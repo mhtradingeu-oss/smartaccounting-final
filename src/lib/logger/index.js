@@ -3,9 +3,10 @@ const path = require('path');
 const { getRequestContext } = require('./context');
 
 const environment = process.env.NODE_ENV || 'development';
+
 const packageVersion = (() => {
   try {
-    // eslint-disable-next-line global-require, import/no-dynamic-require
+    // eslint-disable-next-line global-require
     const pkg = require('../../../package.json');
     return pkg?.version || '1.0.0';
   } catch (error) {
@@ -13,17 +14,22 @@ const packageVersion = (() => {
     return '1.0.0';
   }
 })();
-const defaultLevel = (process.env.LOG_LEVEL || (environment === 'production' ? 'info' : 'debug'))
-  .toLowerCase();
+
+const defaultLevel = (
+  process.env.LOG_LEVEL || (environment === 'production' ? 'info' : 'debug')
+).toLowerCase();
+
 const LEVEL_PRIORITIES = {
   error: 0,
   warn: 1,
   info: 2,
   debug: 3,
 };
+
 const activeLevel = Object.prototype.hasOwnProperty.call(LEVEL_PRIORITIES, defaultLevel)
   ? defaultLevel
   : 'info';
+
 const activePriority = LEVEL_PRIORITIES[activeLevel];
 
 const SENSITIVE_KEYWORDS = [
@@ -43,10 +49,10 @@ const SENSITIVE_KEYWORDS = [
 ];
 
 const logDir = path.join(process.cwd(), 'logs');
+
 try {
   fs.mkdirSync(logDir, { recursive: true });
 } catch (error) {
-  // If log directory creation fails, continue but notify.
   console.error('Failed to create log directory', error);
 }
 
@@ -91,6 +97,7 @@ function serializeError(error) {
   if (error.status) {
     serialized.status = error.status;
   }
+
   if (error.stack) {
     serialized.stack =
       environment === 'production'
@@ -119,6 +126,7 @@ function sanitizeMeta(value) {
   }
 
   const sanitized = {};
+
   Object.entries(value).forEach(([key, entry]) => {
     if (isSensitiveKey(key)) {
       sanitized[key] = '<redacted>';
@@ -143,6 +151,7 @@ function sanitizeMeta(value) {
 
 function mergeMeta(baseMeta, incomingMeta) {
   const merged = { ...(baseMeta || {}) };
+
   if (incomingMeta === undefined || incomingMeta === null) {
     return merged;
   }
@@ -163,10 +172,7 @@ function mergeMeta(baseMeta, incomingMeta) {
 
 function shouldLog(level) {
   const priority = LEVEL_PRIORITIES[level];
-  if (priority === undefined) {
-    return false;
-  }
-  return priority <= activePriority;
+  return priority !== undefined && priority <= activePriority;
 }
 
 function buildContextFields(context = {}) {
@@ -186,7 +192,7 @@ function formatMessage(message) {
   }
   try {
     return JSON.stringify(message);
-  } catch (error) {
+  } catch {
     return String(message);
   }
 }
@@ -194,15 +200,16 @@ function formatMessage(message) {
 function writeToConsole(entry, level) {
   const method = console[level] || console.log;
   const metaPayload = {};
+
   if (entry.channel) {
     metaPayload.channel = entry.channel;
   }
   if (entry.meta) {
     metaPayload.meta = entry.meta;
   }
-  const metaText = Object.keys(metaPayload).length
-    ? ` ${JSON.stringify(metaPayload)}`
-    : '';
+
+  const metaText = Object.keys(metaPayload).length ? ` ${JSON.stringify(metaPayload)}` : '';
+
   method(`[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}${metaText}`);
 }
 
@@ -227,15 +234,7 @@ function logMessage(level, message, meta = {}) {
   const filteredContext = buildContextFields(context);
 
   const { channel, ...restMeta } =
-    typeof sanitized === 'object' && !Array.isArray(sanitized)
-      ? sanitized
-      : { channel: undefined };
-  const metaPayload =
-    typeof sanitized === 'object' && !Array.isArray(sanitized)
-      ? Object.keys(restMeta).length
-        ? restMeta
-        : undefined
-      : sanitized;
+    typeof sanitized === 'object' && !Array.isArray(sanitized) ? sanitized : { channel: undefined };
 
   const entry = {
     timestamp: new Date().toISOString(),
@@ -244,14 +243,16 @@ function logMessage(level, message, meta = {}) {
     service: 'smartaccounting',
     environment,
     version: packageVersion,
-    ...Object.fromEntries(Object.entries(filteredContext).filter(([, value]) => value !== undefined)),
+    ...Object.fromEntries(
+      Object.entries(filteredContext).filter(([, value]) => value !== undefined),
+    ),
   };
 
   if (channel) {
     entry.channel = channel;
   }
-  if (metaPayload !== undefined) {
-    entry.meta = metaPayload;
+  if (Object.keys(restMeta).length) {
+    entry.meta = restMeta;
   }
 
   writeToStream(combinedStream, entry);
@@ -266,13 +267,11 @@ function createLoggerInstance(baseMeta = {}) {
 
   Object.keys(LEVEL_PRIORITIES).forEach((level) => {
     logger[level] = (message, meta) => {
-      const merged = mergeMeta(baseMeta, meta);
-      logMessage(level, message, merged);
+      logMessage(level, message, mergeMeta(baseMeta, meta));
     };
   });
 
-  logger.child = (meta = {}) =>
-    createLoggerInstance(mergeMeta(baseMeta, meta));
+  logger.child = (meta = {}) => createLoggerInstance(mergeMeta(baseMeta, meta));
 
   return logger;
 }
@@ -314,8 +313,10 @@ logger.audit = (message, meta = {}) => logger.info(message, { ...meta, channel: 
 logger.business = (event, meta = {}) =>
   logger.info(`Business Event: ${event}`, { ...meta, channel: 'business' });
 
-const createChildLogger = (meta = {}) => logger.child(meta);
-
-Object.assign(logger, { requestLogger, stream, createChildLogger });
+Object.assign(logger, {
+  requestLogger,
+  stream,
+  createChildLogger: (meta = {}) => logger.child(meta),
+});
 
 module.exports = logger;

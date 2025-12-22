@@ -12,7 +12,7 @@ if (!global.__legacyUploadDeprecatedWarning) {
   global.__legacyUploadDeprecatedWarning = true;
   // eslint-disable-next-line no-console
   console.warn(
-    'Deprecated middleware/upload.js loaded – switch any new routes to middleware/secureUpload.js'
+    'Deprecated middleware/upload.js loaded – switch any new routes to middleware/secureUpload.js',
   );
 }
 
