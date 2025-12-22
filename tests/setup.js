@@ -1,7 +1,3 @@
-process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = 'sqlite::memory:';
-
-
 const httpMocks = require('node-mocks-http');
 const { EventEmitter } = require('events');
 const { logger } = require('../src/utils/errorHandler');
@@ -51,17 +47,6 @@ beforeAll(async () => {
     { expiresIn: '1h' },
   );
 });
-
-afterAll(async () => {
-  try {
-    await sequelize.close();
-  } catch (e) {
-    // ignore if already closed
-  }
-});
-
-
-
 
 global.requestApp = ({ app, method = 'GET', url = '/', headers = {}, body }) => {
   return new Promise((resolve) => {

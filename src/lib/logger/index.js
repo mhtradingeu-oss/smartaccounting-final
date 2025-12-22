@@ -175,7 +175,11 @@ function shouldLog(level) {
   return priority !== undefined && priority <= activePriority;
 }
 
-function buildContextFields(context = {}) {
+function buildContextFields(context) {
+  if (!context) {
+    return {};
+  }
+
   return {
     requestId: context.requestId,
     userId: context.userId,

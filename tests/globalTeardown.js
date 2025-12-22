@@ -1,6 +1,5 @@
-
-const { sequelize } = require('../src/models');
+const { closeDatabase } = require('../src/lib/database');
 
 module.exports = async () => {
-  // DB close is now handled in setup.js afterAll
+  await closeDatabase();
 };
