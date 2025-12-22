@@ -2,6 +2,7 @@ const httpMocks = require('node-mocks-http');
 const { EventEmitter } = require('events');
 const { logger } = require('../src/utils/errorHandler');
 const { sequelize } = require('../src/models');
+const { closeDatabase } = require('../src/lib/database');
 
 // Silence logs
 console.log = jest.fn();
@@ -103,5 +104,9 @@ jest.mock('../src/services/stripeService', () => ({
   createSubscription: jest.fn(),
   cancelSubscription: jest.fn(),
 }));
+
+afterAll(async () => {
+  await closeDatabase();
+});
 
 global.testUtils = require('./utils/testHelpers');
