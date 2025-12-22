@@ -1,0 +1,40 @@
+{
+  "records": {
+    "invoices": [
+      {
+        "id": 101,
+        "invoiceNumber": "INV-2025-0001",
+        "date": "2025-01-31",
+        "dueDate": "2025-02-14",
+        "status": "PAID",
+        "subtotal": "420.00",
+        "total": "499.80",
+        "currency": "EUR",
+        "items": [
+          {
+            "description": "Consulting hours",
+            "quantity": "10",
+            "unitPrice": "42.00",
+            "vatRate": "19.00",
+            "lineNet": "420.00",
+            "lineVat": "79.80",
+            "lineGross": "499.80"
+          }
+        ]
+      }
+    ],
+    "expenses": [
+      {
+        "id": "8f1f1e58-1234-4c3d-a7a1-6c4f8b2d1bd0",
+        "expenseDate": "2025-02-04",
+        "vendorName": "Strom AG",
+        "category": "Utilities",
+        "status": "booked",
+        "netAmount": "150.00",
+        "vatAmount": "28.50",
+        "grossAmount": "178.50",
+        "currency": "EUR"
+      }
+    ]
+  }
+}

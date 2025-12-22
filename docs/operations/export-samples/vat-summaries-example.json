@@ -1,0 +1,16 @@
+[
+  {
+    "id": "a5d8bfae-d6c7-4080-91f3-9a1ab5c4cce4",
+    "reportType": "UStVA",
+    "period": "2025-01",
+    "year": 2025,
+    "data": {
+      "totalSales": 120000.00,
+      "vatCollected": 19000.00,
+      "vatDeductible": 6100.00
+    },
+    "status": "submitted",
+    "generatedAt": "2025-01-20T08:00:00.000Z",
+    "submittedAt": "2025-01-21T09:30:00.000Z"
+  }
+]

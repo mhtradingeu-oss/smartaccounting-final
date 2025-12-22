@@ -1,0 +1,157 @@
+# ========================================
+# Node
+# ========================================
+node_modules/
+client/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ========================================
+# Builds
+# ========================================
+dist/
+build/
+out/
+client/dist/
+client/build/
+
+# ========================================
+# Environment Files (NEVER COMMIT)
+# ========================================
+.env
+.env.*
+!.env.example
+.env.prod
+.env.local
+.env.development
+.env.test
+
+# ========================================
+# Logs & Temp Files
+# ========================================
+*.log
+logs/
+*.tmp
+*.pid
+*.seed
+*.log.gz
+
+# ========================================
+# Testing
+# ========================================
+coverage/
+.vitest/
+jest-cache/
+jest-results.json
+
+# ========================================
+# Database (NEVER COMMIT)
+# ========================================
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+database/
+data/
+
+# ========================================
+# Cache & Runtime Temp
+# ========================================
+.cache/
+.tmp/
+temp/
+tmp/
+
+# ========================================
+# TurboRepo (IMPORTANT)
+# ========================================
+.turbo/
+**/.turbo/
+
+# ========================================
+# Docker
+# ========================================
+docker-data/
+.docker/
+docker-volume/
+docker-volume-data/
+
+# ========================================
+# Security / Keys (CRITICAL)
+# ========================================
+*.pem
+*.key
+*.crt
+*.p12
+*.keystore
+secrets/
+keys/
+Quality
+Quality/**
+
+
+# ========================================
+# Operating System
+# ========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ========================================
+# Editor / IDE
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# ========================================
+# Frontend Frameworks
+# ========================================
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+
+# ========================================
+# Uploads (GDPR / User Content)
+# ========================================
+uploads/
+client/uploads/
+public/uploads/
+
+# ========================================
+# Archives
+# ========================================
+*.tgz
+*.tar
+*.zip
+*.7z
+
+# ========================================
+# Misc
+# ========================================
+*.bak
+*.old
+*.retry
+
+# env files
+.env
+.env.*
+!.env.example
+
+# secrets
+*.key
+*.pem
+
+# coverage
+coverage
+coverage/*
+
+# Temporary local workspaces
+Quality/
+shared/

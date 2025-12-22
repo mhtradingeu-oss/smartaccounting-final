@@ -1,0 +1,34 @@
+[
+  {
+    "id": "6f4c4b96-2c2d-4f1b-942f-dabb0c35cf27",
+    "action": "invoice.create",
+    "resourceType": "Invoice",
+    "resourceId": "INV-2025-0001",
+    "userId": 1,
+    "timestamp": "2025-02-01T09:00:00.000Z",
+    "oldValues": null,
+    "newValues": {"subtotal": 420.00, "status": "SENT"},
+    "ipAddress": "198.51.100.23",
+    "userAgent": "Mozilla/5.0",
+    "hash": "f1e13a42c0bbd936d5d298ef8f08f18527f4c6f9f6a7e8fb40722e1241d0c3a7",
+    "previousHash": null,
+    "reason": "invoice issued",
+    "immutable": true
+  },
+  {
+    "id": "d8e4fd32-e8a6-4475-a3f3-7f50c7448ec1",
+    "action": "invoice.update",
+    "resourceType": "Invoice",
+    "resourceId": "INV-2025-0001",
+    "userId": 1,
+    "timestamp": "2025-02-02T14:20:00.000Z",
+    "oldValues": {"status": "SENT"},
+    "newValues": {"status": "PAID"},
+    "ipAddress": "198.51.100.23",
+    "userAgent": "Mozilla/5.0",
+    "hash": "a6e50bba2c9b3c9124c0bea4a6c216d246ebbbf0d78d4cba1f6f13d69a64ea7e",
+    "previousHash": "f1e13a42c0bbd936d5d298ef8f08f18527f4c6f9f6a7e8fb40722e1241d0c3a7",
+    "reason": "customer payment received",
+    "immutable": true
+  }
+]

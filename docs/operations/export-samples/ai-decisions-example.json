@@ -1,0 +1,23 @@
+[
+  {
+    "id": "1f0b0a6d-fb91-4123-9128-5bcaa6123456",
+    "summary": "Invoice INV-2025-0001 has a high-risk VAT code",
+    "why": "The selected VAT rate (19%) does not match the expected construction category rate (7%).",
+    "legalContext": "§ 15 UStG",
+    "evidence": {"field": "vatRate", "expected": 7, "actual": 19},
+    "modelVersion": "2025-02-05-v1",
+    "featureFlag": "ai-risk-verification",
+    "confidenceScore": 0.87,
+    "entityType": "invoice",
+    "entityId": "INV-2025-0001",
+    "decisions": [
+      {
+        "id": "8f9e0f66-ab42-4025-8f1e-3b34c9d45f3f",
+        "decision": "rejected",
+        "actorUserId": 3,
+        "reason": "Manual check confirmed a correction is required",
+        "createdAt": "2025-02-05T10:10:00.000Z"
+      }
+    ]
+  }
+]
