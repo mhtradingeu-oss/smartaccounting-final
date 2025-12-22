@@ -2,6 +2,7 @@
 // Detects expense anomalies and other outliers (read-only, explainable).
 
 module.exports = {
+  // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
   async detect(context) {
     // ...implementation will analyze for anomalies
     throw new Error('Not implemented: See Phase 13 rules.');

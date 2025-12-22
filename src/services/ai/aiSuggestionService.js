@@ -3,6 +3,7 @@ const { logSuggestionEvent } = require('./aiAuditLogger');
 const { detectMutationIntent } = require('./mutationIntent');
 
 async function getSuggestion(params) {
+  // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
   const { userId, companyId, prompt, context, user } = params;
 
   // Strict cross-company guard

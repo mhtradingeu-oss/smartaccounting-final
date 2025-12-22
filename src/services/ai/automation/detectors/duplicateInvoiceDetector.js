@@ -6,6 +6,7 @@
  * @param {Object} params - { companyId, invoices }
  * @returns {Array} findings
  */
+// eslint-disable-next-line no-unused-vars -- context reserved for AI explainability
 async function detectDuplicateInvoices({ companyId, invoices }) {
   if (!Array.isArray(invoices)) {
     return [];

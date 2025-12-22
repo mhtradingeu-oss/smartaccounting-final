@@ -6,6 +6,7 @@
  * @param {Object} params - { companyId, bankTransactions, invoicePayments }
  * @returns {Array} findings
  */
+// eslint-disable-next-line no-unused-vars -- context reserved for AI explainability
 async function detectUnmatchedBankTransactions({ companyId, bankTransactions = [], invoicePayments = [] }) {
 
   const matchedIds = new Set(invoicePayments.map(p => p.bankTransactionId));

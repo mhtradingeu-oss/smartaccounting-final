@@ -68,6 +68,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   // Architectural Guard: Immutability for reconciled transactions
+  // eslint-disable-next-line no-unused-vars -- required by Sequelize hook signature
   BankTransaction.beforeUpdate(async (transaction, options) => {
     if (transaction.isReconciled) {
       throw new Error('Reconciled bank transactions cannot be modified.');

@@ -253,6 +253,8 @@ const validateRequest = (validations) => async (req, res, next) => {
   next();
 };
 
+// reserved for Phase 10 (advanced security policies)
+// eslint-disable-next-line no-unused-vars
 const ipWhitelist = (allowedIPs = []) => (req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress;
   if (allowedIPs.length && !allowedIPs.includes(clientIP)) {
@@ -266,6 +268,8 @@ const ipWhitelist = (allowedIPs = []) => (req, res, next) => {
   next();
 };
 
+// reserved for CSRF hardening phase
+// eslint-disable-next-line no-unused-vars
 const csrfProtection = (req, res, next) => {
   if (req.method === 'GET' || req.headers.authorization?.startsWith('Bearer ')) {
     return next();

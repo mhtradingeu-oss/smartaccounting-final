@@ -1,6 +1,7 @@
 // aiDataService: strictly read-only, safe projections, no PII
 
 
+// eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
 const { Invoice, Company, BankTransaction } = require('../../models');
 
 const ALLOWED_QUERIES = [

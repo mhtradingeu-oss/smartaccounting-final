@@ -1,0 +1,14 @@
+{
+  "version": "0.2",
+  "words": [
+    "apikey",
+    "api_key",
+    "refreshtoken",
+    "refresh_token",
+    "access_token",
+    "csrf",
+    "jwt",
+    "gobd",
+    "datev"
+  ]
+}

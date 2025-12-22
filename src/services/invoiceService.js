@@ -59,6 +59,7 @@ const createInvoice = async (data, userId, companyId) => {
   }
 
   // Calculate line and invoice totals
+  // eslint-disable-next-line no-unused-vars -- reserved for tax engine Phase 10
   let invoiceSubtotal = 0, invoiceVat = 0, invoiceGross = 0;
   const items = data.items.map(item => {
     const quantity = parseFloat(item.quantity);

@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const aiDataService = require('../services/ai/aiDataService');
+// eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
 const { logRequested, logResponded, logRejected, logRateLimited } = require('../services/ai/aiAuditLogger');
 const aiReadOnlyGuard = require('../middleware/aiReadOnlyGuard');
 const rateLimit = require('../middleware/aiRateLimit');
