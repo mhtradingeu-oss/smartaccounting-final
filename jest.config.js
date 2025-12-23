@@ -1,4 +1,3 @@
-
 module.exports = {
   testEnvironment: 'node',
   setupFiles: ['./tests/env.js'],
@@ -21,15 +20,13 @@ module.exports = {
       statements: 0,
     },
   },
-  testMatch: [
-    '**/tests/**/*.test.js',
-    '**/__tests__/**/*.test.js',
-  ],
+  testMatch: ['**/tests/**/*.test.js', '**/__tests__/**/*.test.js'],
   verbose: true,
   forceExit: true,
   clearMocks: true,
   restoreMocks: true,
   testTimeout: 30000,
-  globalSetup: './tests/globalSetup.js',
-  globalTeardown: './tests/globalTeardown.js',
+  //globalSetup: './tests/globalSetup.js',
+  //globalTeardown: './tests/globalTeardown.js',
+  globalSetup: process.env.CI ? undefined : './tests/globalSetup.js',
 };
