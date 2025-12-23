@@ -34,7 +34,6 @@ router.get('/version', (req, res) => {
 
 router.get('/health-detailed', authenticate, requireRole(['admin']), async (req, res) => {
   try {
-    const { sequelize } = require('../config/database');
     let databaseStatus = 'unknown';
 
     try {

@@ -1,4 +1,4 @@
-const { sequelize, Sequelize } = require("../config/database");
+const { sequelize, Sequelize } = require("../lib/database");
 
 const modelDefiners = [
   require("./User"),
@@ -34,5 +34,6 @@ Object.values(models).forEach((model) => {
 module.exports = {
   sequelize,
   Sequelize,
+
   ...models,
 };
