@@ -1,37 +1,31 @@
-const { sequelize, Sequelize } = require("../lib/database");
+'use strict';
 
-const modelDefiners = [
-  require("./User"),
-  require("./Company"),
-  require("./Invoice"),
-  require("./InvoiceItem"),
-  require("./Expense"),
-  require("./FileAttachment"),
-  require("./BankStatement"),
-  require("./BankTransaction"),
-  require("./Transaction"),
-  require("./TaxReport"),
-  require("./AuditLog"),
-  require("./AIInsight"),
-  require("./AIInsightDecision"),
-  require("./ActiveToken"),
-  require("./RevokedToken"),
-];
+const fs = require('fs');
+const path = require('path');
+const { sequelize, Sequelize } = require('../lib/database');
 
+const basename = path.basename(__filename);
 const models = {};
 
-modelDefiners.forEach((defineModel) => {
-  const model = defineModel(sequelize, DataTypes);
-  models[model.name] = model;
-});
+// Load all model definers
+fs.readdirSync(__dirname)
+  .filter((file) => {
+    return file.indexOf('.') !== 0 && file !== basename && file.slice(-3) === '.js';
+  })
+  .forEach((file) => {
+    const defineModel = require(path.join(__dirname, file));
+    const model = defineModel(sequelize, Sequelize.DataTypes);
+    models[model.name] = model;
+  });
 
-Object.values(models).forEach((model) => {
-  if (typeof model.associate === "function") {
-    model.associate(models);
+// Run associations if defined
+Object.keys(models).forEach((modelName) => {
+  if (typeof models[modelName].associate === 'function') {
+    models[modelName].associate(models);
   }
 });
 
-module.exports = {
-  sequelize,
-  ...models,
-};
+models.sequelize = sequelize;
+models.Sequelize = Sequelize;
+
+module.exports = models;
