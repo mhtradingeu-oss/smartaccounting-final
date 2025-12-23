@@ -6,7 +6,7 @@ const { serve, setup } = require('swagger-ui-express');
 const { createSecurityMiddleware } = require('./middleware/security');
 const errorHandler = require('./middleware/errorHandler');
 const { specs, swaggerOptions } = require('./config/swagger');
-const { APP_VERSION } = require('./config/appVersion');
+const appVersion = require('./config/appVersion');
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
@@ -90,7 +90,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
-    version: APP_VERSION,
+    version: appVersion.version,
   });
 });
 // Readiness check ensures the primary database remains reachable.

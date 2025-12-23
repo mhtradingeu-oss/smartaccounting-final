@@ -1,21 +1,48 @@
+
+
 services:
   backend:
     build: .
-    env_file: .env.prod
+    container_name: smartaccounting-backend
+    env_file:
+      - .env.prod
 
     ports:
-      - "5000:5000"
+      - "5001:5000"
+
+    environment:
+      NODE_ENV: production
+      BUILD_TIME: ${BUILD_TIME:-}
+      GIT_COMMIT: ${GIT_COMMIT:-}
+
     restart: unless-stopped
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
 
+    volumes:
+      # ثبات البيانات (مهم جدًا)
+      - ./database:/usr/src/app/database
+      - ./uploads:/usr/src/app/uploads
+      - ./logs:/usr/src/app/logs
+
+
   frontend:
     build: ./client
+    container_name: smartaccounting-frontend
+
     depends_on:
       backend:
         condition: service_healthy
+
     ports:
       - "8080:80"
+
+    volumes:
+        - ./database:/usr/src/app/database
+        - ./uploads:/usr/src/app/uploads
+
+

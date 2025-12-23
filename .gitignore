@@ -34,7 +34,7 @@ client/build/
 *.log
 logs/
 *.tmp
-*.temp
+*.temp/
 *.pid
 *.seed
 *.log.gz

@@ -17,3 +17,22 @@ docs
 .env.*
 docker-compose*.yml
 *.swp
+
+# Extra hardening for production
+Quality
+smartaccounting@1.0.0
+PHASE_2_FINAL_REPORT.md
+PROJECT_STRUCTURE.txt
+coverage/
+temp/
+logs/
+*.sqlite
+*.sqlite3
+*.old
+*.test.*
+*.spec.*
+*.md
+*.bak
+*.tmp
+*.swp
+*.DS_Store

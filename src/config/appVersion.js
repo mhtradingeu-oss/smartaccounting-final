@@ -1,5 +1,9 @@
-const { APP_VERSION } = require('../../client/appVersion.json');
+const pkg = require('../../package.json');
 
 module.exports = {
-  APP_VERSION,
+  name: 'SmartAccounting',
+  version: pkg.version,
+  environment: process.env.NODE_ENV || 'development',
+  buildTime: process.env.BUILD_TIME || null,
+  commit: process.env.GIT_COMMIT || null,
 };
