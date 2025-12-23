@@ -1,21 +1,21 @@
-const { sequelize, Sequelize } = require('../lib/database');
+const { sequelize, Sequelize } = require("../config/database");
 
 const modelDefiners = [
-  require('./User'),
-  require('./Company'),
-  require('./Invoice'),
-  require('./InvoiceItem'),
-  require('./Expense'),
-  require('./FileAttachment'),
-  require('./BankStatement'),
-  require('./BankTransaction'),
-  require('./Transaction'),
-  require('./TaxReport'),
-  require('./AuditLog'),
-  require('./AIInsight'),
-  require('./AIInsightDecision'),
-  require('./ActiveToken'),
-  require('./RevokedToken'),
+  require("./User"),
+  require("./Company"),
+  require("./Invoice"),
+  require("./InvoiceItem"),
+  require("./Expense"),
+  require("./FileAttachment"),
+  require("./BankStatement"),
+  require("./BankTransaction"),
+  require("./Transaction"),
+  require("./TaxReport"),
+  require("./AuditLog"),
+  require("./AIInsight"),
+  require("./AIInsightDecision"),
+  require("./ActiveToken"),
+  require("./RevokedToken"),
 ];
 
 const models = {};
@@ -26,7 +26,7 @@ modelDefiners.forEach((defineModel) => {
 });
 
 Object.values(models).forEach((model) => {
-  if (typeof model.associate === 'function') {
+  if (typeof model.associate === "function") {
     model.associate(models);
   }
 });
