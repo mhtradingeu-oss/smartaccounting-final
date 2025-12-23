@@ -22,10 +22,6 @@ describe('AI Insights API', () => {
     jest.clearAllMocks();
   });
 
-  afterAll(async () => {
-    await sequelize.close();
-  });
-
   it('should block access if aiEnabled=false', async () => {
     await company.update({ aiEnabled: false });
     const res = await request(app)

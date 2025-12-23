@@ -1,0 +1,76 @@
+{
+  "keywords": [
+    "apply",
+    "update",
+    "change",
+    "mark as",
+    "delete",
+    "remove",
+    "create",
+    "edit",
+    "execute",
+    "trigger",
+    "write",
+    "save",
+    "submit",
+    "auto",
+    "automate",
+    "categorize",
+    "reconcile",
+    "file",
+    "approve",
+    "reject",
+    "activate",
+    "deactivate",
+    "close",
+    "finalize",
+    "cancel",
+    "reset",
+    "archive",
+    "clear",
+    "wipe",
+    "force",
+    "override",
+    "truncate",
+    "set status",
+    "approve all",
+    "run workflow"
+  ],
+  "patterns": [
+    {
+      "pattern": "\\b(force|clear|wipe|zero|truncate)\\b.*\\b(invoices?|records?|balances?)\\b",
+      "flags": "i",
+      "reason": "pattern:force-clear-records"
+    },
+    {
+      "pattern": "\\b(close|finalize|settle|complete)\\b.*\\b(invoices?|batch|payment)s?\\b",
+      "flags": "i",
+      "reason": "pattern:settle-transactions"
+    },
+    {
+      "pattern": "\\b(cancel|void|terminate)\\b.*\\b(invoice|payment|subscription)\\b",
+      "flags": "i",
+      "reason": "pattern:cancel-transaction"
+    },
+    {
+      "pattern": "\\b(approve|reject)\\b.*\\b(invoices?|transactions?|expenses?)\\b",
+      "flags": "i",
+      "reason": "pattern:approve-reject-batch"
+    },
+    {
+      "pattern": "\\b(reset|restart)\\b.*\\b(workflow|state|process)\\b",
+      "flags": "i",
+      "reason": "pattern:reset-workflow"
+    },
+    {
+      "pattern": "\\b(archive|purge)\\b.*\\b(records|invoices|transactions)\\b",
+      "flags": "i",
+      "reason": "pattern:archive-records"
+    },
+    {
+      "pattern": "\\b(run|trigger)\\b.*\\b(automation|workflow|process)\\b.*\\b(delete|cancel|clean)\\b",
+      "flags": "i",
+      "reason": "pattern:automation-delete"
+    }
+  ]
+}

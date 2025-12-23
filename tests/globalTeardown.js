@@ -1,9 +1,7 @@
 const { sequelize } = require('../src/models');
 
 module.exports = async () => {
-  if (process.env.CI) {
-    console.log('Active handles:', process._getActiveHandles().length);
+  if (sequelize && !sequelize._closed) {
+    await sequelize.close();
   }
-
-  await sequelize.close();
 };

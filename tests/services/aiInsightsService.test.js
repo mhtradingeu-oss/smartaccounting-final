@@ -19,10 +19,6 @@ describe('aiInsightsService', () => {
     jest.clearAllMocks();
   });
 
-  afterAll(async () => {
-    await sequelize.close();
-  });
-
   it('should block if aiEnabled=false', async () => {
     await company.update({ aiEnabled: false });
     const result = await aiInsightsService.listInsights(company.id);
