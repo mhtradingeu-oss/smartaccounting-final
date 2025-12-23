@@ -1,6 +1,6 @@
-const { Model, DataTypes } = require('sequelize');
+const { Model } = require('sequelize');
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   class Expense extends Model {
     static associate(models) {
       Expense.belongsTo(models.Company, {
@@ -92,7 +92,6 @@ module.exports = (sequelize) => {
     },
   );
 
-  // Architectural Guard: Immutable approved expenses
   const FINAL_EXPENSE_STATUSES = new Set(['booked', 'archived']);
   const ALLOWED_FINAL_EXPENSE_FIELDS = new Set(['status', 'updatedAt']);
   Expense.addHook('beforeUpdate', (expense) => {
@@ -100,7 +99,9 @@ module.exports = (sequelize) => {
     if (!FINAL_EXPENSE_STATUSES.has(prevStatus)) {
       return;
     }
-    const changedFields = (expense.changed() || []).filter((field) => !ALLOWED_FINAL_EXPENSE_FIELDS.has(field));
+    const changedFields = (expense.changed() || []).filter(
+      (field) => !ALLOWED_FINAL_EXPENSE_FIELDS.has(field),
+    );
     if (changedFields.length > 0) {
       const err = new Error('Approved expenses cannot be modified; create a correction entry instead.');
       err.status = 400;

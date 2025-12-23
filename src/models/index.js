@@ -1,4 +1,4 @@
-const { sequelize, Sequelize } = require('../config/database');
+const { sequelize, DataTypes } = require('../lib/database');
 
 const modelDefiners = [
   require('./User'),
@@ -21,7 +21,7 @@ const modelDefiners = [
 const models = {};
 
 modelDefiners.forEach((defineModel) => {
-  const model = defineModel(sequelize, Sequelize.DataTypes);
+  const model = defineModel(sequelize, DataTypes);
   models[model.name] = model;
 });
 
@@ -33,7 +33,5 @@ Object.values(models).forEach((model) => {
 
 module.exports = {
   sequelize,
-  Sequelize,
-
   ...models,
 };

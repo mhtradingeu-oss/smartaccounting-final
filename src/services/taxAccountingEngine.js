@@ -1,4 +1,4 @@
-const { sequelize } = require('../lib/database');
+const { sequelize } = require('../models');
 
 class TaxAccountingEngine {
   constructor() {

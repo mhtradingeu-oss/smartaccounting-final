@@ -1,9 +1,9 @@
-const { closeDatabase } = require('../src/lib/database');
+const { sequelize } = require('../src/models');
 
 module.exports = async () => {
   if (process.env.CI) {
     console.log('Active handles:', process._getActiveHandles().length);
   }
 
-  await closeDatabase();
+  await sequelize.close();
 };

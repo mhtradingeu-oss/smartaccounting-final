@@ -1,6 +1,5 @@
 const logger = require('./lib/logger');
 const { sequelize } = require('./models');
-const { runMigrations } = require('./lib/database/runMigrations');
 const app = require('./app');
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
@@ -55,7 +54,6 @@ async function startServer() {
     return serverInstance;
   }
 
-  await runMigrations();
   serverInstance = app.listen(PORT, HOST, () => {
     logger.info('Server running', {
       host: HOST,
