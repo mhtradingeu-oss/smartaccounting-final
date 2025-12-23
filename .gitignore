@@ -43,12 +43,12 @@ logs/
 # Testing
 # ========================================
 coverage/
-
+coverage/*
 jest-cache/
 jest-results.json
 
 # ========================================
-# Database (NEVER COMMIT)
+# Database (NEVER COMMIT actual data)
 # ========================================
 *.sqlite
 *.sqlite3
@@ -56,6 +56,13 @@ jest-results.json
 *.db-journal
 database/
 data/
+
+# ========================================
+# 🚨 IMPORTANT: allow Sequelize bootstrap (code, NOT data)
+# ========================================
+!src/lib/
+!src/lib/database/
+!src/lib/database/index.js
 
 # ========================================
 # Cache & Runtime Temp
@@ -66,7 +73,7 @@ temp/
 tmp/
 
 # ========================================
-# TurboRepo (IMPORTANT)
+# TurboRepo
 # ========================================
 .turbo/
 **/.turbo/
@@ -89,7 +96,11 @@ docker-volume-data/
 *.keystore
 secrets/
 keys/
-Quality
+
+# ========================================
+# Quality / Internal
+# ========================================
+Quality/
 Quality/**
 
 
@@ -139,20 +150,4 @@ public/uploads/
 *.bak
 *.old
 *.retry
-
-# env files
-.env
-.env.*
-!.env.example
-
-# secrets
-*.key
-*.pem
-
-# coverage
-coverage
-coverage/*
-
-# Temporary local workspaces
-Quality/
-shared/
+sha
