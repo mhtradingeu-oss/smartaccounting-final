@@ -151,3 +151,5 @@ public/uploads/
 *.old
 *.retry
 sha
+# Local shared workspace (NEVER COMMIT)
+shared/
