@@ -3,7 +3,8 @@ dist
 .env
 .env.*
 *.log
-.vite
+.git
+.gitignore
 .turbo
 coverage
 tests

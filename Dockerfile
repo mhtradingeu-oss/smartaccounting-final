@@ -1,28 +1,39 @@
-# Multi-stage Dockerfile tuned for production readiness
+FROM node:20-bullseye-slim AS deps
 
-# --- Frontend Build Stage ---
-FROM node:20-alpine AS frontend-build
-WORKDIR /app/client
-COPY client/package.json client/package-lock.json ./
-RUN npm ci
-COPY client/ ./
-RUN npm run build
+# --- Build tools required for sqlite3 ---
+RUN apt-get update && apt-get install -y \
+  python3 \
+  make \
+  g++ \
+  && rm -rf /var/lib/apt/lists/*
 
-# --- Backend Dependency Layer ---
-FROM node:20-alpine AS backend-build
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-COPY . ./
-RUN find ./client -mindepth 1 -maxdepth 1 \! -name appVersion.json -exec rm -rf {} +
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 
-# --- Production Runtime Image ---
-FROM node:20-alpine AS production
-WORKDIR /app
+# --- Runtime image ---
+FROM node:20-bullseye-slim AS runner
+
+WORKDIR /usr/src/app
 ENV NODE_ENV=production
-COPY --from=backend-build /app /app
-COPY --from=frontend-build /app/client/dist ./client/dist
-RUN chown -R node:node /app
+
+# Runtime deps
+RUN apt-get update && apt-get install -y \
+  curl \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY package*.json ./
+COPY index.js ./
+COPY .sequelizerc ./
+COPY src ./src
+COPY config ./config
+COPY database ./database
+
+# Required runtime folders
+RUN mkdir -p logs uploads \
+  && chown -R node:node /usr/src/app
+
 USER node
 EXPOSE 5000
 CMD ["node", "index.js"]
