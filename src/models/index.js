@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { sequelize, Sequelize } = require('../lib/database');
+const { sequelize, Sequelize, DataTypes } = require('../lib/database');
 
 const basename = path.basename(__filename);
 const models = {};
@@ -14,7 +14,10 @@ fs.readdirSync(__dirname)
   })
   .forEach((file) => {
     const defineModel = require(path.join(__dirname, file));
-    const model = defineModel(sequelize, Sequelize.DataTypes);
+
+    // ✅ FIX: use DataTypes directly
+    const model = defineModel(sequelize, DataTypes);
+
     models[model.name] = model;
   });
 
@@ -25,7 +28,9 @@ Object.keys(models).forEach((modelName) => {
   }
 });
 
+// Expose sequelize helpers
 models.sequelize = sequelize;
 models.Sequelize = Sequelize;
+models.DataTypes = DataTypes;
 
 module.exports = models;
