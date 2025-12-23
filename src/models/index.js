@@ -1,4 +1,4 @@
-const { sequelize, Sequelize } = require('../lib/database');
+const { sequelize, Sequelize } = require('../config/database');
 
 const modelDefiners = [
   require('./User'),
