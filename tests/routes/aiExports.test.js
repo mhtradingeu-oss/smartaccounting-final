@@ -44,10 +44,6 @@ describe('AI Exports API', () => {
     jest.clearAllMocks();
   });
 
-  afterAll(async () => {
-    await sequelize.close();
-  });
-
   it('should export JSON with modelVersion/ruleId', async () => {
     const res = await request(app)
       .get('/api/v1/ai/exports/insights.json')

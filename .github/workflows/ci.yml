@@ -27,6 +27,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -49,13 +50,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ⚠️ IMPORTANT:
+      # npm cache is intentionally DISABLED here to avoid Jest resolver issues
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies (clean)
         run: npm ci
 
       - name: Run Jest suites
