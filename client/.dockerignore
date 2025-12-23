@@ -3,7 +3,18 @@ dist
 .env
 .env.*
 *.log
-.vite
+.git
+.gitignore
 .turbo
 coverage
 tests
+
+# Extra hardening for production
+*.old
+*.test.*
+*.spec.*
+*.md
+*.bak
+*.tmp
+*.swp
+*.DS_Store

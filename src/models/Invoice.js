@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+const { Model } = require('sequelize');
 
 class Invoice extends Model {
   static associate(models) {
@@ -22,7 +22,7 @@ class Invoice extends Model {
   }
 }
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   Invoice.init(
     {
       invoiceNumber: {
@@ -86,7 +86,6 @@ module.exports = (sequelize) => {
     },
   );
 
-  // Register hooks only when Sequelize is ready
   Invoice.associate = (models) => {
     Invoice.belongsTo(models.User, {
       foreignKey: 'userId',
@@ -105,7 +104,6 @@ module.exports = (sequelize) => {
       foreignKey: 'invoiceId',
       as: 'attachments',
     });
-    // Architectural Guard: Immutability for finalized invoices
     const FINAL_STATUSES = new Set(['SENT', 'PAID', 'OVERDUE', 'CANCELLED']);
     const ALLOWED_FINAL_UPDATE_FIELDS = new Set(['status', 'updatedAt']);
     Invoice.addHook('beforeUpdate', (invoice) => {
@@ -113,7 +111,9 @@ module.exports = (sequelize) => {
       if (!FINAL_STATUSES.has(prevStatus)) {
         return;
       }
-      const changedFields = (invoice.changed() || []).filter((field) => !ALLOWED_FINAL_UPDATE_FIELDS.has(field));
+      const changedFields = (invoice.changed() || []).filter(
+        (field) => !ALLOWED_FINAL_UPDATE_FIELDS.has(field),
+      );
       if (changedFields.length > 0) {
         const err = new Error('Finalized invoices cannot be modified; create a correction entry instead.');
         err.status = 400;
@@ -121,5 +121,6 @@ module.exports = (sequelize) => {
       }
     });
   };
+
   return Invoice;
 };

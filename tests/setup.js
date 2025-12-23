@@ -104,4 +104,10 @@ jest.mock('../src/services/stripeService', () => ({
   cancelSubscription: jest.fn(),
 }));
 
+afterAll(async () => {
+  if (process.env.CI) {
+    await sequelize.close();
+  }
+});
+
 global.testUtils = require('./utils/testHelpers');

@@ -1,71 +1,48 @@
-version: '3.9'
+
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    env_file: .env.prod
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-smartaccounting}
-    ports:
-      - '${POSTGRES_PORT:-5432}:5432'
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-      args:
-        BUILD_COMMIT_SHA: ${BUILD_COMMIT_SHA:-unknown}
-        BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-unknown}
-        BUILD_IMAGE_DIGEST: ${BUILD_IMAGE_DIGEST:-unknown}
-    restart: unless-stopped
-    env_file: .env.prod
+    build: .
+    container_name: smartaccounting-backend
+    env_file:
+      - .env.prod
+
+    ports:
+      - "5001:5000"
+
     environment:
       NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: ${BACKEND_PORT:-5000}
-      BACKEND_PORT: ${BACKEND_PORT:-5000}
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-smartaccounting}}
-    depends_on:
-      - postgres
-    ports:
-      - '${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}'
+      BUILD_TIME: ${BUILD_TIME:-}
+      GIT_COMMIT: ${GIT_COMMIT:-}
+
+    restart: unless-stopped
+
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:${BACKEND_PORT:-5000}/health || exit 1']
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+    volumes:
+      # ثبات البيانات (مهم جدًا)
+      - ./database:/usr/src/app/database
+      - ./uploads:/usr/src/app/uploads
+      - ./logs:/usr/src/app/logs
+
 
   frontend:
-    build:
-      context: client
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
-        BACKEND_HOST: ${BACKEND_HOST:-backend}
-        BACKEND_PORT: ${BACKEND_PORT:-5000}
-    restart: unless-stopped
-    depends_on:
-      - backend
-    environment:
-      BACKEND_HOST: ${BACKEND_HOST:-backend}
-      BACKEND_PORT: ${BACKEND_PORT:-5000}
-    ports:
-      - '${FRONTEND_PORT:-8080}:80'
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost/ || exit 1']
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    build: ./client
+    container_name: smartaccounting-frontend
 
-volumes:
-  postgres-data:
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    ports:
+      - "8080:80"
+
+    volumes:
+        - ./database:/usr/src/app/database
+        - ./uploads:/usr/src/app/uploads
+
+

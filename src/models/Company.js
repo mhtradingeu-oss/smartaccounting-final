@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+const { Model } = require('sequelize');
 
 class Company extends Model {
   static associate(models) {
@@ -6,7 +6,6 @@ class Company extends Model {
       foreignKey: 'companyId',
       as: 'users',
     });
-
 
     Company.hasMany(models.Invoice, {
       foreignKey: 'companyId',
@@ -44,7 +43,7 @@ class Company extends Model {
   }
 }
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   Company.init(
     {
       name: {

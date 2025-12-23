@@ -1,35 +1,24 @@
+const isCiMode = Boolean(process.env.CI) || process.argv.includes('--ci');
+const shouldInitializeDatabase = !isCiMode;
+const globalSetupFile = shouldInitializeDatabase ? './tests/globalSetup.js' : undefined;
+const globalTeardownFile = shouldInitializeDatabase ? './tests/globalTeardown.js' : undefined;
 
 module.exports = {
   testEnvironment: 'node',
+
   setupFiles: ['./tests/env.js'],
   setupFilesAfterEnv: ['./tests/setup.js'],
-  collectCoverage: true,
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/config/**',
-    '!src/templates/**',
-    '!**/node_modules/**',
-    '!**/coverage/**',
-  ],
-  coverageThreshold: {
-    global: {
-      branches: 0,
-      functions: 0,
-      lines: 0,
-      statements: 0,
-    },
-  },
-  testMatch: [
-    '**/tests/**/*.test.js',
-    '**/__tests__/**/*.test.js',
-  ],
+
+  testMatch: ['**/tests/**/*.test.js', '**/__tests__/**/*.test.js'],
+
   verbose: true,
-  forceExit: true,
   clearMocks: true,
   restoreMocks: true,
+  forceExit: true,
   testTimeout: 30000,
-  globalSetup: './tests/globalSetup.js',
-  globalTeardown: './tests/globalTeardown.js',
+
+  collectCoverage: false,
+
+  globalSetup: globalSetupFile,
+  globalTeardown: globalTeardownFile,
 };

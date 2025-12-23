@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+const { Model } = require('sequelize');
 
 const VALID_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
 
@@ -43,7 +43,7 @@ class User extends Model {
   }
 }
 
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   User.init(
     {
       email: {
