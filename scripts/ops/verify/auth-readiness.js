@@ -1,9 +1,29 @@
 #!/usr/bin/env node
 require('dotenv').config();
 
+const JWT_SECRET_MIN_LENGTH = 32;
+const FALLBACK_JWT_SECRET = 'readiness-auth-default-secret-2025-verify-auth-here';
+
+const ensureJwtSecret = () => {
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = FALLBACK_JWT_SECRET;
+    console.warn('JWT_SECRET was not set; using a fallback secret for readiness:auth.');
+  }
+  const secret = process.env.JWT_SECRET;
+  if (secret.length < JWT_SECRET_MIN_LENGTH) {
+    throw new Error(`JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters long`);
+  }
+  if (/replace-with/i.test(secret)) {
+    throw new Error('JWT_SECRET contains placeholder text; configure a real secret before running readiness:auth.');
+  }
+};
+
+ensureJwtSecret();
+
 const authService = require('../../../src/services/authService');
 const { authenticate } = require('../../../src/middleware/authMiddleware');
-const { sequelize } = require('../../../src/models');
+const models = require('../../../src/models');
+const { sequelize, User, Company } = models;
 const appVersion = require('../../../src/config/appVersion');
 
 const API_PREFIX = process.env.API_BASE_URL || '/api/v1';
@@ -16,6 +36,12 @@ const DEMO_ACCOUNTANT_PASSWORD = process.env.DEMO_ACCOUNTANT_PASSWORD || 'Accoun
 
 const DEMO_REGULAR_EMAIL = process.env.DEMO_USER_EMAIL || 'demo.user@example.test';
 const DEMO_REGULAR_PASSWORD = process.env.DEMO_USER_PASSWORD || 'DemoUser123!';
+
+const seededAccounts = [
+  { email: ADMIN_EMAIL, role: 'admin' },
+  { email: DEMO_ACCOUNTANT_EMAIL, role: 'accountant' },
+  { email: DEMO_REGULAR_EMAIL, role: 'viewer' },
+];
 
 const simulateAuthMe = async (token) => {
   const req = {
@@ -69,6 +95,27 @@ const verifyLoginFlow = async (label, credentials, expectedRole) => {
   console.log(`  ✅ ${label} scoped to company "${user.company.name}" with role ${user.role}`);
 };
 
+const ensureSeededUsers = async () => {
+  const missingSeeds = [];
+  const userAttributes = ['id', 'email', 'role', 'companyId', 'isActive'];
+  const companyAttributes = ['id', 'name'];
+  for (const { email } of seededAccounts) {
+    const user = await User.findOne({
+      where: { email },
+      attributes: userAttributes,
+      include: [{ model: Company, as: 'company', attributes: companyAttributes }],
+    });
+    if (!user || !user.isActive || !user.company) {
+      missingSeeds.push(email);
+    }
+  }
+  if (missingSeeds.length) {
+    throw new Error(
+      `Seeded authentication users missing: ${missingSeeds.join(', ')}. Run "npm run db:seed" before readiness:auth.`,
+    );
+  }
+};
+
 const checkHealthEndpoints = async () => {
   console.log('➡️ Evaluating readiness endpoints via shared logic');
   const healthPayload = {
@@ -87,6 +134,7 @@ const checkHealthEndpoints = async () => {
 
 const main = async () => {
   try {
+    await ensureSeededUsers();
     await verifyLoginFlow(
       'System administrator',
       { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
@@ -106,6 +154,7 @@ const main = async () => {
     await checkHealthEndpoints();
   } catch (error) {
     console.error('Auth readiness check failed:', error.message);
+    console.error(error.stack);
     process.exitCode = 1;
   } finally {
     await sequelize.close();
