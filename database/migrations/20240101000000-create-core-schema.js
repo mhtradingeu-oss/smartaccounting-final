@@ -320,7 +320,7 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      transactionDate: {
+      transaction_date: {
         type: Sequelize.DATE,
         allowNull: false,
       },
@@ -403,7 +403,7 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL',
       },
-      transactionDate: {
+      transaction_date: {
         type: Sequelize.DATE,
         allowNull: false,
       },
@@ -598,6 +598,25 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
+      reason: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: 'system',
+      },
+      hash: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: '',
+      },
+      previousHash: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      immutable: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -673,6 +692,26 @@ module.exports = {
         },
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
+      },
+      expense_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'expenses',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+      },
+      invoice_id: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'invoices',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
       },
       ocr_text: {
         type: Sequelize.TEXT,
