@@ -54,7 +54,7 @@ jest-results.json
 *.sqlite3
 *.db
 *.db-journal
-database/
+#database/
 data/
 
 # ========================================
