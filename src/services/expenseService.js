@@ -1,14 +1,19 @@
 
 const { Expense, FileAttachment, sequelize } = require('../models');
 const { enforceCurrencyIsEur, ensureVatTotalsMatch, assertProvidedMatches } = require('../utils/vatIntegrity');
+const { DEFAULT_PAGE_LIMIT } = require('../utils/pagination');
 
-const listExpenses = async (companyId) => {
-  return Expense.findAll({
+const listExpenses = async (companyId, pagination = {}) => {
+  const limit = pagination.limit ?? DEFAULT_PAGE_LIMIT;
+  const offset = pagination.offset ?? 0;
+  return Expense.findAndCountAll({
     where: { companyId },
     order: [['expenseDate', 'DESC']],
     include: [
       { model: FileAttachment, as: 'attachments' },
     ],
+    limit,
+    offset,
   });
 };
 

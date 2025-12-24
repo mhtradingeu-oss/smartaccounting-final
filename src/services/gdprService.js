@@ -92,7 +92,7 @@ async function exportUserData(requestingUser, targetUserId) {
  * @param {string} reason - Reason for anonymization (required)
  * @returns {Promise<User>}
  */
-async function anonymizeUser(requestingUser, targetUserId, reason) {
+async function anonymizeUser(requestingUser, targetUserId, reason, metadata = {}) {
   if (!reason || typeof reason !== 'string' || !reason.trim()) {
     const error = new Error('Reason is required');
     error.status = 400;
@@ -128,14 +128,17 @@ async function anonymizeUser(requestingUser, targetUserId, reason) {
   targetUser.anonymizedAt = now;
   await targetUser.save();
   // Write audit log (operation fails if audit log fails)
-    await AuditLogService.appendEntry({
+  const { ipAddress, userAgent } = metadata;
+  await AuditLogService.appendEntry({
       action: 'GDPR_ANONYMIZE_USER',
       resourceType: 'User',
       resourceId: String(targetUser.id),
       userId: requestingUser.id,
       oldValues,
       newValues: { isAnonymized: true, anonymizedAt: now },
-      reason: 'GDPR user anonymization',
+      reason,
+      ipAddress,
+      userAgent,
     });
   return targetUser;
 }

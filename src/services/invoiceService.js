@@ -1,5 +1,6 @@
 const { Invoice, InvoiceItem, FileAttachment, sequelize } = require('../models');
 const { enforceCurrencyIsEur, ensureVatTotalsMatch, assertProvidedMatches } = require('../utils/vatIntegrity');
+const { DEFAULT_PAGE_LIMIT } = require('../utils/pagination');
 
 const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'];
 const STATUS_TRANSITIONS = {
@@ -25,14 +26,18 @@ const normalizeStatus = (value, fallback = '') => {
 };
 
 
-const listInvoices = async (companyId) => {
-  return Invoice.findAll({
+const listInvoices = async (companyId, pagination = {}) => {
+  const limit = pagination.limit ?? DEFAULT_PAGE_LIMIT;
+  const offset = pagination.offset ?? 0;
+  return Invoice.findAndCountAll({
     where: { companyId },
     order: [['createdAt', 'DESC']],
     include: [
       { model: InvoiceItem, as: 'items' },
       { model: FileAttachment, as: 'attachments' },
     ],
+    limit,
+    offset,
   });
 };
 

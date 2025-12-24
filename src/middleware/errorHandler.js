@@ -1,5 +1,20 @@
 // Canonical Express error handler: logs failures and responds with a consistent shape.
 const logger = require('../lib/logger');
+const sentry = require('../lib/sentry');
+
+const resolveRouteLabel = (req) => {
+  if (req.route && req.route.path) {
+    const normalizedBase = req.baseUrl?.endsWith('/') ? req.baseUrl.slice(0, -1) : req.baseUrl || '';
+    const normalizedPath = req.route.path.startsWith('/') ? req.route.path : `/${req.route.path}`;
+    return `${normalizedBase}${normalizedPath}`.replace(/\/+/g, '/');
+  }
+
+  if (req.originalUrl) {
+    return req.originalUrl.split('?')[0];
+  }
+
+  return 'unknown';
+};
 
 const formatErrorDetails = (errorList = []) => errorList.map((el) => el.message);
 
@@ -43,11 +58,13 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
     statusCode < 500 ||
     operationalError.length > 0;
 
+  const routeLabel = resolveRouteLabel(req);
   const logPayload = {
     error: err.message,
     code,
     url: req.originalUrl,
     method: req.method,
+    route: routeLabel,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
     statusCode,
@@ -68,6 +85,18 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
 
   if (details) {
     response.details = details;
+  }
+
+  if (!isOperational) {
+    sentry.captureException(err, {
+      requestId: req.requestId,
+      userId: req.userId || req.user?.id,
+      companyId: req.companyId || req.user?.companyId,
+      method: req.method,
+      path: req.originalUrl,
+      route: routeLabel,
+      statusCode,
+    });
   }
 
   return res.status(statusCode).json(response);

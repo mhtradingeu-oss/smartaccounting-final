@@ -5,6 +5,7 @@ const { Company } = require('../models');
 const AuditLogService = require('../services/auditLogService');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const { validateRequest } = require('../middleware/security');
+const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 
 const router = express.Router();
 
@@ -21,6 +22,7 @@ const sanitizeStringValue = (value) => (typeof value === 'string' ? value.trim()
 
 router.get('/', authenticate, requireCompany, async (req, res, next) => {
   try {
+    const pagination = getPagination(req.query);
     const filters = [];
     if (req.user.companyId) {
       filters.push({ id: req.user.companyId });
@@ -30,17 +32,31 @@ router.get('/', authenticate, requireCompany, async (req, res, next) => {
     }
 
     if (!filters.length) {
-      return res.json({ companies: [] });
+      return res.json({
+        companies: [],
+        pagination: buildPaginationMeta({
+          total: 0,
+          ...pagination,
+        }),
+      });
     }
 
-    const companies = await Company.findAll({
+    const companies = await Company.findAndCountAll({
       where: {
         [Op.or]: filters,
       },
       order: [['name', 'ASC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
     });
 
-    res.json({ companies });
+    res.json({
+      companies: companies.rows,
+      pagination: buildPaginationMeta({
+        total: companies.count,
+        ...pagination,
+      }),
+    });
   } catch (error) {
     next(error);
   }

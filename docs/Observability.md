@@ -1,46 +1,49 @@
 # Observability & Runtime Visibility
 
-This Phase 3 guide summarizes the lightweight, fail-safe telemetry that can run alongside the SmartAccounting backend without touching business logic or existing API contracts.
+This guide describes how the SmartAccounting backend surfaces operational signals so that incidents can be diagnosed quickly without touching business logic.
 
 ## Structured Logging
 
-- All logs flow through the context-aware logger in `src/lib/logger/index.js`, which merges AsyncLocalStorage metadata (`requestId`, `userId`, `companyId`, `method`, `path`, `ip`), automatically redacts sensitive fields (`authorization`, `password`, `token`, etc.), and writes JSON lines to `logs/combined.log` plus a trimmed error-only stream while still streaming readable entries to the console.
-- HTTP request metadata (method, path, status, duration, and contextual IDs) is emitted from `src/middleware/security.js` when `REQUEST_LOGGING` is not explicitly disabled.
-- Console output is routed through the central logger, and every log record stays JSON-ready for ingestion or grep-based troubleshooting.
-- Audit, security, performance, and business helper methods still exist on the logger so channels remain tagged with `channel:{audit|security|performance|business}` for downstream alerting or compliance hooks.
+- `src/lib/logger/index.js` now emits one JSON line per log entry, writes it both to the filesystem and console, and flushes each record with `requestId`, `userId`, `companyId`, `method`, `path`, `route`, `statusCode`, and `durationMs`.
+- Sensitive keys (`authorization`, `password`, `token`, `cookie`, etc.) are sanitized before persisting, so secrets never leak no matter which route or helper logs data.
+- Logs are context-aware: the request ID is injected before any middleware in `src/middleware/requestId.js`, and the Observability middleware enriches the context with route-level metadata and response duration before every request log.
+- Specialized channels (`logger.security`, `logger.performance`, etc.) still decorate their entries with `channel` without breaking the JSON shape.
 
 ## Request Correlation
 
-- The earliest middleware in `src/app.js` is the request ID generator in `src/middleware/requestId.js`. It seeds the shared AsyncLocalStorage context with the incoming or generated `X-Request-Id`, which automatically surfaces in logs and headers (`X-Request-Id` on the response).
-- Authentication (`src/middleware/authMiddleware.js`) and company context (`src/middleware/requireCompany.js`) update that shared context so downstream logs retain `userId` and `companyId`.
+- The request ID middleware seeds AsyncLocalStorage with a trace block that carries every contextual ID through downstream services.
+- Observability middleware (`src/middleware/observability.js`) captures response duration, route pattern (when available), and status code via `res.once('finish')`, then re-logs using the enriched context so every HTTP access log contains the critical fields developers rely on.
+- Auth middleware augments that context with `userId` and `companyId`, so even background jobs or async callbacks retain the customer scope.
 
 ## Error Visibility
 
-- Errors pass through `src/middleware/errorHandler.js`, which classifies them as operational (mapped to 4xx) or programmer faults (5xx), logs only once, and exposes a consistent JSON error shape without leaking stack traces to the client.
-- Stack traces remain attached to the backend log entry when the error is logged at `error` level, while the API response keeps a sanitized `status`/`message`/`code` payload.
+- The centralized error handler (`src/middleware/errorHandler.js`) still classifies operational vs. programming failures, keeps user-friendly responses minimal, and adds the route label so every error log can be traced to a handler.
+- When `SENTRY_DSN` is configured, `src/lib/sentry/index.js` initializes Sentry and the error handler calls `captureException`, tagging every event with `requestId`, `userId`, `companyId`, `route`, `method`, and `statusCode`. No DSN = no crash.
 
 ## Runtime Metrics
 
-- When `METRICS_ENABLED=true`, each response updates an in-memory metrics snapshot (`src/middleware/metrics.js`) that tracks request count, latency, error rate, slow requests, and status code buckets. A minute-by-minute summary is emitted through `logger.performance`.
-- The slow-request threshold is tunable via `LOG_SLOW_REQUEST_MS` (default `1000`), and slow routes are highlighted even when detailed request logging is disabled.
-- The optional `REQUEST_LOGGING` flag controls whether every HTTP request emits an `info`/`warn`/`error` log; you can silence it to reduce noise while still preserving metric snapshots.
+- Prometheus metrics are powered by `prom-client` and gated behind `METRICS_ENABLED`. When enabled, the middleware registers:
+  - `smartaccounting_http_response_duration_seconds` (histogram with `method`, `route`, `status` labels)
+  - `smartaccounting_http_requests_total` (counter with the same labels)
+  - Default process metrics via `collectDefaultMetrics`
+- `/metrics` only returns 200 when metrics are enabled and, if `METRICS_BASIC_AUTH_USER`/`METRICS_BASIC_AUTH_PASS` are set, it also enforces Basic Auth while keeping the endpoint returning 404 otherwise.
+- Metrics middleware also updates the shared context so every log winds up tagged with the same route and duration values that Prometheus sees.
 
 ## Health & Readiness Probes
 
-- `GET /health` returns a rapid liveness signal with environment, version, and timestamp so orchestrators know the process is still running.
-- `GET /ready` verifies the primary database connectivity before reporting `ready`; any failure surfaces as `503` with a descriptive `error` payload so load balancers can stop traffic while the DB is unreachable.
+- `GET /health` is purely a liveness check (version, environment, timestamp) with no database interaction. Deployments can hit this endpoint from Kubernetes, Docker health checks, or plain curl.
+- `GET /ready` authenticates the Sequelize connection via `sequelize.authenticate()` and returns `503` when the database is unreachable, allowing load balancers to stop routing traffic until the primary database is back.
 
 ## Observability Environment Discipline
 
-- The optional environment variables below control observability and have safe defaults:
-- `LOG_LEVEL`: determines how verbose the context-aware logger should be; defaults to `debug` for development and `info` for production.
-  - `METRICS_ENABLED`: set to `true` to activate runtime metrics logging (defaults to `false`).
-  - `REQUEST_LOGGING`: set to `false` if you want to keep the request log silent (defaults to `true`).
-  - `LOG_SLOW_REQUEST_MS`: slow-request threshold in milliseconds (defaults to `1000`).
-  - `METRICS_SNAPSHOT_INTERVAL_MS`: snapshot cadence for runtime metrics (defaults to `60000`).
-- `validateEnv.js` now warns when these are missing or set to unexpected values, but it never fails the startup — observability remains optional and toggleable.
+- `LOG_LEVEL`, `REQUEST_LOGGING`, and `LOG_SLOW_REQUEST_MS` still govern logging noise; `REQUEST_LOGGING=false` silences request logs while metrics continue to update.
+- New toggles:
+  - `METRICS_ENABLED`: flip `true` to expose Prometheus metrics.
+  - `METRICS_BASIC_AUTH_USER` / `METRICS_BASIC_AUTH_PASS`: protect `/metrics` with Basic Auth (optional but recommended in production).
+  - `SENTRY_DSN`, `SENTRY_ENV`, `SENTRY_TRACES_SAMPLE_RATE`: configure Sentry per environment without crashing when not set.
 
 ## Usage Notes
 
-- To correlate a customer-visible failure, reproduce it via the API, look for the returned `code`/`status`, then search logs for the same `requestId` (every log record carries it).
-- `GET /metrics` is the single Prometheus-compatible scrape endpoint; it serves a minimal `smartaccounting_up` gauge so external monitoring can still observe service availability without internal counters.
+- Every response still echoes `X-Request-Id`, so correlating a failing API request to a log entry is a matter of copying that value into Log Insights.
+- When metrics are enabled, Prometheus can scrape `/metrics` (behind Basic Auth if configured); you can monitor histogram buckets for latency and the counter for error spikes.
+- The new Observability middleware keeps request durations, routes, and user/company IDs in-sync between logs, metrics, and Sentry, simplifying incident response.

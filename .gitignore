@@ -23,6 +23,7 @@ client/build/
 .env
 .env.*
 !.env.example
+.env.prod.example
 .env.prod
 .env.local
 .env.development
@@ -54,7 +55,7 @@ jest-results.json
 *.sqlite3
 *.db
 *.db-journal
-database/
+#database/
 data/
 
 # ========================================

@@ -24,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     transactionDate: {
       type: DataTypes.DATE,
       allowNull: false,
+      field: 'transaction_date',
     },
     valueDate: {
       type: DataTypes.DATE,

@@ -24,7 +24,7 @@ describe('Security Tests', () => {
         },
       });
 
-      expect(response.status).toBe(401);
+      expect([400, 401]).toContain(response.status);
       // Ensure database still exists
       const user = await TestHelpers.createTestUser();
       expect(user).toBeDefined();

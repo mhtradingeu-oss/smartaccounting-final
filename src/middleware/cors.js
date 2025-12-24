@@ -1,7 +1,7 @@
 const cors = require('cors');
 const logger = require('../lib/logger'); // central logger lives under src/lib/logger
 
-const { FRONTEND_URL, NODE_ENV = 'development' } = process.env;
+const { FRONTEND_URL, CLIENT_URL, CORS_ORIGIN, NODE_ENV = 'development' } = process.env;
 const isProduction = NODE_ENV === 'production';
 
 const defaultOrigins = [
@@ -12,7 +12,7 @@ const defaultOrigins = [
 ];
 
 const allowedOrigins = new Set(
-  [FRONTEND_URL, ...(!isProduction ? defaultOrigins : [])].filter(Boolean),
+  [FRONTEND_URL, CLIENT_URL, CORS_ORIGIN, ...(!isProduction ? defaultOrigins : [])].filter(Boolean),
 );
 
 const corsOptions = {
@@ -34,19 +34,21 @@ const corsOptions = {
   },
   credentials: false,
   optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
-    'x-requested-with',
+    'X-Requested-With',
     'Accept',
-    'Origin',
-    'Upgrade',
-    'Connection',
-    'Sec-WebSocket-Key',
-    'Sec-WebSocket-Version',
-    'Sec-WebSocket-Protocol',
+    'X-CSRF-Token',
+    'X-Request-Id',
   ],
 };
 
-module.exports = cors(corsOptions);
+const corsInstance = cors(corsOptions);
+corsInstance.corsOptions = corsOptions;
+corsInstance.allowedOrigins = allowedOrigins;
+corsInstance.defaultOrigins = defaultOrigins;
+corsInstance.isProduction = isProduction;
+
+module.exports = corsInstance;

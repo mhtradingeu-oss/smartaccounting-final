@@ -1,3 +1,5 @@
+const { parseDurationToMs } = require('./duration');
+
 let cachedSecret;
 
 function getJwtSecret() {
@@ -16,7 +18,13 @@ function getJwtExpiresIn() {
   return process.env.JWT_EXPIRES_IN || '1h';
 }
 
+function getJwtExpiresMs() {
+  const defaultMs = 60 * 60 * 1000;
+  return parseDurationToMs(getJwtExpiresIn(), defaultMs);
+}
+
 module.exports = {
   getJwtSecret,
   getJwtExpiresIn,
+  getJwtExpiresMs,
 };

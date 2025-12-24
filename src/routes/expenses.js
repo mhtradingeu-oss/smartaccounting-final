@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const expenseService = require('../services/expenseService');
 const { withAuditLog } = require('../services/withAuditLog');
+const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 
 const router = express.Router();
 
@@ -11,8 +12,16 @@ router.use(requireCompany);
 // List all expenses
 router.get('/', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
   try {
-    const expenses = await expenseService.listExpenses(req.companyId);
-    res.status(200).json({ success: true, expenses });
+    const pagination = getPagination(req.query);
+    const { rows: expenses, count } = await expenseService.listExpenses(req.companyId, pagination);
+    res.status(200).json({
+      success: true,
+      expenses,
+      pagination: buildPaginationMeta({
+        total: count,
+        ...pagination,
+      }),
+    });
   } catch (error) {
     next(error);
   }

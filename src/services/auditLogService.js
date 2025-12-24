@@ -1,5 +1,6 @@
 const { AuditLog, sequelize, User } = require('../models');
 const crypto = require('crypto');
+const { getRequestContext } = require('../lib/logger/context');
 
 /**
  * GoBD-compliant Audit Logging Service
@@ -13,7 +14,7 @@ class AuditLogService {
    * @param {Object} params - { action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent }
    * @throws Error if log cannot be written
    */
-  static async appendEntry({ action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent, reason }) {
+  static async appendEntry({ action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent, reason, correlationId }) {
     if (!userId) {
       const err = new Error('Audit log entry must include actor userId');
       err.status = 400;
@@ -26,6 +27,8 @@ class AuditLogService {
     }
     const timestamp = new Date();
     const isoTimestamp = timestamp.toISOString();
+    const context = getRequestContext();
+    const resolvedCorrelationId = correlationId || context?.requestId || null;
     const transaction = await sequelize.transaction();
     try {
       const findOptions = {
@@ -51,6 +54,7 @@ class AuditLogService {
         timestamp: isoTimestamp,
         previousHash,
         reason,
+        correlationId: resolvedCorrelationId,
       });
       const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
       await AuditLog.create({
@@ -63,6 +67,7 @@ class AuditLogService {
         ipAddress,
         userAgent,
         timestamp,
+        correlationId: resolvedCorrelationId,
         hash,
         previousHash,
         reason,
@@ -128,6 +133,7 @@ class AuditLogService {
         'hash',
         'previousHash',
         'reason',
+        'correlationId',
       ],
     });
     if (format === 'csv') {
@@ -145,11 +151,12 @@ class AuditLogService {
           log.hash,
           log.previousHash,
           log.reason,
+          log.correlationId,
         ]
           .map((value) => `"${String(value || '').replace(/"/g, '""')}"`)
           .join(',');
       });
-      const header = 'id,action,resourceType,resourceId,userId,timestamp,hash,previousHash,reason';
+      const header = 'id,action,resourceType,resourceId,userId,timestamp,hash,previousHash,reason,correlationId';
       return header + '\n' + rows.join('\n');
     }
     return logs.map((log) => log.get({ plain: true }));
@@ -175,6 +182,7 @@ class AuditLogService {
         timestamp: timestampIso,
         previousHash: log.previousHash,
         reason: log.reason,
+        correlationId: log.correlationId,
       });
       const expectedHash = crypto.createHash('sha256').update(hashInput).digest('hex');
       if (log.hash !== expectedHash || log.previousHash !== prevHash) {

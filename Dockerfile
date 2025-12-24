@@ -29,6 +29,7 @@ COPY .sequelizerc ./
 COPY src ./src
 COPY config ./config
 COPY database ./database
+COPY scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 
 # Required runtime folders
 RUN mkdir -p logs uploads \
@@ -36,4 +37,4 @@ RUN mkdir -p logs uploads \
 
 USER node
 EXPOSE 5000
-CMD ["node", "index.js"]
+CMD ["./scripts/docker-entrypoint.sh"]

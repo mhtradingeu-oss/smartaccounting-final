@@ -1,6 +1,8 @@
 
 const express = require('express');
 const authRoutes = require('../../src/routes/auth');
+const authService = require('../../src/services/authService');
+const jwt = require('jsonwebtoken');
 const { User } = require('../../src/models');
 
 const app = express();
@@ -133,6 +135,103 @@ describe('Authentication Routes', () => {
       });
 
       expect(response.status).toBe(400);
+    });
+  });
+
+  describe('Refresh token rotation & logout', () => {
+    let rotationUser;
+
+    beforeEach(async () => {
+      await global.testUtils.cleanDatabase();
+      rotationUser = await global.testUtils.createTestUser();
+    });
+
+    test('rotates refresh tokens and rejects the previous token', async () => {
+      const loginResult = await authService.login({
+        email: rotationUser.email,
+        password: 'testpass123',
+      });
+
+      const firstRefresh = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/auth/refresh',
+        body: {
+          refreshToken: loginResult.refreshToken,
+        },
+      });
+
+      expect(firstRefresh.status).toBe(200);
+      expect(firstRefresh.body.refreshToken).toBeDefined();
+      expect(firstRefresh.body.refreshToken).not.toBe(loginResult.refreshToken);
+
+      const reuseAttempt = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/auth/refresh',
+        body: {
+          refreshToken: loginResult.refreshToken,
+        },
+      });
+
+      expect(reuseAttempt.status).toBe(401);
+    });
+
+    test('logout revokes all active tokens for the user', async () => {
+      const loginResult = await authService.login({
+        email: rotationUser.email,
+        password: 'testpass123',
+      });
+
+      const logoutResponse = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/auth/logout',
+        headers: {
+          Authorization: `Bearer ${loginResult.token}`,
+        },
+      });
+
+      expect(logoutResponse.status).toBe(200);
+
+      const refreshAfterLogout = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/auth/refresh',
+        body: {
+          refreshToken: loginResult.refreshToken,
+        },
+      });
+
+      expect(refreshAfterLogout.status).toBe(401);
+    });
+
+    test('enforces the 30-day session max age on refresh', async () => {
+      const staleSessionStart = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+      const staleRefreshToken = jwt.sign(
+        {
+          userId: rotationUser.id,
+          type: 'refresh',
+          sessionStart: staleSessionStart,
+        },
+        process.env.JWT_SECRET || 'test-jwt-secret',
+        {
+          expiresIn: '10d',
+          jwtid: 'stale-session-jti',
+        },
+      );
+
+      const response = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/auth/refresh',
+        body: {
+          refreshToken: staleRefreshToken,
+        },
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toMatch(/Session expired/i);
     });
   });
 });

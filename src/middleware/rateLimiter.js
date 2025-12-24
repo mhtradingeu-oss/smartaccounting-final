@@ -48,9 +48,19 @@ const elsterLimiter = createLimiter({
   },
 });
 
+const gdprLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Too many GDPR requests, please try again later',
+  },
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
   ocrLimiter,
   elsterLimiter,
+  gdprLimiter,
 };

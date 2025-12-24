@@ -1,13 +1,20 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const { body } = require('express-validator');
 const authService = require('../services/authService');
 const activeTokenService = require('../services/activeTokenService');
 const revokedTokenService = require('../services/revokedTokenService');
 const { sanitizeInput, preventNoSqlInjection } = require('../middleware/validation');
 const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
 const { authenticate } = require('../middleware/authMiddleware');
-const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
+const { validateRequest } = require('../middleware/security');
+const { getJwtSecret, getJwtExpiresIn, getJwtExpiresMs } = require('../utils/jwtConfig');
+const {
+  getRefreshTokenExpiresIn,
+  getRefreshTokenMaxAgeMs,
+  getMaxSessionLifetimeMs,
+} = require('../utils/tokenConfig');
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -17,14 +24,33 @@ const COOKIE_OPTIONS = {
 
 const router = express.Router();
 
+const ALLOWED_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
+
+const registerValidators = [
+  body('email').isEmail().withMessage('Valid email required').normalizeEmail(),
+  body('password').isString().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('firstName').isString().trim().isLength({ min: 2, max: 50 }).withMessage('First name is required'),
+  body('lastName').isString().trim().isLength({ min: 2, max: 50 }).withMessage('Last name is required'),
+  body('role').optional().isIn(ALLOWED_ROLES).withMessage('Invalid role'),
+];
+
+const loginValidators = [
+  body('email').isEmail().withMessage('Valid email required').normalizeEmail(),
+  body('password').isString().isLength({ min: 1 }).withMessage('Password is required'),
+];
+
+const refreshValidators = [
+  body('refreshToken').optional().isString().trim().notEmpty().withMessage('Refresh token must be provided'),
+];
+
 const setTokenCookie = (res, token) => {
-  res.cookie('token', token, { ...COOKIE_OPTIONS, maxAge: 60 * 60 * 1000 });
+  res.cookie('token', token, { ...COOKIE_OPTIONS, maxAge: getJwtExpiresMs() });
 };
 
 const setRefreshCookie = (res, refreshToken) => {
   res.cookie('refreshToken', refreshToken, {
     ...COOKIE_OPTIONS,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: getRefreshTokenMaxAgeMs(),
   });
 };
 
@@ -34,7 +60,7 @@ const clearAuthCookies = (res) => {
 };
 
 // Issue new JWT using refresh token
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', validateRequest(refreshValidators), async (req, res) => {
   const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
   if (!refreshToken) {
     return res.status(401).json({ success: false, message: 'Missing refresh token' });
@@ -46,8 +72,20 @@ router.post('/refresh', async (req, res) => {
       throw new Error('Invalid refresh token type');
     }
 
-    if (await revokedTokenService.isTokenRevoked(decoded.jti)) {
+    const tokenJti = decoded.jti || null;
+    if (tokenJti && (await revokedTokenService.isTokenRevoked(tokenJti))) {
       return res.status(401).json({ success: false, message: 'Refresh token revoked' });
+    }
+
+    const sessionStartIso = decoded.sessionStart || (decoded.iat ? new Date(decoded.iat * 1000).toISOString() : null);
+    if (sessionStartIso) {
+      const sessionStartMs = new Date(sessionStartIso).getTime();
+      if (Number.isFinite(sessionStartMs) && Date.now() - sessionStartMs > getMaxSessionLifetimeMs()) {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expired; please log in again',
+        });
+      }
     }
 
     const user = await authService.getProfile(decoded.userId);
@@ -56,8 +94,14 @@ router.post('/refresh', async (req, res) => {
     }
 
     const tokenId = uuidv4();
+    const sessionStartForTokens = sessionStartIso || new Date().toISOString();
     const token = jwt.sign(
-      { userId: user.id, role: user.role, companyId: user.companyId },
+      {
+        userId: user.id,
+        role: user.role,
+        companyId: user.companyId,
+        sessionStart: sessionStartForTokens,
+      },
       getJwtSecret(),
       { expiresIn: getJwtExpiresIn(), jwtid: tokenId },
     );
@@ -65,30 +109,67 @@ router.post('/refresh', async (req, res) => {
     await activeTokenService.addToken({
       userId: user.id,
       jti: tokenId,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + getJwtExpiresMs()),
+    });
+
+    if (tokenJti) {
+      await revokedTokenService.revokeToken({
+        jti: tokenJti,
+        expiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
+      });
+      await activeTokenService.removeToken(tokenJti);
+    }
+
+    const refreshTokenId = uuidv4();
+    const newRefreshToken = jwt.sign(
+      {
+        userId: user.id,
+        type: 'refresh',
+        sessionStart: sessionStartForTokens,
+      },
+      getJwtSecret(),
+      {
+        expiresIn: getRefreshTokenExpiresIn(),
+        jwtid: refreshTokenId,
+      },
+    );
+
+    await activeTokenService.addToken({
+      userId: user.id,
+      jti: refreshTokenId,
+      expiresAt: new Date(Date.now() + getRefreshTokenMaxAgeMs()),
     });
 
     setTokenCookie(res, token);
-    return res.status(200).json({ success: true, token });
+    setRefreshCookie(res, newRefreshToken);
+    return res.status(200).json({ success: true, token, refreshToken: newRefreshToken });
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
   }
 });
 
-router.post('/register', registerLimiter, sanitizeInput, preventNoSqlInjection, async (req, res, next) => {
-  try {
-    const user = await authService.register(req.body);
-    res.status(201).json({ success: true, user: user.toJSON() });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post(
+  '/register',
+  registerLimiter,
+  sanitizeInput,
+  preventNoSqlInjection,
+  validateRequest(registerValidators),
+  async (req, res, next) => {
+    try {
+      const user = await authService.register(req.body);
+      res.status(201).json({ success: true, user: user.toJSON() });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.post(
   '/login',
   loginLimiter,
   sanitizeInput,
   preventNoSqlInjection,
+  validateRequest(loginValidators),
   async (req, res, next) => {
     try {
       const result = await authService.login(req.body);
@@ -123,6 +204,14 @@ router.get('/me', authenticate, sanitizeInput, preventNoSqlInjection, async (req
     return res.status(200).json({ success: true, user: req.user });
   }
   return res.status(401).json({ success: false, message: 'Not authenticated' });
+});
+
+router.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    component: 'auth',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 module.exports = router;

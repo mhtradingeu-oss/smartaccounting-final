@@ -50,9 +50,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const { validationResult } = require('express-validator');
 const logger = require('../lib/logger');
-const { METRICS_ENABLED, LOG_SLOW_REQUEST_MS, recordMetrics } = require('./metrics');
 
-const REQUEST_LOGGING_ENABLED = process.env.REQUEST_LOGGING !== 'false';
 const createRateLimiter = (options = {}) => {
   const defaults = {
     windowMs: 15 * 60 * 1000,
@@ -111,6 +109,11 @@ if (!isProduction) {
   scriptSrc.push('\'unsafe-inline\'', '\'unsafe-eval\'');
 }
 
+const styleSrc = ['\'self\'', 'https:'];
+if (!isProduction) {
+  styleSrc.push('\'unsafe-inline\'');
+}
+
 const connectSrc = ['\'self\''];
 if (FRONTEND_URL) {
   connectSrc.push(FRONTEND_URL);
@@ -124,7 +127,7 @@ const securityHeaders = helmet({
     directives: {
       defaultSrc: ['\'self\''],
       scriptSrc,
-      styleSrc: ['\'self\'', '\'unsafe-inline\''],
+      styleSrc,
       imgSrc: ['\'self\'', 'data:', 'https:'],
       connectSrc,
       fontSrc: ['\'self\''],
@@ -190,49 +193,6 @@ const sanitizeRequest = (req, res, next) => {
   if (req.query) {
     req.query = sanitizeObject(req.query);
   }
-  next();
-};
-
-const requestLogger = (req, res, next) => {
-  if (!REQUEST_LOGGING_ENABLED && !METRICS_ENABLED) {
-    return next();
-  }
-
-  const startTime = process.hrtime();
-
-  res.on('finish', () => {
-    const [seconds, nanoseconds] = process.hrtime(startTime);
-    const durationMs = Number(((seconds * 1000) + (nanoseconds / 1e6)).toFixed(2));
-    const statusCode = res.statusCode;
-    const logMetadata = {
-      method: req.method,
-      path: req.originalUrl,
-      ip: req.ip,
-      userAgent: req.get('User-Agent') || '',
-      statusCode,
-      durationMs,
-      requestId: req.requestId,
-      userId: req.user?.id || req.userId || null,
-      companyId: req.companyId || req.user?.companyId || null,
-    };
-
-    if (METRICS_ENABLED) {
-      recordMetrics({ durationMs, statusCode });
-    }
-
-    const shouldLogSlow = durationMs > LOG_SLOW_REQUEST_MS;
-    if (shouldLogSlow && (REQUEST_LOGGING_ENABLED || METRICS_ENABLED)) {
-      logger.warn('Slow request detected', logMetadata);
-    }
-
-    if (!REQUEST_LOGGING_ENABLED) {
-      return;
-    }
-
-    const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
-    logger[level]('HTTP request', logMetadata);
-  });
-
   next();
 };
 
@@ -314,7 +274,6 @@ function createSecurityMiddleware() {
     mongoSanitize(),
     xss(),
     hpp({ whitelist: ['sort', 'fields', 'page', 'limit', 'category', 'status'] }),
-    requestLogger,
     compression(),
     sanitizeRequest,
     validateContentType(['application/json', 'multipart/form-data']),
@@ -352,5 +311,6 @@ function createSecurityMiddleware() {
 module.exports = {
   createSecurityMiddleware,
   validateRequest,
+  securityHeaders,
   // ...other exports if needed
 };

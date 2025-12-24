@@ -2,7 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { User, Company } = require('../models');
-const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
+const { getJwtSecret, getJwtExpiresIn, getJwtExpiresMs } = require('../utils/jwtConfig');
+const { getRefreshTokenExpiresIn, getRefreshTokenMaxAgeMs } = require('../utils/tokenConfig');
 
 const ALLOWED_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
 
@@ -81,27 +82,39 @@ const login = async ({ email, password }) => {
   const activeTokenService = require('./activeTokenService');
 
   const tokenId = uuidv4();
+  const sessionStart = new Date();
+  const sessionStartIso = sessionStart.toISOString();
+
   const token = buildToken(
-    { userId: user.id, role: user.role, companyId: user.companyId },
+    {
+      userId: user.id,
+      role: user.role,
+      companyId: user.companyId,
+      sessionStart: sessionStartIso,
+    },
     tokenId,
   );
   // Track active token
   await activeTokenService.addToken({
     userId: user.id,
     jti: tokenId,
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + getJwtExpiresMs()),
   });
 
   // Generate refresh token
   const refreshTokenId = uuidv4();
-  const refreshToken = jwt.sign({ userId: user.id, type: 'refresh' }, getJwtSecret(), {
-    expiresIn: '7d',
-    jwtid: refreshTokenId,
-  });
+  const refreshToken = jwt.sign(
+    { userId: user.id, type: 'refresh', sessionStart: sessionStartIso },
+    getJwtSecret(),
+    {
+      expiresIn: getRefreshTokenExpiresIn(),
+      jwtid: refreshTokenId,
+    },
+  );
   await activeTokenService.addToken({
     userId: user.id,
     jti: refreshTokenId,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + getRefreshTokenMaxAgeMs()),
   });
 
   return { token, refreshToken, user: safeUser };
