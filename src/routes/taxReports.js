@@ -4,25 +4,26 @@ const { authenticate, requireRole, requireCompany } = require('../middleware/aut
 const { body, validationResult } = require('express-validator');
 const { generateTaxReport } = require('../services/taxCalculator');
 const { exportToElster } = require('../services/elsterService');
+const { withAuditLog } = require('../services/withAuditLog');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 const AuditLogService = require('../services/auditLogService');
+const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 const router = express.Router();
 
 router.use(disabledFeatureHandler('Tax reporting'));
 
 router.get('/', authenticate, requireCompany, async (req, res) => {
   try {
-    const { page = 1, limit = 20, reportType, period } = req.query;
-    const offset = (page - 1) * limit;
-
+    const pagination = getPagination(req.query);
+    const { reportType, period } = req.query;
     const whereClause = { companyId: req.user.companyId };
-    if (reportType) {whereClause.reportType = reportType;}
-    if (period) {whereClause.period = period;}
+    if (reportType) { whereClause.reportType = reportType; }
+    if (period) { whereClause.period = period; }
 
     const taxReports = await TaxReport.findAndCountAll({
       where: whereClause,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: pagination.limit,
+      offset: pagination.offset,
       order: [['createdAt', 'DESC']],
       include: [{
         model: Company,
@@ -31,11 +32,17 @@ router.get('/', authenticate, requireCompany, async (req, res) => {
       }],
     });
 
+    const meta = buildPaginationMeta({
+      total: taxReports.count,
+      ...pagination,
+    });
+
     res.json({
       taxReports: taxReports.rows,
-      total: taxReports.count,
-      pages: Math.ceil(taxReports.count / limit),
-      currentPage: parseInt(page),
+      total: meta.total,
+      pages: meta.totalPages,
+      currentPage: meta.currentPage,
+      pagination: meta,
     });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -83,7 +90,7 @@ router.post('/', authenticate, requireCompany, requireRole(['admin', 'accountant
       });
     }
 
-    const { reportType, period, data } = req.body;
+  const { reportType, period, data } = req.body;
 
     if (!reportType || !period) {
       return res.status(400).json({ error: 'Report type and period are required' });
@@ -101,16 +108,31 @@ router.post('/', authenticate, requireCompany, requireRole(['admin', 'accountant
       return res.status(409).json({ error: 'Tax report for this period already exists' });
     }
 
-    const generatedData = await generateTaxReport(req.user.companyId, reportType, period);
-
-    const taxReport = await TaxReport.create({
-      companyId: req.user.companyId,
-      reportType,
-      year: period.year || null,
-      period: JSON.stringify(period),
-      data: data || generatedData,
-      status: 'draft',
-      generatedAt: new Date(),
+    const taxReport = await withAuditLog({
+      action: 'TAX_REPORT_CREATED',
+      resourceType: 'TaxReport',
+      resourceId: (result) => (result?.id ? String(result.id) : null),
+      userId: req.user.id,
+      oldValues: null,
+      newValues: () => ({
+        reportType,
+        period,
+        status: 'draft',
+      }),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      reason: 'Created tax report record',
+    }, async () => {
+      const generatedData = await generateTaxReport(req.user.companyId, reportType, period);
+      return TaxReport.create({
+        companyId: req.user.companyId,
+        reportType,
+        year: period.year || null,
+        period: JSON.stringify(period),
+        data: data || generatedData,
+        status: 'draft',
+        generatedAt: new Date(),
+      });
     });
 
     res.status(201).json({
@@ -211,6 +233,21 @@ router.get('/:id/export/elster', authenticate, requireCompany, async (req, res) 
 
     const elsterXml = await exportToElster(taxReport);
 
+    await AuditLogService.appendEntry({
+      action: 'TAX_REPORT_EXPORTED',
+      resourceType: 'TaxReport',
+      resourceId: String(taxReport.id),
+      userId: req.user.id,
+      oldValues: { status: taxReport.status },
+      newValues: {
+        exportedAt: new Date().toISOString(),
+        format: 'elster',
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      reason: 'Exported tax report to Elster',
+    });
+
     res.set({
       'Content-Type': 'application/xml',
       'Content-Disposition': `attachment; filename="elster_${taxReport.reportType}_${taxReport.id}.xml"`,
@@ -284,7 +321,17 @@ router.post('/generate', authenticate, requireCompany, requireRole(['admin', 'ac
 
     const { reportType, period } = req.body;
 
-    const reportData = await generateTaxReport(req.user.companyId, reportType, period);
+    const reportData = await withAuditLog({
+      action: 'TAX_REPORT_PREVIEW_GENERATED',
+      resourceType: 'TaxReport',
+      resourceId: () => String(req.user.companyId),
+      userId: req.user.id,
+      oldValues: null,
+      newValues: () => ({ reportType, period }),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      reason: 'Generated tax report preview',
+    }, async () => generateTaxReport(req.user.companyId, reportType, period));
 
     res.json({
       message: 'Tax report generated successfully',

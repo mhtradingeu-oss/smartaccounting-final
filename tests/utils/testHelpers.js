@@ -1,6 +1,20 @@
-const { User, Invoice, Company, sequelize } = require('../../src/models');
+const {
+  User,
+  Invoice,
+  Company,
+  Expense,
+  TaxReport,
+  BankStatement,
+  BankTransaction,
+  AuditLog,
+  FileAttachment,
+  ActiveToken,
+  RevokedToken,
+  sequelize,
+} = require('../../src/models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { runWithContext } = require('../../src/lib/logger/context');
 
 /* =========================
    User & Auth Helpers
@@ -110,11 +124,27 @@ async function cleanDatabase() {
   // 🔴 SQLite FK safety for Jest
   await sequelize.query('PRAGMA foreign_keys = OFF');
 
+  await BankTransaction.destroy({ where: {}, force: true });
+  await BankStatement.destroy({ where: {}, force: true });
+  await FileAttachment.destroy({ where: {}, force: true });
+  await TaxReport.destroy({ where: {}, force: true });
+  await Expense.destroy({ where: {}, force: true });
   await Invoice.destroy({ where: {}, force: true });
+  await AuditLog.destroy({ where: {}, force: true });
+  await ActiveToken.destroy({ where: {}, force: true });
+  await RevokedToken.destroy({ where: {}, force: true });
   await Company.destroy({ where: {}, force: true });
   await User.destroy({ where: {}, force: true });
 
   await sequelize.query('PRAGMA foreign_keys = ON');
+}
+
+function withRequestContext(correlationId, action) {
+  return new Promise((resolve, reject) => {
+    runWithContext({ requestId: correlationId }, () => {
+      Promise.resolve(action()).then(resolve).catch(reject);
+    });
+  });
 }
 
 /* =========================
@@ -162,4 +192,5 @@ module.exports = {
   cleanDatabase,
   mockStripeCustomer,
   mockStripeSubscription,
+  withRequestContext,
 };

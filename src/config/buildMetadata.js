@@ -1,4 +1,4 @@
-const pkg = require('../../package.json');
+const { version } = require('./version');
 
 const sanitizeEnv = (value, fallback) => {
   if (!value || value === 'undefined') {
@@ -12,7 +12,8 @@ const BUILD_TIMESTAMP = sanitizeEnv(process.env.BUILD_TIMESTAMP, new Date().toIS
 const BUILD_IMAGE_DIGEST = sanitizeEnv(process.env.BUILD_IMAGE_DIGEST, process.env.DOCKER_IMAGE_DIGEST || 'unknown');
 
 module.exports = {
-  packageVersion: pkg.version,
+  version,
+  packageVersion: version,
   commitHash: BUILD_COMMIT_SHA,
   buildTimestamp: BUILD_TIMESTAMP,
   imageDigest: BUILD_IMAGE_DIGEST,

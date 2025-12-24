@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/info', authenticate, requireRole(['admin']), (req, res) => {
   res.json({
     status: 'SmartAccounting System',
-    version: buildMetadata.packageVersion,
+    version: buildMetadata.version,
     environment: process.env.NODE_ENV || 'development',
     features: {
       multiTenant: true,
@@ -28,7 +28,12 @@ router.get('/info', authenticate, requireRole(['admin']), (req, res) => {
 router.get('/version', (req, res) => {
   res.json({
     success: true,
-    metadata: buildMetadata,
+    metadata: {
+      version: buildMetadata.version,
+      gitSha: buildMetadata.commitHash,
+      buildDate: buildMetadata.buildTimestamp,
+      environment: buildMetadata.environment,
+    },
   });
 });
 

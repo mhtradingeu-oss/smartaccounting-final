@@ -32,6 +32,24 @@ describe('GDPR API', () => {
         expect(res.body.data.user.id).toBe(user.id);
       }
     });
+    it('writes audit log entries for exports', async () => {
+      const res = await request(app)
+        .get('/api/gdpr/export-user-data')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      if (res.status === 200) {
+        const logs = await AuditLog.findAll({
+          where: {
+            action: 'GDPR_EXPORT_USER_DATA',
+            userId: user.id,
+          },
+        });
+        expect(logs.length).toBeGreaterThan(0);
+        expect(logs[0].newValues?.exportedFor).toBeDefined();
+      } else {
+        expect([204, 403, 404]).toContain(res.status);
+      }
+    });
     it('admin exports a company user (200/204/404)', async () => {
       const res = await request(app)
         .get('/api/gdpr/export-user-data')

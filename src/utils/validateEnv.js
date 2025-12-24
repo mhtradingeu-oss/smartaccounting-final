@@ -25,9 +25,18 @@ const observabilityEnvHints = {
   METRICS_ENABLED: 'METRICS_ENABLED toggles runtime metrics snapshots (set true to enable, default false).',
   REQUEST_LOGGING: 'REQUEST_LOGGING toggles HTTP request logs (set false to silence, default true).',
   LOG_SLOW_REQUEST_MS: 'LOG_SLOW_REQUEST_MS adjusts the slow request warning threshold in milliseconds (default 1000).',
+  METRICS_BASIC_AUTH_USER:
+    'METRICS_BASIC_AUTH_USER gates /metrics when Basic Auth protection is required (requires METRICS_BASIC_AUTH_PASS).',
+  METRICS_BASIC_AUTH_PASS:
+    'METRICS_BASIC_AUTH_PASS accompanies METRICS_BASIC_AUTH_USER so Prometheus scrapes stay safe.',
+  SENTRY_DSN: 'SENTRY_DSN enables Sentry (leave blank to disable, no secrets are written to logs).',
+  SENTRY_ENV: 'SENTRY_ENV overrides the environment tag that Sentry uses (defaults to NODE_ENV).',
+  SENTRY_TRACES_SAMPLE_RATE:
+    'SENTRY_TRACES_SAMPLE_RATE controls sentry tracing sampling (0–1, optional; leave blank to disable traces).',
 };
 
 const allowedNodeEnvs = ['development', 'production', 'test'];
+const productionRequiredEnvVars = ['CLIENT_URL', 'CORS_ORIGIN'];
 
 function validateUrl(varName, value) {
   try {
@@ -90,6 +99,26 @@ function validateEnvironment() {
         break;
     }
   });
+
+  if (process.env.NODE_ENV === 'production') {
+    productionRequiredEnvVars.forEach((varName) => {
+      const value = process.env[varName];
+      if (!value) {
+        errors.push(`${varName} is required in production`);
+        return;
+      }
+      try {
+        validateUrl(varName, value);
+      } catch (error) {
+        errors.push(error.message);
+      }
+    });
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (jwtSecret && /replace[-_]?with/i.test(jwtSecret)) {
+      errors.push('JWT_SECRET must be replaced with a secure secret in production');
+    }
+  }
 
   optionalEnvVars.forEach((varName) => {
     if (!process.env[varName]) {

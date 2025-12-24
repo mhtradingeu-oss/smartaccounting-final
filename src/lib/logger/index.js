@@ -186,6 +186,9 @@ function buildContextFields(context) {
     companyId: context.companyId,
     method: context.method,
     path: context.path,
+    route: context.route,
+    statusCode: context.statusCode,
+    durationMs: context.durationMs,
     ip: context.ip,
   };
 }
@@ -203,18 +206,11 @@ function formatMessage(message) {
 
 function writeToConsole(entry, level) {
   const method = console[level] || console.log;
-  const metaPayload = {};
-
-  if (entry.channel) {
-    metaPayload.channel = entry.channel;
+  try {
+    method(JSON.stringify(entry));
+  } catch (error) {
+    method(entry.message);
   }
-  if (entry.meta) {
-    metaPayload.meta = entry.meta;
-  }
-
-  const metaText = Object.keys(metaPayload).length ? ` ${JSON.stringify(metaPayload)}` : '';
-
-  method(`[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}${metaText}`);
 }
 
 function writeToStream(stream, entry) {

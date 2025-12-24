@@ -7,6 +7,8 @@ const { createSecurityMiddleware } = require('./middleware/security');
 const errorHandler = require('./middleware/errorHandler');
 const { specs, swaggerOptions } = require('./config/swagger');
 const appVersion = require('./config/appVersion');
+const sentry = require('./lib/sentry');
+const { requestObservabilityMiddleware, metricsHandler } = require('./middleware/observability');
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
@@ -29,7 +31,15 @@ const germanTaxComplianceRoutes = require('./routes/germanTaxCompliance');
 const expenseRoutes = require('./routes/expenses');
 
 const app = express();
+sentry.init();
 const API_PREFIX = process.env.API_BASE_URL || '/api';
+
+const buildHealthPayload = () => ({
+  status: 'ok',
+  environment: process.env.NODE_ENV || 'development',
+  timestamp: new Date().toISOString(),
+  version: appVersion.version,
+});
 
 app.set('apiPrefix', API_PREFIX);
 
@@ -66,7 +76,10 @@ const { createPerformanceMiddleware } = require('./middleware/performance');
 // 1. Request ID
 app.use(requestIdMiddleware);
 
-// 2. CORS
+// 2. Observability & Metrics
+app.use(requestObservabilityMiddleware);
+
+// 3. CORS
 app.use(corsMiddleware);
 
 
@@ -86,12 +99,10 @@ app.use('/api/docs', serve, setup(specs, swaggerOptions));
 
 // Health and observability endpoints
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    version: appVersion.version,
-  });
+  res.status(200).json(buildHealthPayload());
+});
+app.get(`${API_PREFIX}/health`, (req, res) => {
+  res.status(200).json(buildHealthPayload());
 });
 // Readiness check ensures the primary database remains reachable.
 app.get('/ready', async (req, res) => {
@@ -110,11 +121,7 @@ app.get('/ready', async (req, res) => {
     });
   }
 });
-// Minimal Prometheus endpoint to signal uptime.
-app.get('/metrics', (req, res) => {
-  res.set('Content-Type', 'text/plain');
-  res.send('# HELP smartaccounting_up 1 if up\n# TYPE smartaccounting_up gauge\nsmartaccounting_up 1\n');
-});
+app.get('/metrics', metricsHandler);
 const telemetryRoutes = require('./routes/telemetry');
 app.use(`${API_PREFIX}/telemetry`, telemetryRoutes);
 

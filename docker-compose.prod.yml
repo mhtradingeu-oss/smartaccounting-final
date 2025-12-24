@@ -1,4 +1,4 @@
-
+version: "3.9"
 
 services:
   backend:
@@ -7,11 +7,9 @@ services:
     env_file:
       - .env.prod
 
-    ports:
-      - "5001:5000"
-
     environment:
       NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgres://smartaccounting:smartaccounting@db:5432/smartaccounting}
       BUILD_TIME: ${BUILD_TIME:-}
       GIT_COMMIT: ${GIT_COMMIT:-}
 
@@ -24,10 +22,12 @@ services:
       retries: 3
 
     volumes:
-      # ثبات البيانات (مهم جدًا)
       - ./database:/usr/src/app/database
       - ./uploads:/usr/src/app/uploads
       - ./logs:/usr/src/app/logs
+
+    depends_on:
+      - db
 
 
   frontend:
@@ -35,14 +35,50 @@ services:
     container_name: smartaccounting-frontend
 
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
 
-    ports:
-      - "8080:80"
+    restart: unless-stopped
 
     volumes:
-        - ./database:/usr/src/app/database
-        - ./uploads:/usr/src/app/uploads
+      - ./database:/usr/src/app/database
+      - ./uploads:/usr/src/app/uploads
 
 
+  db:
+    image: postgres:16
+    container_name: smartaccounting-db
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartaccounting}
+      POSTGRES_USER: ${POSTGRES_USER:-smartaccounting}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartsecret}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smartaccounting}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+
+  proxy:
+    image: traefik:2.11
+    container_name: smartaccounting-proxy
+    restart: unless-stopped
+    command: --configFile=/etc/traefik/traefik.yml
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./traefik/acme.json:/acme.json
+
+
+volumes:
+  pgdata:

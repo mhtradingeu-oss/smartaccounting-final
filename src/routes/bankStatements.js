@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const bankStatementService = require('../services/bankStatementService');
+const { withAuditLog } = require('../services/withAuditLog');
 const { BankStatement, BankTransaction } = require('../models');
 const { createSecureUploader, logUploadMetadata } = require('../middleware/secureUpload');
+const { getPagination, buildPaginationMeta } = require('../utils/pagination');
 
 const upload = createSecureUploader({
   subDir: 'bank-statements',
@@ -14,6 +16,9 @@ const upload = createSecureUploader({
 
 const SUPPORTED_FORMATS = ['CSV', 'MT940', 'CAMT053'];
 
+router.use(authenticate);
+router.use(requireCompany);
+
 /**
  * ─────────────────────────────────────────────────────────
  * Import Bank Statement
@@ -21,7 +26,6 @@ const SUPPORTED_FORMATS = ['CSV', 'MT940', 'CAMT053'];
  */
 router.post(
   '/import',
-  authenticate,
   logUploadMetadata,
   upload.single('bankStatement'),
   async (req, res) => {
@@ -41,12 +45,30 @@ router.post(
         });
       }
 
-      const result = await bankStatementService.importBankStatement(
+      const formatNormalized = format.toUpperCase();
+      const importOperation = async () => bankStatementService.importBankStatement(
         req.companyId,
         req.file.path,
         req.file.originalname,
-        format.toUpperCase(),
+        formatNormalized,
       );
+
+      const result = await withAuditLog({
+        action: 'BANK_STATEMENT_IMPORTED',
+        resourceType: 'BankStatement',
+        resourceId: (payload) => payload?.bankStatement?.id ? String(payload.bankStatement.id) : null,
+        userId: req.user.id,
+        oldValues: null,
+        newValues: (payload) => ({
+          fileName: req.file.originalname,
+          format: formatNormalized,
+          imported: payload?.summary?.totalImported,
+          processed: payload?.summary?.totalProcessed,
+        }),
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        reason: 'Imported a bank statement',
+      }, importOperation);
 
       return res.json({
         success: true,
@@ -67,16 +89,23 @@ router.post(
  * List Bank Statements
  * ─────────────────────────────────────────────────────────
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const statements = await BankStatement.findAll({
+    const pagination = getPagination(req.query);
+    const statements = await BankStatement.findAndCountAll({
       where: { companyId: req.companyId },
       order: [['importDate', 'DESC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
     });
 
     return res.json({
       success: true,
-      data: statements,
+      data: statements.rows,
+      pagination: buildPaginationMeta({
+        total: statements.count,
+        ...pagination,
+      }),
     });
   } catch (error) {
     return res.status(500).json({
@@ -91,19 +120,26 @@ router.get('/', authenticate, async (req, res) => {
  * List Transactions for a Statement
  * ─────────────────────────────────────────────────────────
  */
-router.get('/:id/transactions', authenticate, async (req, res) => {
+router.get('/:id/transactions', async (req, res) => {
   try {
-    const transactions = await BankTransaction.findAll({
+    const pagination = getPagination(req.query);
+    const transactions = await BankTransaction.findAndCountAll({
       where: {
         companyId: req.companyId,
         bankStatementId: req.params.id,
       },
       order: [['transactionDate', 'DESC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
     });
 
     return res.json({
       success: true,
-      data: transactions,
+      data: transactions.rows,
+      pagination: buildPaginationMeta({
+        total: transactions.count,
+        ...pagination,
+      }),
     });
   } catch (error) {
     return res.status(500).json({
@@ -118,9 +154,19 @@ router.get('/:id/transactions', authenticate, async (req, res) => {
  * Reconcile Transactions
  * ─────────────────────────────────────────────────────────
  */
-router.post('/reconcile', authenticate, async (req, res) => {
+router.post('/reconcile', async (req, res) => {
   try {
-    const reconciled = await bankStatementService.reconcileTransactions(req.companyId);
+    const reconciled = await withAuditLog({
+      action: 'BANK_TRANSACTIONS_RECONCILED',
+      resourceType: 'BankTransaction',
+      resourceId: () => String(req.companyId),
+      userId: req.user.id,
+      oldValues: null,
+      newValues: (payload) => ({ reconciledCount: payload?.length || 0 }),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      reason: 'Reconciled bank transactions',
+    }, async () => bankStatementService.reconcileTransactions(req.companyId));
 
     return res.json({
       success: true,
@@ -143,7 +189,7 @@ router.post('/reconcile', authenticate, async (req, res) => {
  * Categorize / Update Transaction
  * ─────────────────────────────────────────────────────────
  */
-router.put('/transactions/:id/categorize', authenticate, async (req, res) => {
+router.put('/transactions/:id/categorize', async (req, res) => {
   try {
     const { category, vatCategory, isReconciled } = req.body;
 
@@ -179,7 +225,22 @@ router.put('/transactions/:id/categorize', authenticate, async (req, res) => {
       });
     }
 
-    const updatedTransaction = await transaction.update(updates);
+    const beforeValues = {
+      category: transaction.category,
+      vatCategory: transaction.vatCategory,
+      isReconciled: transaction.isReconciled,
+    };
+    const updatedTransaction = await withAuditLog({
+      action: 'BANK_TRANSACTION_UPDATED',
+      resourceType: 'BankTransaction',
+      resourceId: String(transaction.id),
+      userId: req.user.id,
+      oldValues: beforeValues,
+      newValues: updates,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      reason: 'Categorized bank transaction',
+    }, async () => transaction.update(updates));
 
     return res.json({
       success: true,

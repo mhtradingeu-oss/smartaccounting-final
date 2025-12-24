@@ -1,6 +1,7 @@
 
 const AuditLogService = require('../../src/services/auditLogService');
 const { AuditLog, User, Company, sequelize } = require('../../src/models');
+const { withRequestContext } = require('../utils/testHelpers');
 
 describe('GoBD AuditLogService', () => {
   let testUser;
@@ -108,5 +109,65 @@ describe('GoBD AuditLogService', () => {
         userAgent: 'jest',
       }),
     ).rejects.toThrow(/reason is required/);
+  });
+
+  it('maintains correlation metadata and filters by company', async () => {
+    const correlationId = 'company-filter-test';
+    await withRequestContext(correlationId, () =>
+      AuditLogService.appendEntry({
+        action: 'company_filter',
+        resourceType: 'AuditTest',
+        resourceId: 'company-1',
+        userId: testUser.id,
+        oldValues: null,
+        newValues: { foo: 'bar' },
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+        reason: 'company export test',
+      }),
+    );
+
+    const otherUser = await User.create({
+      email: 'otheruser@example.com',
+      password: 'otherpass',
+      firstName: 'Other',
+      lastName: 'User',
+      role: 'admin',
+      isActive: true,
+      companyId: null,
+    });
+    const otherCompany = await Company.create({
+      name: 'OtherCo',
+      taxId: 'DE000000001',
+      address: 'Other 1',
+      city: 'Berlin',
+      postalCode: '10115',
+      country: 'DE',
+      userId: otherUser.id,
+    });
+    await otherUser.update({ companyId: otherCompany.id });
+
+    await withRequestContext('other-correlation', () =>
+      AuditLogService.appendEntry({
+        action: 'company_filter',
+        resourceType: 'AuditTest',
+        resourceId: 'company-2',
+        userId: otherUser.id,
+        oldValues: null,
+        newValues: { foo: 'baz' },
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+        reason: 'other company log',
+      }),
+    );
+
+    const filteredLogs = await AuditLogService.exportLogs({ companyId: testUser.companyId });
+    expect(filteredLogs).toHaveLength(1);
+    expect(filteredLogs[0].userId).toBe(testUser.id);
+    expect(filteredLogs[0].correlationId).toBe(correlationId);
+
+    await AuditLog.destroy({ where: { userId: otherUser.id } });
+    await otherCompany.destroy();
+    await otherUser.destroy();
   });
 });

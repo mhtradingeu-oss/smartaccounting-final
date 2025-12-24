@@ -28,6 +28,10 @@ module.exports = (sequelize, DataTypes) => {
     userAgent: {
       type: DataTypes.STRING,
     },
+    correlationId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     timestamp: {
       type: DataTypes.DATE,
       allowNull: false,

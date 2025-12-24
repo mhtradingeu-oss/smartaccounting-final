@@ -12,8 +12,43 @@ on:
       - develop
 
 jobs:
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for secrets with Gitleaks
+        uses: zricethezav/gitleaks-action@v4
+        with:
+          args: --path=. --redact
+
+  dependency-scan:
+    name: Dependency Audit
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: ["22.x"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run dependency auditor
+        run: npm run dependency:scan
+
   lint:
     name: Lint
+    needs: [secret-scan, dependency-scan]
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: true
@@ -84,5 +119,29 @@ jobs:
       - name: Install client dependencies
         run: npm ci --prefix client
 
+      - name: Run client lint
+        run: npm run lint --prefix client
+
+      - name: Run client tests
+        run: npm run test --prefix client
+
       - name: Build client bundle
         run: npm run build --prefix client
+
+  docker-build:
+    name: Docker Compose Build Validation
+    needs: client
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate compose configuration
+        run: docker compose -f docker-compose.prod.yml config
+
+      - name: Build production images
+        env:
+          DOCKER_BUILDKIT: 1
+        run: docker compose -f docker-compose.prod.yml build --parallel

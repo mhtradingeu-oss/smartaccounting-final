@@ -1,0 +1,50 @@
+http:
+  middlewares:
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  routers:
+    http-redirect:
+      entryPoints:
+        - web
+      rule: "HostRegexp(`{host:.+}`)"
+      middlewares:
+        - https-redirect
+      service: http-redirect
+      priority: 1
+
+    backend:
+      entryPoints:
+        - websecure
+      rule: "PathPrefix(`/api`)"
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+      priority: 20
+
+    frontend:
+      entryPoints:
+        - websecure
+      rule: "PathPrefix(`/`)"
+      service: frontend-service
+      tls:
+        certResolver: letsencrypt
+      priority: 10
+
+  services:
+    http-redirect:
+      loadBalancer:
+        servers:
+          - url: "http://backend:5000"
+
+    backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://backend:5000"
+
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:80"

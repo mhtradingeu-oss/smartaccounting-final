@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const vatComplianceService = require('../services/vatComplianceService');
-const { authenticate, requireRole } = require('../middleware/authMiddleware');
-const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
+const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const AuditLogService = require('../services/auditLogService');
 
 // VAT/UStG compliance validation endpoint
-router.post('/validate-transaction', authenticate, async (req, res) => {
+router.post('/validate-transaction', async (req, res) => {
   const { net, vat, gross, vatRate, currency } = req.body;
   const result = vatComplianceService.validateTransaction({ net, vat, gross, vatRate, currency });
   if (!result.valid) {
@@ -14,8 +13,11 @@ router.post('/validate-transaction', authenticate, async (req, res) => {
   }
   res.json({ success: true });
 });
+router.use(authenticate);
+router.use(requireCompany);
+
 // GoBD audit log export endpoint
-router.get('/gobd/export', authenticate, requireRole(['auditor']), async (req, res) => {
+router.get('/gobd/export', requireRole(['auditor']), async (req, res) => {
   try {
     const { format = 'json', from, to } = req.query;
     const logs = await AuditLogService.exportLogs({
@@ -34,8 +36,6 @@ router.get('/gobd/export', authenticate, requireRole(['auditor']), async (req, r
   }
 });
 
-router.use(disabledFeatureHandler('Compliance overview'));
-
 router.get('/test', (req, res) => {
   res.json({
     message: 'Compliance route is working',
@@ -43,7 +43,7 @@ router.get('/test', (req, res) => {
   });
 });
 
-router.get('/overview', authenticate, async (req, res) => {
+router.get('/overview', async (req, res) => {
   try {
     
     const complianceData = {
@@ -79,9 +79,10 @@ router.get('/overview', authenticate, async (req, res) => {
   }
 });
 
-router.get('/reports/:companyId/:type', authenticate, async (req, res) => {
+router.get('/reports/:type', async (req, res) => {
   try {
-    const { companyId, type } = req.params;
+    const { type } = req.params;
+    const companyId = req.companyId;
 
     const report = {
       companyId,
@@ -106,7 +107,7 @@ router.get('/reports/:companyId/:type', authenticate, async (req, res) => {
   }
 });
 
-router.get('/deadlines', authenticate, async (req, res) => {
+router.get('/deadlines', async (req, res) => {
   try {
     const deadlines = [
       {
