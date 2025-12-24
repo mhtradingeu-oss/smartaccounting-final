@@ -86,3 +86,17 @@ jobs:
 
       - name: Build client bundle
         run: npm run build --prefix client
+
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for secrets with Gitleaks
+        uses: zricethezav/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
