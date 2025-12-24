@@ -14,9 +14,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "db:migrate": "npx sequelize-cli db:migrate",
+    "db:verify": "node scripts/check-migrations.js",
     "db:rollback": "npx sequelize-cli db:migrate:undo",
     "db:seed": "npx sequelize-cli db:seed:all",
-    "db:seed:undo": "npx sequelize-cli db:seed:undo"
+    "db:seed:undo": "npx sequelize-cli db:seed:undo",
+    "readiness:auth": "node scripts/auth-readiness.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",

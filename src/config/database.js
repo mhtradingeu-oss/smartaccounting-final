@@ -2,7 +2,6 @@ const path = require('path');
 require('dotenv').config();
 
 const projectRoot = path.resolve(__dirname, '..', '..');
-const fallbackPostgresUrl = 'postgres://localhost:5432/smartaccounting';
 const resolveRelativeToRoot = (value) =>
   path.isAbsolute(value) ? value : path.resolve(projectRoot, value);
 const defaultSqliteStorage = resolveRelativeToRoot(process.env.SQLITE_STORAGE_PATH || 'database/dev.sqlite');
@@ -11,12 +10,20 @@ const createDatabaseConfig = (envOverride) => {
   const NODE_ENV = envOverride || process.env.NODE_ENV || 'development';
   const isTest = NODE_ENV === 'test';
   const explicitUrl = process.env.DATABASE_URL;
-  const useSqliteFallback = process.env.USE_SQLITE === 'true';
-  const fallbackSqliteUrl = `sqlite:${defaultSqliteStorage}`;
+  const useSqlite = process.env.USE_SQLITE === 'true';
 
-  const databaseUrl = explicitUrl || (
-    isTest ? 'sqlite::memory:' : (useSqliteFallback ? fallbackSqliteUrl : fallbackPostgresUrl)
-  );
+  if (useSqlite && explicitUrl) {
+    throw new Error('USE_SQLITE=true cannot be combined with DATABASE_URL');
+  }
+
+  let databaseUrl;
+  if (useSqlite) {
+    databaseUrl = isTest ? 'sqlite::memory:' : `sqlite:${defaultSqliteStorage}`;
+  } else if (explicitUrl) {
+    databaseUrl = explicitUrl;
+  } else {
+    throw new Error('No database configuration provided; set USE_SQLITE=true or define DATABASE_URL.');
+  }
 
   const isSqlite = databaseUrl.startsWith('sqlite:');
   const isInMemorySqlite = databaseUrl === 'sqlite::memory:';
