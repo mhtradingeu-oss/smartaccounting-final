@@ -47,7 +47,7 @@ coverage/
 coverage/*
 jest-cache/
 jest-results.json
-
+backups/
 # ========================================
 # Database (NEVER COMMIT actual data)
 # ========================================
