@@ -1,21 +1,3 @@
----
-# AUDIT_TRAIL.md
+# DEPRECATED: See docs/PHASE_3_GOBD_AUDITLOG.md for canonical audit log design.
 
-## Every Action Logged
-- Who: actorUserId
-- What: action, entityType, entityId
-- When: timestamp (UTC)
-- Before/After: diff-safe
-- Why: business, compliance, AI safety
-
-## Example
-{
-  "entityType": "User",
-  "entityId": "<userId>",
-  "action": "ROLE_CHANGED",
-  "before": { "role": "user" },
-  "after": { "role": "admin" },
-  "actorUserId": "<adminId>",
-  "companyId": "<companyId>",
-  "timestamp": "UTC"
-}
+This file is now reference-only. All audit trail and immutability details are maintained in the canonical document.

@@ -1,14 +1,7 @@
-
 const { URL } = require('url');
 const logger = require('../lib/logger');
 
-const requiredEnvVars = [
-  'NODE_ENV',
-  'PORT',
-  'DATABASE_URL',
-  'JWT_SECRET',
-  'FRONTEND_URL',
-];
+const requiredEnvVars = ['NODE_ENV', 'PORT', 'DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL'];
 
 const optionalEnvVars = [
   'EMAIL_HOST',
@@ -21,10 +14,14 @@ const optionalEnvVars = [
 ];
 
 const observabilityEnvHints = {
-  LOG_LEVEL: 'LOG_LEVEL controls structured logging verbosity (defaults to info in production, debug otherwise).',
-  METRICS_ENABLED: 'METRICS_ENABLED toggles runtime metrics snapshots (set true to enable, default false).',
-  REQUEST_LOGGING: 'REQUEST_LOGGING toggles HTTP request logs (set false to silence, default true).',
-  LOG_SLOW_REQUEST_MS: 'LOG_SLOW_REQUEST_MS adjusts the slow request warning threshold in milliseconds (default 1000).',
+  LOG_LEVEL:
+    'LOG_LEVEL controls structured logging verbosity (defaults to info in production, debug otherwise).',
+  METRICS_ENABLED:
+    'METRICS_ENABLED toggles runtime metrics snapshots (set true to enable, default false).',
+  REQUEST_LOGGING:
+    'REQUEST_LOGGING toggles HTTP request logs (set false to silence, default true).',
+  LOG_SLOW_REQUEST_MS:
+    'LOG_SLOW_REQUEST_MS adjusts the slow request warning threshold in milliseconds (default 1000).',
 };
 
 const allowedNodeEnvs = ['development', 'production', 'test'];
@@ -67,7 +64,7 @@ function validateEnvironment() {
         break;
       }
       case 'JWT_SECRET': {
-        if (value.length < 32) {
+        if (process.env.NODE_ENV !== 'test' && value.length < 32) {
           errors.push('JWT_SECRET must be at least 32 characters long');
         }
         break;

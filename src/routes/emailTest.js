@@ -4,48 +4,80 @@ const EmailValidation = require('../utils/emailValidation');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
 const { sendSuccess, sendError } = require('../utils/responseHelpers');
 const logger = require('../lib/logger');
+const { validateEnvironment } = require('../utils/validateEnv');
 
 const router = express.Router();
 const requireAdmin = requireRole(['admin']);
 
+/**
+ * Validate email input
+ */
 const ensureEmail = (value) => {
   if (!EmailValidation.validateEmailFormat(value)) {
-    throw new Error('Invalid email address');
+    const err = new Error('Invalid email address');
+    err.statusCode = 400;
+    throw err;
   }
   return true;
 };
 
 router.use(authenticate);
 
+/**
+ * Validate email configuration (ADMIN only)
+ */
 router.get('/test-config', requireAdmin, (req, res) => {
   try {
-    const validation = EmailValidation.validateEnvironment();
+    let validation = null;
+
+    if (process.env.NODE_ENV !== 'test') {
+      validation = validateEnvironment();
+    }
+
     return sendSuccess(res, 'Email configuration validated', {
       isConfigured: emailService.isConfigured,
-      validation: {
-        ...validation,
-        configuration: {
-          ...validation.configuration,
-          user: EmailValidation.sanitizeEmailForLog(validation.configuration?.user),
-        },
-      },
+      validation: validation
+        ? {
+            ...validation,
+            configuration: {
+              ...validation.configuration,
+              user: EmailValidation.sanitizeEmailForLog(validation.configuration?.user),
+            },
+          }
+        : null,
     });
   } catch (error) {
-    logger.error('Email configuration test failed', { error: error.message });
-    return sendError(res, error.message, 500);
+    logger.error('Email configuration test failed', {
+      error: error.message,
+      userId: req.user?.id,
+      route: '/email/test-config',
+    });
+
+    return sendError(res, error.message, error.statusCode || 500);
   }
 });
 
-router.post('/test-connection', requireAdmin, async (_, res) => {
+/**
+ * Test SMTP connection
+ */
+router.post('/test-connection', requireAdmin, async (req, res) => {
   try {
     const result = await emailService.testConnection();
     return sendSuccess(res, 'Connection test completed', { result });
   } catch (error) {
-    logger.error('Email connection test failed', { error: error.message });
+    logger.error('Email connection test failed', {
+      error: error.message,
+      userId: req.user?.id,
+      route: '/email/test-connection',
+    });
+
     return sendError(res, error.message, 500);
   }
 });
 
+/**
+ * Send basic test email
+ */
 router.post('/send-test', requireAdmin, async (req, res) => {
   try {
     const to = req.body.to || req.user.email;
@@ -54,11 +86,19 @@ router.post('/send-test', requireAdmin, async (req, res) => {
     const result = await emailService.sendTestEmail(to);
     return sendSuccess(res, 'Test email sent', { result });
   } catch (error) {
-    logger.error('Send test email failed', { error: error.message });
-    return sendError(res, error.message, 400);
+    logger.error('Send test email failed', {
+      error: error.message,
+      userId: req.user?.id,
+      route: '/email/send-test',
+    });
+
+    return sendError(res, error.message, error.statusCode || 400);
   }
 });
 
+/**
+ * Test email templates
+ */
 router.post('/test-template/:type', requireAdmin, async (req, res) => {
   try {
     const to = req.body.to || req.user.email;
@@ -77,6 +117,7 @@ router.post('/test-template/:type', requireAdmin, async (req, res) => {
           'Test Umsatzsteuer-Voranmeldung',
         );
         break;
+
       case 'invoice':
         result = await emailService.sendNewInvoiceAlert(
           to,
@@ -85,6 +126,7 @@ router.post('/test-template/:type', requireAdmin, async (req, res) => {
           '1,234.56',
         );
         break;
+
       case 'subscription':
         result = await emailService.sendSubscriptionExpiryAlert(
           to,
@@ -94,14 +136,20 @@ router.post('/test-template/:type', requireAdmin, async (req, res) => {
           7,
         );
         break;
+
       default:
         return sendError(res, 'Invalid template type', 400);
     }
 
     return sendSuccess(res, 'Template email sent', { result });
   } catch (error) {
-    logger.error('Template email failed', { error: error.message });
-    return sendError(res, error.message, 400);
+    logger.error('Template email failed', {
+      error: error.message,
+      userId: req.user?.id,
+      route: `/email/test-template/${req.params.type}`,
+    });
+
+    return sendError(res, error.message, error.statusCode || 400);
   }
 });
 

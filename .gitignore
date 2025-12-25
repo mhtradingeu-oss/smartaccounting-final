@@ -24,6 +24,7 @@ client/build/
 .env.*
 !.env.example
 .env.prod
+!.env.prod.example
 .env.local
 .env.development
 .env.test

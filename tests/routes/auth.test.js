@@ -1,4 +1,3 @@
-
 const express = require('express');
 const authRoutes = require('../../src/routes/auth');
 const { User } = require('../../src/models');
@@ -14,7 +13,14 @@ app.use((err, _req, res, _next) => {
 describe('Authentication Routes', () => {
   let sharedCompany;
   beforeAll(async () => {
-    sharedCompany = await global.testUtils.createTestCompany({ name: 'AuthTestCo', taxId: 'DEAUTHTESTCO', address: 'Test St 1', city: 'Berlin', postalCode: '10115', country: 'Germany' });
+    sharedCompany = await global.testUtils.createTestCompany({
+      name: 'AuthTestCo',
+      taxId: 'DEAUTHTESTCO',
+      address: 'Test St 1',
+      city: 'Berlin',
+      postalCode: '10115',
+      country: 'Germany',
+    });
   });
   afterAll(async () => {
     await global.testUtils.cleanDatabase();
@@ -136,3 +142,41 @@ describe('Authentication Routes', () => {
     });
   });
 });
+// ...existing code...
+
+describe('JWT revocation (logout)', () => {
+  let token;
+  beforeEach(async () => {
+    await global.testUtils.cleanDatabase();
+    await global.testUtils.createTestUser({ email: 'revoke@example.com' });
+    // Login to get token
+    const loginRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/auth/login',
+      body: { email: 'revoke@example.com', password: 'testpass123' },
+    });
+    token = loginRes.body.token;
+    expect(token).toBeTruthy();
+    // Logout to revoke token
+    await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  });
+
+  test('should reject revoked token on protected endpoint', async () => {
+    const res = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect([401, 403]).toContain(res.status);
+    expect(res.body.message).toMatch(/revoked|expired|invalid/i);
+  });
+});
+
+// ...existing code...
