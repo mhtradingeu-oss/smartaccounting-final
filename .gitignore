@@ -55,7 +55,7 @@ backups/
 *.sqlite3
 *.db
 *.db-journal
-database/
+#database/
 data/
 
 # ========================================
