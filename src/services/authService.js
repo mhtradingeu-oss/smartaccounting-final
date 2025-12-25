@@ -1,12 +1,12 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { v4: uuidv4 } = require("uuid");
-const { User, Company } = require("../models");
-const { getJwtSecret, getJwtExpiresIn } = require("../utils/jwtConfig");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+const { User, Company } = require('../models');
+const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
 
-const ALLOWED_ROLES = ["admin", "accountant", "auditor", "viewer"];
+const ALLOWED_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
 
-const normalizeEmail = (email) => (email || "").toLowerCase().trim();
+const normalizeEmail = (email) => (email || '').toLowerCase().trim();
 
 const buildToken = (payload, jti) =>
   jwt.sign(payload, getJwtSecret(), {
@@ -21,41 +21,41 @@ const buildToken = (payload, jti) =>
 
 const register = async (data) => {
   // Only allow registration in non-production
-  if (process.env.NODE_ENV === "production") {
-    if (process.env.NODE_ENV !== "test") {
-      if (process.env.NODE_ENV !== "development") {
-        const error = new Error("Registration is disabled in production");
+  if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV !== 'test') {
+      if (process.env.NODE_ENV !== 'development') {
+        const error = new Error('Registration is disabled in production');
         error.status = 403;
         throw error;
       }
     }
   }
-  const { email, password, firstName, lastName, role = "viewer", companyId } = data || {};
+  const { email, password, firstName, lastName, role = 'viewer', companyId } = data || {};
   if (!email || !password || !firstName || !lastName) {
-    const error = new Error("Missing required fields");
+    const error = new Error('Missing required fields');
     error.status = 400;
     throw error;
   }
   const normalizedEmail = normalizeEmail(email);
   const existing = await User.findOne({ where: { email: normalizedEmail } });
   if (existing) {
-    const error = new Error("Email already registered");
+    const error = new Error('Email already registered');
     error.status = 400;
     throw error;
   }
   let finalCompanyId = companyId;
   // Auto-assign test company if not in production and no companyId provided
-  if (process.env.NODE_ENV !== "production" && !finalCompanyId) {
-    const TEST_COMPANY_TAX_ID = "TEST_COMPANY_TAX_ID";
+  if (process.env.NODE_ENV !== 'production' && !finalCompanyId) {
+    const TEST_COMPANY_TAX_ID = 'TEST_COMPANY_TAX_ID';
     let testCompany = await Company.findOne({ where: { taxId: TEST_COMPANY_TAX_ID } });
     if (!testCompany) {
       testCompany = await Company.create({
-        name: "Test Company",
+        name: 'Test Company',
         taxId: TEST_COMPANY_TAX_ID,
-        address: "1 Test Lane",
-        city: "Testville",
-        postalCode: "00000",
-        country: "Testland",
+        address: '1 Test Lane',
+        city: 'Testville',
+        postalCode: '00000',
+        country: 'Testland',
       });
     }
     finalCompanyId = testCompany.id;
@@ -68,17 +68,17 @@ const register = async (data) => {
     firstName,
     lastName,
     role,
-    companyId: typeof finalCompanyId !== "undefined" ? finalCompanyId : null,
+    companyId: typeof finalCompanyId !== 'undefined' ? finalCompanyId : null,
   });
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== 'production') {
     // Defensive logging in dev/test only
     // eslint-disable-next-line no-console
     console.log(
-      "[authService] Registered user:",
+      '[authService] Registered user:',
       normalizedEmail,
-      "role:",
+      'role:',
       role,
-      "companyId:",
+      'companyId:',
       user.companyId,
     );
   }
@@ -87,26 +87,26 @@ const register = async (data) => {
 
 const login = async ({ email, password }) => {
   if (!email || !password) {
-    const error = new Error("Email and password are required");
+    const error = new Error('Email and password are required');
     error.status = 400;
     throw error;
   }
 
   const normalizedEmail = normalizeEmail(email);
 
-  const user = await User.scope("withPassword").findOne({
+  const user = await User.scope('withPassword').findOne({
     where: { email: normalizedEmail },
   });
 
   if (!user || user.isActive === false) {
-    const error = new Error("Invalid credentials");
+    const error = new Error('Invalid credentials');
     error.status = 401;
     throw error;
   }
 
-  const isValid = await bcrypt.compare(password, user.password || "");
+  const isValid = await bcrypt.compare(password, user.password || '');
   if (!isValid) {
-    const error = new Error("Invalid credentials");
+    const error = new Error('Invalid credentials');
     error.status = 401;
     throw error;
   }
@@ -114,7 +114,7 @@ const login = async ({ email, password }) => {
   const safeUser = user.toJSON();
   delete safeUser.password;
 
-  const activeTokenService = require("./activeTokenService");
+  const activeTokenService = require('./activeTokenService');
 
   const tokenId = uuidv4();
   const token = buildToken(
@@ -133,8 +133,8 @@ const login = async ({ email, password }) => {
   });
 
   const refreshTokenId = uuidv4();
-  const refreshToken = jwt.sign({ userId: user.id, type: "refresh" }, getJwtSecret(), {
-    expiresIn: "7d",
+  const refreshToken = jwt.sign({ userId: user.id, type: 'refresh' }, getJwtSecret(), {
+    expiresIn: '7d',
     jwtid: refreshTokenId,
   });
 
@@ -154,7 +154,7 @@ const login = async ({ email, password }) => {
 const getProfile = async (userId) => {
   const user = await User.findByPk(userId);
   if (!user) {
-    const error = new Error("User not found");
+    const error = new Error('User not found');
     error.status = 404;
     throw error;
   }

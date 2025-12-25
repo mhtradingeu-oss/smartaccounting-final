@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import CompanySelector from './CompanySelector';
 import { useLoadCompanies } from '../hooks/useLoadCompanies';
@@ -124,7 +123,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
   ];
 
   // Mock search results
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -145,9 +144,10 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
 
   const filteredSearchResults = useMemo(() => {
     if (searchQuery.length > 2) {
-      return MOCK_SEARCH_RESULTS.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()),
+      return MOCK_SEARCH_RESULTS.filter(
+        (item) =>
+          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
     return [];
@@ -190,9 +190,9 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
     }
   };
 
-  const currentTime = new Date().toLocaleTimeString('de-DE', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
+  const currentTime = new Date().toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
   const currentDate = new Date().toLocaleDateString('de-DE', {
@@ -203,11 +203,25 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
   });
 
   return (
-    <header className={`fixed top-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:bg-gray-900/95 dark:border-gray-700 transition-all duration-300 ease-in-out ${
-      isCollapsed ? 'main-collapsed' : 'main-expanded'
-    }`}>
+    <header
+      className={`fixed top-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:bg-gray-900/95 dark:border-gray-700 transition-all duration-300 ease-in-out ${
+        isCollapsed ? 'main-collapsed' : 'main-expanded'
+      }`}
+    >
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
+          {/* Logo and Search */}
+          <div className="flex items-center gap-6 min-w-fit">
+            <a href="/dashboard" className="flex items-center">
+              <img
+                src="/brand/logo.png"
+                alt="SmartAccounting Logo"
+                className="h-8 w-auto object-contain"
+                style={{ maxHeight: 40 }}
+                loading="eager"
+              />
+            </a>
+          </div>
           {/* Enhanced Search with autocomplete */}
           <div className="flex-1 max-w-2xl relative" ref={searchRef}>
             <div className="relative">
@@ -339,14 +353,16 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="max-h-80 overflow-y-auto scrollbar-thin">
                     {notifications.length > 0 ? (
                       notifications.map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 ${
-                            !notification.read ? 'bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-l-primary-500' : ''
+                            !notification.read
+                              ? 'bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-l-primary-500'
+                              : ''
                           }`}
                         >
                           <div className="flex items-start space-x-3">
@@ -358,7 +374,9 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                                   {notification.title}
                                 </p>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityBadge(notification.priority)}`}>
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityBadge(notification.priority)}`}
+                                >
                                   {notification.priority}
                                 </span>
                               </div>
@@ -395,7 +413,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                       </div>
                     )}
                   </div>
-                  
+
                   {notifications.length > 0 && (
                     <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-between items-center">
@@ -430,7 +448,9 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     {user?.role} • {user?.subscriptionPlan || 'Professional'}
                   </p>
                 </div>
-                <ChevronDownIcon className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon
+                  className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {isProfileOpen && (
@@ -445,9 +465,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {user?.firstName} {user?.lastName}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {user?.email}
-                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200">
                             {user?.role}
@@ -459,7 +477,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="py-2">
                     <button className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">
                       <UserCircleIcon className="h-4 w-4 mr-3" />
@@ -476,7 +494,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                       Bookmarks
                     </button>
                   </div>
-                  
+
                   <div className="py-2 border-t border-gray-200 dark:border-gray-700">
                     <button
                       onClick={handleLogout}

@@ -84,9 +84,10 @@ const Login = () => {
         {rateLimit && <RateLimitBanner message={rateLimitMessage} />}
         <Card className="p-8 flex flex-col items-center gap-6 shadow-lg border-0">
           <img
-            src="/generated-icon.png"
+            src="/brand/logo.png"
             alt="SmartAccounting Logo"
-            className="w-16 h-16 rounded-xl shadow-lg mb-2"
+            className="max-h-16 w-auto mx-auto mb-2 object-contain"
+            style={{ maxHeight: 64 }}
           />
           <h1 className="text-3xl font-extrabold text-blue-700 dark:text-blue-300 mb-1 tracking-tight">
             SmartAccounting
