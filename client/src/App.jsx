@@ -32,6 +32,8 @@ import Dashboard from './pages/Dashboard';
 import Invoices from './pages/Invoices';
 import InvoiceCreate from './pages/InvoiceCreate';
 import InvoiceEdit from './pages/InvoiceEdit';
+import Expenses from './pages/Expenses';
+import ExpensesCreate from './pages/ExpensesCreate';
 import BankStatements from './pages/BankStatements';
 import BankStatementDetail from './pages/BankStatementDetail';
 import Billing from './pages/Billing';
@@ -49,13 +51,14 @@ function NotFound() {
   return (
     <div style={{ padding: '4rem', textAlign: 'center' }}>
       <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>404 - Page Not Found</h1>
-      <p style={{ color: '#888', marginTop: '1rem' }}>The page you are looking for does not exist.</p>
+      <p style={{ color: '#888', marginTop: '1rem' }}>
+        The page you are looking for does not exist.
+      </p>
     </div>
   );
 }
 
 import './index.css';
-
 
 function LoginRoute() {
   const { status, isAuthenticated } = useAuth();
@@ -74,7 +77,6 @@ function LoginRoute() {
 
   return <Login />;
 }
-
 
 function App() {
   const { activeCompany } = useCompany();
@@ -143,6 +145,17 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/expenses"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Expenses />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/expenses/create" element={<ExpensesCreate />} />
           <Route path="/invoices/create" element={<InvoiceCreate />} />
           <Route
             path="/invoices/:invoiceId/edit"
