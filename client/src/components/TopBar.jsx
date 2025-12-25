@@ -134,13 +134,13 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
         setIsNotificationsOpen(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowSearchResults(false);
+        setSearchQuery('');
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+   document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+}, []);
 
   const filteredSearchResults = useMemo(() => {
     if (searchQuery.length > 2) {
@@ -255,7 +255,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                       key={index}
                       href={result.href}
                       className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                      onClick={() => setShowSearchResults(false)}
+                      onClick={() => setSearchQuery('')}
                     >
                       <div className="flex-shrink-0">
                         <result.icon className="h-5 w-5 text-gray-400" />
