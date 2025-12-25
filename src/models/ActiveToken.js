@@ -7,21 +7,24 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       jti: {
-        type: DataTypes.STRING,
+        type: DataTypes.UUID,
         allowNull: false,
         unique: true,
       },
       expiresAt: {
         type: DataTypes.DATE,
-        allowNull: true,
+        allowNull: false,
       },
     },
     {
       tableName: 'active_tokens',
       timestamps: true,
-      updatedAt: false,
     },
   );
+
+  ActiveToken.associate = (models) => {
+    ActiveToken.belongsTo(models.User, { foreignKey: 'userId' });
+  };
 
   return ActiveToken;
 };
