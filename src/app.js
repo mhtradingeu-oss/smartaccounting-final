@@ -56,7 +56,6 @@ if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production')
   app.set('trust proxy', 1);
 }
 
-
 // --- Middleware Order: requestId, CORS, Security, Rate/Security, Performance, Routes, ErrorHandler ---
 
 const requestIdMiddleware = require('./middleware/requestId');
@@ -69,7 +68,6 @@ app.use(requestIdMiddleware);
 // 2. CORS
 app.use(corsMiddleware);
 
-
 // 3. Security (ordered)
 createSecurityMiddleware().forEach((mw) => app.use(mw));
 
@@ -79,7 +77,6 @@ createPerformanceMiddleware().forEach((mw) => app.use(mw));
 // 5. Body parsers (after security, before routes)
 app.use(express.json({ limit: process.env.JSON_LIMIT || '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || '10mb' }));
-
 
 // 6. Docs and routes
 app.use('/api/docs', serve, setup(specs, swaggerOptions));
@@ -113,7 +110,9 @@ app.get('/ready', async (req, res) => {
 // Minimal Prometheus endpoint to signal uptime.
 app.get('/metrics', (req, res) => {
   res.set('Content-Type', 'text/plain');
-  res.send('# HELP smartaccounting_up 1 if up\n# TYPE smartaccounting_up gauge\nsmartaccounting_up 1\n');
+  res.send(
+    '# HELP smartaccounting_up 1 if up\n# TYPE smartaccounting_up gauge\nsmartaccounting_up 1\n',
+  );
 });
 const telemetryRoutes = require('./routes/telemetry');
 app.use(`${API_PREFIX}/telemetry`, telemetryRoutes);
@@ -132,6 +131,9 @@ app.use(`${API_PREFIX}/german-tax-compliance`, germanTaxComplianceRoutes);
 app.use(`${API_PREFIX}/elster`, elsterRoutes);
 const aiRoutes = require('./routes/ai');
 app.use(`${API_PREFIX}/ai`, aiRoutes);
+
+const adminRoutes = require('./routes/admin');
+app.use(`${API_PREFIX}/admin`, adminRoutes);
 const gdprRoutes = require('./routes/gdpr');
 app.use(`${API_PREFIX}/gdpr`, gdprRoutes);
 app.use(`${API_PREFIX}/ocr`, ocrRoutes);
