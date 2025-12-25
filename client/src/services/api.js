@@ -1,54 +1,25 @@
-
 import axios from 'axios';
 
-/*
- * API contract v0.1
- * baseURL = /api/v1
- *
- * Public:
- *   POST /auth/login
- *   POST /auth/register
- *
- * Authenticated:
- *   GET /auth/me
- *   GET /dashboard/stats
- *
- * Companies:
- *   GET /companies
- *   PUT /companies
- *
- * Users:
- *   GET /users
- *   POST /users
- *   PUT /users/:userId
- *   DELETE /users/:userId
- *
- * Invoices:
- *   GET /invoices
- *   POST /invoices
- *   PUT /invoices/:invoiceId
- *
- * Bank statements:
- *   GET /bank-statements
- *   POST /bank-statements/import
- *   GET /bank-statements/:id/transactions
- *   POST /bank-statements/reconcile
- *   PUT /bank-statements/transactions/:id/categorize
+/**
+ * API BASE URL
+ * - Production: /api (Nginx proxy)
+ * - Dev: VITE_API_URL (optional)
  */
-
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
-  withCredentials: true,
+  withCredentials: true, // required for cookies / auth
   headers: {
+    Accept: 'application/json',
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
   },
 });
 
+/* ================================
+   AUTH FORCE LOGOUT EVENT
+================================ */
 export const AUTH_FORCE_LOGOUT_EVENT = 'smartaccounting:force-logout';
 
 const emitForceLogout = () => {
@@ -64,24 +35,23 @@ const emitForceLogout = () => {
   }
 };
 
+/* ================================
+   DEV LOGGING (SAFE)
+================================ */
+const isDev = import.meta.env.DEV;
+
 const logError = (...args) => {
-  if (import.meta.env.DEV) {
+  if (isDev) {
     console.error(...args);
   }
 };
 
-const logWarn = (...args) => {
-  if (import.meta.env.DEV) {
-    console.warn(...args);
-  }
-};
-
-export const formatApiError = (
-  error,
-  fallbackMessage = 'An error occurred. Please try again.',
-) => {
+/* ================================
+   API ERROR FORMATTER
+================================ */
+export const formatApiError = (error, fallbackMessage = 'An error occurred. Please try again.') => {
   const formatted = {
-    status: error?.response?.status ?? null,
+    status: null,
     message: fallbackMessage,
     retryable: false,
     type: 'generic',
@@ -95,34 +65,31 @@ export const formatApiError = (
     const { status, data } = error.response;
     formatted.status = status;
 
-    const serverMessage =
-      data?.message || (typeof data === 'string' && data.length ? data : null);
-    if (serverMessage) {
-      formatted.message = serverMessage;
+    if (data?.message) {
+      formatted.message = data.message;
     }
 
-    if (status === 403) {
+    if (status === 401) {
+      formatted.type = 'unauthorized';
+    } else if (status === 403) {
       formatted.type = 'forbidden';
       formatted.message = 'Not allowed';
-      formatted.retryable = false;
     } else if (status === 429) {
       formatted.type = 'rate_limit';
       formatted.retryable = true;
-      formatted.message =
-        'Too many requests. Please wait a moment and try again.';
+      formatted.message = 'Too many requests. Please try again later.';
     } else if (status >= 500) {
       formatted.type = 'server_error';
       formatted.retryable = true;
-      formatted.message =
-        'Server is temporarily unavailable. Please try again shortly.';
+      formatted.message = 'Server is temporarily unavailable. Please try again shortly.';
     } else {
       formatted.type = 'http';
     }
   } else if (error.request) {
-    formatted.retryable = true;
     formatted.type = 'network';
-    formatted.message =
-      'Unable to reach the server. Check your connection and try again.';
+    formatted.retryable = true;
+
+    formatted.message = 'Unable to reach the server. Check your connection and try again.';
   } else if (error.message) {
     formatted.message = error.message;
   }
@@ -130,67 +97,52 @@ export const formatApiError = (
   return formatted;
 };
 
-// Request interceptor
+/* ================================
+   REQUEST INTERCEPTOR
+================================ */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (import.meta.env.DEV) {
-      console.log(
-        `🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-      );
+    if (isDev) {
+      console.log(`➡️ ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     }
 
     return config;
   },
   (error) => {
-    logError('❌ Request interceptor error:', error);
+    logError('❌ Request error:', error);
     return Promise.reject(error);
   },
 );
 
-// Response interceptor
+/* ================================
+   RESPONSE INTERCEPTOR
+================================ */
 api.interceptors.response.use(
   (response) => {
-    if (import.meta.env.DEV) {
-      console.log(
-        `✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`,
-      );
+    if (isDev) {
+      console.log(`⬅️ ${response.status} ${response.config.url}`);
     }
     return response;
   },
   (error) => {
     if (error.response) {
-      const { status, data } = error.response;
+      const { status } = error.response;
 
-      logError(`❌ API Error ${status}:`, data);
+      logError(`❌ API Error ${status}`, error.response.data);
 
-      switch (status) {
-        case 401:
-          emitForceLogout();
-          break;
-        case 403:
-          logError('🚫 Forbidden:', data?.message);
-          break;
-        case 404:
-          logError('🔍 Not Found:', error.config.url);
-          break;
-        case 501:
-          logWarn('🟡 Feature disabled in v0.1:', data?.feature);
-          break;
-        case 500:
-          logError('🔥 Server error:', data?.message);
-          break;
-        default:
-          logError(`⚠️ API Error ${status}:`, data?.message);
+      if (status === 401) {
+        emitForceLogout();
       }
     } else if (error.request) {
-      logError('🌐 Network error - backend may be down:', error.message);
+      logError('🌐 Network error:', error.message);
     } else {
-      logError('❌ API request failed:', error.message);
+      logError('❌ Unknown API error:', error.message);
     }
 
     return Promise.reject(error);
