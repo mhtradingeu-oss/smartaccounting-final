@@ -1,76 +1,112 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
-const { User, Company } = require('../models');
-const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const { v4: uuidv4 } = require("uuid");
+const { User, Company } = require("../models");
+const { getJwtSecret, getJwtExpiresIn } = require("../utils/jwtConfig");
 
-const ALLOWED_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
+const ALLOWED_ROLES = ["admin", "accountant", "auditor", "viewer"];
 
-const normalizeEmail = (email) => (email || '').toLowerCase().trim();
+const normalizeEmail = (email) => (email || "").toLowerCase().trim();
 
 const buildToken = (payload, jti) =>
-  jwt.sign(payload, getJwtSecret(), { expiresIn: getJwtExpiresIn(), jwtid: jti });
+  jwt.sign(payload, getJwtSecret(), {
+    expiresIn: getJwtExpiresIn(),
+    jwtid: jti,
+  });
 
-const register = async (payload) => {
-  const email = normalizeEmail(payload.email);
+/**
+ * ⚠️ Registration is disabled in production by default
+ * Enable only if schema is aligned
+ */
 
-  if (!ALLOWED_ROLES.includes(payload.role)) {
-    const error = new Error('Invalid role');
+const register = async (data) => {
+  // Only allow registration in non-production
+  if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV !== "test") {
+      if (process.env.NODE_ENV !== "development") {
+        const error = new Error("Registration is disabled in production");
+        error.status = 403;
+        throw error;
+      }
+    }
+  }
+  const { email, password, firstName, lastName, role = "viewer", companyId } = data || {};
+  if (!email || !password || !firstName || !lastName) {
+    const error = new Error("Missing required fields");
     error.status = 400;
     throw error;
   }
-
-  const existing = await User.findOne({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await User.findOne({ where: { email: normalizedEmail } });
   if (existing) {
-    const error = new Error('Email already exists');
+    const error = new Error("Email already registered");
     error.status = 400;
     throw error;
   }
-
-  const hashedPassword = await bcrypt.hash(payload.password, 12);
-
+  let finalCompanyId = companyId;
+  // Auto-assign test company if not in production and no companyId provided
+  if (process.env.NODE_ENV !== "production" && !finalCompanyId) {
+    const TEST_COMPANY_TAX_ID = "TEST_COMPANY_TAX_ID";
+    let testCompany = await Company.findOne({ where: { taxId: TEST_COMPANY_TAX_ID } });
+    if (!testCompany) {
+      testCompany = await Company.create({
+        name: "Test Company",
+        taxId: TEST_COMPANY_TAX_ID,
+        address: "1 Test Lane",
+        city: "Testville",
+        postalCode: "00000",
+        country: "Testland",
+      });
+    }
+    finalCompanyId = testCompany.id;
+  }
+  const hashRounds = 10;
+  const hashedPassword = await bcrypt.hash(password, hashRounds);
   const user = await User.create({
-    ...payload,
-    email,
+    email: normalizedEmail,
     password: hashedPassword,
-    role: payload.role,
-    isActive: true,
+    firstName,
+    lastName,
+    role,
+    companyId: typeof finalCompanyId !== "undefined" ? finalCompanyId : null,
   });
-
-  const company = await Company.create({
-    name: `${user.firstName} ${user.lastName} Company`,
-    taxId: `DE${Math.floor(Math.random() * 900000000) + 100000000}`,
-    address: 'Auto-generated Building 1',
-    city: 'Berlin',
-    postalCode: '10115',
-    country: 'Germany',
-    userId: user.id,
-  });
-
-  await user.update({ companyId: company.id });
-
+  if (process.env.NODE_ENV !== "production") {
+    // Defensive logging in dev/test only
+    // eslint-disable-next-line no-console
+    console.log(
+      "[authService] Registered user:",
+      normalizedEmail,
+      "role:",
+      role,
+      "companyId:",
+      user.companyId,
+    );
+  }
   return user;
 };
 
 const login = async ({ email, password }) => {
   if (!email || !password) {
-    const error = new Error('Email and password are required');
+    const error = new Error("Email and password are required");
     error.status = 400;
     throw error;
   }
 
   const normalizedEmail = normalizeEmail(email);
-  const user = await User.scope('withPassword').findOne({ where: { email: normalizedEmail } });
 
-  if (!user || !user.isActive || user.isAnonymized) {
-    const error = new Error('Invalid credentials');
+  const user = await User.scope("withPassword").findOne({
+    where: { email: normalizedEmail },
+  });
+
+  if (!user || user.isActive === false) {
+    const error = new Error("Invalid credentials");
     error.status = 401;
     throw error;
   }
 
-  const isValid = await bcrypt.compare(password, user.password || '');
+  const isValid = await bcrypt.compare(password, user.password || "");
   if (!isValid) {
-    const error = new Error('Invalid credentials');
+    const error = new Error("Invalid credentials");
     error.status = 401;
     throw error;
   }
@@ -78,39 +114,47 @@ const login = async ({ email, password }) => {
   const safeUser = user.toJSON();
   delete safeUser.password;
 
-  const activeTokenService = require('./activeTokenService');
+  const activeTokenService = require("./activeTokenService");
 
   const tokenId = uuidv4();
   const token = buildToken(
-    { userId: user.id, role: user.role, companyId: user.companyId },
+    {
+      userId: user.id,
+      role: user.role,
+      companyId: user.companyId,
+    },
     tokenId,
   );
-  // Track active token
+
   await activeTokenService.addToken({
     userId: user.id,
     jti: tokenId,
     expiresAt: new Date(Date.now() + 60 * 60 * 1000),
   });
 
-  // Generate refresh token
   const refreshTokenId = uuidv4();
-  const refreshToken = jwt.sign({ userId: user.id, type: 'refresh' }, getJwtSecret(), {
-    expiresIn: '7d',
+  const refreshToken = jwt.sign({ userId: user.id, type: "refresh" }, getJwtSecret(), {
+    expiresIn: "7d",
     jwtid: refreshTokenId,
   });
+
   await activeTokenService.addToken({
     userId: user.id,
     jti: refreshTokenId,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   });
 
-  return { token, refreshToken, user: safeUser };
+  return {
+    token,
+    refreshToken,
+    user: safeUser,
+  };
 };
 
 const getProfile = async (userId) => {
   const user = await User.findByPk(userId);
   if (!user) {
-    const error = new Error('User not found');
+    const error = new Error("User not found");
     error.status = 404;
     throw error;
   }
