@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import CompanySelector from './CompanySelector';
 import { useLoadCompanies } from '../hooks/useLoadCompanies';
 import { useCompany } from '../context/CompanyContext';
@@ -62,6 +63,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Remove local state for searchResults and showSearchResults
+  const navigate = useNavigate();
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
   const searchRef = useRef(null);
@@ -214,7 +216,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
         <div className="flex justify-between items-center h-16">
           {/* Logo and Search */}
           <div className="flex items-center gap-6 min-w-fit">
-            <a href="/dashboard" className="flex items-center">
+            <Link to="/dashboard" className="flex items-center">
               <img
                 src="/brand/logo.png"
                 alt="SmartAccounting Logo"
@@ -222,7 +224,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                 style={{ maxHeight: 40 }}
                 loading="eager"
               />
-            </a>
+            </Link>
           </div>
           {/* Enhanced Search with autocomplete */}
           <div className="flex-1 max-w-2xl relative" ref={searchRef}>
@@ -234,7 +236,12 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                // onFocus: showSearchResults is derived
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredSearchResults[0]) {
+                    navigate(filteredSearchResults[0].href);
+                    setSearchQuery('');
+                  }
+                }}
                 className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white/80 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800/80 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 transition-all duration-200"
                 placeholder={t('search.enhanced_placeholder')}
               />
@@ -253,9 +260,9 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     Search Results
                   </div>
                   {filteredSearchResults.map((result, index) => (
-                    <a
+                    <Link
                       key={index}
-                      href={result.href}
+                      to={result.href}
                       className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
                       onClick={() => setSearchQuery('')}
                     >
@@ -270,7 +277,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                           {result.subtitle}
                         </p>
                       </div>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -278,10 +285,12 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
           </div>
 
           {/* Company Selector (if companies exist) */}
-          {companies && companies.length > 0 && (
+          {companies?.length > 0 ? (
             <div className="mr-4">
               <CompanySelector />
             </div>
+          ) : (
+            <span className="text-xs text-gray-400">No company</span>
           )}
           {/* Right side enhanced actions */}
           <div className="flex items-center space-x-4">
@@ -389,15 +398,22 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                 <p className="text-xs text-gray-500 dark:text-gray-500">
                                   {notification.time}
                                 </p>
-                                {notification.action && (
-                                  <a
-                                    href={notification.href}
+                                {notification.action && notification.href ? (
+                                  <Link
+                                    to={notification.href}
                                     className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
                                     onClick={() => setIsNotificationsOpen(false)}
                                   >
                                     {notification.action} →
-                                  </a>
-                                )}
+                                  </Link>
+                                ) : notification.action ? (
+                                  <button
+                                    disabled
+                                    className="text-xs opacity-50 cursor-not-allowed"
+                                  >
+                                    {notification.action}
+                                  </button>
+                                ) : null}
                               </div>
                             </div>
                             {!notification.read && (
@@ -419,10 +435,10 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                   {notifications.length > 0 && (
                     <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-between items-center">
-                        <button className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
+                        <button disabled className="text-sm opacity-50 cursor-not-allowed">
                           Mark all as read
                         </button>
-                        <button className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium">
+                        <button disabled className="text-sm opacity-50 cursor-not-allowed">
                           {t('notifications.view_all')} →
                         </button>
                       </div>
@@ -481,17 +497,26 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                   </div>
 
                   <div className="py-2">
-                    <button className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">
+                    <button
+                      disabled
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
+                    >
                       <UserCircleIcon className="h-4 w-4 mr-3" />
                       {t('profile.view')}
                       <span className="ml-auto text-xs text-gray-400">⌘P</span>
                     </button>
-                    <button className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">
+                    <button
+                      disabled
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
+                    >
                       <Cog6ToothIcon className="h-4 w-4 mr-3" />
                       {t('settings.title')}
                       <span className="ml-auto text-xs text-gray-400">⌘,</span>
                     </button>
-                    <button className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">
+                    <button
+                      disabled
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
+                    >
                       <BookmarkIcon className="h-4 w-4 mr-3" />
                       Bookmarks
                     </button>
