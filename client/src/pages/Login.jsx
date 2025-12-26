@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -6,17 +6,12 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import Footer from '../components/Footer';
 import RateLimitBanner from '../components/RateLimitBanner';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, loading, rateLimit, rateLimitMessage } = useAuth();
   const loginDisabled = import.meta.env.VITE_DISABLE_LOGIN === 'true';
-  useEffect(() => {
-    if (loginDisabled) {
-      window.location.href = '/dashboard';
-    }
-  }, [loginDisabled]);
-
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -67,7 +62,23 @@ const Login = () => {
   };
 
   if (loginDisabled) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
+        <EmptyState
+          title="Login temporarily paused"
+          description="Sign-ins are disabled right now while we work on the next secure session rollout. Please try again shortly or contact support."
+          action={
+            <Button
+              variant="primary"
+              disabled
+              className="cursor-not-allowed uppercase tracking-widest"
+            >
+              Coming soon
+            </Button>
+          }
+        />
+      </div>
+    );
   }
 
   if (loading) {

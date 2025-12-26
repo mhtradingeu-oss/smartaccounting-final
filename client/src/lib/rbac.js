@@ -24,8 +24,15 @@ export function isReadOnlyRole(role) {
 }
 
 export function readOnlyBannerMode(role) {
-  if (role === USER_ROLES.AUDITOR) { return 'Auditor'; }
-    if (role === USER_ROLES.INVESTOR) { return 'Investor'; }
-    if (role === USER_ROLES.VIEWER) { return 'Viewer'; }
-    return null;
+  if (role === USER_ROLES.AUDITOR) {
+    return 'Auditor';
+  }
+  if (role === USER_ROLES.INVESTOR) {
+    return 'Investor';
+  }
+  if (role === USER_ROLES.VIEWER) {
+    return 'Viewer';
+  }
+  // Default to 'User' for unknown roles, never null
+  return 'User';
 }

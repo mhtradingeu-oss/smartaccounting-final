@@ -1,5 +1,8 @@
 import React from 'react';
-import { ArrowUpIcon as ArrowTrendingUpIcon, ArrowDownIcon as ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowUpIcon as ArrowTrendingUpIcon,
+  ArrowDownIcon as ArrowTrendingDownIcon,
+} from '@heroicons/react/24/outline';
 import EnhancedCard from './EnhancedCard';
 
 const MetricCard = ({
@@ -16,7 +19,9 @@ const MetricCard = ({
   className = '',
 }) => {
   const formatValue = (val) => {
-    if (loading) {return '---';}
+    if (loading) {
+      return '---';
+    }
     if (typeof val === 'number') {
       return val.toLocaleString();
     }
@@ -40,7 +45,8 @@ const MetricCard = ({
     } else if (changeType === 'negative') {
       return <ArrowTrendingDownIcon className="h-4 w-4" />;
     }
-    return null;
+    // Visually hidden for accessibility, avoids blank render
+    return <span className="sr-only">No trend</span>;
   };
 
   return (
@@ -55,9 +61,7 @@ const MetricCard = ({
           <div className="flex items-center space-x-3">
             {icon && (
               <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                <div className="h-6 w-6 text-primary-600 dark:text-primary-400">
-                  {icon}
-                </div>
+                <div className="h-6 w-6 text-primary-600 dark:text-primary-400">{icon}</div>
               </div>
             )}
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
@@ -66,7 +70,9 @@ const MetricCard = ({
           </div>
 
           {change && (
-            <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getChangeColor()}`}>
+            <div
+              className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getChangeColor()}`}
+            >
               {getTrendIcon()}
               <span>{change}</span>
             </div>
@@ -76,21 +82,17 @@ const MetricCard = ({
         {/* Main Value */}
         <div className="mb-2">
           <div className="text-3xl font-bold text-gray-900 dark:text-white leading-none">
-            {prefix}{formatValue(value)}{suffix}
+            {prefix}
+            {formatValue(value)}
+            {suffix}
           </div>
         </div>
 
         {/* Description and Trend */}
         {(description || trend) && (
           <div className="flex items-center justify-between text-sm">
-            {description && (
-              <p className="text-gray-500 dark:text-gray-400">{description}</p>
-            )}
-            {trend && (
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                {trend}
-              </div>
-            )}
+            {description && <p className="text-gray-500 dark:text-gray-400">{description}</p>}
+            {trend && <div className="text-xs text-gray-400 dark:text-gray-500">{trend}</div>}
           </div>
         )}
       </div>

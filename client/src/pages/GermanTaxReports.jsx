@@ -15,7 +15,6 @@ import { APP_VERSION } from '../lib/constants';
 import { useCompany } from '../context/CompanyContext';
 import api, { formatApiError } from '../services/api';
 
-
 const GermanTaxReports = () => {
   // All hooks must be called before any conditional return
   const { t } = useTranslation();
@@ -76,7 +75,10 @@ const GermanTaxReports = () => {
           return;
         }
 
-        if (fetchError.response?.status === 501 && fetchError.response.data?.status === 'disabled') {
+        if (
+          fetchError.response?.status === 501 &&
+          fetchError.response.data?.status === 'disabled'
+        ) {
           const version = fetchError.response.data?.version || APP_VERSION;
           const feature = fetchError.response.data?.feature || 'VAT/tax reporting';
           setAvailability({
@@ -108,27 +110,31 @@ const GermanTaxReports = () => {
 
   const renderStatusCallout = () => {
     if (availability.status === 'idle' || availability.status === 'available') {
-      return null;
+      // Visually hidden for accessibility, avoids blank render
+      return <div className="sr-only">No status callout</div>;
     }
 
     const statusDetail = availability.detail || {};
     const statusConfig = {
       checking: {
         title: 'Checking availability',
-        description: 'Verifying the German tax reporting service. No data is loaded until the backend is ready.',
-        icon: <ChartBarIcon className="h-5 w-5" />, 
+        description:
+          'Verifying the German tax reporting service. No data is loaded until the backend is ready.',
+        icon: <ChartBarIcon className="h-5 w-5" />,
         badge: 'bg-blue-50 text-blue-600',
       },
       disabled: {
         title: 'Not available yet',
         description: statusDetail.message || 'German tax reporting is disabled for this release.',
-        icon: <ExclamationTriangleIcon className="h-5 w-5" />, 
+        icon: <ExclamationTriangleIcon className="h-5 w-5" />,
         badge: 'bg-yellow-50 text-yellow-600',
       },
       error: {
         title: 'Service unavailable',
-        description: statusDetail.message || 'We cannot reach the tax service right now. Please try again later.',
-        icon: <ExclamationTriangleIcon className="h-5 w-5" />, 
+        description:
+          statusDetail.message ||
+          'We cannot reach the tax service right now. Please try again later.',
+        icon: <ExclamationTriangleIcon className="h-5 w-5" />,
         badge: 'bg-red-50 text-red-600',
       },
     };
@@ -138,9 +144,7 @@ const GermanTaxReports = () => {
     return (
       <Card className="mb-6 border-0 shadow">
         <div className="flex items-start gap-4 p-6">
-          <div className={`rounded-full p-2 ${config.badge}`}>
-            {config.icon}
-          </div>
+          <div className={`rounded-full p-2 ${config.badge}`}>{config.icon}</div>
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">Feature status</p>
             <h2 className="text-lg font-semibold text-gray-900 mt-1">German tax reporting</h2>
@@ -183,19 +187,22 @@ const GermanTaxReports = () => {
 
   const selectedReport = reportTypes.find((type) => type.id === reportType);
   const selectedPeriodLabel = periods.find((period) => period.id === selectedPeriod)?.name;
-  const tooltipText = availability.status === 'disabled'
-    ? 'German tax reporting is disabled in v0.1 and will return in a later release.'
-    : availability.status === 'checking'
-      ? 'We are verifying availability with the backend.'
-      : availability.status === 'error'
-        ? 'Tax reporting is currently unavailable.'
-        : undefined;
+  const tooltipText =
+    availability.status === 'disabled'
+      ? 'German tax reporting is disabled in v0.1 and will return in a later release.'
+      : availability.status === 'checking'
+        ? 'We are verifying availability with the backend.'
+        : availability.status === 'error'
+          ? 'Tax reporting is currently unavailable.'
+          : undefined;
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('germanTaxReports')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t('germanTaxReports')}
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {t('germanTaxReportsDescription')}
           </p>
@@ -229,9 +236,7 @@ const GermanTaxReports = () => {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {type.name}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {type.description}
-                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{type.description}</p>
                     </div>
                   </label>
                 ))}
@@ -260,9 +265,7 @@ const GermanTaxReports = () => {
                       disabled={actionDisabled}
                       title={tooltipText}
                     />
-                    <span className="text-sm text-gray-900 dark:text-white">
-                      {period.name}
-                    </span>
+                    <span className="text-sm text-gray-900 dark:text-white">{period.name}</span>
                   </label>
                 ))}
               </div>
@@ -276,7 +279,9 @@ const GermanTaxReports = () => {
                     <input
                       type="date"
                       value={customRange.start}
-                      onChange={(event) => setCustomRange((prev) => ({ ...prev, start: event.target.value }))}
+                      onChange={(event) =>
+                        setCustomRange((prev) => ({ ...prev, start: event.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
                       disabled={actionDisabled}
                       title={tooltipText}
@@ -289,7 +294,9 @@ const GermanTaxReports = () => {
                     <input
                       type="date"
                       value={customRange.end}
-                      onChange={(event) => setCustomRange((prev) => ({ ...prev, end: event.target.value }))}
+                      onChange={(event) =>
+                        setCustomRange((prev) => ({ ...prev, end: event.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
                       disabled={actionDisabled}
                       title={tooltipText}
@@ -344,7 +351,8 @@ const GermanTaxReports = () => {
               {t('recentReports')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Tax reports will populate here once German tax reporting is live. Nothing is stored or sent until the service is enabled.
+              Tax reports will populate here once German tax reporting is live. Nothing is stored or
+              sent until the service is enabled.
             </p>
           </div>
         </Card>

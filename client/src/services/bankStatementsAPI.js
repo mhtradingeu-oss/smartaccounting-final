@@ -1,13 +1,19 @@
-
 import api from './api';
 import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 
 const inferFormat = (filename = '') => {
   const ext = filename.toLowerCase().split('.').pop();
-  if (ext === 'csv' || ext === 'txt') {return 'CSV';}
-  if (ext === 'mt940') {return 'MT940';}
-  if (ext === 'xml' || ext === 'camt053') {return 'CAMT053';}
-  return null;
+  if (ext === 'csv' || ext === 'txt') {
+    return 'CSV';
+  }
+  if (ext === 'mt940') {
+    return 'MT940';
+  }
+  if (ext === 'xml' || ext === 'camt053') {
+    return 'CAMT053';
+  }
+  // No format matched; return undefined for JS convention
+  return undefined;
 };
 
 const unwrapData = (response) => response?.data ?? response;
@@ -41,7 +47,11 @@ export const bankStatementsAPI = {
     return unwrapData(response);
   },
   updateTransaction: async (transactionId, payload = {}, config = {}) => {
-    const response = await api.put(`/bank-statements/transactions/${transactionId}/categorize`, payload, config);
+    const response = await api.put(
+      `/bank-statements/transactions/${transactionId}/categorize`,
+      payload,
+      config,
+    );
     return unwrapData(response);
   },
 };

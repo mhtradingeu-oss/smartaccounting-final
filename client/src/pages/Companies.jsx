@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -23,6 +24,7 @@ const initialFormState = {
 const Companies = () => {
   const { companies, setCompanies, activeCompany, switchCompany } = useCompany();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [formState, setFormState] = useState(initialFormState);
@@ -138,8 +140,11 @@ const Companies = () => {
       <EmptyState
         title="No companies found"
         description="No companies have been created yet."
-        actionText="Create company"
-        action={() => window.location.assign('/companies/create')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies/create')}>
+            Create company
+          </Button>
+        }
       />
     );
   }
@@ -150,8 +155,11 @@ const Companies = () => {
       <EmptyState
         title="No active company"
         description="Select or create a company to manage details."
-        actionText="Select company"
-        action={() => window.location.assign('/companies')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }

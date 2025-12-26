@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ChartBarIcon,
   CurrencyEuroIcon,
@@ -8,6 +8,7 @@ import {
   BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { dashboardAPI } from '../services/dashboardAPI';
@@ -65,6 +66,7 @@ const statusLabel = (status) => {
 const Analytics = () => {
   const { activeCompany } = useCompany();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [analyticsState, setAnalyticsState] = useState(createInitialState);
   const companyId = activeCompany?.id;
 
@@ -173,8 +175,11 @@ const Analytics = () => {
       <EmptyState
         title="No company selected"
         description="Analytics data is scoped to the active company. Select one from the company menu before viewing dashboards."
-        actionText="Select company"
-        action={() => window.location.assign('/companies')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }
@@ -239,8 +244,11 @@ const Analytics = () => {
       <EmptyState
         title="No analytics data"
         description="There is no analytics data to display yet. Invoice data will appear here once documents are processed for this company."
-        actionText="Refresh"
-        action={fetchAnalytics}
+        action={
+          <Button variant="primary" onClick={fetchAnalytics}>
+            Refresh
+          </Button>
+        }
       />
     );
   }

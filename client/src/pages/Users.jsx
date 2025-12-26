@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -25,6 +26,7 @@ const roleOptions = [
 const Users = () => {
   const { activeCompany } = useCompany();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,8 +108,11 @@ const Users = () => {
       <EmptyState
         title="No active company"
         description="Select a company to view users."
-        actionText="Select company"
-        action={() => window.location.assign('/companies')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }
@@ -168,20 +173,15 @@ const Users = () => {
       )}
 
       {users.length === 0 ? (
-        <EmptyState
-          title="No users found"
-          description="No users have been added to this company yet."
-          actionText="Invite user"
-          action={() => {}}
-          // Hide invite action for read-only, but keep button visible and disabled
-          actionComponent={
-            <PermissionGuard action="create" role={currentUser?.role} showDisabled>
-              <Button onClick={() => window.location.assign('/users/invite')}>
-                Invite user
-              </Button>
-            </PermissionGuard>
-          }
-        />
+      <EmptyState
+        title="No users found"
+        description="No users have been added to this company yet."
+        action={
+          <PermissionGuard action="create" role={currentUser?.role}>
+            <Button onClick={() => navigate('/users/invite')}>Invite user</Button>
+          </PermissionGuard>
+        }
+      />
       ) : (
         <Card>
           <div className="overflow-x-auto">

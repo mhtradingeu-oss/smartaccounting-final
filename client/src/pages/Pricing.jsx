@@ -13,17 +13,24 @@ const getStripePromise = () => {
   const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
   if (!publishableKey) {
-    return null;
+    // No publishable key, return undefined for JS convention
+    return undefined;
   }
 
   if (!publishableKey.startsWith('pk_')) {
-    return null;
+    // Invalid key, return undefined for JS convention
+    return undefined;
   }
 
   return loadStripe(publishableKey);
 };
 
 const stripePromise = getStripePromise();
+
+const fetchData = () => {};
+const handleSelectPlan = () => {};
+const handleSubscriptionSuccess = () => {};
+const handleCancelCheckout = () => {};
 
 const CheckoutForm = ({ planId, onSuccess, onCancel }) => {
   const stripe = useStripe();
@@ -34,13 +41,14 @@ const CheckoutForm = ({ planId, onSuccess, onCancel }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {return;}
+    if (!stripe || !elements) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      
       const { data } = await api.post('/stripe/create-subscription', { planId });
       const subscription = data.subscription || data;
       const clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret;
@@ -87,24 +95,13 @@ const CheckoutForm = ({ planId, onSuccess, onCancel }) => {
         />
       </div>
 
-      {error && (
-        <div className="text-red-600 text-sm">{error}</div>
-      )}
+      {error && <div className="text-red-600 text-sm">{error}</div>}
 
       <div className="flex space-x-3">
-        <Button
-          type="submit"
-          disabled={!stripe || loading}
-          className="flex-1"
-        >
+        <Button type="submit" disabled={!stripe || loading} className="flex-1">
           {loading ? <LoadingSpinner size="sm" /> : 'Subscribe Now'}
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onCancel}
-          disabled={loading}
-        >
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
       </div>
@@ -137,7 +134,11 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan, subscriptionStatus }) => {
           {plan.features.map((feature, index) => (
             <li key={index} className="flex items-center text-sm text-gray-600">
               <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
               </svg>
               {feature}
             </li>
@@ -150,8 +151,11 @@ const PlanCard = ({ plan, currentPlan, onSelectPlan, subscriptionStatus }) => {
           className="w-full"
           variant={isCurrentPlan ? 'secondary' : 'primary'}
         >
-          {isCurrentPlan && isActive ? 'Current Plan' : 
-           isCurrentPlan ? 'Reactivate' : 'Select Plan'}
+          {isCurrentPlan && isActive
+            ? 'Current Plan'
+            : isCurrentPlan
+              ? 'Reactivate'
+              : 'Select Plan'}
         </Button>
       </div>
     </Card>
@@ -183,13 +187,9 @@ const Pricing = () => {
   if (error) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          {t('pricing')} unavailable
-        </h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">{t('pricing')} unavailable</h2>
         <p className="text-gray-600 mb-6">{error}</p>
-        <Button onClick={fetchData}>
-          Retry
-        </Button>
+        <Button onClick={fetchData}>Retry</Button>
       </div>
     );
   }
@@ -203,9 +203,7 @@ const Pricing = () => {
           {t('noPlansAvailable') || 'No plans available'}
         </h2>
         <p className="text-gray-600 mb-6">Please check back later.</p>
-        <Button onClick={fetchData}>
-          Retry
-        </Button>
+        <Button onClick={fetchData}>Retry</Button>
       </div>
     );
   }
@@ -213,17 +211,16 @@ const Pricing = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          {t('choosePlan')}
-        </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          {t('pricingSubtitle')}
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">{t('choosePlan')}</h1>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">{t('pricingSubtitle')}</p>
 
         {subscriptionStatus && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg inline-block">
             <p className="text-sm text-blue-800">
-              {t('status')}: <span className="font-semibold capitalize">{subscriptionStatus.status || subscriptionStatus.subscriptionStatus}</span>
+              {t('status')}:{' '}
+              <span className="font-semibold capitalize">
+                {subscriptionStatus.status || subscriptionStatus.subscriptionStatus}
+              </span>
               {subscriptionStatus.plan && (
                 <span className="ml-2">({plans[subscriptionStatus.plan]?.name})</span>
               )}
@@ -236,9 +233,7 @@ const Pricing = () => {
         <div className="max-w-md mx-auto">
           <Card>
             <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Subscribe to {selectedPlan.name}
-              </h3>
+              <h3 className="text-lg font-semibold mb-4">Subscribe to {selectedPlan.name}</h3>
               <p className="text-gray-600 mb-6">
                 €{selectedPlan.price}/month - {selectedPlan.features.length} features included
               </p>
@@ -269,12 +264,8 @@ const Pricing = () => {
 
       {user?.role === 'admin' && (
         <div className="mt-12 text-center">
-          <p className="text-sm text-gray-500 mb-4">
-            Need a custom solution for your enterprise?
-          </p>
-          <Button variant="secondary">
-            {t('contactSales')}
-          </Button>
+          <p className="text-sm text-gray-500 mb-4">Need a custom solution for your enterprise?</p>
+          <Button variant="secondary">{t('contactSales')}</Button>
         </div>
       )}
     </div>

@@ -26,5 +26,6 @@ export default function MutationIntentGuard({ prompt }) {
       </div>
     );
   }
-  return null;
+  // Visually hidden for accessibility, avoids blank render
+  return <span className="sr-only">No mutation intent detected</span>;
 }

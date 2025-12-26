@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -47,6 +47,7 @@ const formatCurrency = (value, currency = 'EUR') => {
 const Invoices = () => {
   const { activeCompany } = useCompany();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -123,8 +124,11 @@ const Invoices = () => {
       <EmptyState
         title="Select a company"
         description="Invoices are scoped per company. Choose an active company before continuing."
-        actionText="Select company"
-        action={() => window.location.assign('/companies')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }
@@ -210,8 +214,16 @@ const Invoices = () => {
             <EmptyState
               title="No invoices yet"
               description="Create your first invoice or try a different filter."
-              actionText="Create invoice"
-              action={() => window.location.assign('/invoices/create')}
+              action={
+                <PermissionGuard action="invoice.create" role={user?.role}>
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate('/invoices/create')}
+                  >
+                    Create invoice
+                  </Button>
+                </PermissionGuard>
+              }
             />
           ) : (
             <div className="space-y-4">

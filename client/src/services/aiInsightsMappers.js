@@ -19,7 +19,8 @@ export function mapInvoiceToAIInsight(invoice) {
       },
     };
   }
-  return null;
+  // No mapping found; return undefined for JS convention
+  return undefined;
 }
 
 // Example: Map audit log to AI insight (advisory, explainable, field-referenced)
@@ -37,7 +38,8 @@ export function mapAuditLogToAIInsight(log) {
       },
     };
   }
-  return null;
+  // No mapping found; return undefined for JS convention
+  return undefined;
 }
 
 // Add more mappers as needed for expenses, VAT, etc.

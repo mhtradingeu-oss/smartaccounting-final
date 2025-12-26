@@ -79,8 +79,13 @@ const Expenses = () => {
       <EmptyState
         title="No expenses yet"
         description="Create your first expense to get started."
-        actionLabel="Create Expense"
-        actionHref="/expenses/create"
+        action={
+          <PermissionGuard action="expense.create" role={user?.role}>
+            <Link to="/expenses/create">
+              <Button variant="primary">Create Expense</Button>
+            </Link>
+          </PermissionGuard>
+        }
       />
     );
   }

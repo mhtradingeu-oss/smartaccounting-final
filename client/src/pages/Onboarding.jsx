@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { companiesAPI } from '../services/companiesAPI';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Card } from '../components/ui/Card';
@@ -9,7 +9,6 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasCompany, setHasCompany] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -23,7 +22,6 @@ export default function Onboarding() {
           : data?.companies || [];
         if (companies.length > 0) {
           setHasCompany(true);
-          navigate('/dashboard', { replace: true });
         } else {
           setHasCompany(false);
         }
@@ -35,18 +33,33 @@ export default function Onboarding() {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, []);
 
-  if (loading) {return <div className="py-12"><Skeleton className="h-8 w-1/3 mb-4" /><Skeleton className="h-32 w-full" /></div>;}
-  if (error) {return (
-    <Card className="my-8">
-      <div className="flex flex-col items-center">
-        <span className="text-red-600 font-semibold mb-2">{error}</span>
-        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+  if (loading) {
+    return (
+      <div className="py-12">
+        <Skeleton className="h-8 w-1/3 mb-4" />
+        <Skeleton className="h-32 w-full" />
       </div>
-    </Card>
-  );}
-  if (hasCompany) {return null;}
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="my-8">
+        <div className="flex flex-col items-center">
+          <span className="text-red-600 font-semibold mb-2">{error}</span>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  if (hasCompany) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="max-w-xl mx-auto py-12 px-4">

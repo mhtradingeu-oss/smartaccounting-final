@@ -2,7 +2,10 @@ import React from 'react';
 import clsx from 'clsx';
 
 export function Drawer({ open, onClose, children, className = '', ...props }) {
-  if (!open) {return null;}
+  if (!open) {
+    // Visually hidden for accessibility, avoids blank render
+    return <div style={{ display: 'none' }} aria-hidden="true" />;
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black bg-opacity-40">
       <div

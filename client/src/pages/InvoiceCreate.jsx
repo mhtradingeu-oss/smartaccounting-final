@@ -46,8 +46,11 @@ const InvoiceCreate = () => {
       <EmptyState
         title="Select a company"
         description="Choose an active company before creating invoices."
-        actionText="Select company"
-        action={() => navigate('/companies')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }

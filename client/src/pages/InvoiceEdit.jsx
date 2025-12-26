@@ -116,8 +116,11 @@ const InvoiceEdit = () => {
       <EmptyState
         title="No active company"
         description="Select a company before editing invoices."
-        actionText="Select company"
-        action={() => navigate('/companies')}
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }

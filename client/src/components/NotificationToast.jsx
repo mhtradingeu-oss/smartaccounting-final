@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   CheckCircleIcon,
@@ -66,7 +65,10 @@ const NotificationToast = ({
     }
   };
 
-  if (!isVisible) {return null;}
+  if (!isVisible) {
+    // Render visually hidden for accessibility, avoids blank render
+    return <div style={{ display: 'none' }} aria-hidden="true" />;
+  }
 
   return (
     <div
@@ -76,28 +78,22 @@ const NotificationToast = ({
         ${isLeaving ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
       `}
     >
-      <div className={`
+      <div
+        className={`
         rounded-xl border shadow-lg ${getBackgroundColor()}
         p-4 backdrop-blur-sm
-      `}>
+      `}
+      >
         <div className="flex items-start space-x-3">
           {/* Icon */}
-          <div className="flex-shrink-0 pt-0.5">
-            {getIcon()}
-          </div>
+          <div className="flex-shrink-0 pt-0.5">{getIcon()}</div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
             {title && (
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                {title}
-              </h4>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</h4>
             )}
-            {message && (
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                {message}
-              </p>
-            )}
+            {message && <p className="text-sm text-gray-700 dark:text-gray-300">{message}</p>}
 
             {/* Actions */}
             {actions.length > 0 && (

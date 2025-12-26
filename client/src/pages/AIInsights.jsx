@@ -50,12 +50,15 @@ const AIInsights = () => {
   }
   if (!insights.length) {
     return (
-    <EmptyState 
-      title="No AI insights available yet."
-      description="AI has not generated any suggestions for your data yet."
-      actionText="Refresh"
-      action={() => window.location.reload()}
-    />
+      <EmptyState
+        title="No AI insights available yet."
+        description="AI has not generated any suggestions for your data yet."
+        action={
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Refresh
+          </Button>
+        }
+      />
     );
   }
 

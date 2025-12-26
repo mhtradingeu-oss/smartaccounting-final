@@ -2,6 +2,7 @@ import { logger } from '../lib/logger';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FEATURE_FLAGS } from '../lib/constants';
 import api from '../services/api';
@@ -12,6 +13,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 const Billing = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const isBillingDisabled = !FEATURE_FLAGS.STRIPE_BILLING.enabled;
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [billingHistory, setBillingHistory] = useState([]);
@@ -158,7 +160,7 @@ const Billing = () => {
             {statusValue === 'none' ? (
               <div className="text-center py-4">
                 <p className="text-gray-600 mb-4">{t('noActiveSubscription')}</p>
-                <Button onClick={() => window.location.href = '/pricing'}>
+                <Button onClick={() => navigate('/pricing')}>
                   {t('choosePlanButton')}
                 </Button>
               </div>
@@ -223,7 +225,7 @@ const Billing = () => {
                 variant="primary"
                 size="sm"
                 className="w-full"
-                onClick={() => window.location.href = '/pricing'}
+                onClick={() => navigate('/pricing')}
               >
                 View All Plans
               </Button>
@@ -232,9 +234,10 @@ const Billing = () => {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="w-full"
+                  className="w-full opacity-70 cursor-not-allowed"
+                  disabled
                 >
-                  Update Payment Method
+                  Update Payment Method (Coming soon)
                 </Button>
               )}
               
