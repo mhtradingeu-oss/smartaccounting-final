@@ -1,19 +1,48 @@
-
+version: "3.9"
 
 services:
+  db:
+    image: postgres:16
+    container_name: smartaccounting-db
+
+    environment:
+      POSTGRES_DB: smartaccounting
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
   backend:
     build: .
     container_name: smartaccounting-backend
+
     env_file:
       - .env.prod
+
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting
+
+    depends_on:
+      db:
+        condition: service_healthy
 
     ports:
       - "5001:5000"
 
-    environment:
-      NODE_ENV: production
-      BUILD_TIME: ${BUILD_TIME:-}
-      GIT_COMMIT: ${GIT_COMMIT:-}
+    volumes:
+      - ./database:/usr/src/app/database
+      - ./uploads:/usr/src/app/uploads
+      - ./logs:/usr/src/app/logs
 
     restart: unless-stopped
 
@@ -22,13 +51,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
-    volumes:
-      # ثبات البيانات (مهم جدًا)
-      - ./database:/usr/src/app/database
-      - ./uploads:/usr/src/app/uploads
-      - ./logs:/usr/src/app/logs
-
 
   frontend:
     build: ./client
@@ -41,8 +63,7 @@ services:
     ports:
       - "8080:80"
 
-    volumes:
-        - ./database:/usr/src/app/database
-        - ./uploads:/usr/src/app/uploads
+    restart: unless-stopped
 
-
+volumes:
+  pgdata:
