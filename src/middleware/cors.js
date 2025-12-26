@@ -32,7 +32,7 @@ const corsOptions = {
     logger.warn('Blocked CORS origin:', origin);
     return callback(null, false);
   },
-  credentials: false,
+  credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [

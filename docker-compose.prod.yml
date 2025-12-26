@@ -55,6 +55,8 @@ services:
   frontend:
     build: ./client
     container_name: smartaccounting-frontend
+    environment:
+      VITE_API_URL: http://localhost:5001/api
 
     depends_on:
       backend:

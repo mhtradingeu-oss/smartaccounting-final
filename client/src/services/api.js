@@ -3,9 +3,9 @@ import axios from 'axios';
 /**
  * API BASE URL
  * - Production: /api (Nginx proxy)
- * - Dev: VITE_API_URL (optional)
+ * - Dev: VITE_API_URL (required for docker dev)
  */
-export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

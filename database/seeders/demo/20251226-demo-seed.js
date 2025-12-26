@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
  */
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
+  up: async (queryInterface, _Sequelize) => {
     // === SAFETY GUARDS ===
     if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
       throw new Error('DEMO seeder will NOT run in production unless DEMO_MODE=true');
@@ -108,11 +108,6 @@ module.exports = {
       'SELECT id FROM users WHERE email = :email LIMIT 1;',
       { replacements: { email: 'demo-accountant@demo.com' } },
     );
-    const [[viewerUser]] = await queryInterface.sequelize.query(
-      'SELECT id FROM users WHERE email = :email LIMIT 1;',
-      { replacements: { email: 'demo-viewer@demo.com' } },
-    );
-
     // === DEMO INVOICES ===
     const demoInvoices = [
       {
@@ -223,7 +218,7 @@ module.exports = {
     console.log('[DEMO SEED] Demo data seeding complete.');
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     // Only allow down in demo mode
     if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
       throw new Error('DEMO seeder will NOT run in production unless DEMO_MODE=true');
