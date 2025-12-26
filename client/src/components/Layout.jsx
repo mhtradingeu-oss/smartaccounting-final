@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
-import Footer from './Footer';
 
+import Footer from './Footer';
 
 const getInitialDarkMode = () => {
   const savedTheme = localStorage.getItem('theme');
@@ -19,7 +18,7 @@ const getInitialSidebarCollapsed = () => {
   return savedSidebarState === 'true';
 };
 
-const Layout = () => {
+const Layout = ({ children }) => {
   const { status } = useAuth();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(getInitialSidebarCollapsed);
@@ -61,7 +60,7 @@ const Layout = () => {
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
-    
+
     if (newMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -84,17 +83,16 @@ const Layout = () => {
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <Sidebar 
-        isCollapsed={isSidebarCollapsed} 
-        onToggleCollapse={toggleSidebar}
-      />
+      <Sidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={toggleSidebar} />
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-        isSidebarCollapsed ? 'main-collapsed' : 'main-expanded'
-      }`}>
+      <div
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'main-collapsed' : 'main-expanded'
+        }`}
+      >
         {/* Top Bar */}
-        <TopBar 
+        <TopBar
           isDarkMode={isDarkMode}
           onToggleDarkMode={toggleDarkMode}
           isCollapsed={isSidebarCollapsed}
@@ -105,7 +103,7 @@ const Layout = () => {
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               {/* Render children if provided, else render <Outlet /> for nested routes */}
-              {typeof children !== 'undefined' && children !== null ? children : <Outlet />}
+              {children ?? <Outlet />}
             </div>
           </div>
         </main>
@@ -117,7 +115,7 @@ const Layout = () => {
 
       {/* Mobile sidebar overlay */}
       {!isSidebarCollapsed && (
-        <div 
+        <div
           className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
           onClick={toggleSidebar}
         />
