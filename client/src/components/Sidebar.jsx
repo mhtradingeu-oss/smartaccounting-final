@@ -3,7 +3,22 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useRole, roles } from '../context/RoleContext';
-import { HomeIcon, DocumentTextIcon, BanknotesIcon, DocumentChartBarIcon, CreditCardIcon, Cog6ToothIcon, ChevronLeftIcon, ChevronRightIcon, UserCircleIcon, ChartBarIcon, ShieldCheckIcon, BellIcon, BuildingOfficeIcon, UsersIcon } from '@heroicons/react/24/outline';
+import {
+  HomeIcon,
+  DocumentTextIcon,
+  BanknotesIcon,
+  DocumentChartBarIcon,
+  CreditCardIcon,
+  Cog6ToothIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  UserCircleIcon,
+  ChartBarIcon,
+  ShieldCheckIcon,
+  BellIcon,
+  BuildingOfficeIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
   DocumentTextIcon as DocumentTextIconSolid,
@@ -46,7 +61,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     },
   ];
 
-  const systemNavigation = [];
+  // Set to null to avoid rendering empty section
+  const systemNavigation = null;
 
   // Role-based navigation filtering
   const mainNavigation = [
@@ -63,7 +79,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       href: '/invoices',
       icon: DocumentTextIcon,
       iconSolid: DocumentTextIconSolid,
-      badge: '12',
+      badge: null, // No static badge in production
       description: 'Create & Manage Invoices',
     },
     {
@@ -74,33 +90,41 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       badge: null,
       description: 'Bank Transactions',
     },
-    ...(FEATURE_FLAGS.GERMAN_TAX.enabled ? [{
+    {
       name: t('navigation.german_tax'),
       href: '/german-tax-reports',
       icon: DocumentChartBarIcon,
       iconSolid: DocumentChartBarIconSolid,
-      badge: 'NEW',
+      badge: FEATURE_FLAGS.GERMAN_TAX.enabled ? 'NEW' : null,
       description: 'German Tax Compliance',
-    }] : []),
-    ...(FEATURE_FLAGS.STRIPE_BILLING.enabled ? [{
+      enabled: FEATURE_FLAGS.GERMAN_TAX.enabled,
+      partial: !FEATURE_FLAGS.GERMAN_TAX.enabled,
+    },
+    {
       name: t('navigation.billing'),
       href: '/billing',
       icon: CreditCardIcon,
       badge: null,
       description: 'Subscription & Billing',
-    }] : []),
-    ...(FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled ? [{
+      enabled: FEATURE_FLAGS.STRIPE_BILLING.enabled,
+      partial: !FEATURE_FLAGS.STRIPE_BILLING.enabled,
+    },
+    {
       name: t('navigation.compliance'),
       href: '/compliance',
       icon: ShieldCheckIcon,
       badge: null,
       description: 'GDPR & GoBD Compliance',
-    }] : []),
+      enabled: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
+      partial: !FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
+    },
   ];
 
   // Example: Only admin/accountant can see invoices, viewers cannot
-  const filteredMainNavigation = mainNavigation.filter(item => {
-    if (item.href === '/invoices' && role === roles.VIEWER) { return false; }
+  const filteredMainNavigation = mainNavigation.filter((item) => {
+    if (item.href === '/invoices' && role === roles.VIEWER) {
+      return false;
+    }
     return true;
   });
 
@@ -108,11 +132,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const filteredAdminNavigation = (adminNavigation || []).filter(() => role === roles.ADMIN);
 
   // Example: Only admin/accountant can see managementNavigation
-  const filteredManagementNavigation = (managementNavigation || []).filter(() => role !== roles.VIEWER);
+  const filteredManagementNavigation = (managementNavigation || []).filter(
+    () => role !== roles.VIEWER,
+  );
 
   const isActiveLink = (href) => {
-    return location.pathname === href || 
-           (href !== '/dashboard' && location.pathname.startsWith(href));
+    return (
+      location.pathname === href || (href !== '/dashboard' && location.pathname.startsWith(href))
+    );
   };
 
   const renderNavItem = (item, index, sectionKey = '') => {
@@ -126,35 +153,39 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           key={`${sectionKey}-${item.href}`}
           to={item.href}
           className={`relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-            isActive 
-              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25' 
+            isActive
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800'
           }`}
           onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.href}-${index}`)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           <div className="flex items-center w-full">
-            <div className={`flex-shrink-0 ${isActive ? 'transform scale-110' : ''} transition-transform duration-200`}>
+            <div
+              className={`flex-shrink-0 ${isActive ? 'transform scale-110' : ''} transition-transform duration-200`}
+            >
               <IconComponent className="h-5 w-5" />
             </div>
             {!isCollapsed && (
               <>
-                <span className="ml-3 flex-1 text-left truncate">
-                  {item.name}
-                </span>
+                <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
                 {item.badge && (
-                  <span className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : item.badge === 'NEW' 
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                  }`}>
+                  <span
+                    className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : item.badge === 'NEW'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                    }`}
+                  >
                     {item.badge}
                   </span>
                 )}
                 {item.partial && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Coming Soon</span>
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    Coming Soon
+                  </span>
                 )}
               </>
             )}
@@ -177,11 +208,22 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           </div>
           {!isCollapsed && (
             <>
-              <span className="ml-3 flex-1 text-left truncate">
-                {item.name}
-              </span>
+              <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
               <span className="ml-2 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17v.01M12 7v4m0 4h.01M17 7a5 5 0 00-10 0v4a5 5 0 0010 0V7z" /></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 inline"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 17v.01M12 7v4m0 4h.01M17 7a5 5 0 00-10 0v4a5 5 0 0010 0V7z"
+                  />
+                </svg>
               </span>
             </>
           )}
@@ -195,12 +237,13 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       return null;
     }
 
+    const SectionIcon = icon;
     return (
       <div className="space-y-1">
         {!isCollapsed && (
           <div className="px-3 py-3">
             <div className="flex items-center space-x-2">
-              {icon && <icon className="h-4 w-4 text-gray-400" />}
+              {SectionIcon && <SectionIcon className="h-4 w-4 text-gray-400" />}
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
                 {title}
               </h3>
@@ -214,10 +257,17 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     );
   };
 
+  // Optional: Prevent rendering until user/role are loaded (avoid flicker)
+  if (!user || !role) {
+    return null;
+  }
+
   return (
-    <div className={`fixed inset-y-0 left-0 z-30 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-700 ${
-      isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'
-    }`}>
+    <div
+      className={`fixed inset-y-0 left-0 z-30 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-700 ${
+        isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'
+      }`}
+    >
       {/* Enhanced Header */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-800">
         {!isCollapsed && (
@@ -229,9 +279,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               <h1 className="text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                 SmartAccounting
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Professional Suite
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Professional Suite</p>
             </div>
           </div>
         )}
@@ -250,7 +298,9 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       </div>
 
       {/* Enhanced User Profile */}
-      <div className={`p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 ${isCollapsed ? 'px-3' : ''}`}>
+      <div
+        className={`p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 ${isCollapsed ? 'px-3' : ''}`}
+      >
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0 relative">
             <UserCircleIcon className="h-10 w-10 text-gray-400" />
@@ -261,9 +311,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               <p className="text-sm font-medium text-gray-900 truncate dark:text-white">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-gray-500 truncate dark:text-gray-400">
-                {user?.email}
-              </p>
+              <p className="text-xs text-gray-500 truncate dark:text-gray-400">{user?.email}</p>
               <div className="mt-2 flex items-center space-x-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-100 to-blue-100 text-primary-800 dark:from-primary-900/40 dark:to-blue-900/40 dark:text-primary-200">
                   {user?.subscriptionPlan || 'Professional'}
@@ -281,9 +329,18 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
         {renderSection(t('navigation.main'), filteredMainNavigation, 'main', HomeIcon)}
         {renderSection('Analytics', analyticsNavigation, 'analytics', ChartBarIcon)}
-        {filteredManagementNavigation.length > 0 && renderSection(t('navigation.management'), filteredManagementNavigation, 'management', Cog6ToothIcon)}
-        {filteredAdminNavigation.length > 0 && renderSection('Administration', filteredAdminNavigation, 'admin', ShieldCheckIcon)}
-        {renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
+        {filteredManagementNavigation.length > 0 &&
+          renderSection(
+            t('navigation.management'),
+            filteredManagementNavigation,
+            'management',
+            Cog6ToothIcon,
+          )}
+        {filteredAdminNavigation.length > 0 &&
+          renderSection('Administration', filteredAdminNavigation, 'admin', ShieldCheckIcon)}
+        {/* Only render system section if not null and has items */}
+        {systemNavigation &&
+          renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
       </nav>
 
       {/* Enhanced Footer */}
