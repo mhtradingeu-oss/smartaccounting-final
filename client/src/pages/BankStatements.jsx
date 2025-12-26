@@ -95,7 +95,10 @@ const BankStatements = () => {
         title="Select a company first"
         description="Bank statements are scoped per company. Choose an active company to continue."
         action={
-          <Link to="/companies" className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
+          <Link
+            to="/companies"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
+          >
             Select company
           </Link>
         }
@@ -141,14 +144,12 @@ const BankStatements = () => {
         </div>
       ) : statementCount === 0 ? (
         <EmptyState
-          title="No bank statements yet"
-          description="Upload a bank statement to unlock reconciliation."
+          title="No bank statements"
+          description="Upload your first bank statement"
           action={
-            <PermissionGuard action="bank:write" role={user?.role} showDisabled>
-              <Button onClick={refreshStatements} variant="primary">
-                Check again
-              </Button>
-            </PermissionGuard>
+            <Link to="/bank-statements/upload">
+              <Button variant="primary">Upload Statement</Button>
+            </Link>
           }
         />
       ) : (
@@ -161,20 +162,25 @@ const BankStatements = () => {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-gray-500">
-                    {formatDate(statement.statementPeriodStart)} &ndash; {formatDate(statement.statementPeriodEnd)}
+                    {formatDate(statement.statementPeriodStart)} &ndash;{' '}
+                    {formatDate(statement.statementPeriodEnd)}
                   </p>
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {statement.fileName || 'Bank statement'}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {statement.totalTransactions ?? 0} transactions • processed {statement.processedTransactions ?? 0}
+                    {statement.totalTransactions ?? 0} transactions • processed{' '}
+                    {statement.processedTransactions ?? 0}
                   </p>
                 </div>
                 <BankStatementStatusBadge status={statement.status} />
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Imported {statement.importDate ? new Date(statement.importDate).toLocaleString('de-DE') : '—'}
+                  Imported{' '}
+                  {statement.importDate
+                    ? new Date(statement.importDate).toLocaleString('de-DE')
+                    : '—'}
                 </div>
                 <Link
                   to={`/bank-statements/${statement.id}`}
@@ -186,12 +192,24 @@ const BankStatements = () => {
                   </Button>
                 </Link>
                 <PermissionGuard action="bank:write" role={user?.role} showDisabled>
-                  <Button variant="danger" size="medium" onClick={() => {/* delete logic here */}}>
+                  <Button
+                    variant="danger"
+                    size="medium"
+                    onClick={() => {
+                      /* delete logic here */
+                    }}
+                  >
                     Delete
                   </Button>
                 </PermissionGuard>
                 <PermissionGuard action="bank:write" role={user?.role} showDisabled>
-                  <Button variant="secondary" size="medium" onClick={() => {/* reprocess logic here */}}>
+                  <Button
+                    variant="secondary"
+                    size="medium"
+                    onClick={() => {
+                      /* reprocess logic here */
+                    }}
+                  >
                     Reprocess
                   </Button>
                 </PermissionGuard>

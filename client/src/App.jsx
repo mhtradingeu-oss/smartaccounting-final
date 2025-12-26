@@ -1,3 +1,12 @@
+// Minimal placeholder for BankStatementsUpload
+function BankStatementsUploadPlaceholder() {
+  return (
+    <div style={{ padding: '4rem', textAlign: 'center' }}>
+      <h1>Upload Bank Statement (Coming Soon)</h1>
+      <p>This page will allow you to upload bank statements.</p>
+    </div>
+  );
+}
 // HomeRedirect handles "/" route: redirects to /login or /dashboard based on auth
 function HomeRedirect() {
   const { status, isAuthenticated } = useAuth();
@@ -155,8 +164,27 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/expenses/create" element={<ExpensesCreate />} />
-          <Route path="/invoices/create" element={<InvoiceCreate />} />
+          <Route
+            path="/expenses/create"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ExpensesCreate />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/invoices/create"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <InvoiceCreate />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/invoices/:invoiceId/edit"
             element={
@@ -173,6 +201,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <BankStatements />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bank-statements/upload"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BankStatementsUploadPlaceholder />
                 </Layout>
               </ProtectedRoute>
             }

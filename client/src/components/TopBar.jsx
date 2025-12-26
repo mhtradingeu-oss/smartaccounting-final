@@ -33,7 +33,8 @@ const MOCK_SEARCH_RESULTS = [
     type: 'invoice',
     title: 'Invoice #2024-0156',
     subtitle: 'Müller GmbH - €2,450.00',
-    href: '/invoices/2024-0156',
+    // href: '/invoices/2024-0156',
+    href: '/invoices',
     icon: CurrencyEuroIcon,
   },
   {
@@ -76,7 +77,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
       read: false,
       priority: 'high',
       action: 'View Invoice',
-      href: '/invoices/2024-0156',
+      // href: '/invoices/2024-0156',
+      href: '/invoices',
     },
     {
       id: 2,
@@ -138,9 +140,9 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
       }
     };
 
-   document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
+  }, []);
 
   const filteredSearchResults = useMemo(() => {
     if (searchQuery.length > 2) {

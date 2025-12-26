@@ -79,8 +79,8 @@ const Expenses = () => {
       <EmptyState
         title="No expenses yet"
         description="Create your first expense to get started."
-        actionText="Create expense"
-        action={() => window.location.assign('/expenses/create')}
+        actionLabel="Create Expense"
+        actionHref="/expenses/create"
       />
     );
   }
