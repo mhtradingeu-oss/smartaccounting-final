@@ -1,6 +1,11 @@
 const rateLimit = require('express-rate-limit');
 
-const createLimiter = ({ windowMs, max, message }) =>
+const toInt = (value, fallback) => {
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
+
+const createLimiter = ({ windowMs, max, message, skip }) =>
   rateLimit({
     windowMs,
     max,
@@ -10,15 +15,34 @@ const createLimiter = ({ windowMs, max, message }) =>
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: typeof skip === 'function' ? skip : () => false,
   });
 
+const isAuthRateLimitDisabled = () => process.env.AUTH_RATE_LIMIT_DISABLED === 'true';
+
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const isProduction = NODE_ENV === 'production';
+
+const defaultAuthWindowMs = isProduction ? 5 * 60 * 1000 : 15 * 60 * 1000;
+const defaultAuthMaxAttempts = isProduction ? 5 : 20;
+
+const authWindowMs = toInt(
+  process.env.AUTH_RATE_LIMIT_WINDOW_MS ?? process.env.LOGIN_RATE_LIMIT_WINDOW_MS,
+  defaultAuthWindowMs,
+);
+const authMaxAttempts = toInt(
+  process.env.AUTH_RATE_LIMIT_MAX ?? process.env.LOGIN_RATE_LIMIT_MAX,
+  defaultAuthMaxAttempts,
+);
+
 const loginLimiter = createLimiter({
-  windowMs: 5 * 60 * 1000,
-  max: 5,
+  windowMs: authWindowMs,
+  max: authMaxAttempts,
   message: {
     success: false,
     message: 'Too many login attempts, please try again later',
   },
+  skip: isAuthRateLimitDisabled,
 });
 
 const registerLimiter = createLimiter({
@@ -53,4 +77,9 @@ module.exports = {
   registerLimiter,
   ocrLimiter,
   elsterLimiter,
+  resetAuthRateLimit: (key) => {
+    if (loginLimiter && typeof loginLimiter.resetKey === 'function') {
+      loginLimiter.resetKey(key || '');
+    }
+  },
 };

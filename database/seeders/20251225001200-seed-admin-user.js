@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
+  up: async (queryInterface, _Sequelize) => {
     const email = process.env.ADMIN_EMAIL;
     const password = process.env.ADMIN_PASSWORD;
     const firstName = process.env.ADMIN_FIRST_NAME || 'System';
@@ -50,7 +50,7 @@ module.exports = {
       {},
     );
   },
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     const email = process.env.ADMIN_EMAIL;
     if (email) {
       await queryInterface.bulkDelete('users', { email }, {});

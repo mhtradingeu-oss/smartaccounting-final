@@ -7,6 +7,7 @@ import Card from '../components/Card';
 import Footer from '../components/Footer';
 import RateLimitBanner from '../components/RateLimitBanner';
 import { EmptyState } from '../components/ui/EmptyState';
+import { Input } from '../components/ui/Input';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -106,119 +108,143 @@ const Login = () => {
           <p className="text-base text-gray-600 dark:text-gray-300 font-medium mb-2 text-center">
             Modern Accounting. Smarter Decisions.
           </p>
-          <form className="w-full space-y-5" onSubmit={handleSubmit} autoComplete="on">
-            <div className="form-group">
-              <label htmlFor="email" className="form-label font-semibold">
+          <form
+            className="w-full space-y-5"
+            onSubmit={handleSubmit}
+            autoComplete="on"
+            aria-describedby={error ? 'login-error' : undefined}
+          >
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                 Email
               </label>
-              <input
+              <Input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                required
-                className="input input-lg w-full"
-                placeholder="Enter your email"
+                placeholder="hello@demo.com"
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
             </div>
-            <div className="form-group relative">
-              <label htmlFor="password" className="form-label font-semibold">
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                className="input input-lg w-full pr-12"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                className="absolute right-3 top-9 text-gray-400 hover:text-blue-600 focus:outline-none"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675m1.675-2.325A9.956 9.956 0 0112 3c5.523 0 10 4.477 10 10 0 1.657-.336 3.236-.938 4.675m-1.675 2.325A9.956 9.956 0 0112 21c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675m1.675-2.325A9.956 9.956 0 0112 3c5.523 0 10 4.477 10 10 0 1.657-.336 3.236-.938 4.675m-1.675 2.325A9.956 9.956 0 0112 21c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4.271 4.271l15.458 15.458"
-                    />
-                  </svg>
-                )}
-              </button>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  style={{ paddingRight: '3rem' }}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675m1.675-2.325A9.956 9.956 0 0112 3c5.523 0 10 4.477 10 10 0 1.657-.336 3.236-.938 4.675m-1.675 2.325A9.956 9.956 0 0112 21c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675m1.675-2.325A9.956 9.956 0 0112 3c5.523 0 10 4.477 10 10 0 1.657-.336 3.236-.938 4.675m-1.675 2.325A9.956 9.956 0 0112 21c-5.523 0-10-4.477-10-10 0-1.657.336-3.236.938-4.675"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4.271 4.271l15.458 15.458"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm">
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 font-medium text-gray-600 dark:text-gray-300">
                 <input
                   type="checkbox"
                   name="remember"
                   checked={formData.remember}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  className="form-checkbox rounded"
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 Remember me
               </label>
+              <button
+                type="button"
+                className="text-sm font-semibold text-primary-600 hover:text-primary-500 focus:outline-none focus-visible:underline"
+                onClick={() =>
+                  setForgotMessage(
+                    'Forgot password support is coming soon. Contact support@smartaccounting.de for a reset.',
+                  )
+                }
+              >
+                Forgot password?
+              </button>
             </div>
+            {forgotMessage && (
+              <p className="text-xs text-primary-600" role="status">
+                {forgotMessage}
+              </p>
+            )}
             {error && (
-              <div className="form-error alert alert-danger text-center">
-                <span className="font-semibold">{error}</span>
+              <div
+                id="login-error"
+                className="rounded bg-red-50 border border-red-200 py-3 px-4 text-center text-sm font-semibold text-red-700"
+                role="alert"
+                aria-live="assertive"
+              >
+                {error}
               </div>
             )}
             <Button
               type="submit"
               variant="primary"
-              size="large"
+              size="md"
               disabled={isSubmitting}
               loading={isSubmitting}
               className="w-full text-base font-semibold mt-2"
             >
-              Sign In
+              {isSubmitting ? 'Signing in…' : 'Sign In'}
             </Button>
           </form>
           <div className="text-xs text-gray-400 mt-2 text-center">

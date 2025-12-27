@@ -1,5 +1,7 @@
 npm run db:seed
 
+[![CI](https://github.com/mhtradingeu-oss/smartaccounting-final/actions/workflows/ci.yml/badge.svg)](https://github.com/mhtradingeu-oss/smartaccounting-final/actions/workflows/ci.yml)
+
 # SmartAccounting™
 
 ## High-Level Overview
@@ -39,6 +41,13 @@ For a full list, see [docs/DOCUMENTATION_AUDIT.md](docs/DOCUMENTATION_AUDIT.md).
 If you find a secret in the repository, rotate it immediately and follow the checklist.
 
 Security, GDPR, GoBD, and audit guarantees are described in the canonical docs above.
+
+## CI / Test Gate
+
+- `npm run lint` (backend ESLint + TypeScript rules keep the codebase clean).
+- `npm test` now runs Jest plus the new production smoke suite (auth login, `/api/companies`, `/api/invoices` via `supertest`) so API contracts are exercised before merging.
+- `npm run smoke:frontend` builds the React client (`client` package) to catch frontend build regressions early.
+- `.github/workflows/ci.yml` chains lint → Jest → frontend bundle → Docker build → Gitleaks secret scan (the Gitleaks step now receives `GITHUB_TOKEN` so the action can report with proper auth).
 
 ## License
 
@@ -147,6 +156,30 @@ npm run dev
 Frontend: http://localhost:3000
 Backend API: http://localhost:5000
 ```
+
+## ⚠️ Demo data seeding
+
+Use the guarded demo seeder for local sandboxes or demo deployments only. It refuses to run unless **both** `DEMO_MODE=true` and `ALLOW_DEMO_SEED=true`.
+
+### Local (SQLite)
+
+```bash
+USE_SQLITE=true NODE_ENV=development DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo
+USE_SQLITE=true NODE_ENV=development DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo:reset
+```
+
+### Docker / Production-style demos
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm backend \
+  /bin/sh -c "DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo"
+docker compose -f docker-compose.prod.yml run --rm backend \
+  /bin/sh -c "DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo:reset"
+```
+
+### Verification helper
+
+`npm run demo:verify` (with `USE_SQLITE=true NODE_ENV=development JWT_SECRET=<secret>`) logs in as the seeded admin and confirms `/api/companies`, `/api/invoices`, and `/api/bank-statements` all return seeded objects. See `docs/DEMO_SEEDING.md` for more context.
 
 🛡 Security & Audit Guarantees
 

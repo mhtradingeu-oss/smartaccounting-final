@@ -11,6 +11,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
+    "smoke:frontend": "npm run build --prefix client",
+    "migrate:prod": "node scripts/migrate-prod.js",
+    "seed:demo:prod": "node scripts/seed-demo-prod.js",
+    "deploy:prod": "npm run migrate:prod && npm run smoke:frontend && docker build --tag smartaccounting:prod .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "db:migrate": "npx sequelize-cli db:migrate",
@@ -18,7 +22,10 @@
     "db:rollback": "npx sequelize-cli db:migrate:undo",
     "db:seed": "npx sequelize-cli db:seed:all",
     "db:seed:undo": "npx sequelize-cli db:seed:undo",
-    "readiness:auth": "node scripts/auth-readiness.js"
+    "db:seed:demo": "npx sequelize-cli db:seed --seed 20251226-demo-seed.js --seeders-path database/seeders/demo",
+    "db:seed:demo:reset": "npx sequelize-cli db:seed:undo --seed 20251226-demo-seed.js --seeders-path database/seeders/demo",
+    "readiness:auth": "node scripts/auth-readiness.js",
+    "demo:verify": "node scripts/demo-verify.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",

@@ -4,8 +4,6 @@ const { v4: uuidv4 } = require('uuid');
 const { User, Company } = require('../models');
 const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
 
-const ALLOWED_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
-
 const normalizeEmail = (email) => (email || '').toLowerCase().trim();
 
 const buildToken = (payload, jti) =>

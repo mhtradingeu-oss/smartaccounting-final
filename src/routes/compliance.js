@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const vatComplianceService = require('../services/vatComplianceService');
-const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
-const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
+const { authenticate, requireRole } = require('../middleware/authMiddleware');
+const jwtTenantContext = require('../middleware/jwtTenantContext');
 const AuditLogService = require('../services/auditLogService');
 
 // VAT/UStG compliance validation endpoint
@@ -34,31 +34,7 @@ router.get('/gobd/export', authenticate, requireRole(['auditor']), async (req, r
   }
 });
 
-const jwtTenantContext = require('../middleware/jwtTenantContext');
-router.get('/reports/:type', jwtTenantContext, (req, res) => {
-  const { type } = req.params;
-
-  const allowedTypes = ['vat', 'tax', 'audit'];
-  if (!allowedTypes.includes(type)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Unsupported report type',
-    });
-  }
-
-  return res.status(200).json({
-    success: true,
-    data: {
-      type,
-      companyId: req.user.companyId,
-      generatedAt: new Date().toISOString(),
-    },
-  });
-});
-
-router.use(disabledFeatureHandler('Compliance overview'));
-
-router.get('/test', (req, res) => {
+router.get('/test', authenticate, (req, res) => {
   res.json({
     message: 'Compliance route is working',
     timestamp: new Date().toISOString(),
@@ -100,8 +76,8 @@ router.get('/overview', authenticate, async (req, res) => {
   }
 });
 
-// Tenant-safe: companyId is always derived from authenticated user context
-router.get('/reports/:type', authenticate, (req, res) => {
+// Tenant-safe: companyId is derived from the tenant token context
+router.get('/reports/:type', jwtTenantContext, (req, res) => {
   if (!req.user || !req.user.companyId) {
     return res.status(403).json({
       success: false,

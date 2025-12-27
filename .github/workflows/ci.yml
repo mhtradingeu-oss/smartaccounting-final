@@ -62,6 +62,8 @@ jobs:
 
       - name: Run Jest suites
         run: npm run test:ci
+      - name: Frontend build smoke check
+        run: npm run smoke:frontend
 
   client:
     name: Build client bundle
@@ -102,3 +104,16 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Docker build
+    needs: client
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        run: docker build --tag smartaccounting:ci .

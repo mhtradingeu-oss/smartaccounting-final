@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
+  up: async (queryInterface, _Sequelize) => {
     // Check if company already exists
     const [company] = await queryInterface.sequelize.query(
       'SELECT id FROM companies WHERE name = \'Default Company\' LIMIT 1;',
@@ -23,7 +23,7 @@ module.exports = {
       {},
     );
   },
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     await queryInterface.bulkDelete('companies', { name: 'Default Company' }, {});
   },
 };

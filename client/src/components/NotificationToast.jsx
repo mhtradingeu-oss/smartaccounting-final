@@ -7,6 +7,8 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
+import { designTokens } from '../lib/designTokens';
+
 const NotificationToast = ({
   type = 'info', // 'success', 'error', 'warning', 'info'
   title,
@@ -83,6 +85,12 @@ const NotificationToast = ({
         rounded-xl border shadow-lg ${getBackgroundColor()}
         p-4 backdrop-blur-sm
       `}
+        role="status"
+        aria-live="polite"
+        style={{
+          borderRadius: designTokens.radius.lg,
+          boxShadow: designTokens.shadow.base,
+        }}
       >
         <div className="flex items-start space-x-3">
           {/* Icon */}

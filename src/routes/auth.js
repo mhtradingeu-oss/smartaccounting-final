@@ -5,8 +5,8 @@ const authService = require('../services/authService');
 const activeTokenService = require('../services/activeTokenService');
 const revokedTokenService = require('../services/revokedTokenService');
 const { sanitizeInput, preventNoSqlInjection } = require('../middleware/validation');
-const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
-const { authenticate } = require('../middleware/authMiddleware');
+const { loginLimiter, registerLimiter, resetAuthRateLimit } = require('../middleware/rateLimiter');
+const { authenticate, requireRole } = require('../middleware/authMiddleware');
 const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
 
 const COOKIE_OPTIONS = {
@@ -16,6 +16,7 @@ const COOKIE_OPTIONS = {
 };
 
 const router = express.Router();
+const RATE_LIMIT_RESET_ENABLED = process.env.AUTH_RATE_LIMIT_RESET_ENABLED === 'true';
 
 const setTokenCookie = (res, token) => {
   res.cookie('token', token, { ...COOKIE_OPTIONS, maxAge: 60 * 60 * 1000 });
@@ -124,5 +125,19 @@ router.get('/me', authenticate, sanitizeInput, preventNoSqlInjection, async (req
   }
   return res.status(401).json({ success: false, message: 'Not authenticated' });
 });
+
+if (RATE_LIMIT_RESET_ENABLED) {
+  router.post('/rate-limit/reset', authenticate, requireRole(['admin']), (req, res) => {
+    const clientIp =
+      req.body?.ip ||
+      req.ip ||
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim();
+    resetAuthRateLimit(clientIp);
+    return res.json({
+      success: true,
+      message: `Auth rate limit counters reset for ${clientIp || 'current client'}`,
+    });
+  });
+}
 
 module.exports = router;

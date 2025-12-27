@@ -209,6 +209,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           {!isCollapsed && (
             <>
               <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
+              {item.partial && (
+                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-yellow-100 text-yellow-800">
+                  Coming soon
+                </span>
+              )}
               <span className="ml-2 text-gray-400">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

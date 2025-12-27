@@ -1,6 +1,18 @@
 'use strict';
 const bcrypt = require('bcryptjs');
 
+const DEMO_STATEMENT_FILE = 'demo-statement-jan.csv';
+
+const requireDemoSeedEnabled = (phase) => {
+  const demoModeEnabled = process.env.DEMO_MODE === 'true';
+  const demoSeedAllowed = process.env.ALLOW_DEMO_SEED === 'true';
+  if (!demoModeEnabled || !demoSeedAllowed) {
+    throw new Error(
+      `[DEMO SEED] ${phase}: requires DEMO_MODE=true and ALLOW_DEMO_SEED=true (DEMO_MODE=${process.env.DEMO_MODE}, ALLOW_DEMO_SEED=${process.env.ALLOW_DEMO_SEED})`,
+    );
+  }
+};
+
 /**
  * DEMO DATA SEEDER (SAFE, AUDITABLE, DEMO-ONLY)
  *
@@ -14,10 +26,7 @@ const bcrypt = require('bcryptjs');
 
 module.exports = {
   up: async (queryInterface, _Sequelize) => {
-    // === SAFETY GUARDS ===
-    if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
-      throw new Error('DEMO seeder will NOT run in production unless DEMO_MODE=true');
-    }
+    requireDemoSeedEnabled('up');
 
     // === DEMO COMPANY ===
     const DEMO_COMPANY = {
@@ -39,10 +48,12 @@ module.exports = {
       companyId = companies[0].id;
       console.log('[DEMO SEED] Demo company already exists.');
     } else {
-      const [result] = await queryInterface.bulkInsert('companies', [DEMO_COMPANY], {
+      const insertionResult = await queryInterface.bulkInsert('companies', [DEMO_COMPANY], {
         returning: true,
       });
-      companyId = result ? result.id : null;
+      if (Array.isArray(insertionResult) && insertionResult.length > 0) {
+        companyId = insertionResult[0].id;
+      }
       if (!companyId) {
         // fallback for sqlite/mysql
         [companies] = await queryInterface.sequelize.query(
@@ -118,6 +129,9 @@ module.exports = {
         currency: 'EUR',
         status: 'PAID',
         date: '2025-01-01',
+        dueDate: '2025-01-15',
+        clientName: 'Demo Retail GmbH',
+        notes: 'Payment received for January consulting',
         userId: adminUser.id,
         companyId,
         createdAt: new Date(),
@@ -131,6 +145,9 @@ module.exports = {
         currency: 'EUR',
         status: 'SENT',
         date: '2025-01-10',
+        dueDate: '2025-01-25',
+        clientName: 'Demo Services AG',
+        notes: 'Monthly accounting bundle',
         userId: accountantUser.id,
         companyId,
         createdAt: new Date(),
@@ -159,20 +176,40 @@ module.exports = {
     const demoExpenses = [
       {
         description: 'Demo office rent',
+        vendorName: 'Demo Landlord GmbH',
+        expenseDate: '2025-01-05',
+        date: '2025-01-05',
+        category: 'Rent',
+        netAmount: 1000.0,
+        vatRate: 19.0,
+        vatAmount: 190.0,
+        grossAmount: 1190.0,
         amount: 1190.0,
         currency: 'EUR',
-        date: '2025-01-05',
+        status: 'draft',
+        source: 'manual',
         userId: adminUser.id,
+        createdByUserId: adminUser.id,
         companyId,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
         description: 'Demo software subscription',
+        vendorName: 'Demo SaaS Ltd',
+        expenseDate: '2025-01-12',
+        date: '2025-01-12',
+        category: 'Subscriptions',
+        netAmount: 50.0,
+        vatRate: 19.0,
+        vatAmount: 9.5,
+        grossAmount: 59.5,
         amount: 59.5,
         currency: 'EUR',
-        date: '2025-01-12',
+        status: 'draft',
+        source: 'manual',
         userId: accountantUser.id,
+        createdByUserId: accountantUser.id,
         companyId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -195,8 +232,22 @@ module.exports = {
     const demoStatements = [
       {
         statementDate: '2025-01-31',
+        fileName: DEMO_STATEMENT_FILE,
+        fileFormat: 'csv',
+        bankName: 'Demo Bank Berlin',
+        accountNumber: 'DE89370400440532013000',
+        iban: 'DE89370400440532013000',
+        filePath: '/tmp/demo-statement-jan.csv',
+        statementPeriodStart: '2025-01-01',
+        statementPeriodEnd: '2025-01-31',
         openingBalance: 10000.0,
         closingBalance: 11000.0,
+        currency: 'EUR',
+        status: 'PROCESSED',
+        totalTransactions: 6,
+        processedTransactions: 6,
+        importDate: '2025-02-01',
+        userId: adminUser.id,
         companyId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -204,14 +255,14 @@ module.exports = {
     ];
     for (const stmt of demoStatements) {
       const [stmts] = await queryInterface.sequelize.query(
-        'SELECT id FROM bank_statements WHERE "statementDate" = :statementDate AND "companyId" = :companyId LIMIT 1;',
-        { replacements: { statementDate: stmt.statementDate, companyId } },
+        'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
+        { replacements: { fileName: stmt.fileName, companyId } },
       );
       if (stmts.length === 0) {
         await queryInterface.bulkInsert('bank_statements', [stmt], {});
-        console.log(`[DEMO SEED] Bank statement seeded for ${stmt.statementDate}`);
+        console.log(`[DEMO SEED] Bank statement seeded for ${stmt.fileName}`);
       } else {
-        console.log(`[DEMO SEED] Bank statement already exists for ${stmt.statementDate}`);
+        console.log(`[DEMO SEED] Bank statement already exists for ${stmt.fileName}`);
       }
     }
 
@@ -219,22 +270,31 @@ module.exports = {
   },
 
   down: async (queryInterface, _Sequelize) => {
-    // Only allow down in demo mode
-    if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
-      throw new Error('DEMO seeder will NOT run in production unless DEMO_MODE=true');
+    requireDemoSeedEnabled('down');
+    const [companies] = await queryInterface.sequelize.query(
+      'SELECT id FROM companies WHERE "taxId" = :taxId LIMIT 1;',
+      { replacements: { taxId: 'DEMO-TAX-123' } },
+    );
+    const companyId = companies.length > 0 ? companies[0].id : null;
+
+    const expenseFilter = {
+      description: ['Demo office rent', 'Demo software subscription'],
+    };
+    const invoiceFilter = {
+      invoiceNumber: ['DEMO-INV-001', 'DEMO-INV-002'],
+    };
+    const statementFilter = {
+      fileName: DEMO_STATEMENT_FILE,
+    };
+    if (companyId) {
+      expenseFilter.companyId = companyId;
+      invoiceFilter.companyId = companyId;
+      statementFilter.companyId = companyId;
     }
     // Remove demo data only
-    await queryInterface.bulkDelete('bank_statements', { fileName: 'demo-statement-jan.csv' }, {});
-    await queryInterface.bulkDelete(
-      'Expenses',
-      { description: ['Demo office rent', 'Demo software subscription'] },
-      {},
-    );
-    await queryInterface.bulkDelete(
-      'invoices',
-      { invoiceNumber: ['DEMO-INV-001', 'DEMO-INV-002'] },
-      {},
-    );
+    await queryInterface.bulkDelete('bank_statements', statementFilter, {});
+    await queryInterface.bulkDelete('expenses', expenseFilter, {});
+    await queryInterface.bulkDelete('invoices', invoiceFilter, {});
     await queryInterface.bulkDelete(
       'users',
       { email: ['demo-admin@demo.com', 'demo-accountant@demo.com', 'demo-viewer@demo.com'] },
