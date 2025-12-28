@@ -66,48 +66,51 @@ module.exports = {
     }
 
     // === DEMO USERS ===
-    const demoUsers = [
+    const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
+    const demoUserTemplates = [
       {
         email: 'demo-admin@demo.com',
-        password: await bcrypt.hash('demopass1', 10),
         firstName: 'Demo',
         lastName: 'Admin',
         role: 'admin',
-        companyId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         email: 'demo-accountant@demo.com',
-        password: await bcrypt.hash('demopass2', 10),
         firstName: 'Demo',
         lastName: 'Accountant',
         role: 'accountant',
-        companyId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         email: 'demo-viewer@demo.com',
-        password: await bcrypt.hash('demopass3', 10),
         firstName: 'Demo',
         lastName: 'Viewer',
         role: 'viewer',
+      },
+    ];
+    for (const template of demoUserTemplates) {
+      const missing = [];
+      if (!template.firstName) {missing.push('firstName');}
+      if (!template.lastName) {missing.push('lastName');}
+      if (!template.role) {missing.push('role');}
+      if (missing.length > 0) {
+        throw new Error(`[DEMO SEED] ${template.email} missing required fields: ${missing.join(', ')}`);
+      }
+      const user = {
+        ...template,
+        password: await bcrypt.hash(DEMO_PASSWORD, 10),
         companyId,
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
-    ];
-    for (const user of demoUsers) {
+      };
       const [users] = await queryInterface.sequelize.query(
         'SELECT id FROM users WHERE email = :email LIMIT 1;',
         { replacements: { email: user.email } },
       );
       if (users.length === 0) {
         await queryInterface.bulkInsert('users', [user], {});
-        console.log(`[DEMO SEED] User seeded: ${user.email}`);
+        console.log(`[DEMO SEED] Created user: ${user.email} (role=${user.role})`);
       } else {
-        console.log(`[DEMO SEED] User already exists: ${user.email}`);
+        console.log(`[DEMO SEED] User already exists: ${user.email} (role=${user.role})`);
       }
     }
     // Get user IDs for demo data
