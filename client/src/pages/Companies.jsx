@@ -139,10 +139,15 @@ const Companies = () => {
     return (
       <EmptyState
         title="No companies found"
-        description="No companies have been created yet."
+        description="Company creation is managed by the platform team. Contact your admin or support to onboard a new entity."
         action={
-          <Button variant="primary" onClick={() => navigate('/companies/create')}>
-            Create company
+          <Button
+            variant="primary"
+            disabled
+            title="Company creation will be handled via onboarding soon."
+            className="cursor-not-allowed"
+          >
+            Request company
           </Button>
         }
       />

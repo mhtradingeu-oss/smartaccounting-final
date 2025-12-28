@@ -177,9 +177,13 @@ const Users = () => {
         title="No users found"
         description="No users have been added to this company yet."
         action={
-          <PermissionGuard action="create" role={currentUser?.role}>
-            <Button onClick={() => navigate('/users/invite')}>Invite user</Button>
-          </PermissionGuard>
+          <Button
+            disabled
+            title="User invitations will be handled via support soon."
+            className="cursor-not-allowed"
+          >
+            Invite user
+          </Button>
         }
       />
       ) : (

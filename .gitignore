@@ -1,5 +1,5 @@
 # ========================================
-# Node
+# Node / Package Managers
 # ========================================
 node_modules/
 client/node_modules/
@@ -9,7 +9,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # ========================================
-# Builds
+# Builds / Outputs
 # ========================================
 dist/
 build/
@@ -48,22 +48,18 @@ coverage/*
 jest-cache/
 jest-results.json
 backups/
+
 # ========================================
-# Database (NEVER COMMIT actual data)
+# Database DATA (never ship data files)
 # ========================================
 *.sqlite
 *.sqlite3
 *.db
 *.db-journal
-#database/
+
 data/
 
-# ========================================
-# 🚨 IMPORTANT: allow Sequelize bootstrap (code, NOT data)
-# ========================================
-!src/lib/
-!src/lib/database/
-!src/lib/database/index.js
+
 
 # ========================================
 # Cache & Runtime Temp
@@ -80,7 +76,7 @@ tmp/
 **/.turbo/
 
 # ========================================
-# Docker
+# Docker internal
 # ========================================
 docker-data/
 .docker/
@@ -95,7 +91,7 @@ docker-volume-data/
 *.crt
 *.p12
 *.keystore
-secrets/
+
 keys/
 
 # ========================================
@@ -152,3 +148,38 @@ public/uploads/
 *.old
 *.retry
 sha
+
+# ========================================
+# ✅ EXPLICIT ALLOWLIST (CRITICAL)
+# These MUST be present in Docker image
+# ========================================
+
+# Core app
+!index.js
+!package.json
+!package-lock.json
+!.sequelizerc
+
+# Backend source
+!src/
+!src/**
+
+# Config
+!config/
+!config/**
+
+# Database schema & migrations (CODE only)
+!database/
+!database/**
+
+# Production scripts (admin / seed / ops)
+!scripts/
+!scripts/**
+
+# Shared libraries
+!shared/
+!shared/**
+
+# Docs (optional but safe)
+!docs/
+!docs/**

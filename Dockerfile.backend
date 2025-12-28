@@ -29,7 +29,6 @@ COPY docs ./docs
 # Runtime directories expected by containers and host mounts.
 RUN mkdir -p logs uploads temp
 
-
 EXPOSE 5000
 
 CMD ["node", "index.js"]

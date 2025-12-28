@@ -10,6 +10,7 @@
 | `/rbac` | Role-based access control console. | `ProtectedRoute` + `requiredRole="admin"`; wrapped in `Layout`. |
 | `/investor-dashboard` | Auditor/investor KPI surface. | `ProtectedRoute` + `requiredRole="auditor"`. |
 | `/analytics` | Experimental analytics/insights board. | Public (no `ProtectedRoute`). |
+| `/ai-advisor` | AI Advisor insights feed. | `ProtectedRoute` + `Layout`; read-only advisory data from the AI insights service. |
 | `/dashboard` | Main KPI dashboards. | `ProtectedRoute` + `Layout`. |
 | `/invoices` | Invoice list. | `ProtectedRoute` + `Layout`; viewers are hidden from the sidebar. |
 | `/invoices/create` | Invoice creation form. | `ProtectedRoute` + `Layout`. |

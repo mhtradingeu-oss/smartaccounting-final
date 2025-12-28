@@ -2,8 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../services/dashboardAPI';
+import { formatApiError } from '../services/api';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
+import ErrorState from '../components/ErrorState';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
@@ -17,6 +20,7 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [disabled, setDisabled] = useState(false);
+  const [error, setError] = useState(null);
 
   // Demo Data (Admin only)
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -26,6 +30,7 @@ const Dashboard = () => {
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
+    setError(null);
 
     try {
       const result = await dashboardAPI.getStats();
@@ -34,10 +39,13 @@ const Dashboard = () => {
         setDisabled(true);
         setDashboardData(null);
       } else {
+        setDisabled(false);
         setDashboardData(result?.data || null);
       }
     } catch (err) {
-      // Production: ignore error visually, show empty/disabled state
+      setDisabled(false);
+      setDashboardData(null);
+      setError(formatApiError(err, 'Unable to load dashboard metrics.'));
     } finally {
       setLoading(false);
     }
@@ -46,6 +54,8 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const metrics = dashboardData?.metrics || [];
 
   const handleLoadDemoData = async () => {
     setDemoLoading(true);
@@ -82,15 +92,45 @@ const Dashboard = () => {
     );
   }
 
-  if (disabled) {
+  if (error) {
     return (
-      <div className="space-y-6">
-        <p className="text-gray-600">{t('dashboard.not_available')}</p>
-      </div>
+      <ErrorState message={error.message} onRetry={fetchDashboardData} />
     );
   }
 
-  const metrics = dashboardData?.metrics || [];
+  if (disabled) {
+    return (
+      <EmptyState
+        icon={<ChartBarIcon className="h-10 w-10 text-primary-500" />}
+        title="Dashboard temporarily unavailable"
+        description="Analytics data is offline while we finish the backend sync."
+        action={
+          <Button variant="primary" size="small" onClick={fetchDashboardData}>
+            Re-check availability
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (!metrics.length) {
+    return (
+      <EmptyState
+        icon={<ChartBarIcon className="h-10 w-10 text-gray-400" />}
+        title="No KPI data yet"
+        description="Create invoices or load demo data to populate this dashboard."
+        action={
+          <Button
+            variant="primary"
+            size="small"
+            onClick={() => window.location.assign('/invoices')}
+          >
+            Go to invoices
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <>

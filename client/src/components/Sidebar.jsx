@@ -34,15 +34,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const location = useLocation();
   const [, setHoveredItem] = React.useState(null);
 
-  const analyticsNavigation = [
-    {
-      name: t('dashboard.analytics'),
-      href: '/analytics',
-      icon: ChartBarIcon,
-      enabled: true,
-    },
-  ];
-
   const managementNavigation = [
     {
       name: t('companies'),
@@ -127,6 +118,9 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     }
     return true;
   });
+
+  const visibleMainNavigation = filteredMainNavigation.filter((item) => item.enabled !== false);
+  const upcomingFeatures = filteredMainNavigation.filter((item) => item.enabled === false);
 
   // Example: Only admin can see adminNavigation
   const filteredAdminNavigation = (adminNavigation || []).filter(() => role === roles.ADMIN);
@@ -354,8 +348,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
       {/* Enhanced Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
-        {renderSection(t('navigation.main'), filteredMainNavigation, 'main', HomeIcon)}
-        {renderSection('Analytics', analyticsNavigation, 'analytics', ChartBarIcon)}
+        {renderSection(t('navigation.main'), visibleMainNavigation, 'main', HomeIcon)}
         {filteredManagementNavigation.length > 0 &&
           renderSection(
             t('navigation.management'),
@@ -368,6 +361,44 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         {/* Only render system section if not null and has items */}
         {systemNavigation &&
           renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
+        {upcomingFeatures.length > 0 && (
+          <div className="px-3 py-4 border-t border-dashed border-gray-200 dark:border-gray-700 space-y-2">
+            {!isCollapsed && (
+              <div className="flex items-center space-x-2">
+                <ChartBarIcon className="h-4 w-4 text-gray-400" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Coming soon
+                </h3>
+              </div>
+            )}
+            <div className="space-y-2">
+              {upcomingFeatures.map((item) => {
+                const FeatureIcon = item.icon || ChartBarIcon;
+                return (
+                  <div
+                    key={`coming-soon-${item.href}-${item.name}`}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FeatureIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {item.name}
+                        </p>
+                        <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                          {item.description || 'Feature coming soon'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-yellow-800 dark:text-yellow-300">
+                      {item.badge || 'Soon'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Enhanced Footer */}

@@ -59,6 +59,7 @@ import RBACManagement from './pages/RBACManagement';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
 import RequestAccess from './pages/RequestAccess';
+import AIInsights from './pages/AIInsights';
 
 // Simple NotFound page
 function NotFound() {
@@ -138,6 +139,16 @@ export const AppRoutes = () => {
       />
       {/* Analytics, Dashboard, Invoices, InvoiceCreate, InvoiceEdit, BankStatements, BankStatementDetail, Billing, Companies, Users, Pricing, Login, GermanTaxReports, ComplianceDashboard, AuditLogs, GDPRActions, NotFound, etc. */}
       <Route path="/analytics" element={<Analytics />} />
+      <Route
+        path="/ai-advisor"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AIInsights />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={

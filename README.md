@@ -1,5 +1,3 @@
-npm run db:seed
-
 [![CI](https://github.com/mhtradingeu-oss/smartaccounting-final/actions/workflows/ci.yml/badge.svg)](https://github.com/mhtradingeu-oss/smartaccounting-final/actions/workflows/ci.yml)
 
 # SmartAccounting™
@@ -157,6 +155,12 @@ Frontend: http://localhost:3000
 Backend API: http://localhost:5000
 ```
 
+## Session management & logout
+
+- Sessions are backed by the JWT that lives in `localStorage` (key `token`). `AuthContext` refreshes the token silently when possible and exposes rate-limit metadata on login.
+- The top-right profile menu now surfaces your role, a read-only badge when applicable, and a logout action that clears the token (⌘Q) and redirects to `/login`.
+- The app also listens for server-pushed logout events so shared sessions are invalidated centrally; reloading the page after the logout continues to enforce the new authentication state.
+
 ## ⚠️ Demo data seeding
 
 Use the guarded demo seeder for local sandboxes or demo deployments only. It refuses to run unless **both** `DEMO_MODE=true` and `ALLOW_DEMO_SEED=true`.
@@ -177,9 +181,33 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   /bin/sh -c "DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo:reset"
 ```
 
-### Verification helper
+### Core API Verification (Phase 0)
 
-`npm run demo:verify` (with `USE_SQLITE=true NODE_ENV=development JWT_SECRET=<secret>`) logs in as the seeded admin and confirms `/api/companies`, `/api/invoices`, and `/api/bank-statements` all return seeded objects. See `docs/DEMO_SEEDING.md` for more context.
+To verify that the core API endpoints are working and returning valid JSON, use the provided script:
+
+#### Inside Docker (recommended for production-like checks)
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm backend \
+  /bin/sh -c "apt-get update && apt-get install -y jq curl && DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo && bash scripts/verify-core-api.sh"
+```
+
+This will:
+
+- Seed demo data (if not already present)
+- Log in as the seeded demo-accountant user
+- Hit `/api/companies`, `/api/invoices`, `/api/expenses`, `/api/bank-statements`
+- Fail with non-zero exit if any endpoint does not return 200 and valid JSON
+
+#### Locally (if backend is running on localhost:3000)
+
+```bash
+bash scripts/verify-core-api.sh
+```
+
+See `docs/audits/ROUTE_INVENTORY.md` for the full backend route list.
+
+See `docs/DEMO_SEEDING.md` for more context.
 
 🛡 Security & Audit Guarantees
 
@@ -201,6 +229,87 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 SmartAccounting™ is proprietary software.
 Commercial, SaaS, and white-label licensing available.
 
-### Project Structure
+## Manual UI Walkthrough: Invoices Module (Phase 1)
+
+To verify the invoices module is fully functional:
+
+1. Log in as demo-accountant@demo.com (password: demopass2).
+2. Select the seeded demo company.
+3. Go to the Invoices page:
+
+- You should see a list of demo invoices (from seeder).
+- Filtering, searching, and pagination should work.
+- Viewer/Auditor roles: no create/edit buttons.
+- Accountant/Admin: can create and edit invoices.
+
+4. Click an invoice to view/edit details:
+
+- All fields and status transitions should be visible.
+- Read-only for non-editable roles/statuses.
+
+5. Create a new invoice:
+
+- Fill required fields, submit, and verify redirect to list/details.
+- Errors (e.g., missing fields, API errors) are shown clearly.
+
+6. Console must be clean (no errors/warnings).
+
+## Manual UI Walkthrough: Dashboard KPIs (Phase 2)
+
+To verify the dashboard KPIs:
+
+1. Log in as demo-accountant@demo.com (password: demopass2).
+2. Select the seeded demo company.
+3. Go to the Dashboard page:
+   - You should see real numbers for:
+     - Total Revenue (current month)
+     - Total Expenses (current month)
+     - Net Balance
+     - Invoice count by status (paid/unpaid)
+     - Recent invoices (last 5)
+   - Switching company updates all KPIs.
+   - Viewer role: dashboard is read-only.
+   - No console errors or warnings.
+
+## Manual UI Walkthrough: Expenses & Bank Statements (Phase 3)
+
+To verify Expenses and Bank Statements modules:
+
+### Expenses
+
+1. Log in as demo-accountant@demo.com (password: demopass2).
+2. Select the seeded demo company.
+3. Go to the Expenses page:
+
+- You should see demo expenses from the seeder.
+- Create a new expense and verify it appears in the list.
+- Viewer role: no create button, read-only.
+- Dashboard KPIs update after adding expenses.
+- No console errors or warnings.
+
+### Bank Statements
+
+1. Go to the Bank Statements page:
+
+- You should see demo bank statements from the seeder.
+- Click "View transactions" to see statement transactions.
+- Viewer role: read-only, no upload/delete/reprocess actions.
+- No console errors or warnings.
+
+## Manual UI Walkthrough: AI Advisor (Phase 4)
+
+To verify AI Advisor insights:
+
+1. Log in as demo-accountant@demo.com (password: demopass2).
+2. Select the seeded demo company.
+3. Visit `/ai-advisor` (AI Advisor insights page):
+
+- You should see AI-generated insights for invoices (unpaid/overdue), expenses (spikes/anomalies), and cashflow signals.
+- Each insight shows title, explanation, severity, and is labeled as "Advisory Only".
+- Viewer role: summary or limited insights only.
+- No actions or data changes are possible.
+- No console errors or warnings.
+
+If no insights appear, check that demo data is seeded and company is selected.
 
 - 📍 [Project Map & System Layout](docs/PROJECT_MAP.md)

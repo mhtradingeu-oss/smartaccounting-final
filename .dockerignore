@@ -10,6 +10,13 @@ uploads
 client/node_modules
 tests
 docs
+!docs/
+!docs/**
+!scripts/
+!scripts/**
+!src/lib/
+!src/lib/database/
+!src/lib/database/index.js
 .github
 .git
 .gitignore

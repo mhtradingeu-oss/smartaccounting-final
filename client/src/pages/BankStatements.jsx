@@ -147,9 +147,14 @@ const BankStatements = () => {
           title="No bank statements"
           description="Upload your first bank statement"
           action={
-            <Link to="/bank-statements/upload">
-              <Button variant="primary">Upload Statement</Button>
-            </Link>
+            <Button
+              variant="primary"
+              disabled
+              title="Bank statement upload is coming soon."
+              className="cursor-not-allowed"
+            >
+              Upload Statement
+            </Button>
           }
         />
       ) : (

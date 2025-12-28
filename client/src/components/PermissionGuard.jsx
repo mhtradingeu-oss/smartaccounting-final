@@ -16,16 +16,34 @@ export default function PermissionGuard({ action, role, children, fallback }) {
   if (fallback) {
     return fallback;
   }
-  // Try to clone and disable the child if possible
+
+  const tooltip = explainPermission(action, role);
   const child = React.Children.only(children);
-  let disabledChild = child;
+
   if (React.isValidElement(child)) {
-    // If the child supports 'disabled', set it
-    disabledChild = React.cloneElement(child, { disabled: true });
+    const combinedClassName = [child.props.className, 'cursor-not-allowed', 'opacity-70']
+      .filter(Boolean)
+      .join(' ');
+
+    const handleDisabledClick = (event) => {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    return React.cloneElement(child, {
+      disabled: true,
+      title: child.props.title || tooltip,
+      'aria-disabled': true,
+      className: combinedClassName,
+      onClick: handleDisabledClick,
+    });
   }
+
   return (
-    <span title={explainPermission(action, role)} style={{ pointerEvents: 'none', opacity: 0.5 }}>
-      {disabledChild}
+    <span title={tooltip} className="cursor-not-allowed opacity-70">
+      {child}
     </span>
   );
 }

@@ -6,6 +6,7 @@ import { useCompany } from '../context/CompanyContext';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import { isReadOnlyRole } from '../lib/permissions';
 import {
   BellIcon,
   MagnifyingGlassIcon,
@@ -23,6 +24,8 @@ import {
   ClockIcon,
   CalendarDaysIcon,
   CurrencyEuroIcon,
+  BanknotesIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline';
 import {
   BellIcon as BellIconSolid,
@@ -42,21 +45,22 @@ const MOCK_SEARCH_RESULTS = [
     type: 'client',
     title: 'Hans Schmidt GmbH',
     subtitle: 'Client • 15 invoices',
-    href: '/clients/hans-schmidt',
+    href: '/companies',
     icon: UserCircleIcon,
   },
   {
     type: 'report',
-    title: 'VAT Report Q4 2024',
-    subtitle: 'Tax Report • Due Dec 31',
-    href: '/german-tax-reports/vat-q4-2024',
-    icon: BookmarkIcon,
+    title: 'Bank Statement Dec • 42 tx',
+    subtitle: 'Pending reconciliation',
+    href: '/bank-statements',
+    icon: BanknotesIcon,
   },
 ];
 
 const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const isReadOnlySession = isReadOnlyRole(user?.role);
   useLoadCompanies();
   const { companies } = useCompany();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -410,6 +414,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                   <button
                                     disabled
                                     className="text-xs opacity-50 cursor-not-allowed"
+                                    title="This action will be available soon."
                                   >
                                     {notification.action}
                                   </button>
@@ -435,10 +440,18 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                   {notifications.length > 0 && (
                     <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-between items-center">
-                        <button disabled className="text-sm opacity-50 cursor-not-allowed">
+                        <button
+                          disabled
+                          className="text-sm opacity-50 cursor-not-allowed"
+                          title="Bulk notification actions are coming soon."
+                        >
                           Mark all as read
                         </button>
-                        <button disabled className="text-sm opacity-50 cursor-not-allowed">
+                        <button
+                          disabled
+                          className="text-sm opacity-50 cursor-not-allowed"
+                          title="The full notification inbox is coming soon."
+                        >
                           {t('notifications.view_all')} →
                         </button>
                       </div>
@@ -465,6 +478,19 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                     {user?.role} • {user?.subscriptionPlan || 'Professional'}
                   </p>
+                  <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
+                    {isReadOnlySession ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        <LockClosedIcon className="h-3 w-3" />
+                        Read-only session
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        <CheckCircleIcon className="h-3 w-3" />
+                        Full access
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <ChevronDownIcon
                   className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}
@@ -500,6 +526,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     <button
                       disabled
                       className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
+                      title="Profile details are coming soon."
                     >
                       <UserCircleIcon className="h-4 w-4 mr-3" />
                       {t('profile.view')}
@@ -508,6 +535,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     <button
                       disabled
                       className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
+                      title="Settings will be available soon."
                     >
                       <Cog6ToothIcon className="h-4 w-4 mr-3" />
                       {t('settings.title')}
@@ -516,16 +544,21 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     <button
                       disabled
                       className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
+                      title="Bookmarks are coming soon."
                     >
                       <BookmarkIcon className="h-4 w-4 mr-3" />
                       Bookmarks
                     </button>
                   </div>
 
-                  <div className="py-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="py-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                    <p className="text-xs text-gray-500">
+                      Sessions stay active until you log out or close your browser.
+                    </p>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-3 text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors duration-200"
+                      title="Sign out and end your session."
                     >
                       <ArrowRightOnRectangleIcon className="h-4 w-4 mr-3" />
                       {t('auth.logout')}
