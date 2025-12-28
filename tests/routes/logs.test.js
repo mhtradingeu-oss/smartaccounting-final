@@ -18,11 +18,11 @@ function makeApp(authImpl) {
 
   authenticate.mockImplementation(authImpl);
 
-  app.use('/api/v1/logs', logsRouter);
+  app.use('/api/logs', logsRouter);
   return app;
 }
 
-describe('POST /api/v1/logs', () => {
+describe('POST /api/logs', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -33,7 +33,7 @@ describe('POST /api/v1/logs', () => {
     );
 
     const res = await request(app)
-      .post('/api/v1/logs')
+      .post('/api/logs')
       .send({ message: 'test' });
 
     expect(res.status).toBe(401);
@@ -48,7 +48,7 @@ describe('POST /api/v1/logs', () => {
     });
 
     const res = await request(app)
-      .post('/api/v1/logs')
+      .post('/api/logs')
       .send({
         message: 'test',
         level: 'info',
@@ -70,7 +70,7 @@ describe('POST /api/v1/logs', () => {
     });
 
     await request(app)
-      .post('/api/v1/logs')
+      .post('/api/logs')
       .send({
         message: 'test',
         level: 'info',

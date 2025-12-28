@@ -1,4 +1,3 @@
-
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
@@ -29,22 +28,28 @@ i18n
       en: {
         translation: {
           common: {
-            loading: 'Loading...',
-            error: 'Error',
-            retry: 'Retry',
-            empty: 'No data available',
-            success: 'Success',
+            loading: 'Loading, please wait…',
+            error: 'Something went wrong',
+            retry: 'Try again',
+            empty: 'No records found',
+            success: 'Operation successful',
+            disabled: 'This feature is currently unavailable.',
+            coming_soon: 'Coming soon',
+            read_only: 'You have view-only access. Actions are disabled for your role.',
           },
 
           dashboard: {
             title: 'Dashboard',
             subtitle: 'Your accounting overview',
-            error_title: 'Dashboard Error',
-            error_loading: 'Failed to load dashboard data',
-            empty_title: 'No data yet',
-            empty_message: 'Your dashboard is waiting for data.',
+            error_title: 'Dashboard unavailable',
+            error_loading:
+              'We were unable to load your dashboard data. Please try again or contact support if the issue persists.',
+            empty_title: 'No KPI data yet',
+            empty_message:
+              'Your dashboard will display key metrics as soon as you create invoices or upload data.',
             coming_soon: 'Coming Soon',
-            coming_soon_desc: 'This dashboard feature is disabled or coming soon in v0.1.',
+            coming_soon_desc:
+              'This dashboard feature is not yet available. Stay tuned for updates.',
           },
 
           invoices: 'Invoices',
@@ -52,6 +57,12 @@ i18n
           billing: 'Billing',
           settings: 'Settings',
           logout: 'Logout',
+          no_invoices: 'No invoices yet. Create your first invoice to get started.',
+          no_expenses: 'No expenses yet. Add your first expense to begin tracking.',
+          no_bank_statements:
+            'No bank statements uploaded. Upload your first statement to see transactions.',
+          no_ai_insights:
+            'No AI insights available yet. AI will generate suggestions as your data grows.',
 
           auth: {
             signInToAccount: 'Sign in to your account',

@@ -4,3 +4,5 @@ build
 coverage
 .eslintrc.js
 .eslintrc.cjs
+database/*.sqlite
+database/*.sqlite3

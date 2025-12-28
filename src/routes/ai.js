@@ -2,46 +2,42 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const aiInsightsService = require('../services/ai/aiInsightsService');
 const { Company } = require('../models');
+const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
 
 router.use(authenticate);
 router.use(requireCompany);
 
-// GET /api/v1/ai/insights
+// GET /api/ai/insights
 router.get('/insights', async (req, res) => {
   try {
     const company = await Company.findByPk(req.companyId);
-    if (!company.aiEnabled) {return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });}
+    if (company.aiEnabled === false) {
+      return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });
+    }
     const insights = await aiInsightsService.listInsights(req.companyId);
-    res.json({ insights });
+    const viewerMode = req.user?.role === 'viewer';
+    const limitedInsights = viewerMode ? insights.slice(0, 3) : insights;
+    res.json({
+      insights: limitedInsights,
+      viewerLimited: viewerMode,
+    });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
 });
 
-// POST /api/v1/ai/insights/:id/decisions
-router.post('/insights/:id/decisions', async (req, res) => {
-  try {
-    const { decision, reason } = req.body;
-    const actorUser = req.user;
-    try {
-      const decisionObj = await aiInsightsService.decideInsight(req.companyId, req.params.id, actorUser, decision, reason);
-      res.json({ success: true, decision: decisionObj });
-    } catch (err) {
-      // If error has status, use it, else 500
-      res.status(err.status || 500).json({ error: err.message });
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// POST /api/ai/insights/:id/decisions
+router.post('/insights/:id/decisions', disabledFeatureHandler('AI decision capture'));
 
-// GET /api/v1/ai/exports/insights.json
+// GET /api/ai/exports/insights.json
 router.get('/exports/insights.json', async (req, res) => {
   try {
     const company = await Company.findByPk(req.companyId);
-    if (!company.aiEnabled) {return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });}
+    if (company.aiEnabled === false) {
+      return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });
+    }
     const data = await aiInsightsService.exportInsights(req.companyId, 'json');
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(data, null, 2));
@@ -50,11 +46,13 @@ router.get('/exports/insights.json', async (req, res) => {
   }
 });
 
-// GET /api/v1/ai/exports/insights.csv
+// GET /api/ai/exports/insights.csv
 router.get('/exports/insights.csv', async (req, res) => {
   try {
     const company = await Company.findByPk(req.companyId);
-    if (!company.aiEnabled) {return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });}
+    if (company.aiEnabled === false) {
+      return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });
+    }
     const data = await aiInsightsService.exportInsights(req.companyId, 'csv');
     res.setHeader('Content-Type', 'text/csv');
     res.send(data);
@@ -63,19 +61,11 @@ router.get('/exports/insights.csv', async (req, res) => {
   }
 });
 
-// POST /api/v1/ai/insights/generate (optional, admin/accountant only)
-router.post('/insights/generate', requireRole(['admin', 'accountant']), async (req, res) => {
-  try {
-    // context: { invoices, expenses, ... } (should be fetched in real impl)
-    const company = await Company.findByPk(req.companyId);
-    if (!company.aiEnabled) {return res.status(501).json({ status: 'disabled', feature: 'AI Insights' });}
-    // For demo: require context in body
-    const context = req.body;
-    const insights = await aiInsightsService.generateInsightsForCompany(req.companyId, context);
-    res.json({ success: true, insights });
-  } catch (err) {
-    res.status(err.status || 500).json({ error: err.message });
-  }
-});
+// POST /api/ai/insights/generate (optional, admin/accountant only)
+router.post(
+  '/insights/generate',
+  requireRole(['admin', 'accountant']),
+  disabledFeatureHandler('AI insight generation'),
+);
 
 module.exports = router;

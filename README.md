@@ -157,9 +157,14 @@ Backend API: http://localhost:5000
 
 ## Session management & logout
 
-- Sessions are backed by the JWT that lives in `localStorage` (key `token`). `AuthContext` refreshes the token silently when possible and exposes rate-limit metadata on login.
+- Sessions are backed by the JWT that lives in `localStorage` (key `token`). `AuthContext` refreshes the token silently when possible, exposes rate-limit metadata on login, and continues working even if the secure auth cookie is not being replayed (e.g., during local HTTP testing).
 - The top-right profile menu now surfaces your role, a read-only badge when applicable, and a logout action that clears the token (⌘Q) and redirects to `/login`.
 - The app also listens for server-pushed logout events so shared sessions are invalidated centrally; reloading the page after the logout continues to enforce the new authentication state.
+- Use the `SECURE_COOKIES` flag (`true`/`false`) to toggle the `Secure` attribute on the JWT and refresh cookies. Set it to `false` when running with `NODE_ENV=production` on `http://localhost`, but keep it `true` for real HTTPS deployments.
+
+## Admin bootstrap
+
+Provision the system administrator with `node scripts/create-admin.js`. The script accepts values either via CLI flags (`--company-name`, `--company-tax-id`, `--company-address`, `--company-city`, `--company-postal`, `--company-country`, `--user-email`, `--user-password`, `--user-first-name`, `--user-last-name`) or the matching `ADMIN_*` environment variables that also feed the seeder. It deduplicates the company by tax ID and creates the admin user only once, so running it multiple times is safe as long as the same email is provided.
 
 ## ⚠️ Demo data seeding
 
@@ -181,29 +186,26 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   /bin/sh -c "DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo:reset"
 ```
 
-### Core API Verification (Phase 0)
+After the guarded demo seeder completes it emits a **Login sheet** (email, role, password) for each demo account so you can copy credentials without guessing.
 
-To verify that the core API endpoints are working and returning valid JSON, use the provided script:
+### End-to-end production verification
 
-#### Inside Docker (recommended for production-like checks)
+The new script `scripts/verify-production.sh` runs the sequential checks that every deployment should cover: `/health`, `/api/auth/login`, `/api/dashboard/stats`, `/api/invoices`, `/api/expenses`, `/api/bank-statements`, and `/api/ai/insights`. It logs a warning if the container marker is absent, prints each step as it runs, and exits with `0` only when every endpoint responded successfully.
+
+#### Inside the backend container (recommended)
 
 ```bash
 docker compose -f docker-compose.prod.yml run --rm backend \
-  /bin/sh -c "apt-get update && apt-get install -y jq curl && DEMO_MODE=true ALLOW_DEMO_SEED=true npm run db:seed:demo && bash scripts/verify-core-api.sh"
+  bash -c "PRODUCTION_VERIFY_BASE_URL=http://localhost:5000 bash scripts/verify-production.sh"
 ```
 
-This will:
-
-- Seed demo data (if not already present)
-- Log in as the seeded demo-accountant user
-- Hit `/api/companies`, `/api/invoices`, `/api/expenses`, `/api/bank-statements`
-- Fail with non-zero exit if any endpoint does not return 200 and valid JSON
-
-#### Locally (if backend is running on localhost:3000)
+#### From the host
 
 ```bash
-bash scripts/verify-core-api.sh
+PRODUCTION_VERIFY_BASE_URL=http://localhost:5000 bash scripts/verify-production.sh
 ```
+
+Use `PRODUCTION_VERIFY_BASE_URL` to point the script at another host or port if needed. The script requires `python3` (used to extract the bearer token from the login response).
 
 See `docs/audits/ROUTE_INVENTORY.md` for the full backend route list.
 

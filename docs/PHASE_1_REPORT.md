@@ -12,21 +12,21 @@
 
 ## STEP 2 — FRONTEND ↔ BACKEND CONTRACT ALIGNMENT
 
-- **Frontend baseURL:** `/api/v1` (client/src/services/api.js)
+- **Frontend baseURL:** `/api` (client/src/services/api.js)
 - **No /api/api duplication risk.**
 - **Endpoints mapped:**
 
 | Client Call | Backend Route | Response Shape | Status |
 |-------------|--------------|---------------|--------|
-| POST /auth/login | /api/v1/auth/login | { success, token, user } | already ok |
-| POST /auth/register | /api/v1/auth/register | { success, user } | already ok |
-| GET /auth/me | /api/v1/auth/me | { success, user } | already ok |
-| GET /companies | /api/v1/companies | { companies } | already ok |
-| PUT /companies/:id | /api/v1/companies/:id | { message, company } | already ok |
-| GET /users | /api/v1/users | { users } | already ok |
-| POST /users | /api/v1/users | { message, user } | already ok |
-| PUT /users/:id | /api/v1/users/:id | { message, user } | already ok |
-| DELETE /users/:id | /api/v1/users/:id | { message } | already ok |
+| POST /auth/login | /api/auth/login | { success, token, user } | already ok |
+| POST /auth/register | /api/auth/register | { success, user } | already ok |
+| GET /auth/me | /api/auth/me | { success, user } | already ok |
+| GET /companies | /api/companies | { companies } | already ok |
+| PUT /companies/:id | /api/companies/:id | { message, company } | already ok |
+| GET /users | /api/users | { users } | already ok |
+| POST /users | /api/users | { message, user } | already ok |
+| PUT /users/:id | /api/users/:id | { message, user } | already ok |
+| DELETE /users/:id | /api/users/:id | { message } | already ok |
 
 ## STEP 3 — DATABASE CONSISTENCY
 

@@ -12,6 +12,7 @@ describe('Expense model immutability', () => {
   function buildExpensePayload() {
     return {
       vendorName: 'Travel Agency',
+      description: 'Immutable travel expense',
       category: 'Travel',
       netAmount: 100,
       vatRate: 19,

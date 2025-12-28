@@ -2,7 +2,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { User, Company } = require('../models');
-const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
+const { parseDurationMs } = require('../utils/duration');
+const {
+  getJwtSecret,
+  getJwtExpiresIn,
+  getRefreshSecret,
+  getRefreshExpiresIn,
+} = require('../utils/jwtConfig');
 
 const normalizeEmail = (email) => (email || '').toLowerCase().trim();
 
@@ -11,6 +17,9 @@ const buildToken = (payload, jti) =>
     expiresIn: getJwtExpiresIn(),
     jwtid: jti,
   });
+
+const ACCESS_TOKEN_TTL_MS = parseDurationMs(getJwtExpiresIn(), 60 * 60 * 1000);
+const REFRESH_TOKEN_TTL_MS = parseDurationMs(getRefreshExpiresIn(), 7 * 24 * 60 * 60 * 1000);
 
 /**
  * ⚠️ Registration is disabled in production by default
@@ -127,19 +136,19 @@ const login = async ({ email, password }) => {
   await activeTokenService.addToken({
     userId: user.id,
     jti: tokenId,
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + ACCESS_TOKEN_TTL_MS),
   });
 
   const refreshTokenId = uuidv4();
-  const refreshToken = jwt.sign({ userId: user.id, type: 'refresh' }, getJwtSecret(), {
-    expiresIn: '7d',
+  const refreshToken = jwt.sign({ userId: user.id, type: 'refresh' }, getRefreshSecret(), {
+    expiresIn: getRefreshExpiresIn(),
     jwtid: refreshTokenId,
   });
 
   await activeTokenService.addToken({
     userId: user.id,
     jti: refreshTokenId,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
   });
 
   return {

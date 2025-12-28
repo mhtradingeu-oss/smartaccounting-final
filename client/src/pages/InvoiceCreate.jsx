@@ -45,7 +45,7 @@ const InvoiceCreate = () => {
     return (
       <EmptyState
         title="Select a company"
-        description="Choose an active company before creating invoices."
+        description="Invoices are scoped per entity. Choose an active company before creating your first invoice."
         action={
           <Button variant="primary" onClick={() => navigate('/companies')}>
             Select company
@@ -57,23 +57,29 @@ const InvoiceCreate = () => {
 
   return (
     <div className="space-y-6">
-      {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner mode={readOnlyBannerMode(user?.role)} message="You have read-only access. Creating invoices is disabled." />
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">New invoice</p>
-          <h1 className="text-3xl font-bold text-gray-900">{activeCompany.name}</h1>
-          <p className="text-sm text-gray-500">Create invoice linked to {activeCompany.name}.</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+          <h1 className="text-3xl font-bold text-gray-900">Create invoice</h1>
+          <p className="text-sm text-gray-500">
+            This invoice will be linked to {activeCompany.name} and saved as a draft until you publish it.
+          </p>
         </div>
-        <Button variant="secondary" onClick={() => navigate('/invoices')}>
-          Cancel
+        <Button variant="secondary" size="sm" onClick={() => navigate('/invoices')}>
+          Back to invoices
         </Button>
       </div>
 
+      {isReadOnlyRole(user?.role) && (
+        <ReadOnlyBanner
+          mode={readOnlyBannerMode(user?.role)}
+          message="You have read-only access. Invoice creation is disabled for your role."
+        />
+      )}
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error.message}
+          {error?.message || error}
         </div>
       )}
 

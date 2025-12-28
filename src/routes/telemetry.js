@@ -23,7 +23,7 @@ function sanitizeErrorPayload(payload) {
   );
 }
 
-// POST /api/v1/telemetry/client-error
+// POST /api/telemetry/client-error
 router.post('/client-error', telemetryLimiter, (req, res) => {
   try {
     // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit

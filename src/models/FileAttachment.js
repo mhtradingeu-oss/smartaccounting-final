@@ -77,7 +77,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 10,
       },
       expenseId: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: true,
         field: 'expense_id',
       },

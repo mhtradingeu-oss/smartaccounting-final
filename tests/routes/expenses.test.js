@@ -40,6 +40,7 @@ describe('Expense Routes', () => {
     test('should get all expenses', async () => {
       await Expense.create({
         vendorName: 'Test Vendor',
+        description: 'Test expense',
         category: 'Travel',
         netAmount: 100,
         vatAmount: 19,
@@ -67,6 +68,7 @@ describe('Expense Routes', () => {
     test('should create expense', async () => {
       const expenseData = {
         vendorName: 'Test Vendor',
+        description: 'Test expense',
         category: 'Travel',
         netAmount: 100,
         vatRate: 19,
@@ -97,6 +99,7 @@ describe('Expense Routes', () => {
     test('rejects non-EUR currency', async () => {
       const expenseData = {
         vendorName: 'Test Vendor',
+        description: 'Test expense',
         category: 'Travel',
         netAmount: 100,
         vatRate: 19,
@@ -118,6 +121,7 @@ describe('Expense Routes', () => {
     test('rejects VAT/gross mismatch', async () => {
       const expenseData = {
         vendorName: 'Test Vendor',
+        description: 'Test expense',
         category: 'Travel',
         netAmount: 100,
         vatRate: 19,
@@ -142,6 +146,7 @@ describe('Expense Routes', () => {
     test('should allow valid status transition', async () => {
       const expense = await Expense.create({
         vendorName: 'Test Vendor',
+        description: 'Test expense',
         category: 'Travel',
         netAmount: 100,
         vatAmount: 19,
@@ -166,6 +171,7 @@ describe('Expense Routes', () => {
     test('should reject invalid status transition', async () => {
       const expense = await Expense.create({
         vendorName: 'Test Vendor',
+        description: 'Test expense',
         category: 'Travel',
         netAmount: 100,
         vatAmount: 19,
@@ -202,6 +208,7 @@ describe('Expense Routes', () => {
       const otherUser = await testHelpers.createTestUser({ companyId: otherCompany.id });
       const expense = await Expense.create({
         vendorName: 'Other Vendor',
+        description: 'Other company expense',
         category: 'Office',
         netAmount: 50,
         vatAmount: 10,

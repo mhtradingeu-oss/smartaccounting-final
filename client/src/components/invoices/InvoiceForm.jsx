@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Button from '../Button';
+import FormField from '../ui/FormField';
+import Label from '../ui/Label';
 
 const INITIAL_FORM_STATE = {
   invoiceNumber: '',
@@ -22,13 +24,16 @@ const InvoiceForm = ({
   submitLabel = 'Save invoice',
   onSubmit = () => {},
 }) => {
-  const normalizedInitial = useMemo(() => ({
-    ...INITIAL_FORM_STATE,
-    ...initialValues,
-    currency: (initialValues.currency || 'EUR').toUpperCase(),
-    subtotal: normalizeNumericField(initialValues.subtotal),
-    total: normalizeNumericField(initialValues.total),
-  }), [initialValues]);
+  const normalizedInitial = useMemo(
+    () => ({
+      ...INITIAL_FORM_STATE,
+      ...initialValues,
+      currency: (initialValues.currency || 'EUR').toUpperCase(),
+      subtotal: normalizeNumericField(initialValues.subtotal),
+      total: normalizeNumericField(initialValues.total),
+    }),
+    [initialValues],
+  );
 
   const [formState, setFormState] = useState(normalizedInitial);
 
@@ -50,22 +55,19 @@ const InvoiceForm = ({
       dueDate: formState.dueDate,
       currency: (formState.currency || 'EUR').toUpperCase(),
       subtotal: parseFloat(formState.subtotal) || 0,
-      total:
-        parseFloat(formState.total) ||
-        parseFloat(formState.subtotal) ||
-        0,
+      total: parseFloat(formState.total) || parseFloat(formState.subtotal) || 0,
       notes: formState.notes ? formState.notes.trim() : null,
     };
     onSubmit(payload);
   };
 
-  const inputBaseClasses = 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500';
+  const inputBaseClasses =
+    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Invoice Number
+        <FormField label={<Label required>Invoice Number</Label>} required>
           <input
             className={inputBaseClasses}
             name="invoiceNumber"
@@ -75,9 +77,8 @@ const InvoiceForm = ({
             required
             placeholder="INV-2024-001"
           />
-        </label>
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Client Name
+        </FormField>
+        <FormField label={<Label required>Client Name</Label>} required>
           <input
             className={inputBaseClasses}
             name="clientName"
@@ -87,9 +88,8 @@ const InvoiceForm = ({
             required
             placeholder="Müller GmbH"
           />
-        </label>
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Issue Date
+        </FormField>
+        <FormField label={<Label required>Issue Date</Label>} required>
           <input
             type="date"
             className={inputBaseClasses}
@@ -99,9 +99,8 @@ const InvoiceForm = ({
             disabled={disabled}
             required
           />
-        </label>
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Due Date
+        </FormField>
+        <FormField label={<Label required>Due Date</Label>} required>
           <input
             type="date"
             className={inputBaseClasses}
@@ -111,9 +110,8 @@ const InvoiceForm = ({
             disabled={disabled}
             required
           />
-        </label>
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Currency
+        </FormField>
+        <FormField label={<Label required>Currency</Label>} required>
           <input
             className={inputBaseClasses}
             name="currency"
@@ -122,9 +120,8 @@ const InvoiceForm = ({
             disabled={disabled}
             required
           />
-        </label>
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Subtotal
+        </FormField>
+        <FormField label={<Label required>Subtotal</Label>} required>
           <input
             type="number"
             step="0.01"
@@ -137,9 +134,8 @@ const InvoiceForm = ({
             required
             placeholder="0.00"
           />
-        </label>
-        <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-          Total
+        </FormField>
+        <FormField label={<Label>Total</Label>}>
           <input
             type="number"
             step="0.01"
@@ -151,10 +147,9 @@ const InvoiceForm = ({
             disabled={disabled}
             placeholder="Auto = subtotal"
           />
-        </label>
+        </FormField>
       </div>
-      <label className="space-y-1 text-sm font-medium text-gray-700 dark:text-gray-200">
-        Notes (optional)
+      <FormField label={<Label>Notes (optional)</Label>}>
         <textarea
           className={`${inputBaseClasses} min-h-[110px] resize-none`}
           name="notes"
@@ -162,7 +157,7 @@ const InvoiceForm = ({
           onChange={handleChange}
           disabled={disabled}
         />
-      </label>
+      </FormField>
       <div className="flex justify-end">
         <Button type="submit" loading={loading} disabled={disabled} variant="primary">
           {submitLabel}

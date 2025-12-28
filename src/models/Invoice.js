@@ -60,11 +60,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       dueDate: {
         type: DataTypes.DATEONLY,
-        allowNull: false,
+        allowNull: true,
       },
       clientName: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       notes: {
         type: DataTypes.TEXT,

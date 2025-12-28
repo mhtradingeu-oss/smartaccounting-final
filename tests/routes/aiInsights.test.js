@@ -1,6 +1,6 @@
 const request = require('../utils/request');
 const app = require('../../src/app');
-const { AIInsight, AIInsightDecision, User, sequelize } = require('../../src/models');
+const { AIInsight, sequelize } = require('../../src/models');
 const { createTestCompany } = require('../utils/createTestCompany');
 const testUtils = require('../utils/testHelpers');
 
@@ -22,19 +22,35 @@ describe('AI Insights API', () => {
     jest.clearAllMocks();
   });
 
-  it('should block access if aiEnabled=false', async () => {
+  it('should block access when AI is disabled', async () => {
     await company.update({ aiEnabled: false });
     const res = await request(app)
-      .get('/api/v1/ai/insights')
+      .get('/api/ai/insights')
       .set('Authorization', `Bearer ${adminToken}`);
-    expect([200, 403, 404, 501]).toContain(res.status);
-    if (res.status === 501) {
-      expect(res.body).toEqual({ status: 'disabled', feature: 'AI Insights' });
-    }
+    expect(res.status).toBe(501);
+    expect(res.body).toEqual({ status: 'disabled', feature: 'AI Insights' });
     await company.update({ aiEnabled: true });
   });
 
-  it('should enforce tenant isolation', async () => {
+  it('should scope insights by company', async () => {
+    // Seed one insight for primary company
+    await AIInsight.create({
+      companyId: company.id,
+      entityType: 'invoice',
+      entityId: 'inv-iso',
+      type: 'invoice_anomaly',
+      severity: 'medium',
+      confidenceScore: 0.75,
+      summary: 'Scoped test',
+      why: 'Scoped test',
+      legalContext: 'GoBD',
+      evidence: [],
+      ruleId: 'rule-scope',
+      modelVersion: 'v1',
+      featureFlag: 'default',
+      disclaimer: 'Suggestion only — not binding',
+    });
+
     const otherCompany = await createTestCompany({
       name: 'OtherCo',
       taxId: 'DE000000000',
@@ -45,100 +61,65 @@ describe('AI Insights API', () => {
       companyId: otherCompany.id,
     });
     const otherToken = testUtils.createAuthToken(otherAdmin.id);
-    // Create an insight for company
+
+    const res = await request(app)
+      .get('/api/ai/insights')
+      .set('Authorization', `Bearer ${otherToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.insights).toEqual([]);
+  });
+
+  it('should keep AI endpoints read-only (decisions disabled)', async () => {
     const insight = await AIInsight.create({
       companyId: company.id,
       entityType: 'invoice',
-      entityId: 'inv-1',
+      entityId: 'inv-readonly',
       type: 'invoice_anomaly',
-      severity: 'medium',
-      confidenceScore: 0.9,
-      summary: 'Test',
-      why: 'Test',
+      severity: 'low',
+      confidenceScore: 0.5,
+      summary: 'Read-only',
+      why: 'Read-only',
       legalContext: 'GoBD',
       evidence: [],
-      ruleId: 'rule1',
+      ruleId: 'rule-read',
       modelVersion: 'v1',
       featureFlag: 'default',
       disclaimer: 'Suggestion only — not binding',
     });
-    // Other company cannot access
+
     const res = await request(app)
-      .post(`/api/v1/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${otherToken}`)
-      .send({ decision: 'accepted' });
-    expect([403, 404, 501]).toContain(res.status);
+      .post(`/api/ai/insights/${insight.id}/decisions`)
+      .set('Authorization', `Bearer ${accountantToken}`)
+      .send({ decision: 'accepted', reason: 'Test' });
+    expect(res.status).toBe(501);
+    expect(res.body).toHaveProperty('feature', 'AI decision capture');
   });
 
-  it('should allow accountant to accept/reject, admin to override, viewer forbidden', async () => {
-    // Ensure AI is enabled for this test
-    await company.update({ aiEnabled: true });
-    const insight = await AIInsight.create({
-      companyId: company.id,
-      entityType: 'invoice',
-      entityId: 'inv-2',
-      type: 'invoice_anomaly',
-      severity: 'medium',
-      confidenceScore: 0.9,
-      summary: 'Test',
-      why: 'Test',
-      legalContext: 'GoBD',
-      evidence: [],
-      ruleId: 'rule1',
-      modelVersion: 'v1',
-      featureFlag: 'default',
-      disclaimer: 'Suggestion only — not binding',
-    });
-    // Accountant accept
-    let res = await request(app)
-      .post(`/api/v1/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${accountantToken}`)
-      .send({ decision: 'accepted' });
-    expect([200, 403, 404, 501]).toContain(res.status);
-    // Accountant reject (no reason = 400)
-    res = await request(app)
-      .post(`/api/v1/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${accountantToken}`)
-      .send({ decision: 'rejected' });
-    expect([400, 404]).toContain(res.status);
-    // Accountant reject (with reason)
-    res = await request(app)
-      .post(`/api/v1/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${accountantToken}`)
-      .send({ decision: 'rejected', reason: 'Not relevant' });
-    expect([200, 404]).toContain(res.status);
-    if (res.status === 200) {
-      expect(res.body).toHaveProperty('decision');
-    } else {
-      expect(res.status).toBe(404);
-    }
-    // Admin override
-    res = await request(app)
-      .post(`/api/v1/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ decision: 'overridden', reason: 'Manual correction' });
-    expect([200, 404]).toContain(res.status);
-    if (res.status === 200) {
-      expect(res.body).toHaveProperty('decision');
-    }
-    // Viewer forbidden
-    res = await request(app)
-      .post(`/api/v1/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${viewerToken}`)
-      .send({ decision: 'accepted' });
-    expect([403, 404]).toContain(res.status);
-  });
+  it('should flag viewers as limited and cap the feed', async () => {
+    await AIInsight.bulkCreate(
+      Array.from({ length: 5 }, (_, index) => ({
+        companyId: company.id,
+        entityType: 'invoice',
+        entityId: `inv-${index}`,
+        type: 'invoice_anomaly',
+        severity: 'low',
+        confidenceScore: 0.4 + index * 0.1,
+        summary: `Entry ${index}`,
+        why: 'Viewer limit test',
+        legalContext: 'GoBD',
+        evidence: [],
+        ruleId: `rule-${index}`,
+        modelVersion: 'v1',
+        featureFlag: 'default',
+        disclaimer: 'Suggestion only — not binding',
+      })),
+    );
 
-  it('should return insights with decision state', async () => {
     const res = await request(app)
-      .get('/api/v1/ai/insights')
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect([200, 403, 404, 501]).toContain(res.status);
-    if (res.status === 200) {
-      expect(Array.isArray(res.body.insights)).toBe(true);
-      if (res.body.insights.length) {
-        expect(res.body.insights[0]).toHaveProperty('decisions');
-      }
-    }
+      .get('/api/ai/insights')
+      .set('Authorization', `Bearer ${viewerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.viewerLimited).toBe(true);
+    expect(res.body.insights.length).toBeLessThanOrEqual(3);
   });
 });

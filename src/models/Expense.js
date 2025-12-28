@@ -20,14 +20,14 @@ module.exports = (sequelize, DataTypes) => {
 
   Expense.init(
     {
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
       description: {
         type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
+        allowNull: false,
       },
       companyId: {
         type: DataTypes.INTEGER,
@@ -88,7 +88,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Expense',
-      tableName: 'Expenses',
+      tableName: 'expenses',
     },
   );
 

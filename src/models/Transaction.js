@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
         model: 'companies',
         key: 'id',
       },
+      field: 'company_id',
     },
     userId: {
       type: DataTypes.INTEGER,
@@ -20,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         model: 'users',
         key: 'id',
       },
+      field: 'user_id',
     },
     transactionDate: {
       type: DataTypes.DATE,
@@ -40,7 +42,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'EUR',
     },
     type: {
-      type: DataTypes.ENUM('income', 'expense'),
+      type: DataTypes.STRING,
       allowNull: false,
       set(value) {
         this.setDataValue('type', (value || '').toLowerCase());
@@ -52,10 +54,12 @@ module.exports = (sequelize, DataTypes) => {
     vatRate: {
       type: DataTypes.DECIMAL(5, 4),
       defaultValue: 0.00,
+      field: 'vat_rate',
     },
     vatAmount: {
       type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0.00,
+      field: 'vat_amount',
     },
     reference: {
       type: DataTypes.STRING,
@@ -63,26 +67,36 @@ module.exports = (sequelize, DataTypes) => {
     nonDeductible: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      field: 'non_deductible',
     },
     creditAmount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
+      field: 'credit_amount',
     },
     debitAmount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
+      field: 'debit_amount',
     },
     isReconciled: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      field: 'is_reconciled',
     },
     bankTransactionId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: true,
+      field: 'bank_transaction_id',
+      references: {
+        model: 'bank_transactions',
+        key: 'id',
+      },
     },
   }, {
     tableName: 'transactions',
     timestamps: true,
+    underscored: true,
   });
 
   Transaction.associate = (models) => {

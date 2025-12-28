@@ -212,7 +212,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
 
   return (
     <header
-      className={`fixed top-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 dark:bg-gray-900/95 dark:border-gray-700 transition-all duration-300 ease-in-out ${
+      className={`fixed top-0 right-0 z-20 bg-gradient-to-b from-white/95 to-gray-50/90 backdrop-blur border-b border-gray-200 shadow-[0_2px_8px_0_rgba(0,0,0,0.03)] dark:bg-gradient-to-b dark:from-gray-900/95 dark:to-gray-800/90 dark:border-gray-700 transition-all duration-300 ease-in-out ${
         isCollapsed ? 'main-collapsed' : 'main-expanded'
       }`}
     >
@@ -224,7 +224,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
               <img
                 src="/brand/logo.png"
                 alt="SmartAccounting Logo"
-                className="h-8 w-auto object-contain"
+                className="h-8 w-auto object-contain drop-shadow-sm"
                 style={{ maxHeight: 40 }}
                 loading="eager"
               />
@@ -289,13 +289,18 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
           </div>
 
           {/* Company Selector (if companies exist) */}
-          {companies?.length > 0 ? (
-            <div className="mr-4">
+          <div className="flex items-center gap-2 mr-4">
+            {companies?.length > 0 ? (
               <CompanySelector />
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">No company</span>
-          )}
+            ) : (
+              <span className="text-xs text-gray-400">No company</span>
+            )}
+            {user?.role && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 dark:from-primary-900/20 dark:to-blue-900/20 dark:text-primary-200 opacity-80">
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </span>
+            )}
+          </div>
           {/* Right side enhanced actions */}
           <div className="flex items-center space-x-4">
             {/* Current Time Display */}
@@ -465,7 +470,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center space-x-3 p-2 text-sm rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                className="flex items-center space-x-3 p-2 text-sm rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
+                aria-label="Open profile menu"
               >
                 <div className="relative">
                   <UserCircleIconSolid className="h-8 w-8 text-gray-400" />

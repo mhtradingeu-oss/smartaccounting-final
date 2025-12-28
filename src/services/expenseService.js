@@ -54,6 +54,7 @@ const createExpense = async (data, userId, companyId) => {
 
   const expensePayload = {
     vendorName: data.vendorName,
+    description: data.description,
     category: data.category,
     netAmount: net,
     vatAmount: vat,

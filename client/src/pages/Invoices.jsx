@@ -10,7 +10,7 @@ import { invoicesAPI } from '../services/invoicesAPI';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
-import { isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+import { isReadOnlyRole } from '../lib/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 
 const STATUS_FILTERS = [
@@ -93,10 +93,10 @@ const Invoices = () => {
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
-      const matchesStatus =
-        filters.status === 'all' || invoice.status === filters.status;
+      const matchesStatus = filters.status === 'all' || invoice.status === filters.status;
       const search = filters.search.trim().toLowerCase();
-      const matchesSearch = !search ||
+      const matchesSearch =
+        !search ||
         invoice.invoiceNumber?.toLowerCase().includes(search) ||
         invoice.clientName?.toLowerCase().includes(search);
       return matchesStatus && matchesSearch;
@@ -129,45 +129,40 @@ const Invoices = () => {
             Select company
           </Button>
         }
+        help="You can only view and create invoices for your active company."
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner mode={readOnlyBannerMode(user?.role)} message="You have read-only access. Invoice creation and editing are disabled." />
-      )}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Page header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
-          <h1 className="text-3xl font-bold text-gray-900">{activeCompany.name}</h1>
-          <p className="text-sm text-gray-500">Invoices overview</p>
+          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+          <p className="text-sm text-gray-500">
+            All invoices for <span className="font-semibold">{activeCompany.name}</span>
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <PermissionGuard action="invoice.create" role={user?.role}>
             <Link to="/invoices/create">
-              <Button
-                variant="primary"
-                size="medium"
-              >
+              <Button variant="primary" size="md">
                 New Invoice
               </Button>
             </Link>
           </PermissionGuard>
-          <Button
-            variant="secondary"
-            size="medium"
-            onClick={fetchInvoices}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
         </div>
       </div>
-
+      {isReadOnlyRole(user?.role) && (
+        <ReadOnlyBanner
+          mode="Viewer"
+          message="You have view-only access. Invoice creation and editing are disabled for your role."
+        />
+      )}
       <Card>
         <div className="space-y-6">
+          {/* Filters */}
           <div className="grid gap-4 md:grid-cols-3">
             <label className="flex flex-col text-sm font-medium text-gray-700 dark:text-gray-200">
               Search
@@ -178,6 +173,7 @@ const Invoices = () => {
                 value={filters.search}
                 onChange={(event) => handleFilterChange('search', event.target.value)}
                 disabled={loading}
+                aria-label="Search invoices"
               />
             </label>
             <label className="flex flex-col text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -196,7 +192,7 @@ const Invoices = () => {
               </select>
             </label>
           </div>
-
+          {/* Table or states */}
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
@@ -216,10 +212,7 @@ const Invoices = () => {
               description="Create your first invoice or try a different filter."
               action={
                 <PermissionGuard action="invoice.create" role={user?.role}>
-                  <Button
-                    variant="primary"
-                    onClick={() => navigate('/invoices/create')}
-                  >
+                  <Button variant="primary" onClick={() => navigate('/invoices/create')}>
                     Create invoice
                   </Button>
                 </PermissionGuard>
@@ -231,23 +224,45 @@ const Invoices = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Invoice #</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Client</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Issue Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Invoice #
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Client
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Issue Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Due Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Amount
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {paginatedInvoices.map((invoice) => (
-                      <tr key={invoice.id}>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{invoice.invoiceNumber}</td>
+                      <tr key={invoice.id} className="hover:bg-blue-50/60 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {invoice.invoiceNumber}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{invoice.clientName}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(invoice.date)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(invoice.dueDate)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(invoice.total, invoice.currency)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {formatDate(invoice.date)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {formatDate(invoice.dueDate)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {formatCurrency(invoice.total, invoice.currency)}
+                        </td>
                         <td className="px-4 py-3">
                           <InvoiceStatusBadge status={invoice.status} />
                         </td>
@@ -266,7 +281,7 @@ const Invoices = () => {
                   </tbody>
                 </table>
               </div>
-
+              {/* Pagination */}
               <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
                 <p>
                   Showing {showingStart} - {showingEnd} of {filteredInvoices.length} invoices

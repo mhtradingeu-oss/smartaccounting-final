@@ -21,6 +21,29 @@ const requireProduction = () => {
   process.env.NODE_ENV = 'production';
 };
 
+const configureDemoPassword = () => {
+  const password = process.env.DEMO_PASSWORD || 'Demo123!';
+  process.env.DEMO_PASSWORD = password;
+  console.log(`[seed:demo:prod] using deterministic demo password: ${password}`);
+};
+
+const DEMO_USERS = [
+  { email: 'demo-admin@demo.com', role: 'admin' },
+  { email: 'demo-accountant@demo.com', role: 'accountant' },
+  { email: 'demo-viewer@demo.com', role: 'viewer' },
+];
+
+const printLoginSheet = () => {
+  const password = process.env.DEMO_PASSWORD || 'Demo123!';
+  console.log('\n[seed:demo:prod] Login sheet (demo credentials)');
+  console.log('[seed:demo:prod] Email                 | Role        | Password');
+  DEMO_USERS.forEach((user) => {
+    console.log(
+      `[seed:demo:prod] ${user.email.padEnd(22)} | ${user.role.padEnd(11)} | ${password}`,
+    );
+  });
+};
+
 const runCommand = (command, args) => {
   const result = spawnSync(command, args, {
     stdio: 'inherit',
@@ -37,6 +60,7 @@ const runCommand = (command, args) => {
 
 requireDemoMode();
 requireProduction();
+configureDemoPassword();
 
 console.log('[seed:demo:prod] running guarded demo seeder...');
 runCommand('npx', [
@@ -48,3 +72,4 @@ runCommand('npx', [
   'database/seeders/demo',
 ]);
 console.log('[seed:demo:prod] demo seeder completed.');
+printLoginSheet();

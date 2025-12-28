@@ -42,7 +42,7 @@ const ExpensesCreate = () => {
 
   return (
     <Card className="max-w-lg mx-auto mt-8 p-6">
-      <h2 className="text-xl font-bold mb-4">Create Expense</h2>
+      <h2 className="text-2xl font-bold mb-4">Create Expense</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label>Date</label>

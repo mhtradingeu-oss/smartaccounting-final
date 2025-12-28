@@ -1,8 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   const BankStatement = sequelize.define('BankStatement', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     companyId: {

@@ -142,7 +142,7 @@ app.use(`${API_PREFIX}/monitoring`, monitoringRoutes);
 app.use(`${API_PREFIX}/logs`, logRoutes);
 app.use(`${API_PREFIX}/exports`, exportRoutes);
 app.use(`${API_PREFIX}/email-test`, emailTestRoutes);
-app.use('/api/expenses', expenseRoutes);
+app.use(`${API_PREFIX}/expenses`, expenseRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({

@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const expenseService = require('../services/expenseService');
 const { withAuditLog } = require('../services/withAuditLog');
+const { expenseSchema } = require('../validators/expenseValidator');
 
 const router = express.Router();
 
@@ -33,6 +34,12 @@ router.get('/:expenseId', requireRole(['admin', 'accountant', 'auditor', 'viewer
 
 // Create expense (manual entry)
 router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) => {
+  const { error, value } = expenseSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    error.status = 400;
+    return next(error);
+  }
+
   try {
     const expense = await withAuditLog({
       action: 'expense_create',
@@ -40,10 +47,10 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
       resourceId: null,
       userId: req.userId,
       oldValues: null,
-      newValues: req.body,
+      newValues: value,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
-    }, async () => expenseService.createExpense(req.body, req.userId, req.companyId));
+    }, async () => expenseService.createExpense(value, req.userId, req.companyId));
     res.status(201).json({ success: true, expense });
   } catch (error) {
     next(error);

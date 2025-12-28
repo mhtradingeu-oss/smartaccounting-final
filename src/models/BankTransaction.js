@@ -1,8 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   const BankTransaction = sequelize.define('BankTransaction', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     companyId: {
@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     bankStatementId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'bank_statements',
@@ -24,10 +24,12 @@ module.exports = (sequelize, DataTypes) => {
     transactionDate: {
       type: DataTypes.DATE,
       allowNull: false,
+      field: 'date',
     },
     valueDate: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'value_date',
     },
     description: {
       type: DataTypes.STRING,
@@ -43,8 +45,9 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'EUR',
     },
     transactionType: {
-      type: DataTypes.ENUM('DEBIT', 'CREDIT'),
+      type: DataTypes.STRING,
       allowNull: false,
+      defaultValue: 'DEBIT',
     },
     reference: {
       type: DataTypes.STRING,
@@ -54,13 +57,21 @@ module.exports = (sequelize, DataTypes) => {
     },
     vatCategory: {
       type: DataTypes.STRING,
+      field: 'vat_category',
     },
     counterpartyName: {
       type: DataTypes.STRING,
+      field: 'counterparty_name',
     },
     isReconciled: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      field: 'is_reconciled',
+    },
+    reconciledWith: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'reconciled_with',
     },
   }, {
     tableName: 'bank_transactions',
@@ -77,6 +88,12 @@ module.exports = (sequelize, DataTypes) => {
   BankTransaction.associate = (models) => {
     BankTransaction.belongsTo(models.BankStatement, { foreignKey: 'bankStatementId', as: 'bankStatement' });
     BankTransaction.belongsTo(models.Company, { foreignKey: 'companyId', as: 'company' });
+    if (models.Transaction) {
+      BankTransaction.belongsTo(models.Transaction, {
+        foreignKey: 'reconciledWith',
+        as: 'reconciledTransaction',
+      });
+    }
   };
 
   return BankTransaction;

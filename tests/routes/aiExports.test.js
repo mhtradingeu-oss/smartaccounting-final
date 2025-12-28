@@ -46,7 +46,7 @@ describe('AI Exports API', () => {
 
   it('should export JSON with modelVersion/ruleId', async () => {
     const res = await request(app)
-      .get('/api/v1/ai/exports/insights.json')
+      .get('/api/ai/exports/insights.json')
       .set('Authorization', `Bearer ${adminToken}`);
     expect([200, 403, 404, 501]).toContain(res.status);
     if (res.status === 200) {
@@ -60,7 +60,7 @@ describe('AI Exports API', () => {
 
   it('should export CSV with correct headers', async () => {
     const res = await request(app)
-      .get('/api/v1/ai/exports/insights.csv')
+      .get('/api/ai/exports/insights.csv')
       .set('Authorization', `Bearer ${adminToken}`);
     expect([200, 403, 404, 501]).toContain(res.status);
     if (res.status === 200) {
@@ -77,7 +77,7 @@ describe('AI Exports API', () => {
     const otherAdmin = await testUtils.createTestUser({ role: 'admin', companyId: otherCompany.id });
     const otherToken = testUtils.createAuthToken(otherAdmin.id);
     const res = await request(app)
-      .get('/api/v1/ai/exports/insights.json')
+      .get('/api/ai/exports/insights.json')
       .set('Authorization', `Bearer ${otherToken}`);
     // Should not see ExportCo's insights
     if (Array.isArray(res.body)) {

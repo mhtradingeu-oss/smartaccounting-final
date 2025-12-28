@@ -7,25 +7,55 @@ const revokedTokenService = require('../services/revokedTokenService');
 const { sanitizeInput, preventNoSqlInjection } = require('../middleware/validation');
 const { loginLimiter, registerLimiter, resetAuthRateLimit } = require('../middleware/rateLimiter');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
-const { getJwtSecret, getJwtExpiresIn } = require('../utils/jwtConfig');
+const { parseDurationMs } = require('../utils/duration');
+const {
+  getJwtSecret,
+  getJwtExpiresIn,
+  getRefreshSecret,
+  getRefreshExpiresIn,
+} = require('../utils/jwtConfig');
+
+const BOOLEAN_TRUE_VALUES = ['1', 'true', 'yes', 'on'];
+const BOOLEAN_FALSE_VALUES = ['0', 'false', 'no', 'off'];
+
+const parseBooleanEnv = (value, fallback) => {
+  if (typeof value === 'undefined') {
+    return fallback;
+  }
+  const normalized = `${value}`.trim().toLowerCase();
+  if (BOOLEAN_TRUE_VALUES.includes(normalized)) {
+    return true;
+  }
+  if (BOOLEAN_FALSE_VALUES.includes(normalized)) {
+    return false;
+  }
+  return fallback;
+};
+
+const SECURE_COOKIES_ENABLED = parseBooleanEnv(
+  process.env.SECURE_COOKIES,
+  process.env.NODE_ENV === 'production',
+);
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: SECURE_COOKIES_ENABLED,
   sameSite: 'strict',
 };
+const ACCESS_TOKEN_TTL_MS = parseDurationMs(getJwtExpiresIn(), 60 * 60 * 1000);
+const REFRESH_TOKEN_TTL_MS = parseDurationMs(getRefreshExpiresIn(), 7 * 24 * 60 * 60 * 1000);
 
 const router = express.Router();
 const RATE_LIMIT_RESET_ENABLED = process.env.AUTH_RATE_LIMIT_RESET_ENABLED === 'true';
 
 const setTokenCookie = (res, token) => {
-  res.cookie('token', token, { ...COOKIE_OPTIONS, maxAge: 60 * 60 * 1000 });
+  res.cookie('token', token, { ...COOKIE_OPTIONS, maxAge: ACCESS_TOKEN_TTL_MS });
 };
 
 const setRefreshCookie = (res, refreshToken) => {
   res.cookie('refreshToken', refreshToken, {
     ...COOKIE_OPTIONS,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: REFRESH_TOKEN_TTL_MS,
   });
 };
 
@@ -42,7 +72,7 @@ router.post('/refresh', async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, getJwtSecret());
+    const decoded = jwt.verify(refreshToken, getRefreshSecret());
     if (decoded.type !== 'refresh') {
       throw new Error('Invalid refresh token type');
     }
@@ -56,6 +86,14 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ success: false, message: 'User not found or inactive' });
     }
 
+    if (decoded.jti) {
+      await revokedTokenService.revokeToken({
+        jti: decoded.jti,
+        expiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
+      });
+      await activeTokenService.removeToken(decoded.jti);
+    }
+
     const tokenId = uuidv4();
     const token = jwt.sign(
       { userId: user.id, role: user.role, companyId: user.companyId },
@@ -66,11 +104,25 @@ router.post('/refresh', async (req, res) => {
     await activeTokenService.addToken({
       userId: user.id,
       jti: tokenId,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + ACCESS_TOKEN_TTL_MS),
+    });
+
+    const refreshId = uuidv4();
+    const newRefreshToken = jwt.sign(
+      { userId: user.id, type: 'refresh' },
+      getRefreshSecret(),
+      { expiresIn: getRefreshExpiresIn(), jwtid: refreshId },
+    );
+
+    await activeTokenService.addToken({
+      userId: user.id,
+      jti: refreshId,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     });
 
     setTokenCookie(res, token);
-    return res.status(200).json({ success: true, token });
+    setRefreshCookie(res, newRefreshToken);
+    return res.status(200).json({ success: true, token, refreshToken: newRefreshToken });
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
   }

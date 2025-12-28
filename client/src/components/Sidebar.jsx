@@ -139,7 +139,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const renderNavItem = (item, index, sectionKey = '') => {
     const isEnabled = item.enabled !== false;
     const isActive = item.href && isActiveLink(item.href);
-    // const isHovered = hoveredItem === `${sectionKey}-${item.href || item.name}-${index}`;
+
     const IconComponent = isActive && item.iconSolid ? item.iconSolid : item.icon;
     if (isEnabled) {
       return (
@@ -151,6 +151,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800'
           }`}
+          aria-current={isActive ? 'page' : undefined}
           onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.href}-${index}`)}
           onMouseLeave={() => setHoveredItem(null)}
         >
@@ -177,7 +178,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                   </span>
                 )}
                 {item.partial && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <span
+                    className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                    title="This feature is coming soon and not yet available."
+                  >
                     Coming Soon
                   </span>
                 )}
@@ -187,12 +191,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         </NavLink>
       );
     }
-    // DISABLED (not clickable)
+    // DISABLED (not clickable, with tooltip)
     return (
       <div
         key={`${sectionKey}-${item.name}`}
         className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-50 cursor-not-allowed"
-        title="Coming soon"
+        title={item.description ? `${item.description} (Coming soon)` : 'Coming soon'}
+        aria-disabled="true"
+        tabIndex={-1}
         onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.name}-${index}`)}
         onMouseLeave={() => setHoveredItem(null)}
       >
@@ -208,7 +214,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                   Coming soon
                 </span>
               )}
-              <span className="ml-2 text-gray-400">
+              <span className="ml-2 text-gray-400" title="Feature preview">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4 inline"
@@ -240,10 +246,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     return (
       <div className="space-y-1">
         {!isCollapsed && (
-          <div className="px-3 py-3">
+          <div className="px-3 pt-4 pb-2">
             <div className="flex items-center space-x-2">
-              {SectionIcon && <SectionIcon className="h-4 w-4 text-gray-400" />}
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+              {SectionIcon && <SectionIcon className="h-4 w-4 text-gray-300 dark:text-gray-600" />}
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider dark:text-gray-500">
                 {title}
               </h3>
             </div>
@@ -377,20 +383,20 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                 return (
                   <div
                     key={`coming-soon-${item.href}-${item.name}`}
-                    className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300"
+                    className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-500 opacity-70 cursor-not-allowed select-none"
                   >
                     <div className="flex items-center gap-3">
-                      <FeatureIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      <FeatureIcon className="h-4 w-4 text-gray-300 dark:text-gray-600" />
                       <div className="space-y-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">
                           {item.name}
                         </p>
-                        <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                        <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-600">
                           {item.description || 'Feature coming soon'}
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-yellow-800 dark:text-yellow-300">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
                       {item.badge || 'Soon'}
                     </span>
                   </div>

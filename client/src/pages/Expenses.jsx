@@ -62,9 +62,9 @@ const Expenses = () => {
 
   useEffect(() => {
     if (!activeCompany) {
-    setExpenses([]);
-    setError(null);
-    setLoading(false);
+      setExpenses([]);
+      setError(null);
+      setLoading(false);
       return;
     }
     fetchExpenses();
@@ -80,9 +80,7 @@ const Expenses = () => {
   }
 
   if (error) {
-    return (
-      <ErrorState message={error.message} onRetry={fetchExpenses} />
-    );
+    return <ErrorState message={error.message} onRetry={fetchExpenses} />;
   }
 
   // Empty state
