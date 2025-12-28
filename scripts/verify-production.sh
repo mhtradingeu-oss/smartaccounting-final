@@ -1,50 +1,72 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${PRODUCTION_VERIFY_BASE_URL:-http://localhost:5000}"
-API_BASE="${BASE_URL%/}/api"
+EMAIL="${VERIFY_EMAIL:-demo-accountant@demo.com}"
+PASSWORD="${VERIFY_PASSWORD:-Demo123!}"
 
-if [ -f /.dockerenv ]; then
-  echo "[verify] Running inside Docker container."
-else
-  echo "[verify] Warning: container marker not detected; ensure this script runs inside Docker."
+HOST_MARKER="/.dockerenv"
+
+# Inside backend container: app listens on 5000
+DOCKER_URL="http://localhost:5000"
+# On host: backend is mapped to 5001
+HOST_URL="http://localhost:5001"
+
+BASE_URL="${PRODUCTION_VERIFY_BASE_URL:-}"
+if [ -z "$BASE_URL" ]; then
+  if [ -f "$HOST_MARKER" ]; then
+    echo "[verify] Running inside Docker container."
+    BASE_URL="$DOCKER_URL"
+  else
+    echo "[verify] Running on host."
+    BASE_URL="$HOST_URL"
+  fi
 fi
+BASE_URL="${BASE_URL%/}"
 
-log_step() {
-  printf "[verify] %-40s ... " "$1"
-}
+curl -fsS "$BASE_URL/health" >/dev/null
+echo "[verify] /health OK"
 
-check_endpoint_auth() {
-  log_step "$1"
-  curl --fail --silent --show-error -H "Authorization: Bearer ${TOKEN}" "${API_BASE}${2}" >/dev/null
-  echo "OK"
-}
+curl -fsS "$BASE_URL/ready" >/dev/null
+echo "[verify] /ready OK"
 
-log_step "Health check"
-curl --fail --silent --show-error "${BASE_URL%/}/health" >/dev/null
-echo "OK"
+LOGIN_RESPONSE="/tmp/verify-production-login.json"
+TOKEN_FILE="/tmp/verify-production-token.txt"
+cleanup() { rm -f "$LOGIN_RESPONSE" "$TOKEN_FILE"; }
+trap cleanup EXIT
 
-LOGIN_PAYLOAD='{"email":"demo-accountant@demo.com","password":"Demo123!"}'
-log_step "Authenticating demo accountant"
-LOGIN_RESPONSE=$(curl --fail --silent --show-error -X POST "${API_BASE}/auth/login" \
+LOGIN_PAYLOAD='{"email":"'"$EMAIL"'","password":"'"$PASSWORD"'"}'
+
+curl -fsS -X POST "$BASE_URL/api/auth/login" \
   -H 'Content-Type: application/json' \
-  -d "$LOGIN_PAYLOAD")
+  -d "$LOGIN_PAYLOAD" > "$LOGIN_RESPONSE"
 
-TOKEN=$(python3 - <<'PY'
-import json, sys
+grep -o '"token":"[^"]*"' "$LOGIN_RESPONSE" | sed 's/.*"token":"\([^"]*\)".*/\1/' > "$TOKEN_FILE" || {
+  echo "[verify] FAIL: /api/auth/login did not return a token"
+  echo "[verify] Response:"
+  cat "$LOGIN_RESPONSE"
+  exit 1
+}
 
-data = json.load(sys.stdin)
-token = data.get('token')
-if not token:
-    sys.exit('missing token')
-print(token)
-PY <<<"$LOGIN_RESPONSE")
-echo "OK"
+TOKEN="$(cat "$TOKEN_FILE" || true)"
+if [ -z "$TOKEN" ]; then
+  echo "[verify] FAIL: /api/auth/login returned an empty token"
+  echo "[verify] Response:"
+  cat "$LOGIN_RESPONSE"
+  exit 1
+fi
+echo "[verify] /api/auth/login OK"
 
-check_endpoint_auth "Dash stats" "/dashboard/stats"
-check_endpoint_auth "Invoices list" "/invoices"
-check_endpoint_auth "Expenses list" "/expenses"
-check_endpoint_auth "Bank statements" "/bank-statements"
-check_endpoint_auth "AI insights" "/ai/insights"
+AUTH_ENDPOINTS=(
+  "/api/dashboard/stats"
+  "/api/invoices"
+  "/api/expenses"
+  "/api/bank-statements"
+  "/api/ai/insights"
+)
 
-echo "[verify] Production verification completed successfully."
+for endpoint in "${AUTH_ENDPOINTS[@]}"; do
+  curl -fsS -H "Authorization: Bearer $TOKEN" "$BASE_URL$endpoint" >/dev/null
+  echo "[verify] $endpoint OK"
+done
+
+echo "[verify] ALL CHECKS PASSED"
