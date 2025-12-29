@@ -3,6 +3,7 @@ const fs = require('fs');
 const { body, validationResult } = require('express-validator');
 const { FileAttachment } = require('../models');
 const ocrService = require('../services/ocrService');
+const { runOCRPreview } = ocrService;
 const AuditLogService = require('../services/auditLogService');
 const { authenticate, requireCompany, requireRole } = require('../middleware/authMiddleware');
 const logger = require('../lib/logger');
@@ -54,7 +55,7 @@ const previewHandler = async (req, res) => {
   const documentType = req.body.documentType || 'invoice';
 
   try {
-    const previewResult = await ocrService.previewDocument(req.file.path, {
+    const previewResult = await runOCRPreview(req.file.path, {
       documentType,
       userId: req.userId,
       companyId: req.companyId,
@@ -63,6 +64,8 @@ const previewHandler = async (req, res) => {
     if (!previewResult.success) {
       throw new Error(previewResult.error || 'OCR preview failed');
     }
+
+    const previewFields = previewResult.fields || previewResult.extractedData;
 
     await AuditLogService.appendEntry({
       action: 'ocr_preview',
@@ -73,7 +76,7 @@ const previewHandler = async (req, res) => {
       newValues: {
         documentType,
         confidence: previewResult.confidence,
-        fields: previewResult.extractedData,
+        fields: previewFields,
       },
       ipAddress: req.ip,
       userAgent: req.get('User-Agent') || null,
@@ -82,7 +85,7 @@ const previewHandler = async (req, res) => {
     return sendSuccess(res, 'OCR preview generated', {
       type: documentType,
       confidence: previewResult.confidence,
-      fields: previewResult.extractedData,
+      fields: previewFields,
       warnings: previewResult.warnings || [],
       explanations: previewResult.explanations || [],
       rawText: previewResult.text,

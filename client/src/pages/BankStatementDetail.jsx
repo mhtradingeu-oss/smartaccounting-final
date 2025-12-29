@@ -988,7 +988,7 @@ const BankStatementDetail = () => {
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span>
-                    "I understand this action will be recorded and can only be undone manually."
+                    &quot;I understand this action will be recorded and can only be undone manually.&quot;
                   </span>
                 </label>
                 <label

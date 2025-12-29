@@ -291,9 +291,9 @@ module.exports = {
     // === DEMO USERS ===
     for (const template of DEMO_USERS) {
       const missing = [];
-      if (!template.firstName) missing.push('firstName');
-      if (!template.lastName) missing.push('lastName');
-      if (!template.role) missing.push('role');
+      if (!template.firstName) {missing.push('firstName');}
+      if (!template.lastName) {missing.push('lastName');}
+      if (!template.role) {missing.push('role');}
       if (missing.length > 0) {
         throw new Error(`[DEMO SEED] ${template.email} missing required fields: ${missing.join(', ')}`);
       }

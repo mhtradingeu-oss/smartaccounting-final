@@ -537,5 +537,7 @@ class OCRService {
   }
 }
 
-module.exports = new OCRService();
+const ocrService = new OCRService();
+ocrService.runOCRPreview = ocrService.previewDocument.bind(ocrService);
+module.exports = ocrService;
 /* eslint-enable no-useless-escape */
