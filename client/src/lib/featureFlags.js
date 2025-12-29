@@ -30,3 +30,16 @@ export const setOCRPreviewEnabled = (value) => {
 export const resetOCRPreviewEnabled = () => {
   ocrPreviewEnabled = DEFAULT_OCR_PREVIEW_ENABLED;
 };
+
+const DEFAULT_AI_ASSISTANT_ENABLED = normalizeFlag(import.meta.env.VITE_AI_ASSISTANT_ENABLED ?? 'true');
+let aiAssistantEnabled = DEFAULT_AI_ASSISTANT_ENABLED;
+
+export const isAIAssistantEnabled = () => aiAssistantEnabled;
+
+export const setAIAssistantEnabled = (value) => {
+  aiAssistantEnabled = normalizeFlag(value);
+};
+
+export const resetAIAssistantEnabled = () => {
+  aiAssistantEnabled = DEFAULT_AI_ASSISTANT_ENABLED;
+};

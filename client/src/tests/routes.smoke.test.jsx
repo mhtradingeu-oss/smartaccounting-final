@@ -15,6 +15,10 @@ vi.mock('../pages/AIInsights', () => ({
   __esModule: true,
   default: () => <div>AI insights page</div>,
 }));
+vi.mock('../pages/AIAssistant', () => ({
+  __esModule: true,
+  default: () => <div>AI assistant page</div>,
+}));
 vi.mock('../pages/Dashboard', () => ({
   __esModule: true,
   default: () => <div>Dashboard page</div>,
@@ -154,6 +158,7 @@ const routeTestCases = [
   { path: '/investor-dashboard', expectedText: 'Investor dashboard page' },
   { path: '/analytics', expectedText: 'Analytics page' },
   { path: '/ai-advisor', expectedText: 'AI insights page' },
+  { path: '/ai-assistant', expectedText: 'AI assistant page' },
   { path: '/dashboard', expectedText: 'Dashboard page' },
   { path: '/invoices', expectedText: 'Invoices page' },
   { path: '/expenses', expectedText: 'Expenses page' },

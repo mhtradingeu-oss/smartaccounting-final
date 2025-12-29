@@ -33,6 +33,7 @@
 - docs/09_FRONTEND_DASHBOARDS_AND_UX.md
 - docs/10_INTEGRATIONS_DATEV_ELSTER_EMAIL.md
 - docs/12_ROADMAP_AND_PHASES.md
+- docs/PHASE_4_PROGRESSIVE_FEATURE_ACTIVATION.md
 - docs/15_CHAT_CONSOLIDATED_MASTER.md
 - docs/DATA_IMMUTABILITY.md
 - docs/DR.md
@@ -99,6 +100,7 @@
   - 10_INTEGRATIONS_DATEV_ELSTER_EMAIL.md (PLANNED)
   - 11_DEPLOYMENT_AND_DEVOPS.md
   - 12_ROADMAP_AND_PHASES.md
+  - PHASE_4_PROGRESSIVE_FEATURE_ACTIVATION.md
   - 13_GOVERNMENT_READY_PRESENTATION.md
   - 14_AI_ACCOUNTING_INTELLIGENCE_MASTER.md (CANONICAL for AI)
   - 15_CHAT_CONSOLIDATED_MASTER.md (REFERENCE ONLY)
@@ -129,6 +131,7 @@
 - Populated: docs/10_INTEGRATIONS_DATEV_ELSTER_EMAIL.md
 - Deprecated/merged: docs/AI_AUTOMATION_GUARANTEES.md, docs/ai_governance_compliance_onepager.md, docs/compliance_security_summary.md, docs/AUDIT_TRAIL.md
 - Updated: README.md to reference canonical docs only
+- Documented: docs/PHASE_4_PROGRESSIVE_FEATURE_ACTIVATION.md (progressive feature activation playbook)
 
 ## 8. Outstanding Issues
 

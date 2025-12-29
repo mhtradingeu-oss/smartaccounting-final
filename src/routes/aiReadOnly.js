@@ -1,13 +1,27 @@
 const express = require('express');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const aiDataService = require('../services/ai/aiDataService');
+const aiAssistantService = require('../services/ai/aiAssistantService');
 // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
-const { logRequested, logResponded, logRejected, logRateLimited } = require('../services/ai/aiAuditLogger');
+const {
+  logRequested,
+  logResponded,
+  logRejected,
+  logRateLimited,
+  logSessionEvent,
+} = require('../services/ai/aiAuditLogger');
 const aiReadOnlyGuard = require('../middleware/aiReadOnlyGuard');
 const rateLimit = require('../middleware/aiRateLimit');
 const { detectMutationIntent } = require('../services/ai/mutationIntent');
+const { randomUUID } = require('crypto');
 
 const router = express.Router();
+
+const normalizeFlag = (value) => String(value ?? '').toLowerCase() === 'true';
+const isAssistantFeatureEnabled = normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
+
+const respondAssistantDisabled = (res) =>
+  res.status(501).json({ status: 'disabled', feature: 'AI Assistant' });
 
 // Enforce GET-only, authentication, company scoping, and rate limiting
 router.use(authenticate, requireCompany, aiReadOnlyGuard, rateLimit);
@@ -108,6 +122,105 @@ router.get('/reconciliation-summary', async (req, res, next) => {
     const summary = await aiDataService.getReconciliationSummary(companyId, range);
     await logResponded({ userId, companyId, queryType, route, prompt, responseMeta: { insightCount: summary ? 1 : 0 } });
     res.json({ summary });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/assistant/context', async (req, res, next) => {
+  if (!isAssistantFeatureEnabled) {
+    return respondAssistantDisabled(res);
+  }
+  try {
+    const context = await aiAssistantService.getContext(req.companyId);
+    res.json({ context });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/assistant', async (req, res, next) => {
+  if (!isAssistantFeatureEnabled) {
+    return respondAssistantDisabled(res);
+  }
+  try {
+    const { intent, targetInsightId } = req.query;
+    const prompt = req.query.prompt || aiAssistantService.INTENT_LABELS[intent] || intent;
+    const sessionId = req.query.sessionId;
+    const companyId = req.user.companyId;
+    const userId = req.user.id;
+    const route = req.originalUrl;
+    const queryType = `assistant_${intent || 'unknown'}`;
+    if (!intent) {
+      return res.status(400).json({ error: 'intent is required' });
+    }
+    if (!aiAssistantService.INTENT_LABELS[intent]) {
+      return res.status(400).json({ error: 'Intent not supported' });
+    }
+    const context = await aiAssistantService.getContext(companyId);
+    await logRequested({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      responseMeta: { sessionId, targetInsightId },
+      sessionId,
+    });
+    const answer = aiAssistantService.answerIntent({ intent, context, targetInsightId });
+    await logResponded({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      responseMeta: { sessionId, targetInsightId },
+      sessionId,
+    });
+    res.json({ answer });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/session', async (req, res, next) => {
+  if (!isAssistantFeatureEnabled) {
+    return respondAssistantDisabled(res);
+  }
+  try {
+    const { prompt } = req.query;
+    const companyId = req.user.companyId;
+    const userId = req.user.id;
+    const route = req.originalUrl;
+    const queryType = 'assistant_session';
+    const sessionId = randomUUID();
+    await logRequested({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      responseMeta: { sessionId },
+      sessionId,
+    });
+    await logSessionEvent({
+      userId,
+      companyId,
+      sessionId,
+      event: 'started',
+      route,
+      prompt,
+    });
+    await logResponded({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      responseMeta: { sessionId },
+      sessionId,
+    });
+    res.json({ sessionId });
   } catch (err) {
     next(err);
   }

@@ -1,5 +1,6 @@
 
 import appVersionData from '../../appVersion.json';
+import { isAIAssistantEnabled } from './featureFlags';
 
 /*
  * v0.1 scope definition:
@@ -15,6 +16,7 @@ export const FEATURE_FLAGS = {
   GERMAN_TAX: { enabled: false, label: 'German VAT/Tax reporting' },
   STRIPE_BILLING: { enabled: false, label: 'Stripe billing' },
   ELSTER_COMPLIANCE: { enabled: false, label: 'Elster/compliance' },
+  AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
 };
 
 export const API_ENDPOINTS = {

@@ -19,6 +19,7 @@ import {
   BuildingOfficeIcon,
   UsersIcon,
   DocumentMagnifyingGlassIcon,
+  ChatBubbleLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -26,9 +27,10 @@ import {
   BanknotesIcon as BanknotesIconSolid,
   DocumentChartBarIcon as DocumentChartBarIconSolid,
   DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
+  ChatBubbleLeftEllipsisIcon as ChatBubbleLeftEllipsisIconSolid,
 } from '@heroicons/react/24/solid';
 import { FEATURE_FLAGS } from '../lib/constants';
-import { isOCRPreviewEnabled } from '../lib/featureFlags';
+import { isOCRPreviewEnabled, isAIAssistantEnabled } from '../lib/featureFlags';
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { t } = useTranslation();
@@ -68,6 +70,16 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       iconSolid: HomeIconSolid,
       badge: null,
       description: 'Overview & Analytics',
+    },
+    {
+      name: 'AI Assistant',
+      href: '/ai-assistant',
+      icon: ChatBubbleLeftEllipsisIcon,
+      iconSolid: ChatBubbleLeftEllipsisIconSolid,
+      badge: 'AI',
+      description: 'Conversational read-only advisor',
+      enabled: isAIAssistantEnabled(),
+      partial: !isAIAssistantEnabled(),
     },
     {
       name: t('navigation.invoices'),

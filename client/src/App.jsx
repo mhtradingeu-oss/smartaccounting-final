@@ -55,6 +55,7 @@ import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
 import RequestAccess from './pages/RequestAccess';
 import AIInsights from './pages/AIInsights';
+import AIAssistant from './pages/AIAssistant';
 
 // Simple NotFound page
 function NotFound() {
@@ -140,6 +141,16 @@ export const AppRoutes = () => {
           <ProtectedRoute>
             <Layout>
               <AIInsights />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-assistant"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AIAssistant />
             </Layout>
           </ProtectedRoute>
         }

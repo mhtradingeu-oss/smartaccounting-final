@@ -7,7 +7,15 @@ function hashPrompt(prompt) {
   return prompt ? crypto.createHash('sha256').update(prompt).digest('hex') : undefined;
 }
 
-async function logRequested({ userId, companyId, queryType, route, prompt, responseMeta }) {
+async function logRequested({
+  userId,
+  companyId,
+  queryType,
+  route,
+  prompt,
+  responseMeta,
+  sessionId,
+}) {
   await AuditLog.create({
     action: 'AI_QUERY_REQUESTED',
     resourceType: 'AI',
@@ -18,6 +26,7 @@ async function logRequested({ userId, companyId, queryType, route, prompt, respo
       route,
       queryType,
       promptHash: hashPrompt(prompt),
+      sessionId,
       responseMeta,
     },
     createdAt: new Date().toISOString(),
@@ -26,7 +35,15 @@ async function logRequested({ userId, companyId, queryType, route, prompt, respo
   });
 }
 
-async function logResponded({ userId, companyId, queryType, route, prompt, responseMeta }) {
+async function logResponded({
+  userId,
+  companyId,
+  queryType,
+  route,
+  prompt,
+  responseMeta,
+  sessionId,
+}) {
   await AuditLog.create({
     action: 'AI_QUERY_RESPONDED',
     resourceType: 'AI',
@@ -37,11 +54,35 @@ async function logResponded({ userId, companyId, queryType, route, prompt, respo
       route,
       queryType,
       promptHash: hashPrompt(prompt),
+      sessionId,
       responseMeta,
     },
     createdAt: new Date().toISOString(),
     immutable: true,
     reason: 'AI query responded',
+  });
+}
+
+async function logSessionEvent({ userId, companyId, sessionId, event = 'started', route, prompt }) {
+  await AuditLog.create({
+    action: 'AI_ASSISTANT_SESSION',
+    resourceType: 'AI',
+    resourceId: sessionId,
+    userId,
+    companyId,
+    newValues: {
+      event,
+      sessionId,
+      route,
+      prompt,
+    },
+    metadata: {
+      route,
+      promptHash: hashPrompt(prompt),
+    },
+    createdAt: new Date().toISOString(),
+    immutable: true,
+    reason: event,
   });
 }
 
