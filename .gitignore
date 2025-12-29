@@ -58,7 +58,8 @@ backups/
 *.db-journal
 
 data/
-
+tessdata/
+*.traineddata
 
 
 # ========================================

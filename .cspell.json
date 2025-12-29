@@ -1,14 +1,15 @@
 {
   "version": "0.2",
   "words": [
-    "apikey",
-    "api_key",
-    "refreshtoken",
-    "refresh_token",
     "access_token",
+    "api_key",
+    "apikey",
     "csrf",
-    "jwt",
+    "datev",
     "gobd",
-    "datev"
+    "jwt",
+    "refresh_token",
+    "refreshtoken",
+    "traineddata"
   ]
 }
