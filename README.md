@@ -188,6 +188,8 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 
 After the guarded demo seeder completes it emits a **Login sheet** (email, role, password) for each demo account so you can copy credentials without guessing.
 
+The seeded dataset now covers invoices in every major status, expenses (draft/booked/archived), bank statements with matched and unmatched transactions, ledger entries, AI insights + decisions, a VAT report stub, and audit logs so every screen surfaces data. The login sheet lists the four demo roles: `demo-admin@demo.com`, `demo-accountant@demo.com`, `demo-auditor@demo.com`, and `demo-viewer@demo.com`, all sharing the password defined via `DEMO_PASSWORD` (default `Demo123!`).
+
 ### End-to-end production verification
 
 The new script `scripts/verify-production.sh` runs the sequential checks that every deployment should cover: `/health`, `/api/auth/login`, `/api/dashboard/stats`, `/api/invoices`, `/api/expenses`, `/api/bank-statements`, and `/api/ai/insights`. It logs a warning if the container marker is absent, prints each step as it runs, and exits with `0` only when every endpoint responded successfully.

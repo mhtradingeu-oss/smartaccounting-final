@@ -13,7 +13,7 @@ class AuditLogService {
    * @param {Object} params - { action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent }
    * @throws Error if log cannot be written
    */
-  static async appendEntry({ action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent, reason }) {
+  static async appendEntry({ action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent, reason, transaction: providedTransaction } = {}) {
     if (!userId) {
       const err = new Error('Audit log entry must include actor userId');
       err.status = 400;
@@ -26,7 +26,8 @@ class AuditLogService {
     }
     const timestamp = new Date();
     const isoTimestamp = timestamp.toISOString();
-    const transaction = await sequelize.transaction();
+    const transaction = providedTransaction || (await sequelize.transaction());
+    const ownsTransaction = !providedTransaction;
     try {
       const findOptions = {
         order: [['createdAt', 'DESC']],
@@ -68,9 +69,13 @@ class AuditLogService {
         reason,
         immutable: true,
       }, { transaction });
-      await transaction.commit();
+      if (ownsTransaction) {
+        await transaction.commit();
+      }
     } catch (err) {
-      await transaction.rollback();
+      if (ownsTransaction) {
+        await transaction.rollback();
+      }
       throw new Error('Audit log write failed: ' + err.message);
     }
   }

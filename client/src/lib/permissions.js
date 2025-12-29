@@ -12,6 +12,8 @@ const PERMISSIONS = {
   delete: ['admin'],
   create: ['admin', 'accountant'],
   export: ['admin', 'accountant', 'auditor'],
+  'bank:write': ['admin', 'accountant'],
+  'bank:undo': ['admin'],
   // Add more actions as needed
 };
 

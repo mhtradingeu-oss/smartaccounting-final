@@ -1,59 +1,99 @@
+const crypto = require('crypto');
+const { Op } = require('sequelize');
 const csv = require('csv-parser');
 const fs = require('fs');
 const moment = require('moment');
-const { BankStatement, BankTransaction } = require('../models');
+const AuditLogService = require('../services/auditLogService');
+const {
+  AuditLog,
+  BankStatement,
+  BankTransaction,
+  Transaction,
+  BankStatementImportDryRun,
+  Invoice,
+  Expense,
+  User,
+  sequelize,
+} = require('../models');
+
+const DRY_RUN_STATUS = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  CONFIRMED: 'CONFIRMED',
+  FAILED: 'FAILED',
+};
 
 class BankStatementService {
   constructor() {
     this.supportedFormats = ['CSV', 'MT940', 'CAMT053'];
   }
 
+  async loadTransactionsFromFile(filePath, format) {
+    const normalizedFormat = (format || '').toString().toUpperCase();
+    switch (normalizedFormat) {
+      case 'CSV':
+        return this.parseCSVFile(filePath);
+      case 'MT940':
+        return this.parseMT940File(filePath);
+      case 'CAMT053':
+        return this.parseCAMT053File(filePath);
+      default:
+        throw new Error(`Unsupported format: ${format}`);
+    }
+  }
+
   async importBankStatement(companyId, filePath, fileName, format) {
     try {
-      const bankStatement = await BankStatement.create({
+      return await this._runBankStatementImport({
         companyId,
+        filePath,
         fileName,
-        fileFormat: format,
-        accountNumber: 'TEMP', 
-        statementPeriodStart: new Date(),
-        statementPeriodEnd: new Date(),
-        openingBalance: 0,
-        closingBalance: 0,
-        status: 'PROCESSING',
+        format,
       });
+    } catch (error) {
+      throw new Error(`Failed to import bank statement: ${error.message}`);
+    }
+  }
 
-      let transactions = [];
-
-      switch (format.toUpperCase()) {
-        case 'CSV':
-          transactions = await this.parseCSVFile(filePath);
-          break;
-        case 'MT940':
-          transactions = await this.parseMT940File(filePath);
-          break;
-        case 'CAMT053':
-          transactions = await this.parseCAMT053File(filePath);
-          break;
-        default:
-          throw new Error(`Unsupported format: ${format}`);
-      }
-
-      const processedTransactions = await this.processTransactions(
-        companyId, 
-        bankStatement.id, 
-        transactions,
+  async _runBankStatementImport({ companyId, filePath, fileName, format, transaction }) {
+    let bankStatement = null;
+    try {
+      bankStatement = await BankStatement.create(
+        {
+          companyId,
+          fileName,
+          fileFormat: format,
+          accountNumber: 'TEMP',
+          statementPeriodStart: new Date(),
+          statementPeriodEnd: new Date(),
+          openingBalance: 0,
+          closingBalance: 0,
+          status: 'PROCESSING',
+        },
+        { transaction },
       );
 
-      await bankStatement.update({
-        totalTransactions: transactions.length,
-        processedTransactions: processedTransactions.length,
-        status: 'COMPLETED',
-        accountNumber: transactions[0]?.accountNumber || 'UNKNOWN',
-        statementPeriodStart: this.getEarliestDate(transactions),
-        statementPeriodEnd: this.getLatestDate(transactions),
-        openingBalance: transactions[0]?.runningBalance || 0,
-        closingBalance: transactions[transactions.length - 1]?.runningBalance || 0,
-      });
+      const transactions = await this.loadTransactionsFromFile(filePath, format);
+      const processedTransactions = await this.processTransactions(
+        companyId,
+        bankStatement.id,
+        transactions,
+        { transaction },
+      );
+
+      await bankStatement.update(
+        {
+          totalTransactions: transactions.length,
+          processedTransactions: processedTransactions.length,
+          status: 'COMPLETED',
+          accountNumber: transactions[0]?.accountNumber || 'UNKNOWN',
+          statementPeriodStart: this.getEarliestDate(transactions),
+          statementPeriodEnd: this.getLatestDate(transactions),
+          openingBalance: transactions[0]?.runningBalance || 0,
+          closingBalance: transactions[transactions.length - 1]?.runningBalance || 0,
+        },
+        { transaction },
+      );
 
       return {
         bankStatement,
@@ -64,9 +104,115 @@ class BankStatementService {
           duplicatesSkipped: transactions.length - processedTransactions.length,
         },
       };
-
     } catch (error) {
-      throw new Error(`Failed to import bank statement: ${error.message}`);
+      if (bankStatement) {
+        try {
+          await bankStatement.update({ status: 'FAILED' }, { transaction });
+        } catch (statusError) {
+          // intentionally ignored to preserve original error
+        }
+      }
+      throw error;
+    }
+  }
+
+  async registerDryRun({
+    companyId,
+    userId,
+    filePath,
+    fileName,
+    format,
+    summary,
+    matchesCount = 0,
+    unmatchedCount = 0,
+    warningsCount = 0,
+  }) {
+    const confirmationToken = crypto.randomBytes(32).toString('hex');
+
+    return BankStatementImportDryRun.create({
+      companyId,
+      userId,
+      confirmationToken,
+      filePath,
+      fileName,
+      fileFormat: format,
+      summary,
+      totalTransactions: summary?.transactionsDetected || 0,
+      processedTransactions: summary?.validTransactions || 0,
+      matches: matchesCount,
+      unmatched: unmatchedCount,
+      warnings: warningsCount,
+    });
+  }
+
+  async confirmDryRunImport({ confirmationToken, companyId, transaction }) {
+    if (!transaction) {
+      throw new Error('Confirming an import requires an active transaction');
+    }
+
+    const findOptions = {
+      where: {
+        confirmationToken,
+        companyId,
+      },
+      transaction,
+    };
+    if (transaction.LOCK) {
+      findOptions.lock = transaction.LOCK.UPDATE;
+    }
+
+    const dryRun = await BankStatementImportDryRun.findOne(findOptions);
+    if (!dryRun) {
+      const error = new Error('Confirmation token is invalid');
+      error.status = 404;
+      throw error;
+    }
+
+    if (dryRun.status !== DRY_RUN_STATUS.PENDING) {
+      const error = new Error('Confirmation token already consumed');
+      error.status = 409;
+      throw error;
+    }
+
+    await dryRun.update({ status: DRY_RUN_STATUS.PROCESSING }, { transaction });
+
+    try {
+      const importResult = await this._runBankStatementImport({
+        companyId,
+        filePath: dryRun.filePath,
+        fileName: dryRun.fileName,
+        format: dryRun.fileFormat,
+        transaction,
+      });
+
+      await dryRun.update(
+        {
+          status: DRY_RUN_STATUS.CONFIRMED,
+          bankStatementId: importResult.bankStatement.id,
+          summary: importResult.summary,
+          totalTransactions: importResult.summary.totalImported,
+          processedTransactions: importResult.summary.totalProcessed,
+          confirmedAt: new Date(),
+          errorMessage: null,
+        },
+        { transaction },
+      );
+
+      return {
+        dryRunId: dryRun.id,
+        summary: importResult.summary,
+        bankStatement: importResult.bankStatement,
+      };
+    } catch (importError) {
+      await dryRun.update(
+        {
+          status: DRY_RUN_STATUS.FAILED,
+          errorMessage: importError.message,
+          confirmedAt: new Date(),
+        },
+        { transaction },
+      );
+      throw importError;
     }
   }
 
@@ -222,20 +368,25 @@ class BankStatementService {
     return transactions;
   }
 
-  async processTransactions(companyId, bankStatementId, transactions) {
+  async processTransactions(companyId, bankStatementId, transactions, options = {}) {
     const processedTransactions = [];
+    const transaction = options.transaction || null;
 
     for (const transactionData of transactions) {
       try {
-        
-        const existing = await BankTransaction.findOne({
+        const findOptions = {
           where: {
             companyId,
             transactionDate: transactionData.transactionDate,
             amount: transactionData.amount,
             reference: transactionData.reference,
           },
-        });
+        };
+        if (transaction) {
+          findOptions.transaction = transaction;
+        }
+
+        const existing = await BankTransaction.findOne(findOptions);
 
         if (existing) {
           continue;
@@ -245,7 +396,7 @@ class BankStatementService {
           companyId,
           bankStatementId,
           ...transactionData,
-        });
+        }, transaction ? { transaction } : {});
 
         processedTransactions.push(bankTransaction);
       } catch (error) {
@@ -254,6 +405,220 @@ class BankStatementService {
     }
 
     return processedTransactions;
+  }
+
+  async dryRunImportBankStatement(companyId, filePath, format) {
+    const parsedTransactions = await this.loadTransactionsFromFile(filePath, format);
+    const warnings = [];
+    const matches = [];
+    const unmatched = [];
+    const validTransactions = [];
+
+    for (let index = 0; index < parsedTransactions.length; index += 1) {
+      const normalizedTransaction = this.normalizeTransaction(parsedTransactions[index]);
+      const validation = this.validateTransaction(normalizedTransaction);
+      if (!validation.valid) {
+        warnings.push({
+          row: index + 1,
+          message: 'Transaction validation failed',
+          errors: validation.errors,
+          transaction: normalizedTransaction,
+        });
+        continue;
+      }
+
+      const duplicate = await this.isDuplicateTransaction(companyId, normalizedTransaction);
+      if (duplicate) {
+        warnings.push({
+          row: index + 1,
+          message: 'Duplicate transaction detected; already exists in bank transactions.',
+          transaction: normalizedTransaction,
+        });
+        continue;
+      }
+
+      validTransactions.push(normalizedTransaction);
+    }
+
+    for (const transaction of validTransactions) {
+      const match = await this.matchAgainstLedger(companyId, transaction);
+      if (match) {
+        matches.push(match);
+      } else {
+        unmatched.push({
+          transaction,
+          reason: 'No matching ledger transaction found',
+        });
+      }
+    }
+
+    const summary = {
+      transactionsDetected: parsedTransactions.length,
+      validTransactions: validTransactions.length,
+      invalidTransactions: parsedTransactions.length - validTransactions.length,
+      currency: validTransactions[0]?.currency || 'EUR',
+      dateRange: {
+        from: validTransactions.length
+          ? this.getEarliestDate(validTransactions).toISOString()
+          : null,
+        to: validTransactions.length
+          ? this.getLatestDate(validTransactions).toISOString()
+          : null,
+      },
+    };
+
+    return {
+      summary,
+      matches,
+      unmatched,
+      warnings,
+    };
+  }
+
+  normalizeTransaction(transaction = {}) {
+    const parsedAmount =
+      typeof transaction.amount === 'string'
+        ? this.parseAmount(transaction.amount)
+        : transaction.amount;
+
+    const normalized = {
+      ...transaction,
+      transactionDate: transaction.transactionDate ? new Date(transaction.transactionDate) : null,
+      valueDate: transaction.valueDate ? new Date(transaction.valueDate) : null,
+      amount: Number.isFinite(parsedAmount) ? parseFloat(parsedAmount) : 0,
+      currency: (transaction.currency || 'EUR').toUpperCase(),
+      description: (transaction.description || '').trim(),
+      counterpartyName: (transaction.counterpartyName || '').trim(),
+      reference: (transaction.reference || '').trim(),
+      category: transaction.category || null,
+    };
+
+    normalized.category = normalized.category || this.autoCategorizeBankTransaction(normalized);
+    return normalized;
+  }
+
+  validateTransaction(transaction) {
+    const errors = [];
+
+    if (!transaction) {
+      errors.push('Transaction payload unavailable');
+      return { valid: false, errors };
+    }
+
+    if (!transaction.transactionDate || Number.isNaN(transaction.transactionDate.getTime())) {
+      errors.push('Invalid transaction date');
+    }
+
+    if (!Number.isFinite(transaction.amount) || transaction.amount <= 0) {
+      errors.push('Invalid amount value');
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  async isDuplicateTransaction(companyId, transaction) {
+    if (!transaction) {
+      return false;
+    }
+
+    const existing = await BankTransaction.findOne({
+      where: {
+        companyId,
+        transactionDate: transaction.transactionDate,
+        amount: transaction.amount,
+        reference: transaction.reference,
+      },
+    });
+
+    return Boolean(existing);
+  }
+
+  async matchAgainstLedger(companyId, transaction) {
+    if (!transaction) {
+      return null;
+    }
+
+    const windowDays = 3;
+    const centerDate = moment(transaction.transactionDate);
+    const candidates = await Transaction.findAll({
+      where: {
+        companyId,
+        amount: transaction.amount,
+        transactionDate: {
+          [Op.between]: [
+            centerDate.clone().subtract(windowDays, 'days').toDate(),
+            centerDate.clone().add(windowDays, 'days').toDate(),
+          ],
+        },
+      },
+      limit: 10,
+      order: [['transactionDate', 'ASC']],
+    });
+
+    if (!candidates.length) {
+      return null;
+    }
+
+    let bestMatch = null;
+    let bestScore = -Infinity;
+
+    for (const candidate of candidates) {
+      const candidateDate = candidate.transactionDate
+        ? new Date(candidate.transactionDate)
+        : null;
+      const dateDistance = candidateDate
+        ? Math.abs(moment(candidateDate).diff(transaction.transactionDate, 'days'))
+        : 0;
+      const similarity = this.calculateDescriptionSimilarity(
+        transaction.description || '',
+        candidate.description || '',
+      );
+      const score = similarity - dateDistance * 0.1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = candidate;
+      }
+    }
+
+    if (!bestMatch) {
+      return null;
+    }
+
+    const ledgerTransaction = bestMatch.get
+      ? bestMatch.get({ plain: true })
+      : { ...bestMatch };
+    const explanation = this.buildMatchExplanation(transaction, ledgerTransaction);
+
+    return {
+      bankTransaction: transaction,
+      ledgerTransaction: {
+        ...ledgerTransaction,
+        transactionDate: ledgerTransaction.transactionDate
+          ? new Date(ledgerTransaction.transactionDate).toISOString()
+          : null,
+      },
+      explanation,
+    };
+  }
+
+  buildMatchExplanation(bankTransaction, ledgerTransaction) {
+    const ledgerDate = ledgerTransaction.transactionDate
+      ? new Date(ledgerTransaction.transactionDate)
+      : null;
+    const dateDelta = ledgerDate
+      ? Math.abs(moment(bankTransaction.transactionDate).diff(ledgerDate, 'days'))
+      : 0;
+    const amountDelta = Math.abs(
+      bankTransaction.amount - parseFloat(ledgerTransaction.amount || 0),
+    );
+    const similarity = this.calculateDescriptionSimilarity(
+      bankTransaction.description || '',
+      ledgerTransaction.description || '',
+    );
+
+    return `Amount difference ${amountDelta.toFixed(2)}; Date difference ${dateDelta} days; Description similarity ${similarity.toFixed(
+      2,
+    )}`;
   }
 
   autoCategorizeBankTransaction(transaction) {
@@ -435,6 +800,320 @@ class BankStatementService {
     const distance = matrix[len1][len2];
     const maxLength = Math.max(len1, len2);
     return 1 - distance / maxLength;
+  }
+
+  async reconcileBankTransaction({
+    bankTransactionId,
+    targetType,
+    targetId,
+    companyId,
+    userId,
+    reason,
+    ipAddress,
+    userAgent,
+  } = {}) {
+    const parsedTargetType = (targetType || '').toString().toLowerCase();
+    if (!['invoice', 'expense'].includes(parsedTargetType)) {
+      const err = new Error('Invalid target type');
+      err.status = 400;
+      throw err;
+    }
+
+    const parsedTargetId = Number(targetId);
+    if (!Number.isInteger(parsedTargetId) || parsedTargetId <= 0) {
+      const err = new Error('targetId must be a valid number');
+      err.status = 400;
+      throw err;
+    }
+
+    const parsedBankTransactionId = Number(bankTransactionId);
+    if (!Number.isInteger(parsedBankTransactionId) || parsedBankTransactionId <= 0) {
+      const err = new Error('Invalid bank transaction id');
+      err.status = 400;
+      throw err;
+    }
+
+    const logReason = (reason || '').toString().trim() || 'Manual reconciliation confirmed';
+    const transaction = await sequelize.transaction();
+    try {
+      const bankTransaction = await BankTransaction.findOne({
+        where: {
+          id: parsedBankTransactionId,
+          companyId,
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!bankTransaction) {
+        const err = new Error('Bank transaction not found');
+        err.status = 404;
+        throw err;
+      }
+
+      if (bankTransaction.isReconciled) {
+        const err = new Error('Bank transaction already reconciled');
+        err.status = 409;
+        throw err;
+      }
+
+      const targetModel = parsedTargetType === 'invoice' ? Invoice : Expense;
+      const targetLabel = parsedTargetType === 'invoice' ? 'Invoice' : 'Expense';
+      const target = await targetModel.findOne({
+        where: { id: parsedTargetId, companyId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!target) {
+        const err = new Error(`${targetLabel} not found`);
+        err.status = 404;
+        throw err;
+      }
+
+      const transactionDate =
+        parsedTargetType === 'invoice'
+          ? new Date(target.date || target.createdAt || Date.now())
+          : new Date(target.expenseDate || target.createdAt || Date.now());
+      const amount =
+        parsedTargetType === 'invoice'
+          ? Number(target.amount ?? target.total ?? 0)
+          : Number(target.grossAmount ?? target.netAmount ?? 0);
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        const err = new Error('Target must have a valid amount to reconcile');
+        err.status = 400;
+        throw err;
+      }
+
+      const description =
+        parsedTargetType === 'invoice'
+          ? `Invoice ${target.invoiceNumber || target.id}`
+          : target.description || `Expense ${target.id}`;
+      const ledgerTransaction = await Transaction.create(
+        {
+          companyId,
+          userId: target.userId ?? target.createdByUserId ?? userId,
+          transactionDate,
+          description,
+          amount,
+          currency: target.currency || 'EUR',
+          type: parsedTargetType === 'invoice' ? 'income' : 'expense',
+          reference: `${parsedTargetType}:${target.id}`,
+          isReconciled: true,
+          bankTransactionId: bankTransaction.id,
+        },
+        { transaction },
+      );
+
+      await bankTransaction.update(
+        {
+          isReconciled: true,
+          reconciledWith: ledgerTransaction.id,
+        },
+        { transaction },
+      );
+
+      const updatedBankTransaction = await bankTransaction.reload({ transaction });
+
+      await AuditLogService.appendEntry({
+        action: 'bank_transaction_reconciled',
+        resourceType: 'BankTransaction',
+        resourceId: String(bankTransaction.id),
+        userId,
+        oldValues: {
+          isReconciled: false,
+          reconciledWith: null,
+        },
+        newValues: {
+          isReconciled: true,
+          reconciledWith: ledgerTransaction.id,
+          metadata: {
+            bankTransactionId: bankTransaction.id,
+            targetType: parsedTargetType,
+            targetId: parsedTargetId,
+          },
+        },
+        reason: logReason,
+        ipAddress,
+        userAgent,
+        transaction,
+      });
+
+      await transaction.commit();
+      return { bankTransaction: updatedBankTransaction };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async undoManualReconciliation({
+    bankTransactionId,
+    companyId,
+    userId,
+    reason,
+    ipAddress,
+    userAgent,
+  } = {}) {
+    const parsedBankTransactionId = Number(bankTransactionId);
+    if (!Number.isInteger(parsedBankTransactionId) || parsedBankTransactionId <= 0) {
+      const err = new Error('Invalid bank transaction id');
+      err.status = 400;
+      throw err;
+    }
+    const logReason = (reason || '').toString().trim();
+    if (!logReason) {
+      const err = new Error('Reason is required to undo reconciliation');
+      err.status = 400;
+      throw err;
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+      const bankTransaction = await BankTransaction.findOne({
+        where: {
+          id: parsedBankTransactionId,
+          companyId,
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!bankTransaction) {
+        const err = new Error('Bank transaction not found');
+        err.status = 404;
+        throw err;
+      }
+
+      if (!bankTransaction.isReconciled) {
+        const err = new Error('Bank transaction is not reconciled');
+        err.status = 409;
+        throw err;
+      }
+
+      const previousReconciledWith = bankTransaction.reconciledWith;
+      const previousWasReconciled = bankTransaction.isReconciled;
+
+      const ledgerTransaction = await Transaction.findOne({
+        where: {
+          bankTransactionId: bankTransaction.id,
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      await bankTransaction.update(
+        {
+          isReconciled: false,
+          reconciledWith: null,
+        },
+        {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+          allowReconcileUndo: true,
+        },
+      );
+
+      if (ledgerTransaction) {
+        await ledgerTransaction.update(
+          {
+            isReconciled: false,
+            bankTransactionId: null,
+          },
+          {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          },
+        );
+      }
+
+      const updatedBankTransaction = await bankTransaction.reload({ transaction });
+
+      await AuditLogService.appendEntry({
+        action: 'bank_transaction_reconciliation_undone',
+        resourceType: 'BankTransaction',
+        resourceId: String(bankTransaction.id),
+        userId,
+        oldValues: {
+          isReconciled: previousWasReconciled,
+          reconciledWith: previousReconciledWith,
+        },
+        newValues: {
+          isReconciled: false,
+          reconciledWith: null,
+          metadata: {
+            bankTransactionId: bankTransaction.id,
+            ledgerTransactionId: ledgerTransaction?.id ?? null,
+          },
+        },
+        reason: logReason,
+        ipAddress,
+        userAgent,
+        transaction,
+      });
+
+      await transaction.commit();
+      return { bankTransaction: updatedBankTransaction };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async getAuditLogEntriesForStatement({ statementId, companyId } = {}) {
+    const parsedStatementId = Number(statementId);
+    if (!Number.isInteger(parsedStatementId) || parsedStatementId <= 0) {
+      const err = new Error('Invalid bank statement id');
+      err.status = 400;
+      throw err;
+    }
+
+    const statement = await BankStatement.findOne({
+      where: {
+        id: parsedStatementId,
+        companyId,
+      },
+      attributes: ['id'],
+    });
+
+    if (!statement) {
+      const err = new Error('Bank statement not found');
+      err.status = 404;
+      throw err;
+    }
+
+    const transactions = await BankTransaction.findAll({
+      where: {
+        bankStatementId: statement.id,
+        companyId,
+      },
+      attributes: ['id'],
+    });
+
+    const transactionIds = transactions.map((tx) => String(tx.id));
+    if (!transactionIds.length) {
+      return [];
+    }
+
+    const logs = await AuditLog.findAll({
+      where: {
+        resourceType: 'BankTransaction',
+        resourceId: {
+          [Op.in]: transactionIds,
+        },
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+        },
+      ],
+      order: [['timestamp', 'DESC']],
+    });
+
+    return logs.map((log) => log.get({ plain: true }));
   }
 }
 

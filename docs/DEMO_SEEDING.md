@@ -1,6 +1,13 @@
 # Demo Data Seeding
 
-This seeder creates one deterministic demo company, demo users (admin/accountant/viewer), two invoices, two expenses, and a bank statement. It is designed for demo sandboxes and local development only; production deployments are protected by strict guard rails.
+This seeder now creates one deterministic demo company, four demo users (admin/accountant/auditor/viewer), multi-status invoices, multiple expenses, bank statements with matched and unmatched transactions, equivalent ledger transactions, AI insights + decisions, a VAT report stub, and GoBD audit logs. It is designed for demo sandboxes and local development only; production deployments are protected by strict guard rails.
+
+## What the demo seed covers
+- Role-specific users: `demo-admin@demo.com`, `demo-accountant@demo.com`, `demo-auditor@demo.com`, `demo-viewer@demo.com` (password configurable via `DEMO_PASSWORD`, default `Demo123!`).
+- Invoice flows in `DRAFT`, `SENT`, and `PAID` states complete with line items.
+- Expenses in draft/booked/archived states plus bank statements/reconciliations showing both matched and unmatched transactions.
+- Ledger transactions that feed tax calculations, a VAT report placeholder, and audit logs trace every seeded action.
+- AI insights with sample explainability and decision records so the AI dashboard is populated.
 
 ## Guard rails
 - `database/seeders/demo/20251226-demo-seed.js` now throws unless both `DEMO_MODE=true` **and** `ALLOW_DEMO_SEED=true` are present in the environment, regardless of `NODE_ENV`.

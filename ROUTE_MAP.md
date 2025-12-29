@@ -18,6 +18,7 @@
 | `/expenses` | Expense list. | `ProtectedRoute` + `Layout`. |
 | `/expenses/create` | Expense creation form. | `ProtectedRoute` + `Layout`. |
 | `/bank-statements` | Bank statement list. | `ProtectedRoute` + `Layout`. |
+| `/bank-statements/preview` | Preview-only bank statement upload guide. | `ProtectedRoute` + `Layout`; client-only experience with warning/banner and disabled actions for read-only roles. |
 | `/bank-statements/upload` | Upload placeholder (coming soon). | `ProtectedRoute` + `Layout`; placeholder explains upcoming capability. |
 | `/bank-statements/:statementId` | Bank statement detail view. | `ProtectedRoute` + `Layout`. |
 | `/billing` | Billing/subscription management UI. | `ProtectedRoute` + `Layout`; sidebar renders a "Coming soon" badge when `FEATURE_FLAGS.STRIPE_BILLING.enabled === false`. |

@@ -18,14 +18,17 @@ import {
   BellIcon,
   BuildingOfficeIcon,
   UsersIcon,
+  DocumentMagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
   DocumentTextIcon as DocumentTextIconSolid,
   BanknotesIcon as BanknotesIconSolid,
   DocumentChartBarIcon as DocumentChartBarIconSolid,
+  DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
 } from '@heroicons/react/24/solid';
 import { FEATURE_FLAGS } from '../lib/constants';
+import { isOCRPreviewEnabled } from '../lib/featureFlags';
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { t } = useTranslation();
@@ -33,6 +36,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { role } = useRole();
   const location = useLocation();
   const [, setHoveredItem] = React.useState(null);
+  const ocrPreviewEnabled = isOCRPreviewEnabled();
 
   const managementNavigation = [
     {
@@ -80,6 +84,16 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       iconSolid: BanknotesIconSolid,
       badge: null,
       description: 'Bank Transactions',
+    },
+    {
+      name: t('navigation.ocr_preview'),
+      href: '/ocr-preview',
+      icon: DocumentMagnifyingGlassIcon,
+      iconSolid: DocumentMagnifyingGlassIconSolid,
+      badge: 'Preview',
+      description: 'Preview OCR extractions',
+      enabled: ocrPreviewEnabled,
+      partial: !ocrPreviewEnabled,
     },
     {
       name: t('navigation.german_tax'),

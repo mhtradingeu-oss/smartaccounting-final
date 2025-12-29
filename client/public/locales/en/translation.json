@@ -41,6 +41,9 @@
     "analytics": "Analytics",
     "analytics_desc": "View detailed analytics"
   },
+  "navigation": {
+    "ocr_preview": "OCR Preview"
+  },
   "invoices": "Invoices",
   "taxReports": "Tax Reports",
   "billing": "Billing",

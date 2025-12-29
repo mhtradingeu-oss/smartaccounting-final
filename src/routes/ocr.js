@@ -3,11 +3,13 @@ const fs = require('fs');
 const { body, validationResult } = require('express-validator');
 const { FileAttachment } = require('../models');
 const ocrService = require('../services/ocrService');
+const AuditLogService = require('../services/auditLogService');
 const { authenticate, requireCompany, requireRole } = require('../middleware/authMiddleware');
 const logger = require('../lib/logger');
 const { sendSuccess, sendError } = require('../utils/responseHelpers');
 const { ocrLimiter } = require('../middleware/rateLimiter');
 const { createSecureUploader, logUploadMetadata } = require('../middleware/secureUpload');
+const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
 const upload = createSecureUploader({
@@ -36,6 +38,76 @@ const handleValidation = (req, res) => {
   }
   return null;
 };
+
+const OCR_PREVIEW_ENABLED =
+  String(process.env.OCR_PREVIEW_ENABLED || 'false').toLowerCase() === 'true';
+
+const previewHandler = async (req, res) => {
+  if (handleValidation(req, res)) {
+    return;
+  }
+
+  if (!req.file) {
+    return sendError(res, 'No document uploaded', 400);
+  }
+
+  const documentType = req.body.documentType || 'invoice';
+
+  try {
+    const previewResult = await ocrService.previewDocument(req.file.path, {
+      documentType,
+      userId: req.userId,
+      companyId: req.companyId,
+    });
+
+    if (!previewResult.success) {
+      throw new Error(previewResult.error || 'OCR preview failed');
+    }
+
+    await AuditLogService.appendEntry({
+      action: 'ocr_preview',
+      resourceType: 'ocr_preview',
+      resourceId: null,
+      userId: req.userId,
+      reason: 'Document previewed via OCR preview mode',
+      newValues: {
+        documentType,
+        confidence: previewResult.confidence,
+        fields: previewResult.extractedData,
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent') || null,
+    });
+
+    return sendSuccess(res, 'OCR preview generated', {
+      type: documentType,
+      confidence: previewResult.confidence,
+      fields: previewResult.extractedData,
+      warnings: previewResult.warnings || [],
+      explanations: previewResult.explanations || [],
+      rawText: previewResult.text,
+    });
+  } catch (error) {
+    logger.error('OCR preview failed', { error: error.message });
+    return sendError(res, 'Unable to generate OCR preview', 500);
+  } finally {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+  }
+};
+
+if (OCR_PREVIEW_ENABLED) {
+  router.post(
+    '/preview',
+    requireRole(['viewer']),
+    upload.single('document'),
+    validateDocument,
+    previewHandler,
+  );
+} else {
+  router.post('/preview', disabledFeatureHandler('OCR preview'));
+}
 
 router.post('/process', upload.single('document'), validateDocument, async (req, res) => {
   if (handleValidation(req, res)) {return;}

@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
+    "build": "npm run build --prefix client",
     "smoke:frontend": "npm ci --prefix client && npm run build --prefix client",
     "migrate:prod": "node scripts/migrate-prod.js",
     "seed:demo:prod": "node scripts/seed-demo-prod.js",

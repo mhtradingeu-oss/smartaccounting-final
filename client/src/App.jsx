@@ -1,12 +1,3 @@
-// Minimal placeholder for BankStatementsUpload
-function BankStatementsUploadPlaceholder() {
-  return (
-    <div style={{ padding: '4rem', textAlign: 'center' }}>
-      <h1>Upload Bank Statement (Coming Soon)</h1>
-      <p>This page will allow you to upload bank statements.</p>
-    </div>
-  );
-}
 // LandingRoute shows the marketing hero for visitors and redirects authenticated users to /dashboard.
 function LandingRoute() {
   const { status, isAuthenticated } = useAuth();
@@ -47,7 +38,11 @@ import InvoiceEdit from './pages/InvoiceEdit';
 import Expenses from './pages/Expenses';
 import ExpensesCreate from './pages/ExpensesCreate';
 import BankStatements from './pages/BankStatements';
+import BankStatementPreview from './pages/BankStatementPreview';
+import OCRPreview from './pages/OCRPreview';
+import BankStatementImport from './pages/BankStatementImport';
 import BankStatementDetail from './pages/BankStatementDetail';
+import BankStatementReconciliationPreview from './pages/BankStatementReconciliationPreview';
 import Billing from './pages/Billing';
 import Companies from './pages/Companies';
 import Users from './pages/Users';
@@ -221,11 +216,41 @@ export const AppRoutes = () => {
         }
       />
       <Route
-        path="/bank-statements/upload"
+        path="/bank-statements/preview"
         element={
           <ProtectedRoute>
             <Layout>
-              <BankStatementsUploadPlaceholder />
+              <BankStatementPreview />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ocr-preview"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <OCRPreview />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bank-statements/import"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <BankStatementImport />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bank-statements/:statementId/reconciliation-preview"
+        element={
+          <ProtectedRoute requiredRole="accountant">
+            <Layout>
+              <BankStatementReconciliationPreview />
             </Layout>
           </ProtectedRoute>
         }

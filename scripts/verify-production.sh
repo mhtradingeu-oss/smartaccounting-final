@@ -6,10 +6,11 @@ PASSWORD="${VERIFY_PASSWORD:-Demo123!}"
 
 HOST_MARKER="/.dockerenv"
 
-# Inside backend container: app listens on 5000
+
 DOCKER_URL="http://localhost:5000"
-# On host: backend is mapped to 5001
+
 HOST_URL="http://localhost:5001"
+
 
 BASE_URL="${PRODUCTION_VERIFY_BASE_URL:-}"
 if [ -z "$BASE_URL" ]; then
@@ -31,29 +32,34 @@ echo "[verify] /ready OK"
 
 LOGIN_RESPONSE="/tmp/verify-production-login.json"
 TOKEN_FILE="/tmp/verify-production-token.txt"
-cleanup() { rm -f "$LOGIN_RESPONSE" "$TOKEN_FILE"; }
+
+cleanup() {
+  rm -f "$LOGIN_RESPONSE" "$TOKEN_FILE"
+}
 trap cleanup EXIT
 
-LOGIN_PAYLOAD='{"email":"'"$EMAIL"'","password":"'"$PASSWORD"'"}'
+LOGIN_PAYLOAD="{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
 
 curl -fsS -X POST "$BASE_URL/api/auth/login" \
   -H 'Content-Type: application/json' \
-  -d "$LOGIN_PAYLOAD" > "$LOGIN_RESPONSE"
+  -d "$LOGIN_PAYLOAD" \
+  > "$LOGIN_RESPONSE"
 
-grep -o '"token":"[^"]*"' "$LOGIN_RESPONSE" | sed 's/.*"token":"\([^"]*\)".*/\1/' > "$TOKEN_FILE" || {
+grep -o '"token":"[^"]*"' "$LOGIN_RESPONSE" | sed 's/.*"token":"\([^\"]*\)".*/\1/' > "$TOKEN_FILE"
+if ! [ -s "$TOKEN_FILE" ]; then
   echo "[verify] FAIL: /api/auth/login did not return a token"
   echo "[verify] Response:"
   cat "$LOGIN_RESPONSE"
   exit 1
-}
+fi
 
-TOKEN="$(cat "$TOKEN_FILE" || true)"
+TOKEN="$(cat "$TOKEN_FILE")"
 if [ -z "$TOKEN" ]; then
-  echo "[verify] FAIL: /api/auth/login returned an empty token"
-  echo "[verify] Response:"
+  echo "[verify] FAIL: /api/auth/login returned empty token"
   cat "$LOGIN_RESPONSE"
   exit 1
 fi
+
 echo "[verify] /api/auth/login OK"
 
 AUTH_ENDPOINTS=(
@@ -70,3 +76,4 @@ for endpoint in "${AUTH_ENDPOINTS[@]}"; do
 done
 
 echo "[verify] ALL CHECKS PASSED"
+

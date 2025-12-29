@@ -43,6 +43,10 @@ vi.mock('../pages/BankStatements', () => ({
   __esModule: true,
   default: () => <div>Bank statements page</div>,
 }));
+vi.mock('../pages/OCRPreview', () => ({
+  __esModule: true,
+  default: () => <div>OCR preview page</div>,
+}));
 vi.mock('../pages/BankStatementDetail', () => ({
   __esModule: true,
   default: () => <div>Bank statement detail page</div>,
@@ -157,8 +161,9 @@ const routeTestCases = [
   { path: '/invoices/create', expectedText: 'Invoice create page' },
   { path: '/invoices/42/edit', expectedText: 'Invoice edit page' },
   { path: '/bank-statements', expectedText: 'Bank statements page' },
-  { path: '/bank-statements/upload', expectedText: 'Upload Bank Statement (Coming Soon)' },
+  { path: '/bank-statements/import', expectedText: 'Import will save data to the server.' },
   { path: '/bank-statements/123', expectedText: 'Bank statement detail page' },
+  { path: '/ocr-preview', expectedText: 'OCR preview page' },
   { path: '/billing', expectedText: 'Billing page' },
   { path: '/german-tax-reports/status', expectedText: 'German tax reports page' },
   { path: '/companies', expectedText: 'Companies page' },

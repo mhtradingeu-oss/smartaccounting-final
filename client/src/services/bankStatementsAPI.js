@@ -1,7 +1,7 @@
 import api from './api';
 import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 
-const inferFormat = (filename = '') => {
+export const inferFormat = (filename = '') => {
   const ext = filename.toLowerCase().split('.').pop();
   if (ext === 'csv' || ext === 'txt') {
     return 'CSV';
@@ -42,6 +42,31 @@ export const bankStatementsAPI = {
     });
     return unwrapData(response);
   },
+  previewDryRun: async (file) => {
+    const format = inferFormat(file?.name);
+    if (!file || !format) {
+      throw new Error('Unsupported bank statement format for v0.1');
+    }
+
+    const formData = new FormData();
+    formData.append('bankStatement', file);
+    formData.append('format', format);
+
+    const response = await api.post('/bank-statements/import?dryRun=true', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return unwrapData(response);
+  },
+  confirmImport: async (confirmationToken) => {
+    if (!confirmationToken) {
+      throw new Error('Confirmation token is required to confirm the import.');
+    }
+
+    const response = await api.post('/bank-statements/import/confirm', {
+      confirmationToken,
+    });
+    return unwrapData(response);
+  },
   transactions: async (statementId, config = {}) => {
     const response = await api.get(`/bank-statements/${statementId}/transactions`, config);
     return unwrapData(response);
@@ -52,6 +77,26 @@ export const bankStatementsAPI = {
       payload,
       config,
     );
+    return unwrapData(response);
+  },
+  reconcileTransaction: async (transactionId, payload = {}, config = {}) => {
+    const response = await api.post(
+      `/bank-statements/transactions/${transactionId}/reconcile`,
+      payload,
+      config,
+    );
+    return unwrapData(response);
+  },
+  undoReconciliation: async (transactionId, payload = {}, config = {}) => {
+    const response = await api.post(
+      `/bank-statements/transactions/${transactionId}/reconcile/undo`,
+      payload,
+      config,
+    );
+    return unwrapData(response);
+  },
+  auditLogs: async (statementId, config = {}) => {
+    const response = await api.get(`/bank-statements/${statementId}/audit-logs`, config);
     return unwrapData(response);
   },
 };

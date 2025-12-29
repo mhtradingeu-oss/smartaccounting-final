@@ -71,7 +71,7 @@
 | Path | Methods | Notes |
 | --- | --- | --- |
 | `/api/bank-statements/` | GET | Lists statements |
-| `/api/bank-statements/import` | POST | Imports statement CSV |
+| `/api/bank-statements/import` | POST | Imports CSV/MT940/CAMT053 via multipart/form-data (`bankStatement` file + `format` field); guarded by `authenticate` + `requireRole(['admin','accountant'])`, keeping the request company-scoped (`req.companyId`). |
 | `/api/bank-statements/:id/transactions` | GET | Statement transactions |
 | `/api/bank-statements/reconcile` | POST | Reconciliation |
 | `/api/bank-statements/transactions/:id/categorize` | PUT | Tag transaction |
@@ -147,6 +147,7 @@
 | `/api/exports/audit-logs` | GET | Audit trail export |
 | `/api/exports/vat-summaries` | GET | VAT summaries export |
 | `/api/ocr/process` | POST | OCR ingestion |
+| `/api/ocr/preview` | POST | OCR preview only (flag-gated, no persistence) |
 | `/api/ocr/reprocess/:fileId` | POST | Retry OCR |
 | `/api/ocr/results/:fileId` | GET | OCR result detail |
 | `/api/ocr/search` | GET | Search OCR results |

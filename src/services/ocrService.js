@@ -9,6 +9,14 @@ const { Op } = require('sequelize');
 const gobdService = require('./gobdComplianceService');
 const logger = require('../lib/logger');
 
+const DOCUMENT_TYPE_LABELS = {
+  receipt: 'Receipt',
+  invoice: 'Invoice',
+  bank_statement: 'Bank statement',
+  tax_document: 'Tax document',
+  generic: 'Document',
+};
+
 class OCRService {
   constructor() {
     this.supportedLanguages = ['deu', 'eng']; // German and English
@@ -96,6 +104,36 @@ class OCRService {
     }
   }
 
+  async previewDocument(filePath, options = {}) {
+    const { documentType = 'receipt', language = 'deu+eng' } = options;
+    try {
+      const validation = await this.validateDocument(filePath);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const preprocessedPath = await this.preprocessImage(filePath);
+      const ocrResult = await this.extractText(preprocessedPath, language);
+      const structuredData = await this.extractStructuredData(ocrResult.text, documentType);
+      const warnings = this.buildPreviewWarnings(structuredData);
+      const explanations = this.buildPreviewExplanations(structuredData, documentType);
+
+      await this.cleanup([preprocessedPath]);
+
+      return {
+        success: true,
+        text: ocrResult.text,
+        confidence: ocrResult.confidence,
+        extractedData: structuredData,
+        warnings,
+        explanations,
+      };
+    } catch (error) {
+      logger.error('OCR preview error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Validate document format and content
   async validateDocument(filePath) {
     try {
@@ -171,6 +209,65 @@ class OCRService {
 
     const extractor = extractors[documentType] || this.extractGenericData;
     return extractor.call(this, text);
+  }
+
+  buildPreviewWarnings(structuredData = {}) {
+    const warnings = [];
+    const hasAmount =
+      !!structuredData.amount ||
+      !!structuredData.totalAmount ||
+      !!structuredData.openingBalance ||
+      !!structuredData.closingBalance;
+    if (!hasAmount) {
+      warnings.push('No convincing monetary total could be identified.');
+    }
+
+    const hasDate =
+      !!structuredData.date ||
+      !!structuredData.period ||
+      !!structuredData.dueDate ||
+      !!structuredData.taxYear;
+    if (!hasDate) {
+      warnings.push('Unable to detect a clear posting date or period.');
+    }
+
+    const hasIdentifier =
+      !!structuredData.vendor ||
+      !!structuredData.accountNumber ||
+      !!structuredData.taxNumber ||
+      !!structuredData.invoiceNumber;
+    if (!hasIdentifier) {
+      warnings.push('Key identifiers (vendor, account or invoice number) are missing.');
+    }
+
+    if (structuredData.type === 'generic') {
+      warnings.push('Document could not be classified into a known document type.');
+    }
+
+    return warnings;
+  }
+
+  buildPreviewExplanations(structuredData = {}, documentType) {
+    const explanations = [];
+    const classification = structuredData.type || documentType || 'document';
+    const label = DOCUMENT_TYPE_LABELS[classification] || classification;
+    explanations.push(`Document heuristics treat this as a “${label}”.`);
+
+    if (structuredData.vendor) {
+      explanations.push('Vendor name comes from the first readable lines on the page.');
+    }
+    if (structuredData.amount || structuredData.totalAmount) {
+      explanations.push('Amounts are extracted via keywords such as “Summe”, “Total”, or currency symbols.');
+    }
+    if (structuredData.date) {
+      explanations.push('Dates are matched with German/ISO date patterns.');
+    }
+    if (!structuredData.amount && !structuredData.vendor) {
+      explanations.push('OCR text is captured but critical fields need manual review.');
+    }
+
+    explanations.push('Confidence is aggregated from the underlying OCR engine.');
+    return explanations;
   }
 
   // Extract receipt/invoice data with German patterns

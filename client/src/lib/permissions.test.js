@@ -28,6 +28,13 @@ describe('permissions', () => {
     expect(can('create', 'viewer')).toBe(false);
   });
 
+  it('should only allow admin/accountant to import bank statements', () => {
+    expect(can('bank:write', 'admin')).toBe(true);
+    expect(can('bank:write', 'accountant')).toBe(true);
+    expect(can('bank:write', 'auditor')).toBe(false);
+    expect(can('bank:write', 'viewer')).toBe(false);
+  });
+
   it('should allow admin/accountant/auditor to export', () => {
     expect(can('export', 'admin')).toBe(true);
     expect(can('export', 'accountant')).toBe(true);

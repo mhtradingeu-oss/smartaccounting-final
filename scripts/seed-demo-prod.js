@@ -30,6 +30,7 @@ const configureDemoPassword = () => {
 const DEMO_USERS = [
   { email: 'demo-admin@demo.com', role: 'admin' },
   { email: 'demo-accountant@demo.com', role: 'accountant' },
+  { email: 'demo-auditor@demo.com', role: 'auditor' },
   { email: 'demo-viewer@demo.com', role: 'viewer' },
 ];
 
