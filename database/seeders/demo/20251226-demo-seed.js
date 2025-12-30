@@ -16,7 +16,12 @@ const DEMO_COMPANY = {
 
 const DEMO_USERS = [
   { email: 'demo-admin@demo.com', firstName: 'Demo', lastName: 'Admin', role: 'admin' },
-  { email: 'demo-accountant@demo.com', firstName: 'Demo', lastName: 'Accountant', role: 'accountant' },
+  {
+    email: 'demo-accountant@demo.com',
+    firstName: 'Demo',
+    lastName: 'Accountant',
+    role: 'accountant',
+  },
   { email: 'demo-auditor@demo.com', firstName: 'Demo', lastName: 'Auditor', role: 'auditor' },
   { email: 'demo-viewer@demo.com', firstName: 'Demo', lastName: 'Viewer', role: 'viewer' },
 ];
@@ -31,7 +36,12 @@ const INVOICE_TEMPLATES = [
     date: '2025-01-01',
     dueDate: '2025-01-15',
     items: [
-      { description: 'Technical consulting block (10h)', quantity: 10, unitPrice: 100, vatRate: 19 },
+      {
+        description: 'Technical consulting block (10h)',
+        quantity: 10,
+        unitPrice: 100,
+        vatRate: 0.19,
+      },
     ],
   },
   {
@@ -43,7 +53,12 @@ const INVOICE_TEMPLATES = [
     date: '2025-01-10',
     dueDate: '2025-01-25',
     items: [
-      { description: 'Accounting bundle (incl. reporting)', quantity: 1, unitPrice: 500, vatRate: 19 },
+      {
+        description: 'Accounting bundle (incl. reporting)',
+        quantity: 1,
+        unitPrice: 500,
+        vatRate: 0.19,
+      },
     ],
   },
   {
@@ -55,7 +70,7 @@ const INVOICE_TEMPLATES = [
     date: '2025-02-01',
     dueDate: '2025-02-15',
     items: [
-      { description: 'Advisory retainer (3 sessions)', quantity: 3, unitPrice: 450, vatRate: 19 },
+      { description: 'Advisory retainer (3 sessions)', quantity: 3, unitPrice: 450, vatRate: 0.19 },
     ],
   },
 ];
@@ -67,7 +82,7 @@ const EXPENSE_TEMPLATES = [
     expenseDate: '2025-01-05',
     category: 'Rent',
     netAmount: 1000.0,
-    vatRate: 19.0,
+    vatRate: 0.19,
     status: 'booked',
     source: 'bank',
     ownerKey: 'admin',
@@ -79,7 +94,7 @@ const EXPENSE_TEMPLATES = [
     expenseDate: '2025-01-12',
     category: 'Subscriptions',
     netAmount: 50.0,
-    vatRate: 19.0,
+    vatRate: 0.19,
     status: 'draft',
     source: 'manual',
     ownerKey: 'accountant',
@@ -91,7 +106,7 @@ const EXPENSE_TEMPLATES = [
     expenseDate: '2025-01-20',
     category: 'Travel',
     netAmount: 350.0,
-    vatRate: 19.0,
+    vatRate: 0.19,
     status: 'archived',
     source: 'upload',
     ownerKey: 'accountant',
@@ -107,7 +122,7 @@ const LEDGER_TRANSACTIONS = [
     type: 'income',
     category: 'REVENUE',
     amount: 1190.0,
-    vatRate: 19.0,
+    vatRate: 0.19,
     vatAmount: 190.0,
     creditAmount: 1190.0,
     debitAmount: null,
@@ -120,7 +135,7 @@ const LEDGER_TRANSACTIONS = [
     type: 'expense',
     category: 'RENT',
     amount: 1190.0,
-    vatRate: 19.0,
+    vatRate: 0.19,
     vatAmount: 190.0,
     creditAmount: null,
     debitAmount: 1190.0,
@@ -133,7 +148,7 @@ const LEDGER_TRANSACTIONS = [
     type: 'expense',
     category: 'SUBSCRIPTIONS',
     amount: 59.5,
-    vatRate: 19.0,
+    vatRate: 0.19,
     vatAmount: 9.5,
     creditAmount: null,
     debitAmount: 59.5,
@@ -150,6 +165,7 @@ const BANK_STATEMENT_TEMPLATE = {
   iban: 'DE89370400440532013000',
   statementPeriodStart: '2025-01-01',
   statementPeriodEnd: '2025-01-31',
+  statementDate: '2025-01-31',
   openingBalance: 9800.0,
   closingBalance: 11000.0,
   currency: 'EUR',
@@ -227,13 +243,13 @@ const requireDemoSeedEnabled = (phase) => {
 
 const formatMoney = (value) => Number(Number(value).toFixed(2));
 
-const buildInvoiceItems = (items) =>
-  items.map((item) => {
+const buildInvoiceItems = (items = []) =>
+  (items || []).map((item) => {
     const quantity = Number(item.quantity);
     const unitPrice = Number(item.unitPrice);
     const vatRate = Number(item.vatRate);
     const lineNet = formatMoney(quantity * unitPrice);
-    const lineVat = formatMoney((lineNet * vatRate) / 100);
+    const lineVat = formatMoney(lineNet * vatRate);
     const lineGross = formatMoney(lineNet + lineVat);
     return {
       description: item.description,
@@ -246,13 +262,55 @@ const buildInvoiceItems = (items) =>
     };
   });
 
-const insertRecordAndReturnId = async (queryInterface, tableName, record, fallbackQuery, fallbackReplacements = {}) => {
-  const insertionResult = await queryInterface.bulkInsert(tableName, [record], { returning: true });
+// Centralized invoice builder for demo seeds (matches service logic)
+function buildDemoInvoice(template, userId, companyId, now) {
+  const items = buildInvoiceItems(template.items || []);
+  const subtotal = formatMoney(items.reduce((total, item) => total + item.lineNet, 0));
+  const totalVat = formatMoney(items.reduce((total, item) => total + item.lineVat, 0));
+  const totalGross = formatMoney(items.reduce((total, item) => total + item.lineGross, 0));
+  return {
+    invoice: {
+      invoiceNumber: template.invoiceNumber,
+      subtotal,
+      total: totalGross,
+      amount: totalGross,
+      currency: 'EUR',
+      status: template.status.toUpperCase(),
+      date: template.date,
+      dueDate: template.dueDate,
+      clientName: template.clientName,
+      notes: template.notes,
+      userId,
+      companyId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    items,
+  };
+}
+
+const insertRecordAndReturnId = async (
+  queryInterface,
+  tableName,
+  record,
+  fallbackQuery,
+  fallbackReplacements = {},
+  options = {},
+) => {
+  const bulkInsertOptions = { ...options };
+  if (queryInterface.sequelize.getDialect() === 'postgres') {
+    bulkInsertOptions.returning = true;
+  }
+  const insertionResult = await queryInterface.bulkInsert(tableName, [record], bulkInsertOptions);
   if (Array.isArray(insertionResult) && insertionResult.length > 0) {
     return insertionResult[0].id;
   }
   if (fallbackQuery) {
-    const [rows] = await queryInterface.sequelize.query(fallbackQuery, { replacements: fallbackReplacements });
+    const queryOptions = { replacements: fallbackReplacements };
+    if (bulkInsertOptions.transaction) {
+      queryOptions.transaction = bulkInsertOptions.transaction;
+    }
+    const [rows] = await queryInterface.sequelize.query(fallbackQuery, queryOptions);
     return rows.length > 0 ? rows[0].id : null;
   }
   return null;
@@ -291,11 +349,19 @@ module.exports = {
     // === DEMO USERS ===
     for (const template of DEMO_USERS) {
       const missing = [];
-      if (!template.firstName) {missing.push('firstName');}
-      if (!template.lastName) {missing.push('lastName');}
-      if (!template.role) {missing.push('role');}
+      if (!template.firstName) {
+        missing.push('firstName');
+      }
+      if (!template.lastName) {
+        missing.push('lastName');
+      }
+      if (!template.role) {
+        missing.push('role');
+      }
       if (missing.length > 0) {
-        throw new Error(`[DEMO SEED] ${template.email} missing required fields: ${missing.join(', ')}`);
+        throw new Error(
+          `[DEMO SEED] ${template.email} missing required fields: ${missing.join(', ')}`,
+        );
       }
       const userPayload = {
         ...template,
@@ -340,25 +406,12 @@ module.exports = {
         console.log(`[DEMO SEED] Invoice already exists: ${template.invoiceNumber}`);
         continue;
       }
-      const items = buildInvoiceItems(template.items || []);
-      const subtotal = formatMoney(items.reduce((total, item) => total + item.lineNet, 0));
-      const total = formatMoney(items.reduce((total, item) => total + item.lineGross, 0));
-      const invoicePayload = {
-        invoiceNumber: template.invoiceNumber,
-        subtotal,
-        total,
-        amount: total,
-        currency: 'EUR',
-        status: template.status.toUpperCase(),
-        date: template.date,
-        dueDate: template.dueDate,
-        clientName: template.clientName,
-        notes: template.notes,
-        userId: userMap[template.ownerKey] || userMap.accountant,
+      const { invoice: invoicePayload, items } = buildDemoInvoice(
+        template,
+        userMap[template.ownerKey] || userMap.accountant,
         companyId,
-        createdAt: now,
-        updatedAt: now,
-      };
+        now,
+      );
       const invoiceId = await insertRecordAndReturnId(
         queryInterface,
         'invoices',
@@ -368,6 +421,7 @@ module.exports = {
       );
       invoiceIdByNumber[template.invoiceNumber] = invoiceId;
       const itemRecords = items.map((item) => ({
+        id: uuidv4(),
         ...item,
         invoiceId,
         createdAt: now,
@@ -390,7 +444,7 @@ module.exports = {
         continue;
       }
       const netAmount = template.netAmount;
-      const vatAmount = formatMoney((netAmount * template.vatRate) / 100);
+      const vatAmount = formatMoney(netAmount * template.vatRate);
       const grossAmount = formatMoney(netAmount + vatAmount);
       const expensePayload = {
         description: template.description,
@@ -424,123 +478,133 @@ module.exports = {
       console.log(`[DEMO SEED] Expense seeded: ${template.description}`);
     }
 
-    // === DEMO TRANSACTIONS ===
+    // === DEMO TRANSACTIONS / BANK STATEMENT ===
     const transactionIdByReference = {};
-    for (const template of LEDGER_TRANSACTIONS) {
-      const [existingTransactions] = await queryInterface.sequelize.query(
-        'SELECT id FROM transactions WHERE reference = :reference AND company_id = :companyId LIMIT 1;',
-        { replacements: { reference: template.reference, companyId } },
-      );
-      if (existingTransactions.length > 0) {
-        transactionIdByReference[template.reference] = existingTransactions[0].id;
-        console.log(`[DEMO SEED] Ledger transaction already exists: ${template.reference}`);
-        continue;
-      }
-      const transactionPayload = {
-        id: uuidv4(),
-        company_id: companyId,
-        user_id: userMap[template.userKey] || userMap.admin,
-        transaction_date: template.transactionDate,
-        description: template.description,
-        amount: template.amount,
-        currency: 'EUR',
-        type: template.type,
-        category: template.category,
-        vat_rate: template.vatRate,
-        vat_amount: template.vatAmount,
-        reference: template.reference,
-        non_deductible: false,
-        credit_amount: template.creditAmount,
-        debit_amount: template.debitAmount,
-        is_reconciled: false,
-        bank_transaction_id: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await queryInterface.bulkInsert('transactions', [transactionPayload], {});
-      transactionIdByReference[template.reference] = transactionPayload.id;
-      console.log(`[DEMO SEED] Ledger transaction created: ${template.reference}`);
-    }
-
-    // === DEMO BANK STATEMENT ===
-    const [existingStatements] = await queryInterface.sequelize.query(
-      'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
-      { replacements: { fileName: BANK_STATEMENT_TEMPLATE.fileName, companyId } },
-    );
-    let bankStatementId;
-    if (existingStatements.length > 0) {
-      bankStatementId = existingStatements[0].id;
-      console.log('[DEMO SEED] Bank statement already exists.');
-    } else {
-      const statementPayload = {
-        ...BANK_STATEMENT_TEMPLATE,
-        userId: userMap.admin,
-        companyId,
-        createdAt: now,
-        updatedAt: now,
-      };
-      bankStatementId = await insertRecordAndReturnId(
-        queryInterface,
-        'bank_statements',
-        statementPayload,
-        'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
-        { fileName: BANK_STATEMENT_TEMPLATE.fileName, companyId },
-      );
-      console.log('[DEMO SEED] Bank statement seeded.');
-    }
-
-    // === DEMO BANK TRANSACTIONS ===
     const bankTransactionIds = {};
-    for (const template of BANK_TRANSACTION_TEMPLATES) {
-      const [existingBankTx] = await queryInterface.sequelize.query(
-        'SELECT id FROM bank_transactions WHERE reference = :reference AND "companyId" = :companyId LIMIT 1;',
-        { replacements: { reference: template.reference, companyId } },
-      );
-      if (existingBankTx.length > 0) {
-        bankTransactionIds[template.reference] = existingBankTx[0].id;
-        console.log(`[DEMO SEED] Bank transaction already exists: ${template.reference}`);
-        continue;
-      }
-      const bankTxPayload = {
-        bankStatementId,
-        date: template.date,
-        value_date: template.valueDate,
-        description: template.description,
-        amount: template.amount,
-        currency: 'EUR',
-        transaction_type: template.transactionType,
-        reference: template.reference,
-        category: template.category,
-        vat_category: template.vatCategory,
-        counterparty_name: template.counterpartyName,
-        is_reconciled: Boolean(template.reconciledReference),
-        reconciled_with: template.reconciledReference
-          ? transactionIdByReference[template.reconciledReference]
-          : null,
-        companyId,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const bankTxId = await insertRecordAndReturnId(
-        queryInterface,
-        'bank_transactions',
-        bankTxPayload,
-        'SELECT id FROM bank_transactions WHERE reference = :reference AND "companyId" = :companyId LIMIT 1;',
-        { reference: template.reference, companyId },
-      );
-      bankTransactionIds[template.reference] = bankTxId;
-      if (template.reconciledReference) {
-        const targetTransactionId = transactionIdByReference[template.reconciledReference];
-        if (targetTransactionId) {
-          await queryInterface.bulkUpdate(
-            'transactions',
-            { is_reconciled: true, bank_transaction_id: bankTxId },
-            { id: targetTransactionId },
-          );
+    let bankStatementId;
+    await queryInterface.sequelize.transaction(async (transaction) => {
+      for (const template of LEDGER_TRANSACTIONS) {
+        const [existingTransactions] = await queryInterface.sequelize.query(
+          'SELECT id FROM transactions WHERE reference = :reference AND company_id = :companyId LIMIT 1;',
+          { replacements: { reference: template.reference, companyId }, transaction },
+        );
+        if (existingTransactions.length > 0) {
+          transactionIdByReference[template.reference] = existingTransactions[0].id;
+          console.log(`[DEMO SEED] Ledger transaction already exists: ${template.reference}`);
+          continue;
         }
+        const transactionPayload = {
+          id: uuidv4(),
+          company_id: companyId,
+          user_id: userMap[template.userKey] || userMap.admin,
+          transaction_date: template.transactionDate,
+          description: template.description,
+          amount: template.amount,
+          currency: 'EUR',
+          type: template.type,
+          category: template.category,
+          vat_rate: template.vatRate,
+          vat_amount: template.vatAmount,
+          reference: template.reference,
+          non_deductible: false,
+          credit_amount: template.creditAmount,
+          debit_amount: template.debitAmount,
+          is_reconciled: false,
+          bank_transaction_id: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const ledgerTransactionId = await insertRecordAndReturnId(
+          queryInterface,
+          'transactions',
+          transactionPayload,
+          'SELECT id FROM transactions WHERE reference = :reference AND company_id = :companyId LIMIT 1;',
+          { reference: template.reference, companyId },
+          { transaction },
+        );
+        transactionIdByReference[template.reference] = ledgerTransactionId || transactionPayload.id;
+        console.log(`[DEMO SEED] Ledger transaction created: ${template.reference}`);
       }
-      console.log(`[DEMO SEED] Bank transaction seeded: ${template.reference}`);
-    }
+
+      const [existingStatements] = await queryInterface.sequelize.query(
+        'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
+        { replacements: { fileName: BANK_STATEMENT_TEMPLATE.fileName, companyId }, transaction },
+      );
+      if (existingStatements.length > 0) {
+        bankStatementId = existingStatements[0].id;
+        console.log('[DEMO SEED] Bank statement already exists.');
+      } else {
+        const statementPayload = {
+          ...BANK_STATEMENT_TEMPLATE,
+          userId: userMap.admin,
+          companyId,
+          createdAt: now,
+          updatedAt: now,
+        };
+        bankStatementId = await insertRecordAndReturnId(
+          queryInterface,
+          'bank_statements',
+          statementPayload,
+          'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
+          { fileName: BANK_STATEMENT_TEMPLATE.fileName, companyId },
+          { transaction },
+        );
+        console.log('[DEMO SEED] Bank statement seeded.');
+      }
+
+      for (const template of BANK_TRANSACTION_TEMPLATES) {
+        const [existingBankTx] = await queryInterface.sequelize.query(
+          'SELECT id FROM bank_transactions WHERE reference = :reference AND "companyId" = :companyId LIMIT 1;',
+          { replacements: { reference: template.reference, companyId }, transaction },
+        );
+        if (existingBankTx.length > 0) {
+          bankTransactionIds[template.reference] = existingBankTx[0].id;
+          console.log(`[DEMO SEED] Bank transaction already exists: ${template.reference}`);
+          continue;
+        }
+        const bankTxPayload = {
+          bankStatementId,
+          date: template.date,
+          value_date: template.valueDate,
+          description: template.description,
+          amount: template.amount,
+          currency: 'EUR',
+          transaction_type: template.transactionType,
+          reference: template.reference,
+          category: template.category,
+          vat_category: template.vatCategory,
+          counterparty_name: template.counterpartyName,
+          is_reconciled: Boolean(template.reconciledReference),
+          reconciled_with: template.reconciledReference
+            ? transactionIdByReference[template.reconciledReference]
+            : null,
+          companyId,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const bankTxId = await insertRecordAndReturnId(
+          queryInterface,
+          'bank_transactions',
+          bankTxPayload,
+          'SELECT id FROM bank_transactions WHERE reference = :reference AND "companyId" = :companyId LIMIT 1;',
+          { reference: template.reference, companyId },
+          { transaction },
+        );
+        bankTransactionIds[template.reference] = bankTxId;
+        if (template.reconciledReference) {
+          const targetTransactionId = transactionIdByReference[template.reconciledReference];
+          if (targetTransactionId) {
+            await queryInterface.bulkUpdate(
+              'transactions',
+              { is_reconciled: true, bank_transaction_id: bankTxId },
+              { id: targetTransactionId },
+              { transaction },
+            );
+          }
+        }
+        console.log(`[DEMO SEED] Bank transaction seeded: ${template.reference}`);
+      }
+    });
 
     // === DEMO AI INSIGHTS & DECISIONS ===
     const aiInsightIds = {};
@@ -556,7 +620,7 @@ module.exports = {
         summary: 'Invoice DEMO-INV-002 is overdue and may require a reminder.',
         why: 'Due date passed and no payment has been logged; customer history shows slow payments.',
         legalContext: 'AO §147 GoBD documentation requirements.',
-        evidence: { dueDate: '2025-01-25', amount: 595.0, status: 'SENT' },
+        evidence: ['dueDate', 'amount', 'status'],
         ruleId: AI_INSIGHT_RULES.latePayment,
         modelVersion: 'v0.9-demo',
         featureFlag: 'ai-demo-mode',
@@ -576,7 +640,7 @@ module.exports = {
         summary: 'No receipt attached for Demo SaaS Ltd software subscription.',
         why: 'The expense is marked as needing documentation under §14 UStG.',
         legalContext: 'UStG §14 obligation to keep receipts.',
-        evidence: { vendor: 'Demo SaaS Ltd', amount: 59.5 },
+        evidence: ['vendorName', 'amount'],
         ruleId: AI_INSIGHT_RULES.missingReceipt,
         modelVersion: 'v0.9-demo',
         featureFlag: 'ai-demo-mode',
@@ -596,7 +660,7 @@ module.exports = {
         summary: 'Similar rent payments detected in close succession.',
         why: 'Two rent payments of 1190 EUR appear within minutes.',
         legalContext: 'AO §147 vigilance around repeated entries.',
-        evidence: { amount: 1190.0, reference: 'DEMO-EXP-RENT' },
+        evidence: ['amount', 'reference'],
         ruleId: AI_INSIGHT_RULES.duplicateCharge,
         modelVersion: 'v0.9-demo',
         featureFlag: 'ai-demo-mode',
@@ -645,17 +709,21 @@ module.exports = {
       if (existingDecision.length > 0) {
         continue;
       }
-      await queryInterface.bulkInsert('ai_insight_decisions', [
-        {
-          insightId,
-          companyId,
-          actorUserId,
-          decision: spec.decision,
-          reason: spec.reason,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ], {});
+      await queryInterface.bulkInsert(
+        'ai_insight_decisions',
+        [
+          {
+            insightId,
+            companyId,
+            actorUserId,
+            decision: spec.decision,
+            reason: spec.reason,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+        {},
+      );
     }
 
     // === DEMO TAX REPORT ===
@@ -807,7 +875,11 @@ module.exports = {
       {},
     );
 
-    await queryInterface.bulkDelete('bank_statements', { companyId, fileName: BANK_STATEMENT_TEMPLATE.fileName }, {});
+    await queryInterface.bulkDelete(
+      'bank_statements',
+      { companyId, fileName: BANK_STATEMENT_TEMPLATE.fileName },
+      {},
+    );
 
     await queryInterface.bulkDelete(
       'expenses',
@@ -826,3 +898,6 @@ module.exports = {
     console.log('[DEMO SEED] Demo data removed.');
   },
 };
+
+module.exports.buildInvoiceItems = buildInvoiceItems;
+module.exports.BANK_STATEMENT_TEMPLATE = BANK_STATEMENT_TEMPLATE;
