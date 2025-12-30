@@ -91,11 +91,11 @@ describe('Full Workflow Integration Tests', () => {
       // Assert server-calculated amounts
       expect(invoice).toHaveProperty('total');
       expect(invoice).toHaveProperty('subtotal');
-      expect(invoice.total).toBeGreaterThan(0);
-      expect(invoice.subtotal).toBeGreaterThan(0);
+      expect(Number(invoice.total)).toBeGreaterThan(0);
+      expect(Number(invoice.subtotal)).toBeGreaterThan(0);
       // Assert VAT at item level
       expect(invoice.items[0]).toHaveProperty('lineVat');
-      expect(invoice.items[0].lineVat).toBeGreaterThan(0);
+      expect(Number(invoice.items[0].lineVat)).toBeGreaterThan(0);
 
       // 4. Get dashboard data
       const dashboardResponse = await global.requestApp({

@@ -59,7 +59,16 @@ async function createTestUser(overrides = {}) {
   return user;
 }
 
-async function createTestCompany(userId, overrides = {}) {
+async function createTestCompany(userIdOrOverrides, overrides = {}) {
+  let userId;
+  let companyOverrides = overrides;
+
+  if (userIdOrOverrides && typeof userIdOrOverrides === 'object' && !Number.isInteger(userIdOrOverrides)) {
+    companyOverrides = userIdOrOverrides;
+  } else {
+    userId = userIdOrOverrides;
+  }
+
   const defaultCompany = {
     name: `Test Company ${Date.now()}`,
     taxId: `DE${Math.random().toString().slice(2, 11)}`,
@@ -67,10 +76,11 @@ async function createTestCompany(userId, overrides = {}) {
     city: 'Berlin',
     postalCode: '10115',
     country: 'Germany',
+    aiEnabled: typeof companyOverrides.aiEnabled === 'boolean' ? companyOverrides.aiEnabled : true,
     userId,
   };
 
-  return Company.create({ ...defaultCompany, ...overrides });
+  return Company.create({ ...defaultCompany, ...companyOverrides });
 }
 
 async function createTestInvoice(userId, overrides = {}) {
@@ -87,7 +97,7 @@ async function createTestInvoice(userId, overrides = {}) {
     total: 1000.0,
     amount: 1000.0,
     currency: 'EUR',
-    status: 'pending',
+    status: 'SENT',
     date: now,
     dueDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
     clientName: 'Test Client',
@@ -107,14 +117,28 @@ function createAuthToken(userId) {
 ========================= */
 
 async function cleanDatabase() {
-  // 🔴 SQLite FK safety for Jest
-  await sequelize.query('PRAGMA foreign_keys = OFF');
+  const dialect = sequelize.getDialect();
+  const tables = ['invoices', 'companies', 'users'];
+
+  if (dialect === 'sqlite') {
+    // 🔴 SQLite FK safety for Jest
+    await sequelize.query('PRAGMA foreign_keys = OFF');
+    await Invoice.destroy({ where: {}, force: true });
+    await Company.destroy({ where: {}, force: true });
+    await User.destroy({ where: {}, force: true });
+    await sequelize.query('PRAGMA foreign_keys = ON');
+    return;
+  }
+
+  if (dialect === 'postgres') {
+    const quotedTables = tables.map((table) => `"${table}"`).join(', ');
+    await sequelize.query(`TRUNCATE TABLE ${quotedTables} RESTART IDENTITY CASCADE;`);
+    return;
+  }
 
   await Invoice.destroy({ where: {}, force: true });
   await Company.destroy({ where: {}, force: true });
   await User.destroy({ where: {}, force: true });
-
-  await sequelize.query('PRAGMA foreign_keys = ON');
 }
 
 /* =========================

@@ -8,7 +8,7 @@ temp
 logs
 uploads
 client/node_modules
-tests
+
 docs
 !docs/
 !docs/**
@@ -36,8 +36,6 @@ logs/
 *.sqlite
 *.sqlite3
 *.old
-*.test.*
-*.spec.*
 *.md
 *.bak
 *.tmp

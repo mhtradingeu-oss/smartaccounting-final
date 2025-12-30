@@ -477,7 +477,7 @@ describe('Manual reconciliation endpoint', () => {
       where: { bankTransactionId: bankTransaction.id },
     });
     expect(ledgerTransaction).not.toBeNull();
-    expect(ledgerTransaction.amount).toBeCloseTo(1234.56);
+    expect(Number(ledgerTransaction.amount)).toBeCloseTo(1234.56);
     expect(ledgerTransaction.isReconciled).toBe(true);
 
     const auditEntry = await AuditLog.findOne({

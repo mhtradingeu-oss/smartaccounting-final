@@ -1,5 +1,6 @@
 const { Invoice, InvoiceItem, FileAttachment, sequelize } = require('../models');
 const { enforceCurrencyIsEur, ensureVatTotalsMatch, assertProvidedMatches } = require('../utils/vatIntegrity');
+const { normalizeCompanyId, buildCompanyFilter } = require('../utils/companyFilter');
 
 const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'];
 const STATUS_TRANSITIONS = {
@@ -9,6 +10,11 @@ const STATUS_TRANSITIONS = {
   PAID: [],
   CANCELLED: [],
 };
+
+const invoiceIncludes = [
+  { model: InvoiceItem, as: 'items' },
+  { model: FileAttachment, as: 'attachments' },
+];
 
 const normalizeStatus = (value, fallback = '') => {
   if (!value || typeof value !== 'string') {
@@ -26,23 +32,19 @@ const normalizeStatus = (value, fallback = '') => {
 
 
 const listInvoices = async (companyId) => {
+  const where = buildCompanyFilter(companyId);
   return Invoice.findAll({
-    where: { companyId },
+    where,
     order: [['createdAt', 'DESC']],
-    include: [
-      { model: InvoiceItem, as: 'items' },
-      { model: FileAttachment, as: 'attachments' },
-    ],
+    include: invoiceIncludes,
   });
 };
 
 const getInvoiceById = async (invoiceId, companyId) => {
+  const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
   return Invoice.findOne({
-    where: { id: invoiceId, companyId },
-    include: [
-      { model: InvoiceItem, as: 'items' },
-      { model: FileAttachment, as: 'attachments' },
-    ],
+    where,
+    include: invoiceIncludes,
   });
 };
 
@@ -108,7 +110,7 @@ const createInvoice = async (data, userId, companyId) => {
     notes: data.notes || null,
   };
 
-  return await sequelize.transaction(async (t) => {
+  const createdInvoice = await sequelize.transaction(async (t) => {
     const invoice = await Invoice.create(invoicePayload, { transaction: t });
     // Attach items
     for (const item of items) {
@@ -123,8 +125,20 @@ const createInvoice = async (data, userId, companyId) => {
         );
       }
     }
-    return await getInvoiceById(invoice.id, companyId);
+    return invoice;
   });
+
+  const finalizedInvoice = await getInvoiceById(createdInvoice.id, companyId);
+  if (finalizedInvoice) {
+    return finalizedInvoice;
+  }
+  const fallback = await Invoice.findByPk(createdInvoice.id, { include: invoiceIncludes });
+  if (!fallback) {
+    const err = new Error('Invoice created but could not be retrieved');
+    err.status = 500;
+    throw err;
+  }
+  return fallback;
 };
 
 
@@ -138,14 +152,16 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
   if (Object.prototype.hasOwnProperty.call(changes, 'currency')) {
     changes.currency = enforceCurrencyIsEur(changes.currency);
   }
-  const invoice = await Invoice.findOne({ where: { id: invoiceId, companyId } });
+  const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
+  const invoice = await Invoice.findOne({ where });
   if (!invoice) {return null;}
   await invoice.update(changes);
   return await getInvoiceById(invoiceId, companyId);
 };
 
 const updateInvoiceStatus = async (invoiceId, newStatus, companyId) => {
-  const invoice = await Invoice.findOne({ where: { id: invoiceId, companyId } });
+  const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
+  const invoice = await Invoice.findOne({ where });
   if (!invoice) {return null;}
   const current = normalizeStatus(invoice.status);
   const next = normalizeStatus(newStatus);

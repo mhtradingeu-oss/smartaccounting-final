@@ -1,10 +1,6 @@
 const express = require('express');
-const request = require('supertest');
 
 process.env.OCR_PREVIEW_ENABLED = 'true';
-
-const canBindSockets = require('../utils/canBindSockets')();
-const describeIfSockets = canBindSockets ? describe : describe.skip;
 
 let mockCurrentUser = { id: null, role: 'admin', companyId: null };
 
@@ -45,6 +41,31 @@ jest.mock('../../src/services/auditLogService', () => ({
   appendEntry: jest.fn().mockResolvedValue(true),
 }));
 
+const mockFileTemplate = {
+  fieldname: 'document',
+  originalname: 'invoice.pdf',
+  filename: 'invoice.pdf',
+  path: '/tmp/mock-invoice.pdf',
+  mimetype: 'application/pdf',
+  size: 1024,
+};
+
+let mockAttachFile = true;
+
+jest.mock('../../src/middleware/secureUpload', () => ({
+  createSecureUploader: () => ({
+    single: () => (req, _res, next) => {
+      if (mockAttachFile) {
+        req.file = { ...mockFileTemplate };
+      } else {
+        req.file = undefined;
+      }
+      next();
+    },
+  }),
+  logUploadMetadata: (_req, _res, next) => next(),
+}));
+
 jest.mock('../../src/services/ocrService', () => ({
   runOCRPreview: jest.fn().mockResolvedValue(defaultPreviewResponse),
 }));
@@ -62,7 +83,7 @@ app.use((err, _req, res, _next) => {
   res.status(status).json({ message: err.message || 'Error' });
 });
 
-describeIfSockets('OCR preview endpoint', () => {
+describe('OCR preview endpoint', () => {
   beforeEach(async () => {
     await global.testUtils.cleanDatabase();
     const user = await global.testUtils.createTestUser();
@@ -74,6 +95,7 @@ describeIfSockets('OCR preview endpoint', () => {
     runOCRPreview.mockReset();
     runOCRPreview.mockResolvedValue(defaultPreviewResponse);
     AuditLogService.appendEntry.mockClear();
+    mockAttachFile = true;
   });
 
   it('returns preview data, logs the event, and leaves no attachment records', async () => {
@@ -89,10 +111,14 @@ describeIfSockets('OCR preview endpoint', () => {
     runOCRPreview.mockResolvedValue(previewPayload);
     const beforeCount = await FileAttachment.count();
 
-    const response = await request(app)
-      .post('/api/ocr/preview')
-      .field('documentType', 'invoice')
-      .attach('document', Buffer.from('%PDF-1.4...'), 'invoice.pdf');
+    const response = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/ocr/preview',
+      body: {
+        documentType: 'invoice',
+      },
+    });
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
@@ -124,7 +150,12 @@ describeIfSockets('OCR preview endpoint', () => {
   });
 
   it('returns 400 when no file is provided', async () => {
-    const response = await request(app).post('/api/ocr/preview');
+    mockAttachFile = false;
+    const response = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/ocr/preview',
+    });
     expect(response.status).toBe(400);
     expect(runOCRPreview).not.toHaveBeenCalled();
   });

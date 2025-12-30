@@ -1,14 +1,5 @@
-const request = require('supertest');
 const app = require('../../src/app');
 const jwt = require('jsonwebtoken');
-const canBindSockets = require('../utils/canBindSockets')();
-
-if (!canBindSockets) {
-  // eslint-disable-next-line no-console
-  console.warn('Compliance route tests skipped: unable to bind sockets in this environment.');
-}
-
-const describeIfSockets = canBindSockets ? describe : describe.skip;
 
 // Helper to create JWT for a given companyId
 function makeToken(companyId) {
@@ -17,41 +8,48 @@ function makeToken(companyId) {
   });
 }
 
-describeIfSockets('GET /api/compliance/reports/:type (tenant-safe)', () => {
+describe('GET /api/compliance/reports/:type (tenant-safe)', () => {
   it('allows authorized user to fetch their company report', async () => {
     const token = makeToken('company-123');
 
-    const res = await request(app)
-      .get('/api/compliance/reports/vat')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+    const res = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/compliance/reports/vat',
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
+    expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.companyId).toBe('company-123');
     expect(res.body.data.type).toBe('vat');
   });
 
   it('rejects user trying to fetch report for another company', async () => {
-    // User with companyId 'company-abc'
     const token = makeToken('company-abc');
 
-    const res = await request(app)
-      .get('/api/compliance/reports/vat')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+    const res = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/compliance/reports/vat',
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
+    expect(res.status).toBe(200);
     expect(res.body.data.companyId).toBe('company-abc');
 
-    // Token without companyId should fail
     const badToken = jwt.sign({ role: 'user' }, process.env.JWT_SECRET || 'testsecret', {
       expiresIn: '1h',
     });
 
-    const res2 = await request(app)
-      .get('/api/compliance/reports/vat')
-      .set('Authorization', `Bearer ${badToken}`)
-      .expect(403);
+    const res2 = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/compliance/reports/vat',
+      headers: { Authorization: `Bearer ${badToken}` },
+    });
 
+    expect(res2.status).toBe(403);
     expect(res2.body.success).toBe(false);
   });
 });

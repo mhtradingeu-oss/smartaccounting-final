@@ -12,19 +12,15 @@ RUN apt-get update && apt-get install -y \
   curl \
   && rm -rf /var/lib/apt/lists/*
 
-# Install production dependencies.
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Install dependencies with dev packages for testing.
+COPY package*.json ./
+RUN npm ci --omit=dev=false
 
 # Copy application files required at runtime.
-COPY index.js ./
-COPY .sequelizerc ./
-COPY src ./src
-COPY config ./config
-COPY database ./database
-COPY scripts ./scripts
-COPY shared ./shared
-COPY docs ./docs
+COPY . .
+
+# ✅ هذا السطر مهم جدًا
+RUN ls -la tests || true
 
 # Runtime directories expected by containers and host mounts.
 RUN mkdir -p logs uploads temp

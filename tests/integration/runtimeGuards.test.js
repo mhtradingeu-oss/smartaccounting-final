@@ -1,6 +1,5 @@
 // tests/integration/runtimeGuards.test.js
 
-const request = require('supertest');
 const app = require('../../src/app');
 const { sequelize, Company, User, AuditLog } = require('../../src/models');
 const { clearSchemaCache } = require('../../src/services/guards/schemaGuard');
@@ -40,27 +39,36 @@ describe('Runtime Guards Integration', () => {
   });
 
   test('A1: Login works with aiEnabled=false', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'user@noai.com', password: 'Test1234!' });
+    const res = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/auth/login',
+      body: { email: 'user@noai.com', password: 'Test1234!' },
+    });
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
     authToken = res.body.token;
   });
 
   test('A2: Company endpoint works with aiEnabled=false', async () => {
-    const res = await request(app)
-      .get('/api/companies')
-      .set('Authorization', `Bearer ${authToken}`);
+    const res = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/companies',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     expect(res.status).toBe(200);
     expect(res.body.companies).toBeDefined();
     expect(res.body.companies[0].aiEnabled).toBe(false);
   });
 
   test('A3: AI endpoint fails closed (501) when aiEnabled=false', async () => {
-    const res = await request(app)
-      .get('/api/ai/read/invoice-summary?invoiceId=1')
-      .set('Authorization', `Bearer ${authToken}`);
+    const res = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/ai/read/invoice-summary?invoiceId=1',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     expect([404, 501, 503, 400, 403]).toContain(res.status);
     // Accept error or message for fail-closed
     expect(res.body.error || res.body.message || res.body.status).toBeDefined();
@@ -96,10 +104,13 @@ describe('Runtime Guards Integration', () => {
   test('C1: Audit log is written for audited action', async () => {
     // Use company update, which is audited
     const countBefore = await AuditLog.count();
-    await request(app)
-      .put(`/api/companies/${testCompany.id}`)
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ name: 'NoAI Inc Updated' });
+    await global.requestApp({
+      app,
+      method: 'PUT',
+      url: `/api/companies/${testCompany.id}`,
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: { name: 'NoAI Inc Updated' },
+    });
     const countAfter = await AuditLog.count();
     expect(countAfter).toBeGreaterThan(countBefore);
   });
@@ -123,9 +134,12 @@ describe('Runtime Guards Integration', () => {
       await queryInterface.sequelize.query(dropSql);
     }
     clearSchemaCache();
-    const res = await request(app)
-      .get('/api/ai/read/invoice-summary?invoiceId=1')
-      .set('Authorization', `Bearer ${authToken}`);
+    const res = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/ai/read/invoice-summary?invoiceId=1',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     expect([404, 501, 503, 400, 403]).toContain(res.status);
     expect(res.body.error || res.body.message || res.body.status).toBeDefined();
   });

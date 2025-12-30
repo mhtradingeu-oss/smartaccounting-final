@@ -28,9 +28,9 @@
     "db:seed:demo:reset": "npx sequelize-cli db:seed:undo --seed 20251226-demo-seed.js --seeders-path database/seeders/demo",
     "readiness:auth": "node scripts/auth-readiness.js",
     "demo:verify": "node scripts/demo-verify.js",
-    "test:postgres": "docker compose -f docker-compose.test.yml up -d db && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && npx jest tests/integration/runtimeGuards.test.js\" && docker compose -f docker-compose.test.yml down",
-    "migrate:postgres": "docker compose -f docker-compose.test.yml up -d db && node scripts/wait-for-postgres.js docker-compose.test.yml db && PGUSER=postgres PGPASSWORD=postgres NODE_ENV=test DATABASE_URL=postgres://postgres:postgres@db:5432/smartaccounting_test USE_SQLITE=false npx sequelize-cli db:migrate && docker compose -f docker-compose.test.yml down",
-    "seed:demo:postgres": "docker compose -f docker-compose.test.yml up -d db && node scripts/wait-for-postgres.js docker-compose.test.yml db && DEMO_MODE=true ALLOW_DEMO_SEED=true PGUSER=postgres PGPASSWORD=postgres NODE_ENV=test DATABASE_URL=postgres://postgres:postgres@db:5432/smartaccounting_test USE_SQLITE=false node scripts/seed-demo-prod.js && docker compose -f docker-compose.test.yml down"
+    "test:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && npx jest --runInBand\" && docker compose -f docker-compose.test.yml down",
+    "migrate:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate\" && docker compose -f docker-compose.test.yml down",
+    "seed:demo:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"DEMO_MODE=true ALLOW_DEMO_SEED=true NODE_ENV=test USE_SQLITE=false node scripts/seed-demo-prod.js\" && docker compose -f docker-compose.test.yml down"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",

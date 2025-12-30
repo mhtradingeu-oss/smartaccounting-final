@@ -48,7 +48,7 @@ describe('Invoice Routes', () => {
         subtotal: 1000.0,
         total: 1000.0,
         currency: 'EUR',
-        status: 'paid',
+        status: 'PAID',
         userId: testUser.id,
         companyId: testCompany.id,
       });
@@ -85,6 +85,7 @@ describe('Invoice Routes', () => {
         url: '/api/invoices',
         body: invoiceData,
       });
+      console.log('DEBUG invoice response', response.body);
       expect(response.status).toBe(201);
       expect(response.body.invoice).toHaveProperty('items');
       expect(response.body.invoice.items.length).toBe(2);
@@ -171,7 +172,7 @@ describe('Invoice Routes', () => {
         subtotal: 100,
         total: 119,
         currency: 'EUR',
-        status: 'pending',
+        status: 'DRAFT',
         userId: otherUser.id,
         companyId: otherCompany.id,
       });
