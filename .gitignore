@@ -185,3 +185,4 @@ sha
 !docs/
 !docs/**
 database/dev.sqlite
+database/dev.sqlite
