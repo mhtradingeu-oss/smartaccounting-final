@@ -266,7 +266,6 @@ const buildInvoiceItems = (items = []) =>
 function buildDemoInvoice(template, userId, companyId, now) {
   const items = buildInvoiceItems(template.items || []);
   const subtotal = formatMoney(items.reduce((total, item) => total + item.lineNet, 0));
-  const totalVat = formatMoney(items.reduce((total, item) => total + item.lineVat, 0));
   const totalGross = formatMoney(items.reduce((total, item) => total + item.lineGross, 0));
   return {
     invoice: {

@@ -26,7 +26,7 @@ module.exports = {
       });
     }
   },
-  down: async (queryInterface) => {
+  down: async (_queryInterface) => {
     // Do not drop id columns for safety
   },
 };

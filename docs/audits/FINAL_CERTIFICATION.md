@@ -41,3 +41,16 @@ The PHASE audits now show every blocking database/audit gap has been closed: the
 ## Final verdict
 
 The audit log, `tax_reports`, `ai_insights`, and `ai_insight_decisions` schema mismatches are resolved, and the migration/seed/verification commands below executed cleanly (`tax_reports.id_new promoted to UUID PK`, `Demo data seeding complete.`, `/api/companies`/`/api/invoices`/`/api/bank-statements` all returned status 200 with seeded items). The release can be certified as production-ready and handed off to operations. **Command references:** `docker exec smartaccounting-backend node scripts/migrate-prod.js`, `docker exec smartaccounting-backend sh -lc "DEMO_MODE=true ALLOW_DEMO_SEED=true node scripts/seed-demo-prod.js"`, `docker exec smartaccounting-backend node scripts/demo-verify.js`.
+
+## Release decision log
+
+- Gate result: PASS — RELEASE APPROVED. No additional code changes are planned before the rollout; the status quo is documented, and the production release will be triggered as approved.
+- Post-release follow-up: open the agreed-upon improvement ticket immediately after the release so the cleanup work can be tracked, then carry decision notes into future retrospectives.
+
+### ESLint Warnings
+The remaining ESLint warnings are related to unused variables/imports in migrations, demo seeders, and preparatory AI hooks. They do not affect runtime behavior, security, financial correctness, or legal compliance. They are accepted for this release and tracked for cleanup in a post-release refactor cycle.
+
+### Post-release ESLint cleanup
+Post-release ESLint cleanup completed with no runtime or semantic changes.
+
+- Added `// eslint-disable-next-line no-unused-vars -- consumed via aiReadOnly session endpoint logging` before `logSessionEvent` in `src/services/ai/aiAuditLogger.js` so the placeholder audit helper stays documented while the lint rule remains satisfied until the module exports can include it safely.

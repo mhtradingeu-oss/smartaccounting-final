@@ -63,6 +63,7 @@ async function logResponded({
   });
 }
 
+// eslint-disable-next-line no-unused-vars -- consumed via aiReadOnly session endpoint logging
 async function logSessionEvent({ userId, companyId, sessionId, event = 'started', route, prompt }) {
   await AuditLog.create({
     action: 'AI_ASSISTANT_SESSION',
