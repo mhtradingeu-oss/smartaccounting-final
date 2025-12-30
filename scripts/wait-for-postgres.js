@@ -11,7 +11,7 @@ const intervalMs = Number(process.env.PG_READY_INTERVAL_MS || 2000);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function runComposeCommand(args) {
-  const result = spawnSync('docker-compose', ['-f', composeFile, ...args], {
+  const result = spawnSync('docker', ['compose', '-f', composeFile, ...args], {
     encoding: 'utf-8',
   });
   if (result.error) {

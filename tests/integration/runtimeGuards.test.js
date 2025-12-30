@@ -108,7 +108,16 @@ describe('Runtime Guards Integration', () => {
   // Not implemented here for brevity
 
   test('A4: AI read route fails safely when ai_insights schema is missing', async () => {
-    await sequelize.getQueryInterface().dropTable('ai_insights');
+    const queryInterface = sequelize.getQueryInterface();
+    const allTables = await queryInterface.showAllTables();
+    const normalizedTables = allTables.map((table) =>
+      typeof table === 'string' ? table : table.tableName,
+    );
+    if (normalizedTables.includes('ai_insights')) {
+      await queryInterface.sequelize.query(
+        'DROP TABLE IF EXISTS ai_insights CASCADE;',
+      );
+    }
     clearSchemaCache();
     const res = await request(app)
       .get('/api/ai/read/invoice-summary?invoiceId=1')
