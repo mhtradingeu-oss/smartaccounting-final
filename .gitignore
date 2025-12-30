@@ -184,3 +184,4 @@ sha
 # Docs (optional but safe)
 !docs/
 !docs/**
+database/dev.sqlite
