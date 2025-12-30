@@ -56,6 +56,8 @@ This command respects the `USE_SQLITE` guard and leaves `DATABASE_URL` unset to 
 
    In production containers run the same `npx` command with the production `DATABASE_URL`.
 
+    If the `20251229101000-align-taxreport-id-type.js` migration partially applied (e.g., `id_new` already exists but was not yet promoted), simply rerun the same Sequelize/migrate command (`node scripts/migrate-prod.js` in production containers or `npx sequelize-cli db:migrate` in local/test) and it will drop the existing PK, rename `id` → `id_old`, rename `id_new` → `id`, and rebuild the UUID primary key without any manual SQL. Rerunning the migration is safe and idempotent, so no additional manual step is required after the first attempt.
+
 ## 4. Seeding Demo Data Safely
 
 The seeder enforces schema readiness and environment flags. If either `DEMO_MODE` or `ALLOW_DEMO_SEED` is missing, it aborts with a clear log.

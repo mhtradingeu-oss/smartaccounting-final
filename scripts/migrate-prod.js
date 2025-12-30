@@ -11,6 +11,8 @@ const REQUIRED_MIGRATIONS = [
   '20251228000200-update-tax-reports-schema.js',
   '20251228000300-extend-bank-transactions.js',
   '20251228000400-add-ai-enabled-to-companies.js',
+  '20260105000000-create-ai-insight-decisions.js',
+  '20260106000000-add-audit-log-immutable.js',
 ];
 
 function runCommand(command, args) {

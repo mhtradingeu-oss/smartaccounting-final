@@ -6,11 +6,16 @@ require('dotenv').config();
 
 // Default to the local demo stack when env is missing.
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-process.env.USE_SQLITE = process.env.USE_SQLITE || 'true';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'demo-jwt-secret';
 
 const app = require('../src/app');
 const authService = require('../src/services/authService');
+
+if (process.env.DATABASE_URL) {
+  process.env.USE_SQLITE = process.env.USE_SQLITE || 'false';
+} else {
+  process.env.USE_SQLITE = process.env.USE_SQLITE || 'true';
+}
 
 const requestApp = ({ method = 'GET', url = '/', headers = {}, body }) =>
   new Promise((resolve, reject) => {
@@ -55,7 +60,7 @@ const requestApp = ({ method = 'GET', url = '/', headers = {}, body }) =>
 
 const verifySeededEndpoints = async () => {
   console.log('[DEMO VERIFY] Logging in as seeded demo admin...');
-  const credentials = { email: 'demo-admin@demo.com', password: 'demopass1' };
+  const credentials = { email: 'demo-admin@demo.com', password: 'Demo123!' };
   const loginResult = await authService.login(credentials);
   if (!loginResult?.token) {
     throw new Error('Demo login did not return a token');

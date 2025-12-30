@@ -42,8 +42,21 @@ const REQUIRED_COLUMNS = {
 
 async function checkTables() {
   const tables = await sequelize.getQueryInterface().showAllTables();
+  const normalizedTables = tables.map((table) => {
+    if (typeof table === 'string') {
+      return table.toLowerCase();
+    }
+    if (table && typeof table === 'object') {
+      const tableName = table.tableName || table.TABLE_NAME || table.name || table.table_name;
+      if (tableName && typeof tableName === 'string') {
+        return tableName.toLowerCase();
+      }
+    }
+    return String(table).toLowerCase();
+  });
+
   for (const table of REQUIRED_TABLES) {
-    if (!tables.includes(table)) {
+    if (!normalizedTables.includes(table.toLowerCase())) {
       throw new Error(`[SCHEMA VERIFY] Missing required table: ${table}`);
     }
   }

@@ -48,7 +48,7 @@ describe('demo invoice item helper', () => {
   afterAll(async () => {
     const queryInterface = sequelize.getQueryInterface();
     if (invoice) {
-      await queryInterface.bulkDelete('InvoiceItems', { invoiceId: invoice.id }, {});
+      await queryInterface.bulkDelete('invoice_items', { invoiceId: invoice.id }, {});
       await sequelize.models.Invoice.destroy({ where: { id: invoice.id }, force: true });
     }
     if (company) {
@@ -71,9 +71,9 @@ describe('demo invoice item helper', () => {
       updatedAt: now,
     }));
 
-    await queryInterface.bulkInsert('InvoiceItems', itemRecords, {});
+    await queryInterface.bulkInsert('invoice_items', itemRecords, {});
     const [rows] = await sequelize.query(
-      'SELECT id FROM "InvoiceItems" WHERE "invoiceId" = :invoiceId;',
+      'SELECT id FROM "invoice_items" WHERE "invoiceId" = :invoiceId;',
       { replacements: { invoiceId: invoice.id } },
     );
 

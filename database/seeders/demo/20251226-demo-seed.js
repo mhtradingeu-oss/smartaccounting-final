@@ -427,7 +427,7 @@ module.exports = {
         createdAt: now,
         updatedAt: now,
       }));
-      await queryInterface.bulkInsert('InvoiceItems', itemRecords, {});
+      await queryInterface.bulkInsert('invoice_items', itemRecords, {});
       console.log(`[DEMO SEED] Invoice seeded: ${template.invoiceNumber}`);
     }
 
@@ -620,7 +620,7 @@ module.exports = {
         summary: 'Invoice DEMO-INV-002 is overdue and may require a reminder.',
         why: 'Due date passed and no payment has been logged; customer history shows slow payments.',
         legalContext: 'AO §147 GoBD documentation requirements.',
-        evidence: ['dueDate', 'amount', 'status'],
+        evidence: JSON.stringify(['dueDate', 'amount', 'status']),
         ruleId: AI_INSIGHT_RULES.latePayment,
         modelVersion: 'v0.9-demo',
         featureFlag: 'ai-demo-mode',
@@ -640,7 +640,7 @@ module.exports = {
         summary: 'No receipt attached for Demo SaaS Ltd software subscription.',
         why: 'The expense is marked as needing documentation under §14 UStG.',
         legalContext: 'UStG §14 obligation to keep receipts.',
-        evidence: ['vendorName', 'amount'],
+        evidence: JSON.stringify(['vendorName', 'amount']),
         ruleId: AI_INSIGHT_RULES.missingReceipt,
         modelVersion: 'v0.9-demo',
         featureFlag: 'ai-demo-mode',
@@ -660,7 +660,7 @@ module.exports = {
         summary: 'Similar rent payments detected in close succession.',
         why: 'Two rent payments of 1190 EUR appear within minutes.',
         legalContext: 'AO §147 vigilance around repeated entries.',
-        evidence: ['amount', 'reference'],
+        evidence: JSON.stringify(['amount', 'reference']),
         ruleId: AI_INSIGHT_RULES.duplicateCharge,
         modelVersion: 'v0.9-demo',
         featureFlag: 'ai-demo-mode',
@@ -741,10 +741,10 @@ module.exports = {
         period: TAX_REPORT_PERIOD,
         year: 2025,
         status: 'draft',
-        data: {
+        data: JSON.stringify({
           summary: { totalOutputTax: 190.0, totalInputTax: 9.5, vatPayable: 180.5 },
           details: { invoices: 3, expenses: 3 },
-        },
+        }),
         generatedAt: now,
         submittedBy: userMap.accountant,
         elsterStatus: 'pending',

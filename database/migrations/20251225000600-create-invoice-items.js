@@ -6,7 +6,7 @@ module.exports = {
     if (dialect === 'postgres') {
       await queryInterface.sequelize.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
     }
-    await queryInterface.createTable('InvoiceItems', {
+    await queryInterface.createTable('invoice_items', {
       id:
         dialect === 'sqlite'
           ? { type: Sequelize.STRING, primaryKey: true }
@@ -62,9 +62,9 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
-    await queryInterface.addIndex('InvoiceItems', ['invoiceId']);
+    await queryInterface.addIndex('invoice_items', ['invoiceId']);
   },
   down: async (queryInterface) => {
-    await queryInterface.dropTable('InvoiceItems');
+    await queryInterface.dropTable('invoice_items');
   },
 };
