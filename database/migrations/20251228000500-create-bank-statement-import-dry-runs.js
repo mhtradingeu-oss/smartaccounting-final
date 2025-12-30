@@ -2,41 +2,53 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // SQLite compatibility: Gate Postgres-only features
+    const dialect = queryInterface.sequelize.getDialect();
+    const isSqlite = dialect === 'sqlite';
+    if (dialect === 'postgres') {
+      // Ensure pgcrypto is enabled for gen_random_uuid()
+      await queryInterface.sequelize.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+    }
     await queryInterface.createTable('bank_statement_import_dry_runs', {
-      id: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
-        primaryKey: true,
-      },
+      id: isSqlite
+        ? { type: Sequelize.STRING, primaryKey: true } // SQLite: use TEXT for UUID
+        : {
+            type: Sequelize.UUID,
+            defaultValue: Sequelize.literal('gen_random_uuid()'),
+            primaryKey: true,
+          },
       companyId: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'companies',
-          key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        ...(isSqlite
+          ? {} // SQLite: skip FK constraints
+          : {
+              references: { model: 'companies', key: 'id' },
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+            }),
       },
       userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        ...(isSqlite
+          ? {}
+          : {
+              references: { model: 'users', key: 'id' },
+              onUpdate: 'CASCADE',
+              onDelete: 'SET NULL',
+            }),
       },
       bankStatementId: {
         type: Sequelize.INTEGER,
         allowNull: true,
-        references: {
-          model: 'bank_statements',
-          key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        ...(isSqlite
+          ? {}
+          : {
+              references: { model: 'bank_statements', key: 'id' },
+              onUpdate: 'CASCADE',
+              onDelete: 'SET NULL',
+            }),
       },
       confirmationToken: {
         type: Sequelize.STRING,
@@ -61,7 +73,7 @@ module.exports = {
         defaultValue: 'PENDING',
       },
       summary: {
-        type: Sequelize.JSON,
+        type: isSqlite ? Sequelize.TEXT : Sequelize.JSON, // SQLite: store JSON as TEXT
         allowNull: true,
       },
       totalTransactions: {
@@ -100,14 +112,15 @@ module.exports = {
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('NOW'),
+        ...(isSqlite ? {} : { defaultValue: Sequelize.fn('NOW') }),
       },
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('NOW'),
+        ...(isSqlite ? {} : { defaultValue: Sequelize.fn('NOW') }),
       },
     });
+    // End SQLite compatibility
   },
 
   down: async (queryInterface) => {

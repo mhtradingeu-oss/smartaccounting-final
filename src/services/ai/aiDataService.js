@@ -1,8 +1,9 @@
 // aiDataService: strictly read-only, safe projections, no PII
 
-
 // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
+
 const { Invoice, Company, BankTransaction } = require('../../models');
+const { checkTableAndColumns } = require('../guards/schemaGuard');
 
 const ALLOWED_QUERIES = [
   'invoice_summary',
@@ -21,9 +22,36 @@ module.exports = {
   isAllowedQuery,
   // Invoice summary (no PII)
   async getInvoiceSummary(companyId, invoiceId) {
+    // Guard: check ai_insights schema (read-only)
+    const aiSchemaOk = await checkTableAndColumns('ai_insights', [
+      'id',
+      'companyId',
+      'entityType',
+      'severity',
+      'legalContext',
+      'evidence',
+      'ruleId',
+      'modelVersion',
+      'featureFlag',
+      'disclaimer',
+    ]);
+    if (!aiSchemaOk) {
+      const err = new Error('AI schema missing or incomplete');
+      err.status = 503;
+      throw err;
+    }
     const invoice = await Invoice.findOne({
       where: { id: invoiceId, companyId },
-      attributes: ['id', 'status', 'total', 'currency', 'date', 'dueDate', 'createdAt', 'updatedAt'],
+      attributes: [
+        'id',
+        'status',
+        'total',
+        'currency',
+        'date',
+        'dueDate',
+        'createdAt',
+        'updatedAt',
+      ],
     });
     if (!invoice) {
       return null;
@@ -52,10 +80,15 @@ module.exports = {
     });
     const total = invoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
     const count = invoices.length;
-    return { month, total, count, statusBreakdown: invoices.reduce((acc, inv) => {
-      acc[inv.status] = (acc[inv.status] || 0) + 1;
-      return acc;
-    }, {}) };
+    return {
+      month,
+      total,
+      count,
+      statusBreakdown: invoices.reduce((acc, inv) => {
+        acc[inv.status] = (acc[inv.status] || 0) + 1;
+        return acc;
+      }, {}),
+    };
   },
   async getReconciliationSummary(companyId, range) {
     const [from, to] = range.split('_to_');
@@ -67,7 +100,7 @@ module.exports = {
       attributes: ['id', 'amount', 'isReconciled'],
     });
     const total = txs.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    const reconciled = txs.filter(t => t.isReconciled).length;
+    const reconciled = txs.filter((t) => t.isReconciled).length;
     return { range, total, count: txs.length, reconciled };
   },
 };

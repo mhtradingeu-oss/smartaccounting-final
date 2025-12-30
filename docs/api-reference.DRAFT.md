@@ -13,7 +13,7 @@ Response:
       "net": 100.00,
       "vat": 19.00,
       "gross": 119.00,
-      "vatRate": 19,
+      "vatRate": 0.19,
       "status": "draft",
       "date": "2025-12-15",
       "attachments": [ { "id": "uuid", "fileName": "receipt.pdf" } ]
@@ -38,7 +38,7 @@ Request Body:
   "vendor": "Test Vendor",
   "category": "Travel",
   "net": 100.00,
-  "vatRate": 19,
+  "vatRate": 0.19,
   "date": "2025-12-15",
   "attachments": ["file-uuid-1"]
 }
@@ -178,7 +178,7 @@ Response:
       "dueDate": "2026-01-15",
       "clientName": "Test Client",
       "items": [
-        { "description": "Service A", "quantity": 2, "unitPrice": 100, "vatRate": 19, "lineNet": 200, "lineVat": 38, "lineGross": 238 }
+        { "description": "Service A", "quantity": 2, "unitPrice": 100, "vatRate": 0.19, "lineNet": 200, "lineVat": 38, "lineGross": 238 }
       ],
       "attachments": [ { "id": "uuid", "fileName": "invoice.pdf" } ]
     }
@@ -206,8 +206,8 @@ Request Body:
   "dueDate": "2026-01-15",
   "clientName": "Test Client",
   "items": [
-    { "description": "Service A", "quantity": 2, "unitPrice": 100, "vatRate": 19 },
-    { "description": "Service B", "quantity": 1, "unitPrice": 50, "vatRate": 7 }
+    { "description": "Service A", "quantity": 2, "unitPrice": 100, "vatRate": 0.19 },
+    { "description": "Service B", "quantity": 1, "unitPrice": 50, "vatRate": 0.07 }
   ],
   "attachments": ["file-uuid-1", "file-uuid-2"]
 }

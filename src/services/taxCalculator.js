@@ -110,10 +110,10 @@ class TaxCalculator {
       const netAmount = parseFloat(invoice.netAmount);
       const vatAmount = parseFloat(invoice.vatAmount);
 
-      if (vatRate === 19) {
+      if (vatRate === 0.19) {
         ustData.kz81_standardRate += netAmount;
         ustData.kz83_standardTax += vatAmount;
-      } else if (vatRate === 7) {
+      } else if (vatRate === 0.07) {
         ustData.kz86_reducedRate += netAmount;
         ustData.kz87_reducedTax += vatAmount;
       } else if (vatRate === 0) {
@@ -127,9 +127,9 @@ class TaxCalculator {
       const vatRate = parseFloat(invoice.vatRate);
       const vatAmount = parseFloat(invoice.vatAmount);
 
-      if (vatRate === 19) {
+      if (vatRate === 0.19) {
         ustData.kz61_inputTax19 += vatAmount;
-      } else if (vatRate === 7) {
+      } else if (vatRate === 0.07) {
         ustData.kz62_inputTax7 += vatAmount;
       }
 

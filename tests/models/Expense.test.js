@@ -15,7 +15,7 @@ describe('Expense model immutability', () => {
       description: 'Immutable travel expense',
       category: 'Travel',
       netAmount: 100,
-      vatRate: 19,
+      vatRate: 0.19,
       vatAmount: 19,
       grossAmount: 119,
       expenseDate: new Date(),

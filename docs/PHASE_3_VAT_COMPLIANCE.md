@@ -2,7 +2,7 @@
 
 ## Purpose
 Ensures all accounting transactions comply with German VAT law (UStG):
-- Only legal VAT rates (0, 7, 19)
+- Only legal VAT rates (0, 0.07, 0.19)
 - Net/VAT/Gross math is correct
 - EUR currency enforced
 - No auto-fix: illegal data is always rejected
@@ -14,7 +14,7 @@ Ensures all accounting transactions comply with German VAT law (UStG):
 - **No business logic changes**: Pure validation layer
 
 ## Validation Rules
-- VAT rate must be 0, 7, or 19
+- VAT rate must be 0, 0.07, or 0.19
 - Currency must be EUR
 - VAT = net * rate (rounded to 2 decimals)
 - Gross = net + VAT (rounded to 2 decimals)

@@ -1,13 +1,38 @@
-
 const { AIInsight, AIInsightDecision, Company } = require('../../models');
 const { logAIEvent } = require('./auditLogger');
 const { detectInvoiceAnomaly } = require('./insightTypes');
+const { checkTableAndColumns } = require('../guards/schemaGuard');
+
+const AI_INSIGHTS_TABLE = 'ai_insights';
+const AI_INSIGHTS_COLUMNS = [
+  'id',
+  'companyId',
+  'entityType',
+  'severity',
+  'legalContext',
+  'evidence',
+  'ruleId',
+  'modelVersion',
+  'featureFlag',
+  'disclaimer',
+];
+
+async function ensureAiSchema() {
+  const aiSchemaOk = await checkTableAndColumns(AI_INSIGHTS_TABLE, AI_INSIGHTS_COLUMNS);
+  if (!aiSchemaOk) {
+    const err = new Error('AI schema missing or incomplete');
+    err.status = 503;
+    throw err;
+  }
+}
 
 const ALLOWED_DECISIONS = ['accepted', 'rejected', 'overridden'];
 
 async function generateInsightsForCompany(companyId, context = {}) {
   // Example: generate insights for all invoices/expenses (expand as needed)
   // context: { invoices, expenses, ... }
+
+  await ensureAiSchema();
   const company = await Company.findByPk(companyId);
   if (!company || company.aiEnabled === false) {
     throw Object.assign(new Error('AI disabled'), { status: 501 });
@@ -34,7 +59,14 @@ async function generateInsightsForCompany(companyId, context = {}) {
         featureFlag: 'default',
         disclaimer: 'Suggestion only — not binding',
       });
-      await logAIEvent({ entityType: 'invoice', entityId: invoice.id, action: 'AI_SUGGEST', aiOutput: insight, userId: 0, aiVersion: 'v1' });
+      await logAIEvent({
+        entityType: 'invoice',
+        entityId: invoice.id,
+        action: 'AI_SUGGEST',
+        aiOutput: insight,
+        userId: 0,
+        aiVersion: 'v1',
+      });
       insights.push(insight);
     }
   }
@@ -43,6 +75,7 @@ async function generateInsightsForCompany(companyId, context = {}) {
 }
 
 async function listInsights(companyId, filters = {}) {
+  await ensureAiSchema();
   return AIInsight.findAll({
     where: { companyId, ...filters },
     include: [{ model: AIInsightDecision, as: 'decisions' }],
@@ -61,6 +94,7 @@ async function decideInsight(companyId, insightId, actorUser, decision, reason) 
   if (actorUser.role === 'viewer') {
     throw Object.assign(new Error('Forbidden'), { status: 403 });
   }
+  await ensureAiSchema();
   const insight = await AIInsight.findOne({ where: { id: insightId, companyId } });
   if (!insight) {
     throw Object.assign(new Error('Not found'), { status: 404 });
@@ -81,11 +115,20 @@ async function decideInsight(companyId, insightId, actorUser, decision, reason) 
     decision,
     reason,
   });
-  await logAIEvent({ entityType: 'ai_insight', entityId: insightId, action: `USER_${decision.toUpperCase()}`, aiOutput: insight, userId: actorUser.id, aiVersion: insight.modelVersion, reason });
+  await logAIEvent({
+    entityType: 'ai_insight',
+    entityId: insightId,
+    action: `USER_${decision.toUpperCase()}`,
+    aiOutput: insight,
+    userId: actorUser.id,
+    aiVersion: insight.modelVersion,
+    reason,
+  });
   return decisionObj;
 }
 
 async function exportInsights(companyId, format = 'json') {
+  await ensureAiSchema();
   const insights = await AIInsight.findAll({
     where: { companyId },
     include: [{ model: AIInsightDecision, as: 'decisions' }],
@@ -94,19 +137,50 @@ async function exportInsights(companyId, format = 'json') {
   if (format === 'csv') {
     // Flatten for CSV
     const header = [
-      'id','entityType','entityId','type','severity','confidenceScore','summary','why','legalContext','ruleId','modelVersion','featureFlag','createdAt','decision','decisionReason','decisionActorUserId','decisionCreatedAt',
+      'id',
+      'entityType',
+      'entityId',
+      'type',
+      'severity',
+      'confidenceScore',
+      'summary',
+      'why',
+      'legalContext',
+      'ruleId',
+      'modelVersion',
+      'featureFlag',
+      'createdAt',
+      'decision',
+      'decisionReason',
+      'decisionActorUserId',
+      'decisionCreatedAt',
     ];
-    const rows = insights.map(i => {
+    const rows = insights.map((i) => {
       const d = (i.decisions && i.decisions[0]) || {};
       return [
-        i.id, i.entityType, i.entityId, i.type, i.severity, i.confidenceScore, i.summary, i.why, i.legalContext, i.ruleId, i.modelVersion, i.featureFlag, i.createdAt,
-        d.decision || '', d.reason || '', d.actorUserId || '', d.createdAt || '',
-      ].map(x => (x === null || x === undefined) ? '' : String(x).replace(/\n/g, ' '));
+        i.id,
+        i.entityType,
+        i.entityId,
+        i.type,
+        i.severity,
+        i.confidenceScore,
+        i.summary,
+        i.why,
+        i.legalContext,
+        i.ruleId,
+        i.modelVersion,
+        i.featureFlag,
+        i.createdAt,
+        d.decision || '',
+        d.reason || '',
+        d.actorUserId || '',
+        d.createdAt || '',
+      ].map((x) => (x === null || x === undefined ? '' : String(x).replace(/\n/g, ' ')));
     });
-    return header.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');
+    return header.join(',') + '\n' + rows.map((r) => r.join(',')).join('\n');
   }
   // JSON
-  return insights.map(i => i.toJSON());
+  return insights.map((i) => i.toJSON());
 }
 
 module.exports = {

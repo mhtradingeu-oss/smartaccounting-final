@@ -6,7 +6,7 @@ const expenseSchema = Joi.object({
   category: Joi.string().min(3).required(),
   netAmount: Joi.number().min(0).optional(),
   grossAmount: Joi.number().min(0).optional(),
-  vatRate: Joi.number().min(0).max(100).default(0),
+  vatRate: Joi.number().min(0).max(1).default(0),
   vatAmount: Joi.number().min(0).optional(),
   expenseDate: Joi.date().optional(),
   companyId: Joi.number().integer().optional(),

@@ -75,8 +75,8 @@ describe('Invoice Routes', () => {
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Test Client',
         items: [
-          { description: 'Service A', quantity: 2, unitPrice: 100, vatRate: 19 },
-          { description: 'Service B', quantity: 1, unitPrice: 50, vatRate: 7 },
+          { description: 'Service A', quantity: 2, unitPrice: 100, vatRate: 0.19 },
+          { description: 'Service B', quantity: 1, unitPrice: 50, vatRate: 0.07 },
         ],
       };
       const response = await global.requestApp({
@@ -121,7 +121,7 @@ describe('Invoice Routes', () => {
         clientName: 'Client Bad Math',
         total: 1,
         items: [
-          { description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 19 },
+          { description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 0.19 },
         ],
       };
       const response = await global.requestApp({
@@ -143,7 +143,7 @@ describe('Invoice Routes', () => {
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Client Foreign',
         items: [
-          { description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 19 },
+          { description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 0.19 },
         ],
       };
       const response = await global.requestApp({
@@ -194,7 +194,7 @@ describe('Invoice Routes', () => {
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Test Client',
         items: [
-          { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 19 },
+          { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 },
         ],
       };
       const createRes = await global.requestApp({
@@ -223,7 +223,7 @@ describe('Invoice Routes', () => {
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Test Client',
         items: [
-          { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 19 },
+          { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 },
         ],
       };
       const createRes = await global.requestApp({
@@ -252,7 +252,7 @@ describe('Invoice Routes', () => {
       dueDate: new Date().toISOString().slice(0, 10),
       clientName: 'Draft Client',
       items: [
-        { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 19 },
+        { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 },
       ],
     });
 

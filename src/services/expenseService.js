@@ -33,11 +33,11 @@ const createExpense = async (data, userId, companyId) => {
   // Calculate VAT and gross/net
   let net = parseFloat(data.netAmount ?? 0);
   const vatRate = parseFloat(data.vatRate ?? 0);
-  let vat = +(net * vatRate / 100).toFixed(2);
+  let vat = +(net * vatRate).toFixed(2);
   let gross = +(net + vat).toFixed(2);
   if (!net && data.grossAmount && vatRate) {
     gross = parseFloat(data.grossAmount);
-    net = +(gross / (1 + vatRate / 100)).toFixed(2);
+    net = +(gross / (1 + vatRate)).toFixed(2);
     vat = +(gross - net).toFixed(2);
   }
 

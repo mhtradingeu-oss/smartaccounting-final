@@ -70,7 +70,7 @@ describeIfSockets('Production smoke suite', () => {
           description: 'Smoke verification',
           quantity: 1,
           unitPrice: 190,
-          vatRate: 19,
+        vatRate: 0.19,
         },
       ],
     };

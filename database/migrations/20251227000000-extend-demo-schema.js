@@ -42,7 +42,7 @@ module.exports = {
       allowNull: true,
     });
     await queryInterface.addColumn('expenses', 'vatRate', {
-      type: Sequelize.DECIMAL(5, 2),
+      type: Sequelize.DECIMAL(5, 4),
       allowNull: true,
     });
     await queryInterface.addColumn('expenses', 'vatAmount', {

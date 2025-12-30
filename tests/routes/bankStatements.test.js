@@ -63,6 +63,7 @@ const createStatement = async (companyId) => {
     companyId,
     fileName: 'manual-reconcile.csv',
     fileFormat: 'CSV',
+    statementDate: new Date(),
     statementPeriodStart: new Date(),
     statementPeriodEnd: new Date(),
     status: 'COMPLETED',

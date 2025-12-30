@@ -1,2 +1,7 @@
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'sqlite::memory:';
+if (typeof process.env.USE_SQLITE === 'undefined') {
+  process.env.USE_SQLITE = 'true';
+}
+if (process.env.USE_SQLITE === 'true') {
+  delete process.env.DATABASE_URL;
+}

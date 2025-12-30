@@ -4,11 +4,39 @@ const { spawnSync } = require('child_process');
 const requireDemoMode = () => {
   const demoModeEnabled = process.env.DEMO_MODE === 'true';
   const demoSeedAllowed = process.env.ALLOW_DEMO_SEED === 'true';
-  if (!demoModeEnabled || !demoSeedAllowed) {
+  const missing = [];
+  if (!demoModeEnabled) {missing.push('DEMO_MODE=true');}
+  if (!demoSeedAllowed) {missing.push('ALLOW_DEMO_SEED=true');}
+  if (missing.length) {
     console.error(
-      '[seed:demo:prod] aborted: DEMO_MODE=true and ALLOW_DEMO_SEED=true are required to run the demo seeder.',
+      `[seed:demo:prod] aborted: ${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} required to run the demo seeder.`,
+    );
+    console.error(
+      `[seed:demo:prod] current flags: DEMO_MODE=${process.env.DEMO_MODE || 'undefined'} ALLOW_DEMO_SEED=${process.env.ALLOW_DEMO_SEED || 'undefined'}`,
     );
     process.exit(1);
+  }
+};
+
+const verifySchema = () => {
+  const result = spawnSync('node', ['scripts/verify-schema.js'], {
+    env: process.env,
+    encoding: 'utf-8',
+    stdio: ['inherit', 'pipe', 'pipe'],
+  });
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+  if (result.status !== 0) {
+    const message = [result.stderr, result.stdout].filter(Boolean).join('\n');
+    console.error('[seed:demo:prod] aborted: Schema is not ready for seeding.');
+    if (message) {
+      console.error(`[seed:demo:prod] schema error: ${message.trim()}`);
+    }
+    process.exit(result.status);
   }
 };
 
@@ -22,6 +50,9 @@ const requireProduction = () => {
 };
 
 const configureDemoPassword = () => {
+  if (process.env.DEMO_MODE !== 'true') {
+    return;
+  }
   const password = process.env.DEMO_PASSWORD || 'Demo123!';
   process.env.DEMO_PASSWORD = password;
   console.log(`[seed:demo:prod] using deterministic demo password: ${password}`);
@@ -61,6 +92,7 @@ const runCommand = (command, args) => {
 
 requireDemoMode();
 requireProduction();
+verifySchema();
 configureDemoPassword();
 
 console.log('[seed:demo:prod] running guarded demo seeder...');

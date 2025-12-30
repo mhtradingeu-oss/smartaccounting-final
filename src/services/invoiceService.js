@@ -66,7 +66,7 @@ const createInvoice = async (data, userId, companyId) => {
     const unitPrice = parseFloat(item.unitPrice ?? item.price);
     const vatRate = parseFloat(item.vatRate);
     const lineNet = +(quantity * unitPrice).toFixed(2);
-    const lineVat = +((lineNet * vatRate) / 100).toFixed(2);
+    const lineVat = +(lineNet * vatRate).toFixed(2);
     const lineGross = +(lineNet + lineVat).toFixed(2);
     invoiceSubtotal += lineNet;
     invoiceVat += lineVat;

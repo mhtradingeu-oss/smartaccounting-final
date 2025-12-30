@@ -2,12 +2,19 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const dialect = queryInterface.sequelize.getDialect();
+    if (dialect === 'postgres') {
+      await queryInterface.sequelize.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+    }
     await queryInterface.createTable('InvoiceItems', {
-      id: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
-        primaryKey: true,
-      },
+      id:
+        dialect === 'sqlite'
+          ? { type: Sequelize.STRING, primaryKey: true }
+          : {
+              type: Sequelize.UUID,
+              defaultValue: Sequelize.literal('gen_random_uuid()'),
+              primaryKey: true,
+            },
       invoiceId: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -31,7 +38,7 @@ module.exports = {
         allowNull: false,
       },
       vatRate: {
-        type: Sequelize.DECIMAL(5, 2),
+        type: Sequelize.DECIMAL(5, 4),
         allowNull: false,
       },
       lineNet: {

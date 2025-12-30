@@ -34,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       vatRate: {
-        type: DataTypes.DECIMAL(5, 2),
+        type: DataTypes.DECIMAL(5, 4),
         allowNull: false,
       },
       lineNet: {

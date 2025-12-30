@@ -57,8 +57,8 @@ describe('AI Insight Types', () => {
     expect(out).toHaveProperty('anomaly', 'duplicate');
   });
   it('should detect VAT rate mismatch', () => {
-    const inv = { vatRate: 19, country: 'DE', vat: 19, net: 100, gross: 119 };
-    const out = detectVATRisk(inv, { DE: 7, default: 19 });
+    const inv = { vatRate: 0.19, country: 'DE', vat: 19, net: 100, gross: 119 };
+    const out = detectVATRisk(inv, { DE: 0.07, default: 0.19 });
     expect(out).not.toBeNull();
     expect(out).toHaveProperty('risk', 'rate_mismatch');
   });

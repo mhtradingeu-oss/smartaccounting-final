@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { FileAttachment } = require('../models');
+const { checkTableAndColumns } = require('./guards/schemaGuard');
 const { Op } = require('sequelize');
 const gobdService = require('./gobdComplianceService');
 const logger = require('../lib/logger');
@@ -23,12 +24,12 @@ class OCRService {
     this.supportedFormats = ['pdf', 'jpg', 'jpeg', 'png', 'tiff'];
     this.archivePath = path.join(process.cwd(), 'uploads', 'documents', 'archive');
     this.tempPath = path.join(process.cwd(), 'temp', 'ocr');
-    
+
     this.ensureDirectories();
   }
 
   ensureDirectories() {
-    [this.archivePath, this.tempPath].forEach(dir => {
+    [this.archivePath, this.tempPath].forEach((dir) => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -37,13 +38,20 @@ class OCRService {
 
   // Process uploaded document with OCR
   async processDocument(filePath, options = {}) {
+    // Guard: check FileAttachment OCR columns
+    const ocrSchemaOk = await checkTableAndColumns('file_attachments', [
+      'ocrText',
+      'ocrConfidence',
+      'extractedData',
+      'processingStatus',
+      'archived',
+      'retentionPeriod',
+    ]);
+    if (!ocrSchemaOk) {
+      return { success: false, error: 'OCR schema missing or incomplete' };
+    }
     try {
-      const {
-        language = 'deu+eng',
-        documentType = 'receipt',
-        userId,
-        companyId,
-      } = options;
+      const { language = 'deu+eng', documentType = 'receipt', userId, companyId } = options;
 
       // Validate file
       const validation = await this.validateDocument(filePath);
@@ -94,7 +102,6 @@ class OCRService {
         extractedData: structuredData,
         archiveLocation: archiveResult.archivePath,
       };
-
     } catch (error) {
       logger.error('OCR processing error:', error);
       return {
@@ -142,7 +149,8 @@ class OCRService {
       }
 
       const stats = fs.statSync(filePath);
-      if (stats.size > 50 * 1024 * 1024) { // 50MB limit
+      if (stats.size > 50 * 1024 * 1024) {
+        // 50MB limit
         return { valid: false, error: 'File too large (max 50MB)' };
       }
 
@@ -180,7 +188,7 @@ class OCRService {
   async extractText(imagePath, language) {
     try {
       const result = await Tesseract.recognize(imagePath, language, {
-        logger: m => {
+        logger: (m) => {
           if (m.status === 'recognizing text') {
             logger.info(`OCR Progress: ${Math.round(m.progress * 100)}%`);
           }
@@ -201,10 +209,10 @@ class OCRService {
   // Extract structured data based on document type
   async extractStructuredData(text, documentType) {
     const extractors = {
-      'receipt': this.extractReceiptData,
-      'invoice': this.extractInvoiceData,
-      'bank_statement': this.extractBankStatementData,
-      'tax_document': this.extractTaxDocumentData,
+      receipt: this.extractReceiptData,
+      invoice: this.extractInvoiceData,
+      bank_statement: this.extractBankStatementData,
+      tax_document: this.extractTaxDocumentData,
     };
 
     const extractor = extractors[documentType] || this.extractGenericData;
@@ -257,7 +265,9 @@ class OCRService {
       explanations.push('Vendor name comes from the first readable lines on the page.');
     }
     if (structuredData.amount || structuredData.totalAmount) {
-      explanations.push('Amounts are extracted via keywords such as “Summe”, “Total”, or currency symbols.');
+      explanations.push(
+        'Amounts are extracted via keywords such as “Summe”, “Total”, or currency symbols.',
+      );
     }
     if (structuredData.date) {
       explanations.push('Dates are matched with German/ISO date patterns.');
@@ -343,8 +353,14 @@ class OCRService {
       type: 'invoice',
       invoiceNumber: this.extractPattern(text, /(?:Rechnung|Invoice|RG)[\s#:]*([A-Z0-9-]+)/i),
       date: this.extractPattern(text, /(\d{1,2}\.(\d{1,2})\.(\d{4}))/),
-      dueDate: this.extractPattern(text, /(?:Fällig|Due|Zahlbar bis)[\s:]*(\d{1,2}\.\d{1,2}\.\d{4})/i),
-      totalAmount: this.extractAmount(text, /(?:Gesamtbetrag|Total|Endbetrag)[\s:]*(\d+[,\.]\d{2})/i),
+      dueDate: this.extractPattern(
+        text,
+        /(?:Fällig|Due|Zahlbar bis)[\s:]*(\d{1,2}\.\d{1,2}\.\d{4})/i,
+      ),
+      totalAmount: this.extractAmount(
+        text,
+        /(?:Gesamtbetrag|Total|Endbetrag)[\s:]*(\d+[,\.]\d{2})/i,
+      ),
       netAmount: this.extractAmount(text, /(?:Nettobetrag|Net)[\s:]*(\d+[,\.]\d{2})/i),
       vatAmount: this.extractAmount(text, /(?:MwSt|USt|VAT)[\s:]*(\d+[,\.]\d{2})/i),
     };
@@ -354,7 +370,10 @@ class OCRService {
     return {
       type: 'bank_statement',
       accountNumber: this.extractPattern(text, /(?:Konto|Account)[\s:]*([0-9\s]+)/i),
-      period: this.extractPattern(text, /(\d{1,2}\.\d{1,2}\.\d{4})\s*-\s*(\d{1,2}\.\d{1,2}\.\d{4})/),
+      period: this.extractPattern(
+        text,
+        /(\d{1,2}\.\d{1,2}\.\d{4})\s*-\s*(\d{1,2}\.\d{1,2}\.\d{4})/,
+      ),
       openingBalance: this.extractAmount(text, /(?:Anfangssaldo|Opening)[\s:]*(\d+[,\.]\d{2})/i),
       closingBalance: this.extractAmount(text, /(?:Endsaldo|Closing)[\s:]*(\d+[,\.]\d{2})/i),
     };
@@ -434,7 +453,7 @@ class OCRService {
       const hash = crypto.createHash('sha256');
       const stream = fs.createReadStream(filePath);
 
-      stream.on('data', chunk => hash.update(chunk));
+      stream.on('data', (chunk) => hash.update(chunk));
       stream.on('end', () => resolve(hash.digest('hex')));
       stream.on('error', reject);
     });
@@ -469,14 +488,22 @@ class OCRService {
   async searchDocuments(criteria) {
     try {
       const { documentType, dateFrom, dateTo, vendor, minAmount, maxAmount } = criteria;
-      
+
       const whereClause = {};
-      if (criteria.companyId) {whereClause.companyId = criteria.companyId;}
-      if (documentType) {whereClause.documentType = documentType;}
+      if (criteria.companyId) {
+        whereClause.companyId = criteria.companyId;
+      }
+      if (documentType) {
+        whereClause.documentType = documentType;
+      }
       if (dateFrom || dateTo) {
         whereClause.createdAt = {};
-        if (dateFrom) {whereClause.createdAt[Op.gte] = dateFrom;}
-        if (dateTo) {whereClause.createdAt[Op.lte] = dateTo;}
+        if (dateFrom) {
+          whereClause.createdAt[Op.gte] = dateFrom;
+        }
+        if (dateTo) {
+          whereClause.createdAt[Op.lte] = dateTo;
+        }
       }
 
       const documents = await FileAttachment.findAll({
@@ -486,21 +513,21 @@ class OCRService {
 
       // Filter by extracted data if needed
       if (vendor || minAmount || maxAmount) {
-        return documents.filter(doc => {
+        return documents.filter((doc) => {
           const data = JSON.parse(doc.extractedData || '{}');
-          
+
           if (vendor && !data.vendor?.toLowerCase().includes(vendor.toLowerCase())) {
             return false;
           }
-          
+
           if (minAmount && (!data.amount || data.amount < minAmount)) {
             return false;
           }
-          
+
           if (maxAmount && (!data.amount || data.amount > maxAmount)) {
             return false;
           }
-          
+
           return true;
         });
       }
