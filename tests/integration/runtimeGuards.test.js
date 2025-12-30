@@ -114,9 +114,13 @@ describe('Runtime Guards Integration', () => {
       typeof table === 'string' ? table : table.tableName,
     );
     if (normalizedTables.includes('ai_insights')) {
-      await queryInterface.sequelize.query(
-        'DROP TABLE IF EXISTS ai_insights CASCADE;',
-      );
+      const dialect = sequelize.getDialect();
+      // SQLite lacks CASCADE support; Postgres needs it to drop dependencies safely.
+      const dropSql =
+        dialect === 'postgres'
+          ? 'DROP TABLE IF EXISTS ai_insights CASCADE;'
+          : 'DROP TABLE IF EXISTS ai_insights;';
+      await queryInterface.sequelize.query(dropSql);
     }
     clearSchemaCache();
     const res = await request(app)
