@@ -1,6 +1,10 @@
 const { Invoice, InvoiceItem, FileAttachment, sequelize } = require('../models');
-const { enforceCurrencyIsEur, ensureVatTotalsMatch, assertProvidedMatches } = require('../utils/vatIntegrity');
-const { normalizeCompanyId, buildCompanyFilter } = require('../utils/companyFilter');
+const {
+  enforceCurrencyIsEur,
+  ensureVatTotalsMatch,
+  assertProvidedMatches,
+} = require('../utils/vatIntegrity');
+const { buildCompanyFilter } = require('../utils/companyFilter');
 
 const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'];
 const STATUS_TRANSITIONS = {
@@ -29,7 +33,6 @@ const normalizeStatus = (value, fallback = '') => {
   }
   return VALID_STATUS.includes(normalized) ? normalized : fallback;
 };
-
 
 const listInvoices = async (companyId) => {
   const where = buildCompanyFilter(companyId);
@@ -61,9 +64,9 @@ const createInvoice = async (data, userId, companyId) => {
   }
 
   // Calculate line and invoice totals
-  // eslint-disable-next-line no-unused-vars -- reserved for tax engine Phase 10
-  let invoiceSubtotal = 0, invoiceVat = 0, invoiceGross = 0;
-  const items = data.items.map(item => {
+  let invoiceSubtotal = 0;
+  let invoiceGross = 0;
+  const items = data.items.map((item) => {
     const quantity = parseFloat(item.quantity);
     const unitPrice = parseFloat(item.unitPrice ?? item.price);
     const vatRate = parseFloat(item.vatRate);
@@ -71,7 +74,7 @@ const createInvoice = async (data, userId, companyId) => {
     const lineVat = +(lineNet * vatRate).toFixed(2);
     const lineGross = +(lineNet + lineVat).toFixed(2);
     invoiceSubtotal += lineNet;
-    invoiceVat += lineVat;
+
     invoiceGross += lineGross;
     ensureVatTotalsMatch({
       net: lineNet,
@@ -141,9 +144,10 @@ const createInvoice = async (data, userId, companyId) => {
   return fallback;
 };
 
-
 const updateInvoice = async (invoiceId, changes, companyId) => {
-  const forbiddenFields = Object.keys(changes || {}).filter(field => PROHIBITED_DERIVED_FIELDS.has(field));
+  const forbiddenFields = Object.keys(changes || {}).filter((field) =>
+    PROHIBITED_DERIVED_FIELDS.has(field),
+  );
   if (forbiddenFields.length > 0) {
     const err = new Error('Derived invoice totals cannot be changed directly.');
     err.status = 400;
@@ -154,7 +158,9 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
   }
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
   const invoice = await Invoice.findOne({ where });
-  if (!invoice) {return null;}
+  if (!invoice) {
+    return null;
+  }
   await invoice.update(changes);
   return await getInvoiceById(invoiceId, companyId);
 };
@@ -162,7 +168,9 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
 const updateInvoiceStatus = async (invoiceId, newStatus, companyId) => {
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
   const invoice = await Invoice.findOne({ where });
-  if (!invoice) {return null;}
+  if (!invoice) {
+    return null;
+  }
   const current = normalizeStatus(invoice.status);
   const next = normalizeStatus(newStatus);
   if (!next || !STATUS_TRANSITIONS[current]?.includes(next)) {
