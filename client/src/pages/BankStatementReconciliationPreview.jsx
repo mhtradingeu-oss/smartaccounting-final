@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Modal } from '../components/ui/Modal';
+import AsyncModal from '../components/ui/AsyncModal';
 import { useCompany } from '../context/CompanyContext';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { formatCurrency, formatDate } from '../lib/utils/formatting';
@@ -242,7 +242,7 @@ const BankStatementReconciliationPreview = () => {
         </Button>
       </div>
 
-      <Modal open={infoOpen} onClose={() => setInfoOpen(false)} title="Simulation guidance">
+      <AsyncModal open={infoOpen} onClose={() => setInfoOpen(false)} title="Simulation guidance">
         <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
           <p>
             This view translates bank transactions into a reconciliation preview. Everything you see
@@ -256,7 +256,7 @@ const BankStatementReconciliationPreview = () => {
             Close this preview at any time and return to the detail view. No backend reconciliations were triggered.
           </p>
         </div>
-      </Modal>
+      </AsyncModal>
     </div>
   );
 };

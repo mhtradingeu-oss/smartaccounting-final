@@ -6,7 +6,7 @@ import BankStatementStatusBadge from '../components/BankStatementStatusBadge';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import PermissionGuard from '../components/PermissionGuard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Modal } from '../components/ui/Modal';
+import AsyncModal from '../components/ui/AsyncModal';
 import { useCompany } from '../context/CompanyContext';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { expensesAPI } from '../services/expensesAPI';
@@ -871,7 +871,7 @@ const BankStatementDetail = () => {
           </div>
         )}
       </div>
-      <Modal
+      <AsyncModal
         open={showManualReconciliation}
         onClose={closeManualReconciliation}
         title="Manual reconciliation"
@@ -1037,8 +1037,8 @@ const BankStatementDetail = () => {
             </div>
           </div>
         )}
-      </Modal>
-      <Modal
+      </AsyncModal>
+      <AsyncModal
         open={Boolean(selectedUndoTransaction)}
         onClose={closeUndoModal}
         title="Undo reconciliation"
@@ -1115,7 +1115,7 @@ const BankStatementDetail = () => {
             </div>
           </div>
         )}
-      </Modal>
+      </AsyncModal>
     </div>
   );
 };

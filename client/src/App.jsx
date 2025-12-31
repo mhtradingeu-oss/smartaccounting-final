@@ -1,4 +1,49 @@
-// LandingRoute shows the marketing hero for visitors and redirects authenticated users to /dashboard.
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
+import { PageLoadingState } from './components/ui/PageStates';
+import { useAuth } from './context/AuthContext';
+import { useCompany } from './context/CompanyContext';
+
+const withSuspense = (children) => (
+  <Suspense fallback={<PageLoadingState />}>{children}</Suspense>
+);
+
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const RequestAccess = lazy(() => import('./pages/RequestAccess'));
+const OnboardingWizard = lazy(() => import('./pages/OnboardingWizard'));
+const RBACManagement = lazy(() => import('./pages/RBACManagement'));
+const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard'));
+const ComplianceDashboard = lazy(() => import('./pages/ComplianceDashboard'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const GDPRActions = lazy(() => import('./pages/GDPRActions'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const InvoiceCreate = lazy(() => import('./pages/InvoiceCreate'));
+const InvoiceEdit = lazy(() => import('./pages/InvoiceEdit'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const ExpensesCreate = lazy(() => import('./pages/ExpensesCreate'));
+const BankStatements = lazy(() => import('./pages/BankStatements'));
+const BankStatementPreview = lazy(() => import('./pages/BankStatementPreview'));
+const OCRPreview = lazy(() => import('./pages/OCRPreview'));
+const BankStatementImport = lazy(() => import('./pages/BankStatementImport'));
+const BankStatementDetail = lazy(() => import('./pages/BankStatementDetail'));
+const BankStatementReconciliationPreview = lazy(
+  () => import('./pages/BankStatementReconciliationPreview'),
+);
+const Billing = lazy(() => import('./pages/Billing'));
+const Companies = lazy(() => import('./pages/Companies'));
+const Users = lazy(() => import('./pages/Users'));
+const GermanTaxReports = lazy(() => import('./pages/GermanTaxReports'));
+const AIInsights = lazy(() => import('./pages/AIInsights'));
+const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+
 function LandingRoute() {
   const { status, isAuthenticated } = useAuth();
 
@@ -14,50 +59,9 @@ function LandingRoute() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Landing />;
+  return withSuspense(<Landing />);
 }
-import ComplianceDashboard from './pages/ComplianceDashboard';
-import ErrorBoundary from './components/ErrorBoundary';
-import AuditLogs from './pages/AuditLogs';
-import GDPRActions from './pages/GDPRActions';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-import Layout from './components/Layout';
-
-import ProtectedRoute from './components/ProtectedRoute';
-import LoadingSpinner from './components/LoadingSpinner';
-import { useAuth } from './context/AuthContext';
-import { useCompany } from './context/CompanyContext';
-
-// Pages
-import Analytics from './pages/Analytics';
-import Dashboard from './pages/Dashboard';
-import Invoices from './pages/Invoices';
-import InvoiceCreate from './pages/InvoiceCreate';
-import InvoiceEdit from './pages/InvoiceEdit';
-import Expenses from './pages/Expenses';
-import ExpensesCreate from './pages/ExpensesCreate';
-import BankStatements from './pages/BankStatements';
-import BankStatementPreview from './pages/BankStatementPreview';
-import OCRPreview from './pages/OCRPreview';
-import BankStatementImport from './pages/BankStatementImport';
-import BankStatementDetail from './pages/BankStatementDetail';
-import BankStatementReconciliationPreview from './pages/BankStatementReconciliationPreview';
-import Billing from './pages/Billing';
-import Companies from './pages/Companies';
-import Users from './pages/Users';
-import Pricing from './pages/Pricing';
-import Login from './pages/Login';
-import GermanTaxReports from './pages/GermanTaxReports';
-import OnboardingWizard from './pages/OnboardingWizard';
-import RBACManagement from './pages/RBACManagement';
-import InvestorDashboard from './pages/InvestorDashboard';
-import Landing from './pages/Landing';
-import RequestAccess from './pages/RequestAccess';
-import AIInsights from './pages/AIInsights';
-import AIAssistant from './pages/AIAssistant';
-
-// Simple NotFound page
 function NotFound() {
   return (
     <div style={{ padding: '4rem', textAlign: 'center' }}>
@@ -68,8 +72,6 @@ function NotFound() {
     </div>
   );
 }
-
-import './index.css';
 
 function LoginRoute() {
   const { status, isAuthenticated } = useAuth();
@@ -86,7 +88,7 @@ function LoginRoute() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Login />;
+  return withSuspense(<Login />);
 }
 
 export const AppRoutes = () => {
@@ -94,53 +96,39 @@ export const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Landing route: marketing experience for visitors */}
       <Route path="/" element={<LandingRoute />} />
-      {/* Public routes */}
       <Route path="/login" element={<LoginRoute />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/request-access" element={<RequestAccess />} />
-      {/* SaaS Onboarding */}
+      <Route path="/pricing" element={withSuspense(<Pricing />)} />
+      <Route path="/request-access" element={withSuspense(<RequestAccess />)} />
       <Route
         path="/onboarding"
         element={
           <ProtectedRoute>
-            <Layout>
-              <OnboardingWizard />
-            </Layout>
+            <Layout>{withSuspense(<OnboardingWizard />)}</Layout>
           </ProtectedRoute>
         }
       />
-      {/* RBAC Management (admin only) */}
       <Route
         path="/rbac"
         element={
           <ProtectedRoute requiredRole="admin">
-            <Layout>
-              <RBACManagement />
-            </Layout>
+            <Layout>{withSuspense(<RBACManagement />)}</Layout>
           </ProtectedRoute>
         }
       />
-      {/* Investor/Auditor Dashboard */}
       <Route
         path="/investor-dashboard"
         element={
           <ProtectedRoute requiredRole="auditor">
-            <Layout>
-              <InvestorDashboard />
-            </Layout>
+            <Layout>{withSuspense(<InvestorDashboard />)}</Layout>
           </ProtectedRoute>
         }
       />
-      {/* Analytics, Dashboard, Invoices, InvoiceCreate, InvoiceEdit, BankStatements, BankStatementDetail, Billing, Companies, Users, Pricing, Login, GermanTaxReports, ComplianceDashboard, AuditLogs, GDPRActions, NotFound, etc. */}
       <Route
         path="/analytics"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Analytics />
-            </Layout>
+            <Layout>{withSuspense(<Analytics />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -148,9 +136,7 @@ export const AppRoutes = () => {
         path="/ai-advisor"
         element={
           <ProtectedRoute>
-            <Layout>
-              <AIInsights />
-            </Layout>
+            <Layout>{withSuspense(<AIInsights />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -158,9 +144,7 @@ export const AppRoutes = () => {
         path="/ai-assistant"
         element={
           <ProtectedRoute>
-            <Layout>
-              <AIAssistant />
-            </Layout>
+            <Layout>{withSuspense(<AIAssistant />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -168,9 +152,7 @@ export const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Dashboard />
-            </Layout>
+            <Layout>{withSuspense(<Dashboard />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -178,9 +160,7 @@ export const AppRoutes = () => {
         path="/invoices"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Invoices />
-            </Layout>
+            <Layout>{withSuspense(<Invoices />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -188,9 +168,7 @@ export const AppRoutes = () => {
         path="/expenses"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Expenses />
-            </Layout>
+            <Layout>{withSuspense(<Expenses />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -198,20 +176,15 @@ export const AppRoutes = () => {
         path="/expenses/create"
         element={
           <ProtectedRoute>
-            <Layout>
-              <ExpensesCreate />
-            </Layout>
+            <Layout>{withSuspense(<ExpensesCreate />)}</Layout>
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/invoices/create"
         element={
           <ProtectedRoute>
-            <Layout>
-              <InvoiceCreate />
-            </Layout>
+            <Layout>{withSuspense(<InvoiceCreate />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -219,9 +192,7 @@ export const AppRoutes = () => {
         path="/invoices/:invoiceId/edit"
         element={
           <ProtectedRoute>
-            <Layout>
-              <InvoiceEdit />
-            </Layout>
+            <Layout>{withSuspense(<InvoiceEdit />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -229,9 +200,7 @@ export const AppRoutes = () => {
         path="/bank-statements"
         element={
           <ProtectedRoute>
-            <Layout>
-              <BankStatements />
-            </Layout>
+            <Layout>{withSuspense(<BankStatements />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -239,9 +208,7 @@ export const AppRoutes = () => {
         path="/bank-statements/preview"
         element={
           <ProtectedRoute>
-            <Layout>
-              <BankStatementPreview />
-            </Layout>
+            <Layout>{withSuspense(<BankStatementPreview />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -249,9 +216,7 @@ export const AppRoutes = () => {
         path="/ocr-preview"
         element={
           <ProtectedRoute>
-            <Layout>
-              <OCRPreview />
-            </Layout>
+            <Layout>{withSuspense(<OCRPreview />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -259,9 +224,7 @@ export const AppRoutes = () => {
         path="/bank-statements/import"
         element={
           <ProtectedRoute>
-            <Layout>
-              <BankStatementImport />
-            </Layout>
+            <Layout>{withSuspense(<BankStatementImport />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -269,9 +232,7 @@ export const AppRoutes = () => {
         path="/bank-statements/:statementId/reconciliation-preview"
         element={
           <ProtectedRoute requiredRole="accountant">
-            <Layout>
-              <BankStatementReconciliationPreview />
-            </Layout>
+            <Layout>{withSuspense(<BankStatementReconciliationPreview />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -279,9 +240,7 @@ export const AppRoutes = () => {
         path="/bank-statements/:statementId"
         element={
           <ProtectedRoute>
-            <Layout>
-              <BankStatementDetail />
-            </Layout>
+            <Layout>{withSuspense(<BankStatementDetail />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -289,9 +248,7 @@ export const AppRoutes = () => {
         path="/billing"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Billing />
-            </Layout>
+            <Layout>{withSuspense(<Billing />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -300,7 +257,9 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <GermanTaxReports key={activeCompany?.id || 'no-company'} />
+              {withSuspense(
+                <GermanTaxReports key={activeCompany?.id || 'no-company'} />,
+              )}
             </Layout>
           </ProtectedRoute>
         }
@@ -309,9 +268,7 @@ export const AppRoutes = () => {
         path="/companies"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Companies />
-            </Layout>
+            <Layout>{withSuspense(<Companies />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -319,20 +276,15 @@ export const AppRoutes = () => {
         path="/users"
         element={
           <ProtectedRoute requiredRole="admin">
-            <Layout>
-              <Users />
-            </Layout>
+            <Layout>{withSuspense(<Users />)}</Layout>
           </ProtectedRoute>
         }
       />
-      {/* Compliance & Audit routes */}
       <Route
         path="/compliance"
         element={
           <ProtectedRoute requiredRole="admin">
-            <Layout>
-              <ComplianceDashboard />
-            </Layout>
+            <Layout>{withSuspense(<ComplianceDashboard />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -340,9 +292,7 @@ export const AppRoutes = () => {
         path="/audit-logs"
         element={
           <ProtectedRoute requiredRole="admin">
-            <Layout>
-              <AuditLogs />
-            </Layout>
+            <Layout>{withSuspense(<AuditLogs />)}</Layout>
           </ProtectedRoute>
         }
       />
@@ -350,9 +300,7 @@ export const AppRoutes = () => {
         path="/gdpr-actions"
         element={
           <ProtectedRoute>
-            <Layout>
-              <GDPRActions />
-            </Layout>
+            <Layout>{withSuspense(<GDPRActions />)}</Layout>
           </ProtectedRoute>
         }
       />

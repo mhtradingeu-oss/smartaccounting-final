@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal } from './Modal';
+import AsyncModal from './AsyncModal';
 import { Button } from './Button';
 
 export function ConfirmDangerModal({
@@ -13,7 +13,7 @@ export function ConfirmDangerModal({
   loading,
 }) {
   return (
-    <Modal open={open} onClose={onClose} title={title} ariaLabel={description || title}>
+    <AsyncModal open={open} onClose={onClose} title={title} ariaLabel={description || title}>
       <div className="space-y-4">
         <p className="text-gray-700 dark:text-gray-200">{description}</p>
         <div className="flex justify-end gap-2">
@@ -25,6 +25,6 @@ export function ConfirmDangerModal({
           </Button>
         </div>
       </div>
-    </Modal>
+    </AsyncModal>
   );
 }

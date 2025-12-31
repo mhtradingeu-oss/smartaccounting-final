@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AISuggestionCard } from '../components/AISuggestionCard';
 import { aiInsightsAPI } from '../services/aiInsightsAPI';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -11,25 +11,32 @@ import { isReadOnlyRole } from '../lib/permissions';
 const AIInsights = () => {
   const { user } = useAuth();
   const isReadOnly = user && isReadOnlyRole(user.role);
-  // All hooks must be called before any conditional return
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewerLimited, setViewerLimited] = useState(false);
 
-  useEffect(() => {
-    aiInsightsAPI
-      .list()
-      .then(({ insights: result, viewerLimited: limited }) => {
-        setInsights(result);
-        setViewerLimited(limited);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message || 'Unknown error');
-        setLoading(false);
-      });
+  const loadInsights = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setViewerLimited(false);
+
+    try {
+      const { insights: result = [], viewerLimited: limited } = await aiInsightsAPI.list();
+      setInsights(result);
+      setViewerLimited(Boolean(limited));
+    } catch (err) {
+      setInsights([]);
+      setViewerLimited(false);
+      setError(err?.message || 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadInsights();
+  }, [loadInsights]);
 
   if (loading) {
     return (
@@ -46,7 +53,7 @@ const AIInsights = () => {
         title="Unable to load AI insights"
         description={error}
         action={
-          <Button variant="primary" onClick={() => window.location.reload()}>
+          <Button variant="primary" onClick={loadInsights} disabled={loading}>
             Retry
           </Button>
         }
@@ -60,7 +67,7 @@ const AIInsights = () => {
         title="No AI insights yet"
         description="AI will generate suggestions as your data grows."
         action={
-          <Button variant="primary" onClick={() => window.location.reload()}>
+          <Button variant="primary" onClick={loadInsights} disabled={loading}>
             Refresh
           </Button>
         }

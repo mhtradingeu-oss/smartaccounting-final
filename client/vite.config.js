@@ -2,12 +2,24 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
+  const shouldAnalyze = process.env.ANALYZE === 'true';
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      shouldAnalyze &&
+        visualizer({
+          filename: 'dist/bundle-analysis.html',
+          gzipSize: true,
+          brotliSize: true,
+          open: false,
+          template: 'treemap',
+        }),
+    ].filter(Boolean),
     test: {
       globals: true,
       environment: 'jsdom',
