@@ -1,51 +1,97 @@
 import React from 'react';
-import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import { Link } from 'react-router-dom';
 
-// Placeholder for future API integration
+import Card from '../components/Card';
+import ComplianceSnapshot from '../components/ComplianceSnapshot';
+
+const overviewCards = [
+  {
+    title: 'Policy guardrails',
+    description:
+      'Control families track GoBD, ISO, and SOC expectations so finance leaders see what is covered and what is pending.',
+    meta: '3 control families',
+  },
+  {
+    title: 'Audit readiness',
+    description:
+      'Data exports run on schedule and hold immutable fingerprints so regulators can verify activity without back-and-forth.',
+    meta: '5 years retention',
+  },
+  {
+    title: 'GDPR posture',
+    description:
+      'GDPR requests are surfaced alongside their SLA status so you can confirm subject rights are honored in time.',
+    meta: 'SLA: 30 days',
+  },
+];
+
+const adminLinks = [
+  {
+    label: 'Audit logs',
+    description: 'Inspect the latest export of company-wide system activity.',
+    to: '/audit-logs',
+  },
+  {
+    label: 'GDPR actions',
+    description: 'Review live GDPR requests and their completion status.',
+    to: '/gdpr-actions',
+  },
+];
+
 export default function ComplianceDashboard() {
-  const { user } = useAuth();
-  // TODO: Wire to backend compliance endpoints if available
-  // For now, static read-only compliance status
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4">
-      {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner mode={readOnlyBannerMode(user?.role)} message="You have read-only access. Compliance actions are disabled." />
-      )}
-      <h1 className="text-3xl font-bold mb-4">Compliance Dashboard</h1>
-      <p className="mb-6 text-gray-600">
-        This dashboard provides an overview of your organization&apos;s compliance status for GDPR, GoBD, and VAT. For legal details, consult your compliance officer.
-      </p>
-      <div className="bg-white rounded shadow p-6 space-y-6">
-        <section>
-          <h2 className="text-xl font-semibold mb-2">GDPR Status</h2>
-          <ul className="list-disc list-inside text-gray-700">
-            <li>Data subject rights: enabled</li>
-            <li>Export/anonymize: available</li>
-            <li>Retention policy: enforced</li>
-          </ul>
-        </section>
-        <section>
-          <h2 className="text-xl font-semibold mb-2">GoBD Audit Readiness</h2>
-          <ul className="list-disc list-inside text-gray-700">
-            <li>Audit log: active</li>
-            <li>Data immutability: enforced</li>
-            <li>Access controls: role-based</li>
-          </ul>
-        </section>
-        <section>
-          <h2 className="text-xl font-semibold mb-2">VAT Compliance</h2>
-          <ul className="list-disc list-inside text-gray-700">
-            <li>VAT calculation: automated</li>
-            <li>Reverse charge: supported</li>
-            <li>Export for tax authorities: available</li>
-          </ul>
-        </section>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+          Admin center
+        </p>
+        <h1 className="text-3xl font-semibold text-gray-900">Compliance Overview</h1>
+        <p className="text-gray-600 max-w-3xl">
+          Centralize your audit posture, monitor GDPR coverage, and access the tools your compliance team
+          depends on without leaving the platform.
+        </p>
       </div>
-      {isReadOnlyRole(user?.role) && (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 mt-4">
-          You do not have permission to perform compliance actions.
+
+      <ComplianceSnapshot />
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {overviewCards.map((card) => (
+          <Card key={card.title}>
+            <div className="space-y-2">
+              <p className="text-xl font-semibold text-gray-900">{card.title}</p>
+              <p className="text-sm text-gray-600">{card.description}</p>
+              {card.meta && (
+                <p className="text-xs uppercase tracking-wider text-gray-400">{card.meta}</p>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Admin tools</p>
+            <h2 className="text-xl font-semibold text-gray-900">Quick links</h2>
+          </div>
         </div>
-      )}
+        <div className="grid gap-4 md:grid-cols-2">
+          {adminLinks.map((link) => (
+            <Card key={link.label} className="flex flex-col justify-between">
+              <div>
+                <p className="text-lg font-semibold text-gray-900">{link.label}</p>
+                <p className="text-sm text-gray-600">{link.description}</p>
+              </div>
+              <Link
+                to={link.to}
+                className="mt-4 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500"
+              >
+                Open {link.label}
+              </Link>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

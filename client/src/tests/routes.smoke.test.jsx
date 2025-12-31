@@ -87,10 +87,6 @@ vi.mock('../pages/InvestorDashboard', () => ({
   __esModule: true,
   default: () => <div>Investor dashboard page</div>,
 }));
-vi.mock('../pages/ComplianceDashboard', () => ({
-  __esModule: true,
-  default: () => <div>Compliance dashboard page</div>,
-}));
 vi.mock('../pages/AuditLogs', () => ({
   __esModule: true,
   default: () => <div>Audit logs page</div>,
@@ -173,10 +169,10 @@ const routeTestCases = [
   { path: '/german-tax-reports/status', expectedText: 'German tax reports page' },
   { path: '/companies', expectedText: 'Companies page' },
   { path: '/users', expectedText: 'Users page' },
-  { path: '/compliance', expectedText: 'Compliance dashboard page' },
+  { path: '/compliance', expectedText: 'Compliance Overview' },
   { path: '/audit-logs', expectedText: 'Audit logs page' },
   { path: '/gdpr-actions', expectedText: 'GDPR actions page' },
-  { path: '/compliance-dashboard', expectedText: 'Compliance dashboard page' },
+  { path: '/compliance-dashboard', expectedText: 'Compliance Overview' },
 ];
 
 describe('Route smoke test', () => {
