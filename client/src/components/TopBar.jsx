@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import { isReadOnlyRole } from '../lib/permissions';
+import { FEATURE_FLAGS } from '../lib/constants';
 import {
   BellIcon,
   MagnifyingGlassIcon,
@@ -73,20 +74,59 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
   const searchRef = useRef(null);
 
   // Enhanced notifications with more variety
-  const notifications = [
-    {
-      id: 1,
-      type: 'success',
-      title: t('notifications.invoice_processed'),
-      message: 'Invoice #2024-0156 has been successfully processed and sent to Müller GmbH',
-      time: '2 min ago',
-      read: false,
-      priority: 'high',
-      action: 'View Invoice',
-      // href: '/invoices/2024-0156',
-      href: '/invoices',
-    },
-    {
+  const isGermanTaxEnabled = FEATURE_FLAGS.GERMAN_TAX.enabled;
+
+  const notifications = useMemo(() => {
+    const baseNotifications = [
+      {
+        id: 1,
+        type: 'success',
+        title: t('notifications.invoice_processed'),
+        message: 'Invoice #2024-0156 has been successfully processed and sent to Müller GmbH',
+        time: '2 min ago',
+        read: false,
+        priority: 'high',
+        action: 'View Invoice',
+        href: '/invoices',
+      },
+      {
+        id: 3,
+        type: 'info',
+        title: 'Payment Received',
+        message: 'Payment of €2,450.00 received from Hans Schmidt GmbH',
+        time: '3 hours ago',
+        read: true,
+        priority: 'normal',
+        action: 'View Payment',
+        href: '/bank-statements',
+      },
+      {
+        id: 4,
+        type: 'success',
+        title: t('notifications.backup_complete'),
+        message: 'Monthly database backup completed successfully',
+        time: '1 day ago',
+        read: true,
+        priority: 'low',
+      },
+      {
+        id: 5,
+        type: 'info',
+        title: 'New Feature Available',
+        message: 'AI-powered expense categorization is now available in your dashboard',
+        time: '2 days ago',
+        read: false,
+        priority: 'normal',
+        action: 'Explore',
+        href: '/dashboard',
+      },
+    ];
+
+    if (!isGermanTaxEnabled) {
+      return baseNotifications;
+    }
+
+    const taxNotification = {
       id: 2,
       type: 'warning',
       title: t('notifications.tax_deadline'),
@@ -96,39 +136,14 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
       priority: 'urgent',
       action: 'Review Tax',
       href: '/german-tax-reports',
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'Payment Received',
-      message: 'Payment of €2,450.00 received from Hans Schmidt GmbH',
-      time: '3 hours ago',
-      read: true,
-      priority: 'normal',
-      action: 'View Payment',
-      href: '/bank-statements',
-    },
-    {
-      id: 4,
-      type: 'success',
-      title: t('notifications.backup_complete'),
-      message: 'Monthly database backup completed successfully',
-      time: '1 day ago',
-      read: true,
-      priority: 'low',
-    },
-    {
-      id: 5,
-      type: 'info',
-      title: 'New Feature Available',
-      message: 'AI-powered expense categorization is now available in your dashboard',
-      time: '2 days ago',
-      read: false,
-      priority: 'normal',
-      action: 'Explore',
-      href: '/dashboard',
-    },
-  ];
+    };
+
+    return [
+      baseNotifications[0],
+      taxNotification,
+      ...baseNotifications.slice(1),
+    ];
+  }, [t, isGermanTaxEnabled]);
 
   // Mock search results
   const unreadCount = notifications.filter((n) => !n.read).length;
