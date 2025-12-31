@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingSpinner from './components/LoadingSpinner';
-import ErrorBoundary from './components/ErrorBoundary';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingState } from './components/ui/PageStates';
 import { useAuth } from './context/AuthContext';
 import { useCompany } from './context/CompanyContext';
@@ -11,6 +11,17 @@ import { useCompany } from './context/CompanyContext';
 const withSuspense = (children) => (
   <Suspense fallback={<PageLoadingState />}>{children}</Suspense>
 );
+
+const wrapRoute = (element) => <RouteErrorBoundary>{element}</RouteErrorBoundary>;
+
+const withProtectedLayout = (element, requiredRole) => (
+  <ProtectedRoute requiredRole={requiredRole}>
+    <Layout>{withSuspense(element)}</Layout>
+  </ProtectedRoute>
+);
+
+const renderProtectedRoute = (element, requiredRole) =>
+  wrapRoute(withProtectedLayout(element, requiredRole));
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
@@ -96,234 +107,82 @@ export const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingRoute />} />
-      <Route path="/login" element={<LoginRoute />} />
-      <Route path="/pricing" element={withSuspense(<Pricing />)} />
-      <Route path="/request-access" element={withSuspense(<RequestAccess />)} />
-      <Route
-        path="/onboarding"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<OnboardingWizard />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={wrapRoute(<LandingRoute />)} />
+      <Route path="/login" element={wrapRoute(<LoginRoute />)} />
+      <Route path="/pricing" element={wrapRoute(withSuspense(<Pricing />))} />
+      <Route path="/request-access" element={wrapRoute(withSuspense(<RequestAccess />))} />
+      <Route path="/onboarding" element={renderProtectedRoute(<OnboardingWizard />)} />
       <Route
         path="/rbac"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <Layout>{withSuspense(<RBACManagement />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<RBACManagement />, 'admin')}
       />
       <Route
         path="/investor-dashboard"
-        element={
-          <ProtectedRoute requiredRole="auditor">
-            <Layout>{withSuspense(<InvestorDashboard />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<InvestorDashboard />, 'auditor')}
       />
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<Analytics />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ai-advisor"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<AIInsights />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ai-assistant"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<AIAssistant />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<Dashboard />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/invoices"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<Invoices />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/expenses"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<Expenses />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/expenses/create"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<ExpensesCreate />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/invoices/create"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<InvoiceCreate />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/invoices/:invoiceId/edit"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<InvoiceEdit />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/bank-statements"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<BankStatements />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/analytics" element={renderProtectedRoute(<Analytics />)} />
+      <Route path="/ai-advisor" element={renderProtectedRoute(<AIInsights />)} />
+      <Route path="/ai-assistant" element={renderProtectedRoute(<AIAssistant />)} />
+      <Route path="/dashboard" element={renderProtectedRoute(<Dashboard />)} />
+      <Route path="/invoices" element={renderProtectedRoute(<Invoices />)} />
+      <Route path="/expenses" element={renderProtectedRoute(<Expenses />)} />
+      <Route path="/expenses/create" element={renderProtectedRoute(<ExpensesCreate />)} />
+      <Route path="/invoices/create" element={renderProtectedRoute(<InvoiceCreate />)} />
+      <Route path="/invoices/:invoiceId/edit" element={renderProtectedRoute(<InvoiceEdit />)} />
+      <Route path="/bank-statements" element={renderProtectedRoute(<BankStatements />)} />
       <Route
         path="/bank-statements/preview"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<BankStatementPreview />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<BankStatementPreview />)}
       />
-      <Route
-        path="/ocr-preview"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<OCRPreview />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/ocr-preview" element={renderProtectedRoute(<OCRPreview />)} />
       <Route
         path="/bank-statements/import"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<BankStatementImport />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<BankStatementImport />)}
       />
       <Route
         path="/bank-statements/:statementId/reconciliation-preview"
-        element={
-          <ProtectedRoute requiredRole="accountant">
-            <Layout>{withSuspense(<BankStatementReconciliationPreview />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<BankStatementReconciliationPreview />, 'accountant')}
       />
       <Route
         path="/bank-statements/:statementId"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<BankStatementDetail />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<BankStatementDetail />)}
       />
-      <Route
-        path="/billing"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<Billing />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/billing" element={renderProtectedRoute(<Billing />)} />
       <Route
         path="/german-tax-reports/*"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              {withSuspense(
-                <GermanTaxReports key={activeCompany?.id || 'no-company'} />,
-              )}
-            </Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(
+          <GermanTaxReports key={activeCompany?.id || 'no-company'} />,
+        )}
       />
-      <Route
-        path="/companies"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<Companies />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/users"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <Layout>{withSuspense(<Users />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/companies" element={renderProtectedRoute(<Companies />)} />
+      <Route path="/users" element={renderProtectedRoute(<Users />, 'admin')} />
       <Route
         path="/compliance"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <Layout>{withSuspense(<ComplianceDashboard />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<ComplianceDashboard />, 'admin')}
       />
       <Route
         path="/audit-logs"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <Layout>{withSuspense(<AuditLogs />)}</Layout>
-          </ProtectedRoute>
-        }
+        element={renderProtectedRoute(<AuditLogs />, 'admin')}
       />
-      <Route
-        path="/gdpr-actions"
-        element={
-          <ProtectedRoute>
-            <Layout>{withSuspense(<GDPRActions />)}</Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/gdpr-actions" element={renderProtectedRoute(<GDPRActions />)} />
       <Route
         path="/compliance-dashboard"
-        element={
+        element={wrapRoute(
           <ProtectedRoute requiredRole="admin">
             <Navigate to="/compliance" replace />
-          </ProtectedRoute>
-        }
+          </ProtectedRoute>,
+        )}
       />
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={wrapRoute(<NotFound />)} />
     </Routes>
   );
 };
 
 function App() {
   return (
-    <ErrorBoundary>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </ErrorBoundary>
+    <Router>
+      <AppRoutes />
+    </Router>
   );
 }
 
