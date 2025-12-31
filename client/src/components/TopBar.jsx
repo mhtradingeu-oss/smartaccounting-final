@@ -282,7 +282,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   {t('topbar.search_results_title')}
                 </div>
-                {filteredSearchResults.map((result, index) => (
+                {filteredSearchResults.map((result, _index) => (
                     <Link
                       key={`${result.type}-${result.title}`}
                       to={result.href}

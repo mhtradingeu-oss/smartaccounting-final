@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -52,7 +52,6 @@ const formatCurrency = (value, currency = 'EUR') => {
 const Invoices = () => {
   const { activeCompany } = useCompany();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);

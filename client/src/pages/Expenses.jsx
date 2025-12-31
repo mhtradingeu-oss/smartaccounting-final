@@ -48,16 +48,12 @@ const Expenses = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  if (!activeCompany) {
-    return <PageNoAccessState />;
-  }
-
   const fetchExpenses = useCallback(async () => {
     if (!activeCompany) {
       return;
     }
+
     setLoading(true);
-    setError(null);
     setError(null);
     try {
       const data = await expensesAPI.list({ companyId: activeCompany.id });
@@ -76,8 +72,13 @@ const Expenses = () => {
       setLoading(false);
       return;
     }
+
     fetchExpenses();
   }, [activeCompany, fetchExpenses]);
+
+  if (!activeCompany) {
+    return <PageNoAccessState />;
+  }
 
   // Loader
   if (loading) {
