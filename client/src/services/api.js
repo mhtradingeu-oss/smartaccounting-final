@@ -3,9 +3,10 @@ import axios from 'axios';
 /**
  * API BASE URL
  * - Production: /api (Nginx proxy)
- * - Dev: VITE_API_URL (required for docker dev)
+ * - Dev: VITE_API_URL (required for docker/dev setups)
  */
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const viteApiUrl = import.meta.env.VITE_API_URL?.trim();
+export const API_BASE_URL = viteApiUrl || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

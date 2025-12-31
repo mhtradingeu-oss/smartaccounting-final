@@ -11,11 +11,14 @@ export default function GDPRActions() {
   const [error, setError] = useState(null);
   const [modal, setModal] = useState(null); // 'export' | 'anonymize' | null
   const [result, setResult] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [anonymizing, setAnonymizing] = useState(false);
 
   const handleExport = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setExporting(true);
     try {
       const data = await gdprAPI.exportUser(user.id);
       setResult({ type: 'export', data });
@@ -23,6 +26,7 @@ export default function GDPRActions() {
       setError(err?.message || 'Failed to export data');
     } finally {
       setLoading(false);
+      setExporting(false);
       setModal(null);
     }
   };
@@ -31,13 +35,15 @@ export default function GDPRActions() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setAnonymizing(true);
     try {
-      await gdprAPI.anonymizeUser(user.id);
+      await gdprAPI.anonymizeUser(user.id, 'Requested via GDPR Actions UI');
       setResult({ type: 'anonymize', data: 'User anonymized successfully.' });
     } catch (err) {
       setError(err?.message || 'Failed to anonymize user');
     } finally {
       setLoading(false);
+      setAnonymizing(false);
       setModal(null);
     }
   };

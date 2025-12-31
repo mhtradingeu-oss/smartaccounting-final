@@ -31,19 +31,20 @@ export default function AuditLogs() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner message="You have read-only access. Audit logs are view-only." />
+        <ReadOnlyBanner message="You have read-only access. Audit exports are view-only." />
       )}
-      <h1 className="text-3xl font-bold mb-4">Audit Logs</h1>
+      <h1 className="text-3xl font-bold mb-4">Audit Trail Export feed</h1>
       <p className="mb-6 text-gray-600">
-        All actions are logged for GoBD compliance. Only company-scoped logs are shown. For legal audit, export logs as required.
+        This feed mirrors the `/api/exports/audit-logs?format=json` endpoint so auditors can review the same
+        GoBD-grade trail exported for legal reviews. Entries below reflect company-scoped activity only.
       </p>
       <div className="bg-white rounded shadow p-6">
         {loading ? (
-          <LoadingState message="Loading audit logs..." />
+          <LoadingState message="Loading audit trail export..." />
         ) : error ? (
           <ErrorState message={error} onRetry={() => window.location.reload()} />
         ) : logs.length === 0 ? (
-          <EmptyState title="No audit logs found" description="No actions have been logged yet." />
+          <EmptyState title="Export is empty" description="No audit entries were exported yet." />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
