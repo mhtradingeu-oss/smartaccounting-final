@@ -134,7 +134,16 @@ export const AppRoutes = () => {
         }
       />
       {/* Analytics, Dashboard, Invoices, InvoiceCreate, InvoiceEdit, BankStatements, BankStatementDetail, Billing, Companies, Users, Pricing, Login, GermanTaxReports, ComplianceDashboard, AuditLogs, GDPRActions, NotFound, etc. */}
-      <Route path="/analytics" element={<Analytics />} />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Analytics />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/ai-advisor"
         element={
