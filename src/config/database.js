@@ -12,8 +12,8 @@ const createDatabaseConfig = (envOverride) => {
   const explicitUrl = process.env.DATABASE_URL;
   const useSqlite = process.env.USE_SQLITE === 'true';
 
-  if (useSqlite && explicitUrl) {
-    throw new Error('USE_SQLITE=true cannot be combined with DATABASE_URL');
+  if (useSqlite && explicitUrl && !isTest) {
+    throw new Error('USE_SQLITE=true cannot be combined with DATABASE_URL outside of tests');
   }
 
   let databaseUrl;
