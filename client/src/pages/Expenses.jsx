@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { EmptyState } from '../components/ui/EmptyState';
-import LoadingSpinner from '../components/LoadingSpinner';
-import ErrorState from '../components/ErrorState';
+import {
+  PageLoadingState,
+  PageEmptyState,
+  PageErrorState,
+  PageNoAccessState,
+} from '../components/ui/PageStates';
 import { expensesAPI } from '../services/expensesAPI';
 import { formatApiError } from '../services/api';
 import { useCompany } from '../context/CompanyContext';
@@ -39,9 +43,14 @@ const formatCurrency = (value, currency = 'EUR') => {
 const Expenses = () => {
   const { activeCompany } = useCompany();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  if (!activeCompany) {
+    return <PageNoAccessState />;
+  }
 
   const fetchExpenses = useCallback(async () => {
     if (!activeCompany) {
@@ -72,27 +81,23 @@ const Expenses = () => {
 
   // Loader
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (error) {
-    return <ErrorState message={error.message} onRetry={fetchExpenses} />;
+    return <PageErrorState onRetry={fetchExpenses} />;
   }
 
   // Empty state
   if (!expenses.length) {
     return (
-      <EmptyState
-        title="No expenses yet"
-        description="Create your first expense to get started."
+      <PageEmptyState
         action={
           <PermissionGuard action="expense.create" role={user?.role}>
             <Link to="/expenses/create">
-              <Button variant="primary">Create Expense</Button>
+              <Button variant="primary" size="md">
+                {t('states.empty.action')}
+              </Button>
             </Link>
           </PermissionGuard>
         }
@@ -104,7 +109,7 @@ const Expenses = () => {
   return (
     <div className="space-y-6">
       {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner message="You have read-only access. Expenses are view-only." />
+        <ReadOnlyBanner message={t('states.read_only.expenses_notice')} />
       )}
       <Card>
         <div className="flex justify-between items-center mb-4">

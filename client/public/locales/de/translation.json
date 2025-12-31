@@ -107,7 +107,7 @@
     "analytics": "Analyse",
     "analytics_desc": "Detaillierte Analyse anzeigen"
   },
-    "common": {
+  "common": {
     "loading": "Lädt...",
     "error": "Fehler",
     "success": "Erfolgreich",
@@ -133,5 +133,87 @@
     "back": "Zurück",
     "next": "Weiter",
     "previous": "Vorherige"
+  },
+  "theme": {
+    "light": "Heller Modus",
+    "dark": "Dunkelmodus"
+  },
+  "topbar": {
+    "search_results_title": "Suchergebnisse",
+    "search_results_empty": "Keine Treffer",
+    "no_company": "Kein Unternehmen",
+    "notifications": {
+      "bulk_actions_coming_soon": "Massenbenachrichtigungen kommen bald.",
+      "full_inbox_coming_soon": "Das vollständige Benachrichtigungszentrum wird bald verfügbar sein.",
+      "action_coming_soon": "Diese Aktion ist bald verfügbar.",
+      "mark_all": "Alle als gelesen markieren"
+    },
+    "profile": {
+      "open_menu": "Profilmenü öffnen",
+      "session_hint": "Sitzungen bleiben aktiv, bis Sie sich abmelden oder den Browser schließen.",
+      "session_read_only": "Nur-Lesen-Sitzung",
+      "session_full_access": "Vollzugriff",
+      "profile_tooltip": "Profildetails kommen bald.",
+      "view": "Profil",
+      "plan_professional": "Professional",
+      "plan_pro": "Pro"
+    }
+  },
+  "sidebar": {
+    "expand": "Seitenleiste erweitern",
+    "collapse": "Seitenleiste reduzieren"
+  },
+  "navigation": {
+    "main": "Hauptbereich",
+    "management": "Verwaltung",
+    "system": "System",
+    "dashboard": "Dashboard",
+    "invoices": "Rechnungen",
+    "bank_statements": "Bankauszüge",
+    "ocr_preview": "OCR-Vorschau",
+    "german_tax": "Deutsche Steuern",
+    "billing": "Abrechnung",
+    "compliance": "Compliance",
+    "companies": "Unternehmen",
+    "users": "Benutzer",
+    "administration": "Administration",
+    "ai_assistant": "KI-Assistent"
+  },
+  "auth": {
+    "logout": "Abmelden"
+  },
+  "states": {
+    "loading": {
+      "title": "Wird geladen…",
+      "description": "Bitte warten Sie, während wir Ihre Daten abrufen."
+    },
+    "empty": {
+      "title": "Noch nichts vorhanden",
+      "description": "Erstellen Sie Daten oder aktualisieren Sie die Filter.",
+      "action": "Daten hinzufügen"
+    },
+    "error": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Wir können die Daten gerade nicht laden. Versuchen Sie es erneut.",
+      "help": "Wenn das Problem weiterhin besteht, kontaktieren Sie den Support."
+    },
+    "no_access": {
+      "title": "Unternehmen auswählen",
+      "description": "Daten sind unternehmensspezifisch. Wählen Sie eines aus, um fortzufahren.",
+      "action": "Unternehmen auswählen"
+    },
+    "read_only": {
+      "label": "Nur-Lesen:",
+      "default_message": "Sie haben nur Lesezugriff. Aktionen sind für Ihre Rolle deaktiviert.",
+      "details": "Um Änderungen vorzunehmen, kontaktieren Sie Ihren Administrator oder fordern Sie eine höhere Rolle an.",
+      "dashboard_notice": "Dashboard-Aktionen sind für Ihre Rolle deaktiviert.",
+      "invoices_notice": "Rechnungsstellung und -bearbeitung sind für Ihre Rolle deaktiviert.",
+      "expenses_notice": "Ausgaben sind nur zur Ansicht verfügbar.",
+      "bank_statements_notice": "Bankauszüge stehen im Nur-Lesen-Modus, bis die Vorschau abgeschlossen ist."
+    }
+  },
+  "footer": {
+    "version": "Version 2.1.0 Professional",
+    "copyright": "© {{year}} SmartAccounting"
   }
 }

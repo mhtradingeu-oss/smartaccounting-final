@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import EmptyState from '../components/EmptyState';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useTranslation } from 'react-i18next';
 import Button from '../components/Button';
 import BankStatementStatusBadge from '../components/BankStatementStatusBadge';
 import { useCompany } from '../context/CompanyContext';
@@ -11,6 +10,12 @@ import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { formatApiError } from '../services/api';
 import { isReadOnlyRole } from '../lib/permissions';
+import {
+  PageLoadingState,
+  PageEmptyState,
+  PageErrorState,
+  PageNoAccessState,
+} from '../components/ui/PageStates';
 
 const formatDate = (value) => {
   if (!value) {
@@ -23,14 +28,12 @@ const formatDate = (value) => {
   });
 };
 
-const READ_ONLY_BANNER_MESSAGE =
-  'Bank statements are currently available in read-only mode. Uploads and reconciliations remain disabled while we finalize the preview and validation experience.';
-
 const BANK_STATEMENT_REFRESH_EVENT = 'bankStatements:refresh';
 
 const BankStatements = () => {
   const { activeCompany } = useCompany();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [statements, setStatements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -144,28 +147,12 @@ const BankStatements = () => {
   const statementCount = summary.totalStatements;
 
   if (!activeCompany) {
-    return (
-      <div className="space-y-6">
-        <ReadOnlyBanner message={READ_ONLY_BANNER_MESSAGE} />
-        <EmptyState
-          title="Select a company first"
-          description="Bank statements are scoped per company. Choose an active company to continue."
-          action={
-            <Link
-              to="/companies"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
-            >
-              Select company
-            </Link>
-          }
-        />
-      </div>
-    );
+    return <PageNoAccessState />;
   }
 
   return (
     <div className="space-y-6">
-      <ReadOnlyBanner message={READ_ONLY_BANNER_MESSAGE} />
+      <ReadOnlyBanner message={t('states.read_only.bank_statements_notice')} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
@@ -268,33 +255,11 @@ const BankStatements = () => {
       </section>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <LoadingSpinner size="large" />
-        </div>
+        <PageLoadingState />
       ) : error ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-12">
-          <p className="text-center text-sm font-semibold text-red-600">{error.message}</p>
-          {error.retryable && (
-            <Button onClick={refreshStatements} variant="primary">
-              Retry
-            </Button>
-          )}
-        </div>
+        <PageErrorState onRetry={refreshStatements} />
       ) : statementCount === 0 ? (
-        <EmptyState
-          title="No bank statements"
-          description="Upload your first bank statement"
-          action={
-            <Button
-              variant="primary"
-              disabled
-              title="Bank statement upload is coming soon."
-              className="cursor-not-allowed"
-            >
-              Upload Statement
-            </Button>
-          }
-        />
+        <PageEmptyState />
       ) : (
         <div className="space-y-3">
           {statements.map((statement) => (

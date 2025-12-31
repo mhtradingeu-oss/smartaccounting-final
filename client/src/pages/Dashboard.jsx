@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../services/dashboardAPI';
 import { formatApiError } from '../services/api';
-import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
-import { EmptyState } from '../components/ui/EmptyState';
+import { PageLoadingState, PageEmptyState, PageErrorState } from '../components/ui/PageStates';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
@@ -84,61 +84,27 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Skeleton variant="card" className="w-full max-w-2xl h-64" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (error) {
-    return (
-      <EmptyState
-        icon={<ChartBarIcon className="h-10 w-10 text-red-400" />}
-        title={t('dashboard.error_title')}
-        description={t('dashboard.error_loading')}
-        action={
-          <Button variant="primary" onClick={fetchDashboardData}>
-            {t('common.retry')}
-          </Button>
-        }
-        help="If this problem continues, please contact support."
-      />
-    );
+    return <PageErrorState onRetry={fetchDashboardData} />;
   }
 
   if (disabled) {
-    return (
-      <EmptyState
-        icon={<ChartBarIcon className="h-10 w-10 text-primary-500" />}
-        title="Dashboard temporarily unavailable"
-        description="Analytics data is offline while we finish the backend sync."
-        action={
-          <Button variant="primary" size="small" onClick={fetchDashboardData}>
-            Re-check availability
-          </Button>
-        }
-        help="This is a temporary state. Please try again later."
-      />
-    );
+    return <PageErrorState onRetry={fetchDashboardData} />;
   }
 
   if (!metrics.length) {
     return (
-      <EmptyState
-        icon={<ChartBarIcon className="h-10 w-10 text-gray-400" />}
-        title={t('dashboard.empty_title')}
-        description={t('dashboard.empty_message')}
+      <PageEmptyState
         action={
-          <Button
-            variant="primary"
-            size="small"
-            onClick={() => window.location.assign('/invoices')}
-          >
-            Go to invoices
-          </Button>
+          <Link to="/invoices">
+            <Button variant="primary" size="small">
+              {t('states.empty.action')}
+            </Button>
+          </Link>
         }
-        help="You can also load demo data as an admin."
       />
     );
   }
@@ -202,10 +168,7 @@ const Dashboard = () => {
       {/* Dashboard Content */}
       <div className="space-y-12">
         {isReadOnly && (
-          <ReadOnlyBanner
-            mode="Viewer"
-            message="You have view-only access. Dashboard actions are disabled for your role."
-          />
+        <ReadOnlyBanner mode="Viewer" message={t('states.read_only.dashboard_notice')} />
         )}
 
         {/* KPI Metrics */}

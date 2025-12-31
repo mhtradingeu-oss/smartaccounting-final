@@ -69,5 +69,87 @@
   "inactive": "غير نشط",
   "pending": "معلق",
   "approved": "موافق عليه",
-  "rejected": "مرفوض"
+  "rejected": "مرفوض",
+  "theme": {
+    "light": "الوضع الفاتح",
+    "dark": "الوضع الداكن"
+  },
+  "topbar": {
+    "search_results_title": "نتائج البحث",
+    "search_results_empty": "لا توجد نتائج",
+    "no_company": "لا توجد شركة",
+    "notifications": {
+      "bulk_actions_coming_soon": "إجراءات الإشعارات الجماعية قادمة قريباً.",
+      "full_inbox_coming_soon": "صندوق الإشعارات الكامل سيُتاح قريباً.",
+      "action_coming_soon": "سيكون هذا الإجراء متاحاً قريباً.",
+      "mark_all": "وضع علامة على الكل كمقروء"
+    },
+    "profile": {
+      "open_menu": "فتح قائمة الملف الشخصي",
+      "session_hint": "تظل الجلسات نشطة حتى تقوم بتسجيل الخروج أو إغلاق المتصفح.",
+      "session_read_only": "وضع للقراءة فقط",
+      "session_full_access": "وصول كامل",
+      "profile_tooltip": "تفاصيل الملف الشخصي قادمة قريباً.",
+      "view": "الملف الشخصي",
+      "plan_professional": "Professional",
+      "plan_pro": "Pro"
+    }
+  },
+  "sidebar": {
+    "expand": "توسيع الشريط الجانبي",
+    "collapse": "طي الشريط الجانبي"
+  },
+  "navigation": {
+    "main": "الرئيسية",
+    "management": "الإدارة",
+    "system": "النظام",
+    "dashboard": "لوحة التحكم",
+    "invoices": "الفواتير",
+    "bank_statements": "كشف الحساب",
+    "ocr_preview": "معاينة OCR",
+    "german_tax": "الضرائب الألمانية",
+    "billing": "الفوترة",
+    "compliance": "الالتزام",
+    "companies": "الشركات",
+    "users": "المستخدمون",
+    "administration": "الإدارة",
+    "ai_assistant": "مساعد الذكاء الاصطناعي"
+  },
+  "auth": {
+    "logout": "تسجيل الخروج"
+  },
+  "states": {
+    "loading": {
+      "title": "جاري التحميل…",
+      "description": "يرجى الانتظار بينما نقوم بتحميل البيانات."
+    },
+    "empty": {
+      "title": "لا شيء هنا حتى الآن",
+      "description": "ابدأ بإنشاء البيانات أو تحديث المرشحات.",
+      "action": "إضافة بيانات"
+    },
+    "error": {
+      "title": "حدث خطأ",
+      "description": "لا يمكننا تحميل هذه البيانات الآن. حاول مرة أخرى.",
+      "help": "إذا استمر الخطأ، يرجى الاتصال بالدعم."
+    },
+    "no_access": {
+      "title": "اختر شركة",
+      "description": "البيانات مرتبطة بالشركة. اختر شركة للمتابعة.",
+      "action": "اختر شركة"
+    },
+    "read_only": {
+      "label": "وضع للقراءة فقط:",
+      "default_message": "لديك صلاحية قراءة فقط. الإجراءات معطلة لدورك.",
+      "details": "لإجراء تغييرات، يرجى الاتصال بمسؤولك أو طلب دور أعلى.",
+      "dashboard_notice": "تم تعطيل إجراءات لوحة التحكم لدورك.",
+      "invoices_notice": "تم تعطيل إنشاء الفواتير وتحريرها لدورك.",
+      "expenses_notice": "النفقات متاحة للعرض فقط.",
+      "bank_statements_notice": "كشف الحساب في وضع القراءة فقط حتى تنتهي المعاينة."
+    }
+  },
+  "footer": {
+    "version": "الإصدار 2.1.0 Professional",
+    "copyright": "© {{year}} SmartAccounting"
+  }
 }

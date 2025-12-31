@@ -45,19 +45,17 @@ describe('Sidebar role & feature flags', () => {
 
   it('hides administration links for non-admin roles', () => {
     renderSidebar(roles.VIEWER);
-    expect(screen.queryByText('users')).toBeNull();
+    expect(screen.queryByText('navigation.users')).toBeNull();
   });
 
   it('shows administration links for admin role', () => {
     renderSidebar(roles.ADMIN);
-    expect(screen.getByText('users')).toBeInTheDocument();
+    expect(screen.getByText('navigation.users')).toBeInTheDocument();
   });
 
-  it('renders coming soon badges for partial feature links', () => {
+  it('does not render coming soon badges once features are hidden', () => {
     renderSidebar(roles.ADMIN);
-    // Await badges in case of async render
     const badges = screen.queryAllByText(/Coming soon/i);
-    // Accept 1 or more badges, as feature count may change
-    expect(badges.length).toBeGreaterThanOrEqual(1);
+    expect(badges.length).toBe(0);
   });
 });

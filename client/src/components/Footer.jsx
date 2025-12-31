@@ -1,15 +1,13 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const Footer = () => {
+  const { t } = useTranslation();
   const year = new Date().getFullYear();
   return (
-    <footer className="flex flex-col items-center justify-center py-3 text-xs text-gray-500 dark:text-gray-400 select-none w-full">
-      <div className="font-semibold text-base mb-1 text-center">SmartAccounting</div>
-      <div className="text-center mb-1">Modern Accounting. Smarter Decisions.</div>
-      <div className="flex flex-col items-center gap-0.5">
-        <span>© {year} SmartAccounting</span>
-        <span>Developed by Crew Art · Powered by MH Trading UG (Germany)</span>
-      </div>
+    <footer className="flex flex-col items-center justify-center py-3 text-xs text-gray-500 dark:text-gray-400 select-none w-full space-y-1">
+      <span>{t('footer.version')}</span>
+      <span>{t('footer.copyright', { year })}</span>
     </footer>
   );
 };

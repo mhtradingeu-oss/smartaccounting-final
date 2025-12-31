@@ -13,7 +13,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   UserCircleIcon,
-  ChartBarIcon,
   ShieldCheckIcon,
   BellIcon,
   BuildingOfficeIcon,
@@ -28,6 +27,10 @@ import {
   DocumentChartBarIcon as DocumentChartBarIconSolid,
   DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
   ChatBubbleLeftEllipsisIcon as ChatBubbleLeftEllipsisIconSolid,
+  CreditCardIcon as CreditCardIconSolid,
+  ShieldCheckIcon as ShieldCheckIconSolid,
+  BuildingOfficeIcon as BuildingOfficeIconSolid,
+  UsersIcon as UsersIconSolid,
 } from '@heroicons/react/24/solid';
 import { FEATURE_FLAGS } from '../lib/constants';
 import { isOCRPreviewEnabled, isAIAssistantEnabled } from '../lib/featureFlags';
@@ -42,18 +45,20 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const managementNavigation = [
     {
-      name: t('companies'),
+      name: t('navigation.companies'),
       href: '/companies',
       icon: BuildingOfficeIcon,
+      iconSolid: BuildingOfficeIconSolid,
       enabled: true,
     },
   ];
 
   const adminNavigation = [
     {
-      name: t('users'),
+      name: t('navigation.users'),
       href: '/users',
       icon: UsersIcon,
+      iconSolid: UsersIconSolid,
       enabled: role === roles.ADMIN,
     },
   ];
@@ -72,14 +77,13 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       description: 'Overview & Analytics',
     },
     {
-      name: 'AI Assistant',
+      name: t('navigation.ai_assistant'),
       href: '/ai-assistant',
       icon: ChatBubbleLeftEllipsisIcon,
       iconSolid: ChatBubbleLeftEllipsisIconSolid,
       badge: 'AI',
       description: 'Conversational read-only advisor',
       enabled: isAIAssistantEnabled(),
-      partial: !isAIAssistantEnabled(),
     },
     {
       name: t('navigation.invoices'),
@@ -105,7 +109,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       badge: 'Preview',
       description: 'Preview OCR extractions',
       enabled: ocrPreviewEnabled,
-      partial: !ocrPreviewEnabled,
     },
     {
       name: t('navigation.german_tax'),
@@ -115,25 +118,24 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       badge: FEATURE_FLAGS.GERMAN_TAX.enabled ? 'NEW' : null,
       description: 'German Tax Compliance',
       enabled: FEATURE_FLAGS.GERMAN_TAX.enabled,
-      partial: !FEATURE_FLAGS.GERMAN_TAX.enabled,
     },
     {
       name: t('navigation.billing'),
       href: '/billing',
       icon: CreditCardIcon,
+      iconSolid: CreditCardIconSolid,
       badge: null,
       description: 'Subscription & Billing',
       enabled: FEATURE_FLAGS.STRIPE_BILLING.enabled,
-      partial: !FEATURE_FLAGS.STRIPE_BILLING.enabled,
     },
     {
       name: t('navigation.compliance'),
       href: '/compliance',
       icon: ShieldCheckIcon,
+      iconSolid: ShieldCheckIconSolid,
       badge: null,
       description: 'GDPR & GoBD Compliance',
       enabled: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
-      partial: !FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
     },
   ];
 
@@ -146,7 +148,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   });
 
   const visibleMainNavigation = filteredMainNavigation.filter((item) => item.enabled !== false);
-  const upcomingFeatures = filteredMainNavigation.filter((item) => item.enabled === false);
 
   // Example: Only admin can see adminNavigation
   const filteredAdminNavigation = (adminNavigation || []).filter(() => role === roles.ADMIN);
@@ -203,14 +204,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                     {item.badge}
                   </span>
                 )}
-                {item.partial && (
-                  <span
-                    className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
-                    title="This feature is coming soon and not yet available."
-                  >
-                    Coming Soon
-                  </span>
-                )}
               </>
             )}
           </div>
@@ -235,11 +228,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           {!isCollapsed && (
             <>
               <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
-              {item.partial && (
-                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-yellow-100 text-yellow-800">
-                  Coming soon
-                </span>
-              )}
               <span className="ml-2 text-gray-400" title="Feature preview">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -389,66 +377,12 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             Cog6ToothIcon,
           )}
         {filteredAdminNavigation.length > 0 &&
-          renderSection('Administration', filteredAdminNavigation, 'admin', ShieldCheckIcon)}
+          renderSection(t('navigation.administration'), filteredAdminNavigation, 'admin', ShieldCheckIcon)}
         {/* Only render system section if not null and has items */}
         {systemNavigation &&
           renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
-        {upcomingFeatures.length > 0 && (
-          <div className="px-3 py-4 border-t border-dashed border-gray-200 dark:border-gray-700 space-y-2">
-            {!isCollapsed && (
-              <div className="flex items-center space-x-2">
-                <ChartBarIcon className="h-4 w-4 text-gray-400" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Coming soon
-                </h3>
-              </div>
-            )}
-            <div className="space-y-2">
-              {upcomingFeatures.map((item) => {
-                const FeatureIcon = item.icon || ChartBarIcon;
-                return (
-                  <div
-                    key={`coming-soon-${item.href}-${item.name}`}
-                    className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-400 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-500 opacity-70 cursor-not-allowed select-none"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FeatureIcon className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">
-                          {item.name}
-                        </p>
-                        <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-600">
-                          {item.description || 'Feature coming soon'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
-                      {item.badge || 'Soon'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </nav>
 
-      {/* Enhanced Footer */}
-      {!isCollapsed && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
-          <div className="text-center">
-            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <p className="font-medium">SmartAccounting Suite</p>
-              <p>Version 2.1.0 Professional</p>
-              <p>© 2024 MH Trading UG</p>
-            </div>
-            <div className="mt-3 flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-              <span className="text-xs text-emerald-600 font-medium">System Healthy</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

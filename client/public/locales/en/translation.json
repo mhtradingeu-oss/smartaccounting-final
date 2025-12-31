@@ -3,6 +3,35 @@
   "login": "Login",
   "email": "Email",
   "password": "Password",
+  "theme": {
+    "light": "Light mode",
+    "dark": "Dark mode"
+  },
+  "topbar": {
+    "search_results_title": "Search Results",
+    "search_results_empty": "No matches found",
+    "no_company": "No company",
+    "notifications": {
+      "bulk_actions_coming_soon": "Bulk notification actions are coming soon.",
+      "full_inbox_coming_soon": "The full notification inbox is coming soon.",
+      "action_coming_soon": "This action will be available soon.",
+      "mark_all": "Mark all as read"
+    },
+    "profile": {
+      "open_menu": "Open profile menu",
+      "session_hint": "Sessions stay active until you log out or close your browser.",
+      "session_read_only": "Read-only session",
+      "session_full_access": "Full access",
+      "profile_tooltip": "Profile details are coming soon.",
+      "view": "Profile",
+      "plan_professional": "Professional",
+      "plan_pro": "Pro"
+    }
+  },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar"
+  },
   "dashboard": {
     "title": "Dashboard",
     "overview": "Overview",
@@ -42,7 +71,53 @@
     "analytics_desc": "View detailed analytics"
   },
   "navigation": {
-    "ocr_preview": "OCR Preview"
+    "main": "Main",
+    "management": "Management",
+    "system": "System",
+    "dashboard": "Dashboard",
+    "invoices": "Invoices",
+    "bank_statements": "Bank Statements",
+    "ocr_preview": "OCR Preview",
+    "german_tax": "German Tax",
+    "billing": "Billing",
+    "compliance": "Compliance",
+    "companies": "Companies",
+    "users": "Users",
+    "administration": "Administration",
+    "ai_assistant": "AI Assistant"
+  },
+  "auth": {
+    "logout": "Logout"
+  },
+  "states": {
+    "loading": {
+      "title": "Loading…",
+      "description": "Hang tight while we fetch your data."
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "description": "Start by creating data or refreshing the filters.",
+      "action": "Add data"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "description": "We can’t load this right now. Try again.",
+      "help": "If this continues, contact support."
+    },
+    "no_access": {
+      "title": "Select a company",
+      "description": "Data is scoped to a company. Choose one to continue.",
+      "action": "Select company"
+    },
+    "read_only": {
+      "label": "Read-only:",
+      "default_message": "You have view-only access. Actions are disabled for your role.",
+      "details": "To make changes, please contact your administrator or request a higher access role.",
+      "dashboard_notice": "Dashboard actions are disabled for your role.",
+      "invoices_notice": "Invoice creation and editing are disabled for your role.",
+      "expenses_notice": "Expenses are view-only.",
+      "bank_statements_notice": "Bank statements are in read-only mode until the preview is complete."
+    }
   },
   "invoices": "Invoices",
   "taxReports": "Tax Reports",
@@ -53,7 +128,9 @@
   "success": "Success",
   "companies": "Companies",
   "users": "Users",
-  "settings": "Settings",
+  "settings": {
+    "title": "Settings"
+  },
   "profile": "Profile",
   "reports": "Reports",
   "compliance": "Compliance",
@@ -152,5 +229,9 @@
     "back": "Back",
     "next": "Next",
     "previous": "Previous"
+  },
+  "footer": {
+    "version": "Version 2.1.0 Professional",
+    "copyright": "© {{year}} SmartAccounting"
   }
 }

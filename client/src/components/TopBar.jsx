@@ -14,14 +14,12 @@ import {
   SunIcon,
   MoonIcon,
   UserCircleIcon,
-  Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
   XMarkIcon,
-  BookmarkIcon,
   ClockIcon,
   CalendarDaysIcon,
   CurrencyEuroIcon,
@@ -276,7 +274,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 max-h-96 overflow-y-auto z-50">
                 <div className="p-3">
                   <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    Search Results
+                    {t('topbar.search_results_title')}
                   </div>
                   {filteredSearchResults.map((result, index) => (
                     <Link
@@ -308,7 +306,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
             {companies?.length > 0 ? (
               <CompanySelector />
             ) : (
-              <span className="text-xs text-gray-400">No company</span>
+              <span className="text-xs text-gray-400">{t('topbar.no_company')}</span>
             )}
             {user?.role && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 dark:from-primary-900/20 dark:to-blue-900/20 dark:text-primary-200 opacity-80">
@@ -434,7 +432,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                   <button
                                     disabled
                                     className="text-xs opacity-50 cursor-not-allowed"
-                                    title="This action will be available soon."
+                                    title={t('topbar.notifications.action_coming_soon')}
+                                    aria-label={t('topbar.notifications.action_coming_soon')}
                                   >
                                     {notification.action}
                                   </button>
@@ -463,14 +462,16 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                         <button
                           disabled
                           className="text-sm opacity-50 cursor-not-allowed"
-                          title="Bulk notification actions are coming soon."
+                          title={t('topbar.notifications.bulk_actions_coming_soon')}
+                          aria-label={t('topbar.notifications.bulk_actions_coming_soon')}
                         >
-                          Mark all as read
+                          {t('topbar.notifications.mark_all')}
                         </button>
                         <button
                           disabled
                           className="text-sm opacity-50 cursor-not-allowed"
-                          title="The full notification inbox is coming soon."
+                          title={t('topbar.notifications.full_inbox_coming_soon')}
+                          aria-label={t('topbar.notifications.full_inbox_coming_soon')}
                         >
                           {t('notifications.view_all')} →
                         </button>
@@ -486,7 +487,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center space-x-3 p-2 text-sm rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
-                aria-label="Open profile menu"
+                aria-label={t('topbar.profile.open_menu')}
               >
                 <div className="relative">
                   <UserCircleIconSolid className="h-8 w-8 text-gray-400" />
@@ -497,20 +498,20 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     {user?.firstName} {user?.lastName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {user?.role} • {user?.subscriptionPlan || 'Professional'}
+                    {user?.role} • {user?.subscriptionPlan || t('topbar.profile.plan_professional')}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
-                    {isReadOnlySession ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                        <LockClosedIcon className="h-3 w-3" />
-                        Read-only session
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        <CheckCircleIcon className="h-3 w-3" />
-                        Full access
-                      </span>
-                    )}
+                  {isReadOnlySession ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                      <LockClosedIcon className="h-3 w-3" />
+                      {t('topbar.profile.session_read_only')}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      <CheckCircleIcon className="h-3 w-3" />
+                      {t('topbar.profile.session_full_access')}
+                    </span>
+                  )}
                   </div>
                 </div>
                 <ChevronDownIcon
@@ -536,7 +537,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                             {user?.role}
                           </span>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
-                            {user?.subscriptionPlan || 'Pro'}
+                            {user?.subscriptionPlan || t('topbar.profile.plan_pro')}
                           </span>
                         </div>
                       </div>
@@ -547,34 +548,18 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     <button
                       disabled
                       className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
-                      title="Profile details are coming soon."
+                      title={t('topbar.profile.profile_tooltip')}
+                      aria-label={t('topbar.profile.profile_tooltip')}
                     >
                       <UserCircleIcon className="h-4 w-4 mr-3" />
-                      {t('profile.view')}
+                      {t('topbar.profile.view')}
                       <span className="ml-auto text-xs text-gray-400">⌘P</span>
-                    </button>
-                    <button
-                      disabled
-                      className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
-                      title="Settings will be available soon."
-                    >
-                      <Cog6ToothIcon className="h-4 w-4 mr-3" />
-                      {t('settings.title')}
-                      <span className="ml-auto text-xs text-gray-400">⌘,</span>
-                    </button>
-                    <button
-                      disabled
-                      className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
-                      title="Bookmarks are coming soon."
-                    >
-                      <BookmarkIcon className="h-4 w-4 mr-3" />
-                      Bookmarks
                     </button>
                   </div>
 
                   <div className="py-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
                     <p className="text-xs text-gray-500">
-                      Sessions stay active until you log out or close your browser.
+                      {t('topbar.profile.session_hint')}
                     </p>
                     <button
                       onClick={handleLogout}

@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { EmptyState } from '../components/ui/EmptyState';
-import LoadingSpinner from '../components/LoadingSpinner';
+import {
+  PageLoadingState,
+  PageEmptyState,
+  PageErrorState,
+  PageNoAccessState,
+} from '../components/ui/PageStates';
 import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
 import { formatApiError } from '../services/api';
 import { invoicesAPI } from '../services/invoicesAPI';
@@ -48,6 +53,7 @@ const Invoices = () => {
   const { activeCompany } = useCompany();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -120,18 +126,7 @@ const Invoices = () => {
   const showingEnd = Math.min(filteredInvoices.length, page * PAGE_SIZE);
 
   if (!activeCompany) {
-    return (
-      <EmptyState
-        title="Select a company"
-        description="Invoices are scoped per company. Choose an active company before continuing."
-        action={
-          <Button variant="primary" onClick={() => navigate('/companies')}>
-            Select company
-          </Button>
-        }
-        help="You can only view and create invoices for your active company."
-      />
-    );
+    return <PageNoAccessState />;
   }
 
   return (
@@ -155,10 +150,7 @@ const Invoices = () => {
         </div>
       </div>
       {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner
-          mode="Viewer"
-          message="You have view-only access. Invoice creation and editing are disabled for your role."
-        />
+        <ReadOnlyBanner mode="Viewer" message={t('states.read_only.invoices_notice')} />
       )}
       <Card>
         <div className="space-y-6">
@@ -194,27 +186,18 @@ const Invoices = () => {
           </div>
           {/* Table or states */}
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <LoadingSpinner size="lg" />
-            </div>
+            <PageLoadingState />
           ) : error ? (
-            <div className="flex flex-col items-center justify-center gap-4 py-12">
-              <p className="text-center text-sm font-semibold text-red-600">{error.message}</p>
-              {error.retryable && (
-                <Button onClick={fetchInvoices} variant="primary" size="medium">
-                  Retry
-                </Button>
-              )}
-            </div>
+            <PageErrorState onRetry={fetchInvoices} />
           ) : filteredInvoices.length === 0 ? (
-            <EmptyState
-              title="No invoices yet"
-              description="Create your first invoice or try a different filter."
+            <PageEmptyState
               action={
                 <PermissionGuard action="invoice.create" role={user?.role}>
-                  <Button variant="primary" onClick={() => navigate('/invoices/create')}>
-                    Create invoice
-                  </Button>
+                  <Link to="/invoices/create">
+                    <Button variant="primary" size="md">
+                      {t('states.empty.action')}
+                    </Button>
+                  </Link>
                 </PermissionGuard>
               }
             />
