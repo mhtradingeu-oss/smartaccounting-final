@@ -26,7 +26,12 @@
       "view": "Profile",
       "plan_professional": "Professional",
       "plan_pro": "Pro"
-    }
+    },
+    "current_time_label": "Current time"
+  },
+  "company_selector": {
+    "label": "Switch company",
+    "placeholder": "Select company"
   },
   "sidebar": {
     "expand": "Expand sidebar",
@@ -229,6 +234,9 @@
     "back": "Back",
     "next": "Next",
     "previous": "Previous"
+  },
+  "language": {
+    "switcher_label": "Change language"
   },
   "footer": {
     "version": "Version 2.1.0 Professional",

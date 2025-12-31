@@ -261,6 +261,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                 }}
                 className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white/80 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800/80 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 transition-all duration-200"
                 placeholder={t('search.enhanced_placeholder')}
+                aria-label={t('search.enhanced_placeholder')}
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center space-x-2">
                 <kbd className="hidden sm:inline-block px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600">
@@ -271,17 +272,24 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
 
             {/* Enhanced Search Results */}
             {showSearchResults && filteredSearchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 max-h-96 overflow-y-auto z-50">
-                <div className="p-3">
-                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    {t('topbar.search_results_title')}
-                  </div>
-                  {filteredSearchResults.map((result, index) => (
+            <div
+              className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 max-h-96 overflow-y-auto z-50"
+              role="listbox"
+              aria-label={t('topbar.search_results_title')}
+              aria-live="polite"
+            >
+              <div className="p-3">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  {t('topbar.search_results_title')}
+                </div>
+                {filteredSearchResults.map((result, index) => (
                     <Link
-                      key={index}
+                      key={`${result.type}-${result.title}`}
                       to={result.href}
                       className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
                       onClick={() => setSearchQuery('')}
+                      role="option"
+                      aria-label={`${result.title} • ${result.subtitle}`}
                     >
                       <div className="flex-shrink-0">
                         <result.icon className="h-5 w-5 text-gray-400" />
@@ -317,7 +325,12 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
           {/* Right side enhanced actions */}
           <div className="flex items-center space-x-4">
             {/* Current Time Display */}
-            <div className="hidden lg:flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
+            <div
+              className="hidden lg:flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-label={`${t('topbar.current_time_label')}: ${currentTime}. ${currentDate}`}
+            >
               <ClockIcon className="h-4 w-4" />
               <span className="font-medium">{currentTime}</span>
               <span className="text-gray-400">•</span>
@@ -333,6 +346,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
               onClick={onToggleDarkMode}
               className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all duration-200 relative group"
               aria-label={isDarkMode ? t('theme.light') : t('theme.dark')}
+              aria-pressed={isDarkMode}
             >
               <div className="relative">
                 {isDarkMode ? (
@@ -349,6 +363,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                 className="relative p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all duration-200 group"
                 aria-label={t('notifications.title')}
+                aria-expanded={isNotificationsOpen}
               >
                 {unreadCount > 0 ? (
                   <BellIconSolid className="h-5 w-5 text-primary-500 animate-bounce-gentle" />
@@ -365,7 +380,11 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
               </button>
 
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 animate-fade-in max-h-[32rem] overflow-hidden">
+                <div
+                  className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 animate-fade-in max-h-[32rem] overflow-hidden"
+                  role="region"
+                  aria-label={t('notifications.title')}
+                >
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-800">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -380,6 +399,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                         <button
                           onClick={() => setIsNotificationsOpen(false)}
                           className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          type="button"
+                          aria-label={t('common.close')}
                         >
                           <XMarkIcon className="h-4 w-4" />
                         </button>
@@ -425,7 +446,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                     to={notification.href}
                                     className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
                                     onClick={() => setIsNotificationsOpen(false)}
-                                  >
+                                    type="button"
+                                    >
                                     {notification.action} →
                                   </Link>
                                 ) : notification.action ? (
@@ -434,6 +456,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                     className="text-xs opacity-50 cursor-not-allowed"
                                     title={t('topbar.notifications.action_coming_soon')}
                                     aria-label={t('topbar.notifications.action_coming_soon')}
+                                    aria-disabled="true"
+                                    type="button"
                                   >
                                     {notification.action}
                                   </button>
@@ -460,18 +484,22 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-between items-center">
                         <button
+                          type="button"
                           disabled
                           className="text-sm opacity-50 cursor-not-allowed"
                           title={t('topbar.notifications.bulk_actions_coming_soon')}
                           aria-label={t('topbar.notifications.bulk_actions_coming_soon')}
+                          aria-disabled="true"
                         >
                           {t('topbar.notifications.mark_all')}
                         </button>
                         <button
+                          type="button"
                           disabled
                           className="text-sm opacity-50 cursor-not-allowed"
                           title={t('topbar.notifications.full_inbox_coming_soon')}
                           aria-label={t('topbar.notifications.full_inbox_coming_soon')}
+                          aria-disabled="true"
                         >
                           {t('notifications.view_all')} →
                         </button>
@@ -488,6 +516,8 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center space-x-3 p-2 text-sm rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
                 aria-label={t('topbar.profile.open_menu')}
+                aria-haspopup="true"
+                aria-expanded={isProfileOpen}
               >
                 <div className="relative">
                   <UserCircleIconSolid className="h-8 w-8 text-gray-400" />

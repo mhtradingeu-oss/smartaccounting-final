@@ -59,24 +59,25 @@ export const Button = React.forwardRef(
     const isDisabled = disabled || loading;
     const sizeStyle = sizeStyles[size] || sizeStyles.md;
     return (
-      <button
-        ref={ref}
-        type={props.type || 'button'}
-        className={clsx(
-          'inline-flex items-center justify-center gap-2 rounded font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed',
-          variantClasses[variant],
-          className,
-        )}
-        style={{
-          borderRadius: designTokens.radius.base,
-          boxShadow: isDisabled ? 'none' : designTokens.shadow.base,
-          padding: sizeStyle.padding,
-          fontSize: sizeStyle.fontSize,
-        }}
-        disabled={isDisabled}
-        aria-busy={loading}
-        {...props}
-      >
+    <button
+      ref={ref}
+      type={props.type || 'button'}
+      className={clsx(
+        'inline-flex items-center justify-center gap-2 rounded font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed',
+        variantClasses[variant],
+        className,
+      )}
+      style={{
+        borderRadius: designTokens.radius.base,
+        boxShadow: isDisabled ? 'none' : designTokens.shadow.base,
+        padding: sizeStyle.padding,
+        fontSize: sizeStyle.fontSize,
+      }}
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      aria-busy={loading}
+      {...props}
+    >
         {loading && <Spinner variant={variant} />}
         <span className={loading ? 'opacity-80' : undefined}>{children}</span>
       </button>

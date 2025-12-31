@@ -212,42 +212,25 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     }
     // DISABLED (not clickable, with tooltip)
     return (
-      <div
+      <button
         key={`${sectionKey}-${item.name}`}
-        className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-50 cursor-not-allowed"
+        type="button"
+        className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-60 cursor-not-allowed text-gray-500 dark:text-gray-400"
         title={item.description ? `${item.description} (Coming soon)` : 'Coming soon'}
         aria-disabled="true"
-        tabIndex={-1}
+        disabled
         onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.name}-${index}`)}
         onMouseLeave={() => setHoveredItem(null)}
       >
-        <div className="flex items-center w-full">
+        <div className="flex items-center w-full gap-3">
           <div className="flex-shrink-0">
-            <IconComponent className="h-5 w-5" />
+            <IconComponent className="h-5 w-5" aria-hidden="true" />
           </div>
           {!isCollapsed && (
-            <>
-              <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
-              <span className="ml-2 text-gray-400" title="Feature preview">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 inline"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 17v.01M12 7v4m0 4h.01M17 7a5 5 0 00-10 0v4a5 5 0 0010 0V7z"
-                  />
-                </svg>
-              </span>
-            </>
+            <span className="flex-1 text-left truncate">{item.name}</span>
           )}
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -326,6 +309,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         )}
 
         <button
+          type="button"
           onClick={onToggleCollapse}
           className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all duration-200 shadow-sm"
           aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}

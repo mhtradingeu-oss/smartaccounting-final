@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const LanguageSwitcher = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const toggleId = useId();
+  const menuId = `${toggleId}-menu`;
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -23,6 +25,12 @@ const LanguageSwitcher = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        type="button"
+        id={toggleId}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        aria-label={t('language.switcher_label')}
       >
         <span className="text-lg">{currentLanguage.flag}</span>
         <span>{currentLanguage.name}</span>
@@ -32,7 +40,12 @@ const LanguageSwitcher = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-50">
+      <div
+        className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-50"
+        role="menu"
+        id={menuId}
+        aria-labelledby={toggleId}
+      >
           {languages.map((language) => (
             <button
               key={language.code}
@@ -40,6 +53,10 @@ const LanguageSwitcher = () => {
               className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center space-x-3 ${
                 i18n.language === language.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
               }`}
+              type="button"
+              role="menuitemradio"
+              aria-checked={i18n.language === language.code}
+              aria-label={language.name}
             >
               <span className="text-lg">{language.flag}</span>
               <span>{language.name}</span>
