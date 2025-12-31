@@ -47,7 +47,7 @@
 | Path | Methods | Notes |
 | --- | --- | --- |
 | `/api/dashboard/stats` | GET | Dashboard KPIs |
-| `/api/monitoring/logs` | GET | Aggregated monitoring logs |
+| `/api/monitoring/logs` | GET | Aggregated monitoring logs (disabled by default; enable `MONITORING_ENABLED=true` to expose) |
 | `/api/system/health-detailed` | GET | Detailed system snapshot |
 | `/api/system/info` | GET | Metadata endpoint |
 | `/api/system/version` | GET | App version / git info |
