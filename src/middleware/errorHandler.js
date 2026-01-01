@@ -3,7 +3,8 @@ const logger = require('../lib/logger');
 
 const formatErrorDetails = (errorList = []) => errorList.map((el) => el.message);
 
-const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused-vars
+const errorHandler = (err, req, res, next) => {
+  // eslint-disable-line no-unused-vars
   if (res.headersSent) {
     return next(err);
   }
@@ -38,12 +39,10 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
     message = 'Server error';
   }
 
-  const isOperational =
-    err.isOperational ||
-    statusCode < 500 ||
-    operationalError.length > 0;
+  const isOperational = err.isOperational || statusCode < 500 || operationalError.length > 0;
 
   const logPayload = {
+    requestId: req.id,
     error: err.message,
     code,
     url: req.originalUrl,
@@ -60,6 +59,7 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
   const response = {
     status: 'error',
     message,
+    requestId: req.id,
   };
 
   if (code) {
