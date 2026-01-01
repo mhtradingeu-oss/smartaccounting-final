@@ -2,6 +2,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import ErrorState from './ErrorState';
+import { useLocation } from 'react-router-dom';
+import { reportClientError } from '../lib/telemetryClient';
+
+const appVersion = import.meta.env.VITE_APP_VERSION || 'unknown';
 
 class AppErrorBoundaryInner extends React.Component {
   constructor(props) {
@@ -17,8 +21,25 @@ class AppErrorBoundaryInner extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // Only log in dev
     if (import.meta.env.DEV) {
       console.error('AppErrorBoundary caught an error:', error, errorInfo);
+    }
+    // Telemetry: only in production and if enabled
+    if (import.meta.env.VITE_TELEMETRY_ENABLED === 'true') {
+      try {
+        const route = window.location.pathname;
+        const version = appVersion;
+        const requestId = window.__LAST_REQUEST_ID__ || null;
+        reportClientError({
+          route,
+          version,
+          requestId,
+          errorType: 'AppErrorBoundary',
+        });
+      } catch (e) {
+        void e;
+      }
     }
   }
 
@@ -59,9 +80,7 @@ class AppErrorBoundaryInner extends React.Component {
           <div>
             <ErrorState onRetry={this.handleRetry} />
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t('states.error.help')}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('states.error.help')}</p>
           <div className="flex flex-col gap-3 items-center">
             <button
               type="button"
@@ -74,9 +93,7 @@ class AppErrorBoundaryInner extends React.Component {
           {import.meta.env.DEV && this.state.error?.stack && (
             <details className="text-xs text-left text-gray-500 dark:text-gray-400">
               <summary className="cursor-pointer">Error stack</summary>
-              <pre className="mt-2 whitespace-pre-wrap text-[11px]">
-                {this.state.error.stack}
-              </pre>
+              <pre className="mt-2 whitespace-pre-wrap text-[11px]">{this.state.error.stack}</pre>
             </details>
           )}
         </div>
@@ -88,7 +105,7 @@ class AppErrorBoundaryInner extends React.Component {
 export default function AppErrorBoundary({ children }) {
   const { logout } = useAuth();
   const { t } = useTranslation();
-
+  useLocation(); // ensure rerender on route change
   return (
     <AppErrorBoundaryInner logout={logout} t={t}>
       {children}

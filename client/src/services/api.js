@@ -124,19 +124,33 @@ api.interceptors.request.use(
 /* ================================
    RESPONSE INTERCEPTOR
 ================================ */
+// Global for last requestId (safe, not PII)
+if (typeof window !== 'undefined') {
+  window.__LAST_REQUEST_ID__ = null;
+}
+
 api.interceptors.response.use(
   (response) => {
+    // Capture X-Request-Id from headers
+    const reqId = response.headers?.['x-request-id'] || response.headers?.['X-Request-Id'];
+    if (reqId && typeof window !== 'undefined') {
+      window.__LAST_REQUEST_ID__ = reqId;
+    }
     if (isDev) {
       console.log(`⬅️ ${response.status} ${response.config.url}`);
     }
     return response;
   },
   (error) => {
+    // Also try to capture from error responses
+    const reqId =
+      error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['X-Request-Id'];
+    if (reqId && typeof window !== 'undefined') {
+      window.__LAST_REQUEST_ID__ = reqId;
+    }
     if (error.response) {
       const { status } = error.response;
-
       logError(`❌ API Error ${status}`, error.response.data);
-
       if (status === 401) {
         emitForceLogout();
       }
@@ -145,7 +159,6 @@ api.interceptors.response.use(
     } else {
       logError('❌ Unknown API error:', error.message);
     }
-
     return Promise.reject(error);
   },
 );
