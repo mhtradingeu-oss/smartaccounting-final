@@ -1,11 +1,12 @@
 process.env.NODE_ENV = 'test';
-const request = require('supertest');
 const app = require('../../src/app');
+const createRequest = require('../utils/request');
+const request = createRequest(app);
 
 describe('AI meta logging invariants', () => {
   it('AI read endpoint includes requestId and does not crash with meta registry', async () => {
     // Use app directly, not handler
-    const res = await request(app)
+    const res = await request
       .get('/api/v1/ai/read/monthly-overview?month=2026-01&prompt=hello')
       .set('Authorization', 'Bearer test-token');
 

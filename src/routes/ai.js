@@ -36,7 +36,16 @@ router.get('/insights', async (req, res) => {
 });
 
 // POST /api/ai/insights/:id/decisions
-router.post('/insights/:id/decisions', disabledFeatureHandler('AI decision capture'));
+const decisionValidator = require('../services/ai/decision/decisionValidator');
+const decisionService = require('../services/ai/decision/decisionService');
+
+router.post('/insights/:id/decisions', requireRole(['admin', 'accountant']), async (req, res) => {
+  // 🔒 HARD READ-ONLY GUARD
+  return res.status(501).json({
+    feature: 'AI decision capture',
+    status: 'disabled',
+  });
+});
 
 // GET /api/ai/exports/insights.json
 router.get('/exports/insights.json', async (req, res) => {

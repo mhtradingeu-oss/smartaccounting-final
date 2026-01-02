@@ -2,43 +2,71 @@ const { Model } = require('sequelize');
 
 class Company extends Model {
   static associate(models) {
-    Company.hasMany(models.User, {
-      foreignKey: 'companyId',
-      as: 'users',
+    const safeAssociate = (targetModel, alias, associateFn) => {
+      if (
+        !targetModel ||
+        targetModel.sequelize !== this.sequelize ||
+        this.associations?.[alias]
+      ) {
+        return;
+      }
+      associateFn(targetModel);
+    };
+
+    safeAssociate(models.User, 'users', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'users',
+      });
     });
 
-    Company.hasMany(models.Invoice, {
-      foreignKey: 'companyId',
-      as: 'invoices',
-    });
-    Company.hasMany(models.Expense, {
-      foreignKey: 'companyId',
-      as: 'expenses',
+    safeAssociate(models.Invoice, 'invoices', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'invoices',
+      });
     });
 
-    Company.hasMany(models.Transaction, {
-      foreignKey: 'companyId',
-      as: 'transactions',
+    safeAssociate(models.Expense, 'expenses', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'expenses',
+      });
     });
 
-    Company.hasMany(models.BankStatement, {
-      foreignKey: 'companyId',
-      as: 'bankStatements',
+    safeAssociate(models.Transaction, 'transactions', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'transactions',
+      });
     });
 
-    Company.hasMany(models.BankTransaction, {
-      foreignKey: 'companyId',
-      as: 'bankTransactions',
+    safeAssociate(models.BankStatement, 'bankStatements', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'bankStatements',
+      });
     });
 
-    Company.hasMany(models.TaxReport, {
-      foreignKey: 'companyId',
-      as: 'taxReports',
+    safeAssociate(models.BankTransaction, 'bankTransactions', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'bankTransactions',
+      });
     });
 
-    Company.hasMany(models.FileAttachment, {
-      foreignKey: 'companyId',
-      as: 'attachments',
+    safeAssociate(models.TaxReport, 'taxReports', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'taxReports',
+      });
+    });
+
+    safeAssociate(models.FileAttachment, 'attachments', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'companyId',
+        as: 'attachments',
+      });
     });
   }
 }

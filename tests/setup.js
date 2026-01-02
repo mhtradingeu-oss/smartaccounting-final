@@ -7,9 +7,7 @@ const bcrypt = require('bcryptjs');
 process.env.NODE_ENV = 'test';
 process.env.USE_SQLITE = 'true';
 delete process.env.DATABASE_URL;
-const { getSequelize } = require('../src/config/database');
-const sequelize = getSequelize();
-console.log('[Sequelize Instance] tests/setup.js', sequelize);
+const { sequelize } = require('../src/lib/database');
 
 // ===============================
 // Silence logs globally in tests

@@ -23,7 +23,14 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   ActiveToken.associate = (models) => {
-    ActiveToken.belongsTo(models.User, { foreignKey: 'userId' });
+    const target = models?.User;
+    if (
+      target &&
+      target.sequelize === ActiveToken.sequelize &&
+      !ActiveToken.associations?.user
+    ) {
+      ActiveToken.belongsTo(target, { foreignKey: 'userId', as: 'user' });
+    }
   };
 
   return ActiveToken;
