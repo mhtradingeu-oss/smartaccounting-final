@@ -154,23 +154,4 @@ app.use('*', (req, res) => {
 
 app.use(errorHandler);
 
-const originalListen = app.listen.bind(app);
-app.listen = function (port, ...args) {
-  if (!args.length || typeof args[0] === 'function') {
-    return originalListen(port, '127.0.0.1', ...args);
-  }
-  return originalListen(port, ...args);
-};
-
-if (process.env.NODE_ENV === 'test') {
-  const http = require('http');
-  const originalServerListen = http.Server.prototype.listen;
-  http.Server.prototype.listen = function (port, ...args) {
-    if (typeof port === 'number' && (args.length === 0 || typeof args[0] === 'function')) {
-      return originalServerListen.call(this, port, '127.0.0.1', ...args);
-    }
-    return originalServerListen.call(this, port, ...args);
-  };
-}
-
 module.exports = app;

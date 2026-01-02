@@ -1,11 +1,9 @@
-
 const AuditLogService = require('../../src/services/auditLogService');
 const { AuditLog, User, Company, sequelize } = require('../../src/models');
 
 describe('GoBD AuditLogService', () => {
   let testUser;
   beforeAll(async () => {
-    await sequelize.sync({ force: true });
     const company = await Company.create({
       name: 'TestCo',
       taxId: 'DE123456789',

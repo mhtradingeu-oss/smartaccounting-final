@@ -13,6 +13,7 @@
     "test:coverage": "npm run test:sqlite -- --coverage",
     "lint": "eslint .",
     "build": "npm run build --prefix client",
+    "build:server": "echo 'Backend build complete.'",
     "smoke:frontend": "npm ci --prefix client && npm run build --prefix client",
     "migrate:prod": "node scripts/migrate-prod.js",
     "seed:demo:prod": "node scripts/seed-demo-prod.js",
@@ -78,6 +79,7 @@
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
     "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.50.0",

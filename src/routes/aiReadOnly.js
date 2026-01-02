@@ -8,10 +8,12 @@ const {
   logRejected,
   logSessionEvent,
 } = require('../services/ai/aiAuditLogger');
+
 const aiReadOnlyGuard = require('../middleware/aiReadOnlyGuard');
 const rateLimit = require('../middleware/aiRateLimit');
 const { detectMutationIntent } = require('../services/ai/mutationIntent');
 const { randomUUID } = require('crypto');
+const { getPromptMeta } = require('../services/ai/promptRegistry');
 
 const router = express.Router();
 
@@ -50,19 +52,58 @@ router.get('/invoice-summary', async (req, res, next) => {
     const route = req.originalUrl;
     const queryType = 'invoice_summary';
     if (!companyId) {
-      await logRejected({ userId, companyId, queryType, route, prompt, reason: 'Missing companyId' });
+      await logRejected({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        reason: 'Missing companyId',
+      });
       return res.status(403).json({ error: 'companyId required' });
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      await logRejected({ userId, companyId, queryType, route, prompt, reason: 'Query not allowed' });
+      await logRejected({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        reason: 'Query not allowed',
+      });
       return res.status(400).json({ error: 'Query not allowed' });
     }
     if (await rejectIfMutationIntent({ userId, companyId, queryType, route, prompt }, res)) {
       return;
     }
-    await logRequested({ userId, companyId, queryType, route, prompt });
+    const meta = getPromptMeta(queryType);
+    let hasLoggedRequest = false;
+    const ensureLogRequested = async (extra = {}) => {
+      if (hasLoggedRequest) {return;}
+      hasLoggedRequest = true;
+      // ...existing code...
+      // logRequested is only called via ensureLogRequested
+      await logRequested({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        ...extra,
+        meta,
+      });
+    };
+    await ensureLogRequested();
     const summary = await aiDataService.getInvoiceSummary(companyId, invoiceId);
-    await logResponded({ userId, companyId, queryType, route, prompt, responseMeta: { insightCount: summary ? 1 : 0 } });
+    await logResponded({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      meta,
+      responseMeta: { insightCount: summary ? 1 : 0 },
+    });
     res.json({ summary });
   } catch (err) {
     next(err);
@@ -78,19 +119,58 @@ router.get('/monthly-overview', async (req, res, next) => {
     const route = req.originalUrl;
     const queryType = 'monthly_overview';
     if (!companyId) {
-      await logRejected({ userId, companyId, queryType, route, prompt, reason: 'Missing companyId' });
+      await logRejected({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        reason: 'Missing companyId',
+      });
       return res.status(403).json({ error: 'companyId required' });
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      await logRejected({ userId, companyId, queryType, route, prompt, reason: 'Query not allowed' });
+      await logRejected({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        reason: 'Query not allowed',
+      });
       return res.status(400).json({ error: 'Query not allowed' });
     }
     if (await rejectIfMutationIntent({ userId, companyId, queryType, route, prompt }, res)) {
       return;
     }
-    await logRequested({ userId, companyId, queryType, route, prompt });
+    const meta = getPromptMeta(queryType);
+    let hasLoggedRequest = false;
+    const ensureLogRequested = async (extra = {}) => {
+      if (hasLoggedRequest) {return;}
+      hasLoggedRequest = true;
+      // ...existing code...
+      // logRequested is only called via ensureLogRequested
+      await logRequested({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        ...extra,
+        meta,
+      });
+    };
+    await ensureLogRequested();
     const overview = await aiDataService.getMonthlyOverview(companyId, month);
-    await logResponded({ userId, companyId, queryType, route, prompt, responseMeta: { insightCount: overview ? 1 : 0 } });
+    await logResponded({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      meta,
+      responseMeta: { insightCount: overview ? 1 : 0 },
+    });
     res.json({ overview });
   } catch (err) {
     next(err);
@@ -106,19 +186,58 @@ router.get('/reconciliation-summary', async (req, res, next) => {
     const route = req.originalUrl;
     const queryType = 'reconciliation_summary';
     if (!companyId) {
-      await logRejected({ userId, companyId, queryType, route, prompt, reason: 'Missing companyId' });
+      await logRejected({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        reason: 'Missing companyId',
+      });
       return res.status(403).json({ error: 'companyId required' });
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      await logRejected({ userId, companyId, queryType, route, prompt, reason: 'Query not allowed' });
+      await logRejected({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        reason: 'Query not allowed',
+      });
       return res.status(400).json({ error: 'Query not allowed' });
     }
     if (await rejectIfMutationIntent({ userId, companyId, queryType, route, prompt }, res)) {
       return;
     }
-    await logRequested({ userId, companyId, queryType, route, prompt });
+    const meta = getPromptMeta(queryType);
+    let hasLoggedRequest = false;
+    const ensureLogRequested = async (extra = {}) => {
+      if (hasLoggedRequest) {return;}
+      hasLoggedRequest = true;
+      // ...existing code...
+      // logRequested is only called via ensureLogRequested
+      await logRequested({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        ...extra,
+        meta,
+      });
+    };
+    await ensureLogRequested();
     const summary = await aiDataService.getReconciliationSummary(companyId, range);
-    await logResponded({ userId, companyId, queryType, route, prompt, responseMeta: { insightCount: summary ? 1 : 0 } });
+    await logResponded({
+      userId,
+      companyId,
+      queryType,
+      route,
+      prompt,
+      meta,
+      responseMeta: { insightCount: summary ? 1 : 0 },
+    });
     res.json({ summary });
   } catch (err) {
     next(err);
@@ -156,15 +275,24 @@ router.get('/assistant', async (req, res, next) => {
       return res.status(400).json({ error: 'Intent not supported' });
     }
     const context = await aiAssistantService.getContext(companyId);
-    await logRequested({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt,
-      responseMeta: { sessionId, targetInsightId },
-      sessionId,
-    });
+    const meta = getPromptMeta(queryType);
+    let hasLoggedRequest = false;
+    const ensureLogRequested = async (extra = {}) => {
+      if (hasLoggedRequest) {return;}
+      hasLoggedRequest = true;
+      // ...existing code...
+      // logRequested is only called via ensureLogRequested
+      await logRequested({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        ...extra,
+        meta,
+      });
+    };
+    await ensureLogRequested({ responseMeta: { sessionId, targetInsightId }, sessionId });
     const answer = aiAssistantService.answerIntent({ intent, context, targetInsightId });
     await logResponded({
       userId,
@@ -172,6 +300,7 @@ router.get('/assistant', async (req, res, next) => {
       queryType,
       route,
       prompt,
+      meta,
       responseMeta: { sessionId, targetInsightId },
       sessionId,
     });
@@ -192,15 +321,24 @@ router.get('/session', async (req, res, next) => {
     const route = req.originalUrl;
     const queryType = 'assistant_session';
     const sessionId = randomUUID();
-    await logRequested({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt,
-      responseMeta: { sessionId },
-      sessionId,
-    });
+    const meta = getPromptMeta(queryType);
+    let hasLoggedRequest = false;
+    const ensureLogRequested = async (extra = {}) => {
+      if (hasLoggedRequest) {return;}
+      hasLoggedRequest = true;
+      // ...existing code...
+      // logRequested is only called via ensureLogRequested
+      await logRequested({
+        userId,
+        companyId,
+        queryType,
+        route,
+        prompt,
+        ...extra,
+        meta,
+      });
+    };
+    await ensureLogRequested({ responseMeta: { sessionId }, sessionId });
     await logSessionEvent({
       userId,
       companyId,
@@ -215,6 +353,7 @@ router.get('/session', async (req, res, next) => {
       queryType,
       route,
       prompt,
+      meta,
       responseMeta: { sessionId },
       sessionId,
     });

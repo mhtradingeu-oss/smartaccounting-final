@@ -1,3 +1,8 @@
+// Alias for gateway compatibility
+async function getInsight(context) {
+  // context: { companyId, ... }
+  return listInsights(context.companyId, context.filters || {});
+}
 const { AIInsight, AIInsightDecision, Company } = require('../../models');
 const { logAIEvent } = require('./auditLogger');
 const { detectInvoiceAnomaly } = require('./insightTypes');
@@ -188,4 +193,5 @@ module.exports = {
   listInsights,
   decideInsight,
   exportInsights,
+  getInsight,
 };

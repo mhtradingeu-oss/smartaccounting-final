@@ -11,7 +11,6 @@ describe('Runtime Guards Integration', () => {
   let authToken;
 
   beforeAll(async () => {
-    await sequelize.sync({ force: true });
     testCompany = await Company.create({
       name: 'NoAI Inc',
       taxId: 'NOAI-123',
@@ -35,7 +34,7 @@ describe('Runtime Guards Integration', () => {
   });
 
   afterAll(async () => {
-    await sequelize.close();
+    // DB close handled in setup.js
   });
 
   test('A1: Login works with aiEnabled=false', async () => {

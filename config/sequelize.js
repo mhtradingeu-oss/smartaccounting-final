@@ -8,7 +8,16 @@ const { createDatabaseConfig } = require('../src/config/database');
 const buildEnvConfig = (targetEnv) => {
   const dbConfig = createDatabaseConfig(targetEnv);
 
-  // ✅ SQLITE (runtime, not CLI)
+  // Always use SQLite in-memory for tests
+  if (dbConfig.isTest) {
+    return {
+      dialect: 'sqlite',
+      storage: ':memory:',
+      logging: false,
+    };
+  }
+
+  // SQLITE (runtime, not CLI)
   if (dbConfig.isSqlite) {
     const sqliteStorage =
       dbConfig.storage ||
@@ -23,7 +32,7 @@ const buildEnvConfig = (targetEnv) => {
     };
   }
 
-  // ✅ POSTGRES
+  // POSTGRES
   return {
     dialect: 'postgres',
     url: dbConfig.databaseUrl,

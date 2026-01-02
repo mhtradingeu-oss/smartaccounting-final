@@ -6,13 +6,41 @@ describe('aiInsightsService', () => {
   let company, admin, accountant, viewer;
 
   beforeAll(async () => {
-    await sequelize.sync({ force: true });
     company = await createTestCompany();
     // Create a system user with id 0 for AI/system actions
-    await User.create({ id: 0, email: 'system@ai.com', password: 'x', firstName: 'System', lastName: 'AI', role: 'admin', companyId: company.id });
-    admin = await User.create({ email: 'admin@serviceco.com', password: 'x', firstName: 'A', lastName: 'A', role: 'admin', companyId: company.id });
-    accountant = await User.create({ email: 'acc@serviceco.com', password: 'x', firstName: 'B', lastName: 'B', role: 'accountant', companyId: company.id });
-    viewer = await User.create({ email: 'viewer@serviceco.com', password: 'x', firstName: 'C', lastName: 'C', role: 'viewer', companyId: company.id });
+    await User.create({
+      id: 0,
+      email: 'system@ai.com',
+      password: 'x',
+      firstName: 'System',
+      lastName: 'AI',
+      role: 'admin',
+      companyId: company.id,
+    });
+    admin = await User.create({
+      email: 'admin@serviceco.com',
+      password: 'x',
+      firstName: 'A',
+      lastName: 'A',
+      role: 'admin',
+      companyId: company.id,
+    });
+    accountant = await User.create({
+      email: 'acc@serviceco.com',
+      password: 'x',
+      firstName: 'B',
+      lastName: 'B',
+      role: 'accountant',
+      companyId: company.id,
+    });
+    viewer = await User.create({
+      email: 'viewer@serviceco.com',
+      password: 'x',
+      firstName: 'C',
+      lastName: 'C',
+      role: 'viewer',
+      companyId: company.id,
+    });
   });
 
   afterEach(() => {
@@ -27,7 +55,12 @@ describe('aiInsightsService', () => {
   });
 
   it('should persist insights matching contract', async () => {
-    const context = { invoices: [{ id: 'inv-1', number: 'X', amount: 100, date: '2025-01-01' }, { id: 'inv-2', number: 'X', amount: 100, date: '2025-01-01' }] };
+    const context = {
+      invoices: [
+        { id: 'inv-1', number: 'X', amount: 100, date: '2025-01-01' },
+        { id: 'inv-2', number: 'X', amount: 100, date: '2025-01-01' },
+      ],
+    };
     const insights = await aiInsightsService.generateInsightsForCompany(company.id, context);
     expect(Array.isArray(insights)).toBe(true);
     expect(insights[0]).toHaveProperty('companyId', company.id);

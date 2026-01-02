@@ -18,9 +18,15 @@ const createTestCompany = async (overrides = {}) => {
 };
 
 const createTestUser = async (overrides = {}) => {
-  const company = overrides.companyId
-    ? await Company.findByPk(overrides.companyId)
-    : await createTestCompany();
+  let company;
+  if (overrides.companyId) {
+    company = await Company.findByPk(overrides.companyId);
+    if (!company) {
+      company = await createTestCompany({ id: overrides.companyId });
+    }
+  } else {
+    company = await createTestCompany();
+  }
 
   const defaultUser = {
     email: `test-${Date.now()}@example.com`,
@@ -32,9 +38,12 @@ const createTestUser = async (overrides = {}) => {
     companyId: company.id,
   };
 
-  const user = await User.create({ ...defaultUser, ...overrides });
+  const user = await User.create({ ...defaultUser, ...overrides, companyId: company.id });
 
-  await company.update({ userId: user.id });
+  // Ensure company references user as owner/admin if not already
+  if (!company.userId) {
+    await company.update({ userId: user.id });
+  }
   return user;
 };
 

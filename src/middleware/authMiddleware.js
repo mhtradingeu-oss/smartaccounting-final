@@ -49,6 +49,18 @@ const authenticate = async (req, res, next) => {
     req.tokenJti = tokenJti;
     req.tokenExp = tokenExp;
 
+    // Temporary debug logging for test environment only
+    if (process.env.NODE_ENV === 'test') {
+      // eslint-disable-next-line no-console
+      console.debug(
+        '[authMiddleware][TEST] Authenticated user:',
+        'userId:',
+        user.id,
+        'companyId:',
+        user.companyId,
+      );
+    }
+
     next();
   } catch (error) {
     return res.status(401).json({

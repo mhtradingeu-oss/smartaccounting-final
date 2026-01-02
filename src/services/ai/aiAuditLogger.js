@@ -7,6 +7,18 @@ function hashPrompt(prompt) {
   return prompt ? crypto.createHash('sha256').update(prompt).digest('hex') : undefined;
 }
 
+function sanitizeMeta(meta) {
+  if (!meta) {
+    return undefined;
+  }
+  return {
+    policyVersion: meta.policyVersion,
+    modelVersion: meta.modelVersion,
+    promptVersion: meta.promptVersion,
+    ruleId: meta.ruleId,
+  };
+}
+
 async function logRequested({
   userId,
   companyId,
@@ -15,6 +27,7 @@ async function logRequested({
   prompt,
   responseMeta,
   sessionId,
+  meta,
 }) {
   await AuditLog.create({
     action: 'AI_QUERY_REQUESTED',
@@ -28,6 +41,7 @@ async function logRequested({
       promptHash: hashPrompt(prompt),
       sessionId,
       responseMeta,
+      meta: sanitizeMeta(meta),
     },
     createdAt: new Date().toISOString(),
     immutable: true,
@@ -43,6 +57,7 @@ async function logResponded({
   prompt,
   responseMeta,
   sessionId,
+  meta,
 }) {
   await AuditLog.create({
     action: 'AI_QUERY_RESPONDED',
@@ -56,6 +71,7 @@ async function logResponded({
       promptHash: hashPrompt(prompt),
       sessionId,
       responseMeta,
+      meta: sanitizeMeta(meta),
     },
     createdAt: new Date().toISOString(),
     immutable: true,

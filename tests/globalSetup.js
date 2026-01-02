@@ -6,6 +6,4 @@ module.exports = async () => {
   if (process.env.USE_SQLITE === 'true') {
     delete process.env.DATABASE_URL;
   }
-  const { sequelize } = require('../src/models');
-  await sequelize.authenticate();
 };

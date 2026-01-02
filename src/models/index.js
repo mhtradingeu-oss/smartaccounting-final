@@ -3,8 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 
-// ✅ Node-native resolution (will load index.js automatically)
-const { sequelize, Sequelize, DataTypes } = require('../lib/database');
+const { getSequelize } = require('../config/database');
+const sequelize = getSequelize();
+const { Sequelize, DataTypes } = require('sequelize');
+console.log('[Sequelize Instance] models/index.js', sequelize);
 
 const basename = path.basename(__filename);
 const models = {};

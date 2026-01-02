@@ -4,6 +4,9 @@ const globalSetupFile = shouldInitializeDatabase ? './tests/globalSetup.js' : un
 const globalTeardownFile = shouldInitializeDatabase ? './tests/globalTeardown.js' : undefined;
 
 module.exports = {
+  transform: {
+    '^.+\\.[jt]sx?$': 'babel-jest',
+  },
   testEnvironment: 'node',
 
   setupFiles: ['./tests/env.js'],
@@ -21,4 +24,5 @@ module.exports = {
 
   globalSetup: globalSetupFile,
   globalTeardown: globalTeardownFile,
+  maxWorkers: 1,
 };

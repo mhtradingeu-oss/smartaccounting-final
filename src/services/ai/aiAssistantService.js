@@ -1,3 +1,4 @@
+const { sanitizeContext } = require('./contextContract');
 const { Company, Invoice, Expense, BankTransaction, AIInsight } = require('../../models');
 
 const MAX_ITEMS = 5;
@@ -149,13 +150,30 @@ async function getContext(companyId) {
       where: { companyId },
       order: [['date', 'DESC']],
       limit: MAX_ITEMS,
-      attributes: ['id', 'invoiceNumber', 'status', 'total', 'currency', 'date', 'dueDate', 'clientName'],
+      attributes: [
+        'id',
+        'invoiceNumber',
+        'status',
+        'total',
+        'currency',
+        'date',
+        'dueDate',
+        'clientName',
+      ],
     }),
     Expense.findAll({
       where: { companyId },
       order: [['expenseDate', 'DESC']],
       limit: MAX_ITEMS,
-      attributes: ['id', 'description', 'vendorName', 'status', 'grossAmount', 'currency', 'expenseDate'],
+      attributes: [
+        'id',
+        'description',
+        'vendorName',
+        'status',
+        'grossAmount',
+        'currency',
+        'expenseDate',
+      ],
     }),
     BankTransaction.findAll({
       where: { companyId },
@@ -179,13 +197,15 @@ async function getContext(companyId) {
     }),
   ]);
 
-  return buildContextResponse({
+  const rawContext = buildContextResponse({
     company: company.get({ plain: true }),
     invoices: invoices.map(mapInvoiceRecord),
     expenses: expenses.map(mapExpenseRecord),
     bankTransactions: bankTransactions.map(mapTransactionRecord),
     insights: insights.map(mapInsightRecord),
   });
+
+  return sanitizeContext(rawContext);
 }
 
 function selectInsight(insights = [], insightId) {
@@ -215,7 +235,9 @@ function buildReviewResponse(context) {
     );
   }
 
-  const overdueInvoice = invoices.find((invoice) => String(invoice.status).toUpperCase() === 'OVERDUE');
+  const overdueInvoice = invoices.find(
+    (invoice) => String(invoice.status).toUpperCase() === 'OVERDUE',
+  );
   if (overdueInvoice) {
     const text = `Invoice ${overdueInvoice.invoiceNumber} is OVERDUE (due ${formatDate(
       overdueInvoice.dueDate,
@@ -281,26 +303,25 @@ function buildRiskResponse(context) {
     ? `High-severity risk detected (${highSeverityInsight.type}) on ${highSeverityInsight.entityType} ${highSeverityInsight.entityId}: ${highSeverityInsight.summary}`
     : `No high-severity AI flags right now for ${company.name}. Medium severity alerts: ${breakdown.medium}, low severity alerts: ${breakdown.low}.`;
 
-  const highlights = insights.slice(0, 2).map(
-    (insight) =>
-      `${insight.type} (${insight.severity}) on ${insight.entityType} ${insight.entityId}: ${insight.summary}`,
-  );
+  const highlights = insights
+    .slice(0, 2)
+    .map(
+      (insight) =>
+        `${insight.type} (${insight.severity}) on ${insight.entityType} ${insight.entityId}: ${insight.summary}`,
+    );
 
   return {
     message,
     highlights,
-    references: [
-      `High: ${breakdown.high}`,
-      `Medium: ${breakdown.medium}`,
-      `Low: ${breakdown.low}`,
-    ],
+    references: [`High: ${breakdown.high}`, `Medium: ${breakdown.medium}`, `Low: ${breakdown.low}`],
   };
 }
 
 function buildExplainResponse(insight) {
   if (!insight) {
     return {
-      message: 'There are no flagged transactions yet. The assistant is monitoring new data for insights.',
+      message:
+        'There are no flagged transactions yet. The assistant is monitoring new data for insights.',
       highlights: [],
       references: [],
     };
@@ -325,7 +346,8 @@ function buildExplainResponse(insight) {
 function buildWhyFlaggedResponse(insight) {
   if (!insight) {
     return {
-      message: 'No flag data is available yet. Create more transactions or wait for the next AI cycle.',
+      message:
+        'No flag data is available yet. Create more transactions or wait for the next AI cycle.',
       highlights: [],
       references: [],
     };

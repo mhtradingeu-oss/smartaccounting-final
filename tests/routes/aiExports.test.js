@@ -8,10 +8,17 @@ describe('AI Exports API', () => {
   let admin, adminToken, company;
 
   beforeAll(async () => {
-    await sequelize.sync({ force: true });
     company = await createTestCompany();
     // Create a system user with id 0 for AI/system actions
-    await User.create({ id: 0, email: 'system@ai.com', password: 'x', firstName: 'System', lastName: 'AI', role: 'admin', companyId: company.id });
+    await User.create({
+      id: 0,
+      email: 'system@ai.com',
+      password: 'x',
+      firstName: 'System',
+      lastName: 'AI',
+      role: 'admin',
+      companyId: company.id,
+    });
     admin = await testUtils.createTestUser({ role: 'admin', companyId: company.id });
     adminToken = testUtils.createAuthToken(admin.id);
     // Create insights/decisions
@@ -47,7 +54,8 @@ describe('AI Exports API', () => {
   it('should export JSON with modelVersion/ruleId', async () => {
     const res = await request(app)
       .get('/api/ai/exports/insights.json')
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Authorization', `Bearer ${adminToken}`)
+      .query({ purpose: 'insights_export_json', policyVersion: 'v1' });
     expect([200, 403, 404, 501]).toContain(res.status);
     if (res.status === 200) {
       expect(Array.isArray(res.body) || typeof res.body === 'object').toBe(true);
@@ -61,10 +69,13 @@ describe('AI Exports API', () => {
   it('should export CSV with correct headers', async () => {
     const res = await request(app)
       .get('/api/ai/exports/insights.csv')
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Authorization', `Bearer ${adminToken}`)
+      .query({ purpose: 'insights_export_csv', policyVersion: 'v1' });
     expect([200, 403, 404, 501]).toContain(res.status);
     if (res.status === 200) {
-      expect(res.text).toContain('id,entityType,entityId,type,severity,confidenceScore,summary,why,legalContext,ruleId,modelVersion,featureFlag,createdAt,decision,decisionReason,decisionActorUserId,decisionCreatedAt');
+      expect(res.text).toContain(
+        'id,entityType,entityId,type,severity,confidenceScore,summary,why,legalContext,ruleId,modelVersion,featureFlag,createdAt,decision,decisionReason,decisionActorUserId,decisionCreatedAt',
+      );
     }
   });
 
@@ -74,14 +85,20 @@ describe('AI Exports API', () => {
       taxId: 'DE000000000',
       address: 'Test Address 3',
     });
-    const otherAdmin = await testUtils.createTestUser({ role: 'admin', companyId: otherCompany.id });
+    const otherAdmin = await testUtils.createTestUser({
+      role: 'admin',
+      companyId: otherCompany.id,
+    });
     const otherToken = testUtils.createAuthToken(otherAdmin.id);
     const res = await request(app)
       .get('/api/ai/exports/insights.json')
-      .set('Authorization', `Bearer ${otherToken}`);
+      .set('Authorization', `Bearer ${otherToken}`)
+      .query({ purpose: 'insights_export_json', policyVersion: 'v1' });
     // Should not see ExportCo's insights
     if (Array.isArray(res.body)) {
-      expect(res.body.length === 0 || res.body.every(i => i.companyId === otherCompany.id)).toBe(true);
+      expect(res.body.length === 0 || res.body.every((i) => i.companyId === otherCompany.id)).toBe(
+        true,
+      );
     } else {
       expect(typeof res.body).toBe('object');
     }

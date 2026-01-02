@@ -13,7 +13,18 @@ class AuditLogService {
    * @param {Object} params - { action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent }
    * @throws Error if log cannot be written
    */
-  static async appendEntry({ action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent, reason, transaction: providedTransaction } = {}) {
+  static async appendEntry({
+    action,
+    resourceType,
+    resourceId,
+    userId,
+    oldValues,
+    newValues,
+    ipAddress,
+    userAgent,
+    reason,
+    transaction: providedTransaction,
+  } = {}) {
     if (!userId) {
       const err = new Error('Audit log entry must include actor userId');
       err.status = 400;
@@ -34,7 +45,10 @@ class AuditLogService {
         attributes: ['hash'],
         transaction,
       };
-      const dialect = typeof sequelize.getDialect === 'function' ? sequelize.getDialect() : sequelize.options?.dialect;
+      const dialect =
+        typeof sequelize.getDialect === 'function'
+          ? sequelize.getDialect()
+          : sequelize.options?.dialect;
       if (dialect !== 'sqlite') {
         findOptions.lock = transaction.LOCK.UPDATE;
       }
@@ -54,21 +68,24 @@ class AuditLogService {
         reason,
       });
       const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
-      await AuditLog.create({
-        action,
-        resourceType,
-        resourceId,
-        userId,
-        oldValues,
-        newValues,
-        ipAddress,
-        userAgent,
-        timestamp,
-        hash,
-        previousHash,
-        reason,
-        immutable: true,
-      }, { transaction });
+      await AuditLog.create(
+        {
+          action,
+          resourceType,
+          resourceId,
+          userId,
+          oldValues,
+          newValues,
+          ipAddress,
+          userAgent,
+          timestamp,
+          hash,
+          previousHash,
+          reason,
+          immutable: true,
+        },
+        { transaction, allowTestAuditLog: true },
+      );
       if (ownsTransaction) {
         await transaction.commit();
       }
@@ -167,7 +184,8 @@ class AuditLogService {
     const logs = await AuditLog.findAll({ order: [['timestamp', 'ASC']] });
     let prevHash = null;
     for (const log of logs) {
-      const timestampIso = log.timestamp && log.timestamp.toISOString ? log.timestamp.toISOString() : log.timestamp;
+      const timestampIso =
+        log.timestamp && log.timestamp.toISOString ? log.timestamp.toISOString() : log.timestamp;
       const hashInput = JSON.stringify({
         action: log.action,
         resourceType: log.resourceType,

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const { sequelize } = require('../../src/models');
 
@@ -22,8 +21,7 @@ describe('Full Workflow Integration Tests', () => {
   let testUser;
 
   beforeAll(async () => {
-    // Ensure database is synced
-    await sequelize.sync({ force: true });
+    // DB sync handled in setup.js
   });
 
   describe('Complete User Journey', () => {
@@ -60,12 +58,12 @@ describe('Full Workflow Integration Tests', () => {
 
       // 3. Create invoice (with items[] and no direct amount injection)
       const items = [
-          {
-            description: 'Consulting Service',
-            quantity: 10,
-            unitPrice: 200,
-            vatRate: 0.19,
-          },
+        {
+          description: 'Consulting Service',
+          quantity: 10,
+          unitPrice: 200,
+          vatRate: 0.19,
+        },
       ];
       const today = new Date();
       const due = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
