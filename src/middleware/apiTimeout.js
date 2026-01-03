@@ -23,11 +23,11 @@ const resolveTimeoutMs = (req, overrides, defaultMs = DEFAULT_TIMEOUT_MS) => {
 };
 
 const preventPostTimeoutWrites = (res, hasTimedOutRef) => {
-  const methods = ['send', 'json', 'end'];
-  methods.forEach((methodName) => {
+  ['send', 'json', 'end'].forEach((methodName) => {
     if (typeof res[methodName] !== 'function') {
       return;
     }
+
     const original = res[methodName].bind(res);
     res[methodName] = (...args) => {
       if (hasTimedOutRef.value) {
@@ -45,21 +45,17 @@ const createApiTimeoutMiddleware = (options = {}) => {
   return (req, res, next) => {
     const timeoutMs = resolveTimeoutMs(req, overrides, defaultTimeoutMs);
     res.set('X-API-Timeout', `${timeoutMs}ms`);
-    const timeoutState = { value: false };
-    const timer = setTimeout(timedOut, timeoutMs);
-    const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
 
-    const cleanup = () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
+    const timeoutState = { value: false };
+    const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
 
     const timedOut = () => {
       timeoutState.value = true;
+
       if (res.headersSent) {
         return;
       }
+
       logger.warn('API request exceeded timeout threshold', {
         timeoutMs,
         route: `${req.baseUrl}${req.path}`,
@@ -67,12 +63,19 @@ const createApiTimeoutMiddleware = (options = {}) => {
         method: req.method,
         userId: req.user?.id,
       });
+
       res.status(504).json({
         status: 'error',
         message: 'Request timed out',
         timeoutMs,
         requestId,
       });
+    };
+
+    const timer = setTimeout(timedOut, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timer);
     };
 
     preventPostTimeoutWrites(res, timeoutState);
