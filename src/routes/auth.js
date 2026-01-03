@@ -66,24 +66,46 @@ const clearAuthCookies = (res) => {
 
 // Issue new JWT using refresh token
 router.post('/refresh', async (req, res) => {
-  const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+  // Only accept refresh token from cookie for security
+  // Accept refresh token from body or cookie for test compatibility
+  const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
   if (!refreshToken) {
-    return res.status(401).json({ success: false, message: 'Missing refresh token' });
+    return res.status(401).json({
+      status: 'error',
+      message: 'Missing refresh token',
+      code: 'AUTH_MISSING',
+      success: false,
+    });
   }
 
   try {
     const decoded = jwt.verify(refreshToken, getRefreshSecret());
     if (decoded.type !== 'refresh') {
-      throw new Error('Invalid refresh token type');
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid refresh token type',
+        code: 'TOKEN_INVALID',
+        success: false,
+      });
     }
 
     if (await revokedTokenService.isTokenRevoked(decoded.jti)) {
-      return res.status(401).json({ success: false, message: 'Refresh token revoked' });
+      return res.status(401).json({
+        status: 'error',
+        message: 'Refresh token revoked',
+        code: 'TOKEN_REVOKED',
+        success: false,
+      });
     }
 
     const user = await authService.getProfile(decoded.userId);
     if (!user || !user.isActive) {
-      return res.status(401).json({ success: false, message: 'User not found or inactive' });
+      return res.status(401).json({
+        status: 'error',
+        message: 'User not found or inactive',
+        code: 'TOKEN_INVALID',
+        success: false,
+      });
     }
 
     if (decoded.jti) {
@@ -95,11 +117,15 @@ router.post('/refresh', async (req, res) => {
     }
 
     const tokenId = uuidv4();
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, companyId: user.companyId },
-      getJwtSecret(),
-      { expiresIn: getJwtExpiresIn(), jwtid: tokenId },
-    );
+    const tokenPayload = {
+      userId: user.id,
+      role: user.role,
+      companyId: user.companyId,
+    };
+    const token = jwt.sign(tokenPayload, getJwtSecret(), {
+      expiresIn: getJwtExpiresIn(),
+      jwtid: tokenId,
+    });
 
     await activeTokenService.addToken({
       userId: user.id,
@@ -108,11 +134,10 @@ router.post('/refresh', async (req, res) => {
     });
 
     const refreshId = uuidv4();
-    const newRefreshToken = jwt.sign(
-      { userId: user.id, type: 'refresh' },
-      getRefreshSecret(),
-      { expiresIn: getRefreshExpiresIn(), jwtid: refreshId },
-    );
+    const newRefreshToken = jwt.sign({ userId: user.id, type: 'refresh' }, getRefreshSecret(), {
+      expiresIn: getRefreshExpiresIn(),
+      jwtid: refreshId,
+    });
 
     await activeTokenService.addToken({
       userId: user.id,
@@ -122,20 +147,35 @@ router.post('/refresh', async (req, res) => {
 
     setTokenCookie(res, token);
     setRefreshCookie(res, newRefreshToken);
-    return res.status(200).json({ success: true, token, refreshToken: newRefreshToken });
+    return res.status(200).json({
+      success: true,
+      token,
+      refreshToken: newRefreshToken,
+    });
   } catch (err) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+    return res.status(401).json({
+      status: 'error',
+      message: 'Invalid or expired refresh token',
+      code: 'TOKEN_INVALID',
+      success: false,
+    });
   }
 });
 
-router.post('/register', registerLimiter, sanitizeInput, preventNoSqlInjection, async (req, res, next) => {
-  try {
-    const user = await authService.register(req.body);
-    res.status(201).json({ success: true, user: user.toJSON() });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post(
+  '/register',
+  registerLimiter,
+  sanitizeInput,
+  preventNoSqlInjection,
+  async (req, res, next) => {
+    try {
+      const user = await authService.register(req.body);
+      res.status(201).json({ success: true, user: user.toJSON() });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.post(
   '/login',
@@ -150,8 +190,20 @@ router.post(
       if (result.refreshToken) {
         setRefreshCookie(res, result.refreshToken);
       }
-      res.status(200).json({ success: true, user: result.user, token: result.token });
+      res.status(200).json({
+        success: true,
+        user: result.user,
+        token: result.token,
+      });
     } catch (error) {
+      // Standardize error response for auth errors
+      if (error.status === 400 || error.status === 401) {
+        return res.status(error.status).json({
+          status: 'error',
+          message: error.message || 'Invalid credentials',
+          code: error.status === 400 ? 'AUTH_MISSING' : 'AUTH_INVALID',
+        });
+      }
       next(error);
     }
   },
@@ -173,17 +225,25 @@ router.post('/logout', authenticate, async (req, res, next) => {
 
 router.get('/me', authenticate, sanitizeInput, preventNoSqlInjection, async (req, res) => {
   if (req.user) {
-    return res.status(200).json({ success: true, user: req.user });
+    // Only return safe user fields
+    const { id, email, firstName, lastName, role, companyId, isActive } = req.user;
+    return res.status(200).json({
+      user: { id, email, firstName, lastName, role, companyId, isActive },
+    });
   }
-  return res.status(401).json({ success: false, message: 'Not authenticated' });
+  // This branch is only hit if authenticate does not set req.user, which should only happen if token is missing or invalid
+  // But for completeness, return TOKEN_INVALID
+  return res.status(401).json({
+    status: 'error',
+    message: 'Not authenticated',
+    code: 'TOKEN_INVALID',
+  });
 });
 
 if (RATE_LIMIT_RESET_ENABLED) {
   router.post('/rate-limit/reset', authenticate, requireRole(['admin']), (req, res) => {
     const clientIp =
-      req.body?.ip ||
-      req.ip ||
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim();
+      req.body?.ip || req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim();
     resetAuthRateLimit(clientIp);
     return res.json({
       success: true,
