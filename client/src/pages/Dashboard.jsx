@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../services/dashboardAPI';
-import { formatApiError } from '../services/api';
+import api, { formatApiError } from '../services/api';
 import { Button } from '../components/ui/Button';
 import { PageLoadingState, PageEmptyState, PageErrorState } from '../components/ui/PageStates';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
@@ -62,16 +62,11 @@ const Dashboard = () => {
     setDemoSuccess(false);
 
     try {
-      const res = await fetch('/api/admin/demo-data/load', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await api.post('/admin/demo-data/load');
+      const data = response?.data || response;
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to load demo data');
+      if (!data?.success) {
+        throw new Error(data?.message || 'Failed to load demo data');
       }
 
       setDemoSuccess(true);

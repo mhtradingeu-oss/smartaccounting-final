@@ -1,13 +1,10 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
 import ErrorState from './ErrorState';
-import { useLocation } from 'react-router-dom';
 import { reportClientError } from '../lib/telemetryClient';
 
 const appVersion = import.meta.env.VITE_APP_VERSION || 'unknown';
 
-class AppErrorBoundaryInner extends React.Component {
+class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -21,11 +18,10 @@ class AppErrorBoundaryInner extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Only log in dev
     if (import.meta.env.DEV) {
       console.error('AppErrorBoundary caught an error:', error, errorInfo);
     }
-    // Telemetry: only in production and if enabled
+
     if (import.meta.env.VITE_TELEMETRY_ENABLED === 'true') {
       try {
         const route = window.location.pathname;
@@ -37,9 +33,27 @@ class AppErrorBoundaryInner extends React.Component {
           requestId,
           errorType: 'AppErrorBoundary',
         });
-      } catch (e) {
-        void e;
+      } catch (reportError) {
+        void reportError;
       }
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    const { location } = this.props;
+    const prevLocation = prevProps.location;
+
+    if (!prevLocation || !location || !this.state.hasError) {
+      return;
+    }
+
+    const locationChanged =
+      location.key !== prevLocation.key ||
+      location.pathname !== prevLocation.pathname ||
+      location.search !== prevLocation.search;
+
+    if (locationChanged) {
+      this.setState({ hasError: false, error: null });
     }
   }
 
@@ -102,13 +116,4 @@ class AppErrorBoundaryInner extends React.Component {
   }
 }
 
-export default function AppErrorBoundary({ children }) {
-  const { logout } = useAuth();
-  const { t } = useTranslation();
-  useLocation(); // ensure rerender on route change
-  return (
-    <AppErrorBoundaryInner logout={logout} t={t}>
-      {children}
-    </AppErrorBoundaryInner>
-  );
-}
+export default AppErrorBoundary;

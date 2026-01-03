@@ -39,7 +39,7 @@ const register = async (data) => {
   }
   const { email, password, firstName, lastName, role = 'viewer', companyId } = data || {};
   if (!email || !password || !firstName || !lastName) {
-    const error = new Error('Missing required fields');
+    const error = new Error();
     error.status = 400;
     throw error;
   }

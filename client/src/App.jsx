@@ -1,12 +1,15 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingSpinner from './components/LoadingSpinner';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingState } from './components/ui/PageStates';
-import { useAuth } from './context/AuthContext';
-import { useCompany } from './context/CompanyContext';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { CompanyProvider, useCompany } from './context/CompanyContext';
+import { RoleProvider } from './context/RoleContext';
 
 const withSuspense = (children) => (
   <Suspense fallback={<PageLoadingState />}>{children}</Suspense>
@@ -178,11 +181,27 @@ export const AppRoutes = () => {
   );
 };
 
+function AppInner() {
+  const location = useLocation();
+  const { logout } = useAuth();
+  const { t } = useTranslation();
+
+  return (
+    <AppErrorBoundary location={location} logout={logout} t={t}>
+      <CompanyProvider>
+        <RoleProvider>
+          <AppRoutes />
+        </RoleProvider>
+      </CompanyProvider>
+    </AppErrorBoundary>
+  );
+}
+
 function App() {
   return (
-    <Router>
-      <AppRoutes />
-    </Router>
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
   );
 }
 

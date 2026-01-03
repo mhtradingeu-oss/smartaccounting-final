@@ -24,6 +24,7 @@ RUN ls -la tests || true
 
 # Runtime directories expected by containers and host mounts.
 RUN mkdir -p logs uploads temp
+VOLUME /usr/src/app/node_modules
 
 EXPOSE 5000
 

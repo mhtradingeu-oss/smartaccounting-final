@@ -12,7 +12,7 @@ function validateSuggestionContract(suggestion) {
   const requiredFields = ['confidence', 'explanation', 'severity', 'relatedEntity', 'advisory'];
   for (const field of requiredFields) {
     if (!(field in suggestion)) {
-      throw new Error(`Suggestion missing required field: ${field}`);
+      throw new Error(`Suggestion  ${field}`);
     }
   }
   if (typeof suggestion.confidence !== 'number' || suggestion.confidence < 0 || suggestion.confidence > 1) {

@@ -13,7 +13,7 @@ function validateInputContract(input) {
         return { ok: false, reason: 'Missing user or user fields' };
       }
     } else if (!input[field]) {
-      return { ok: false, reason: `Missing required field: ${field}` };
+      return { ok: false, reason: ` ${field}` };
     }
   }
   return { ok: true };

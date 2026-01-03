@@ -7,6 +7,7 @@ const { createSecurityMiddleware } = require('./middleware/security');
 const errorHandler = require('./middleware/errorHandler');
 const { specs, swaggerOptions } = require('./config/swagger');
 const appVersion = require('./config/appVersion');
+const { createApiTimeoutMiddleware } = require('./middleware/apiTimeout');
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
@@ -60,7 +61,7 @@ if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production')
 
 const requestIdMiddleware = require('./middleware/requestId');
 const corsMiddleware = require('./middleware/cors');
-const { createPerformanceMiddleware } = require('./middleware/performance');
+const { createPerformanceMiddleware, performanceMonitor } = require('./middleware/performance');
 
 // 1. Request ID
 app.use(requestIdMiddleware);
@@ -109,12 +110,62 @@ app.get('/ready', async (req, res) => {
 });
 // Minimal Prometheus endpoint to signal uptime.
 app.get('/metrics', (req, res) => {
+  const metrics = performanceMonitor.getMetrics();
+  const memory = metrics.memory || {};
+  const cpu = metrics.cpu || {};
+  const [load1 = 0, load5 = 0, load15 = 0] = metrics.load || [];
+  const uptimeSeconds = typeof metrics.uptime === 'number' ? metrics.uptime : 0;
+
+  const lines = [
+    '# HELP smartaccounting_up 1 if up',
+    '# TYPE smartaccounting_up gauge',
+    'smartaccounting_up 1',
+    '# HELP smartaccounting_requests_total Total requests seen since process start',
+    '# TYPE smartaccounting_requests_total counter',
+    `smartaccounting_requests_total ${metrics.requests}`,
+    '# HELP smartaccounting_errors_total Total errors seen since process start',
+    '# TYPE smartaccounting_errors_total counter',
+    `smartaccounting_errors_total ${metrics.errors}`,
+    '# HELP smartaccounting_avg_response_time_ms Average response time in ms',
+    '# TYPE smartaccounting_avg_response_time_ms gauge',
+    `smartaccounting_avg_response_time_ms ${metrics.averageResponseTime}`,
+    '# HELP smartaccounting_slow_request_rate_percent Slow requests as a percentage',
+    '# TYPE smartaccounting_slow_request_rate_percent gauge',
+    `smartaccounting_slow_request_rate_percent ${metrics.slowRequestRate}`,
+    '# HELP smartaccounting_error_rate_percent Errors as a percentage of requests',
+    '# TYPE smartaccounting_error_rate_percent gauge',
+    `smartaccounting_error_rate_percent ${metrics.errorRate}`,
+    '# HELP smartaccounting_memory_rss_bytes Resident set size in bytes',
+    '# TYPE smartaccounting_memory_rss_bytes gauge',
+    `smartaccounting_memory_rss_bytes ${memory.rss || 0}`,
+    '# HELP smartaccounting_memory_heap_used_bytes Heap used in bytes',
+    '# TYPE smartaccounting_memory_heap_used_bytes gauge',
+    `smartaccounting_memory_heap_used_bytes ${memory.heapUsed || 0}`,
+    '# HELP smartaccounting_cpu_user_usec CPU user time in microseconds',
+    '# TYPE smartaccounting_cpu_user_usec gauge',
+    `smartaccounting_cpu_user_usec ${cpu.user || 0}`,
+    '# HELP smartaccounting_cpu_system_usec CPU system time in microseconds',
+    '# TYPE smartaccounting_cpu_system_usec gauge',
+    `smartaccounting_cpu_system_usec ${cpu.system || 0}`,
+    '# HELP smartaccounting_uptime_seconds Process uptime in seconds',
+    '# TYPE smartaccounting_uptime_seconds gauge',
+    `smartaccounting_uptime_seconds ${uptimeSeconds.toFixed(2)}`,
+    '# HELP smartaccounting_load_avg_1m Load average over the last minute',
+    '# TYPE smartaccounting_load_avg_1m gauge',
+    `smartaccounting_load_avg_1m ${load1}`,
+    '# HELP smartaccounting_load_avg_5m Load average over the last 5 minutes',
+    '# TYPE smartaccounting_load_avg_5m gauge',
+    `smartaccounting_load_avg_5m ${load5}`,
+    '# HELP smartaccounting_load_avg_15m Load average over the last 15 minutes',
+    '# TYPE smartaccounting_load_avg_15m gauge',
+    `smartaccounting_load_avg_15m ${load15}`,
+  ];
+
   res.set('Content-Type', 'text/plain');
-  res.send(
-    '# HELP smartaccounting_up 1 if up\n# TYPE smartaccounting_up gauge\nsmartaccounting_up 1\n',
-  );
+  res.send(lines.join('\n'));
 });
 const telemetryRoutes = require('./routes/telemetry');
+app.use(`${API_PREFIX}`, createApiTimeoutMiddleware());
 app.use(`${API_PREFIX}/telemetry`, telemetryRoutes);
 
 app.use(`${API_PREFIX}/auth`, authRoutes);

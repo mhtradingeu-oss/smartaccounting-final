@@ -80,6 +80,7 @@
     "management": "Management",
     "system": "System",
     "dashboard": "Dashboard",
+    "expenses": "Expenses",
     "invoices": "Invoices",
     "bank_statements": "Bank Statements",
     "ocr_preview": "OCR Preview",

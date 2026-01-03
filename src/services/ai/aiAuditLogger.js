@@ -2,9 +2,16 @@
 const { AuditLog } = require('../../models');
 
 const crypto = require('crypto');
+const { redactPII } = require('./governance');
+
+function sanitizePrompt(prompt) {
+  const normalized = typeof prompt === 'string' ? prompt : '';
+  return redactPII(normalized);
+}
 
 function hashPrompt(prompt) {
-  return prompt ? crypto.createHash('sha256').update(prompt).digest('hex') : undefined;
+  const sanitized = sanitizePrompt(prompt);
+  return sanitized ? crypto.createHash('sha256').update(sanitized).digest('hex') : undefined;
 }
 
 function sanitizeMeta(meta) {
@@ -81,6 +88,7 @@ async function logResponded({
 
 // eslint-disable-next-line no-unused-vars -- consumed via aiReadOnly session endpoint logging
 async function logSessionEvent({ userId, companyId, sessionId, event = 'started', route, prompt }) {
+  const safePrompt = sanitizePrompt(prompt);
   await AuditLog.create({
     action: 'AI_ASSISTANT_SESSION',
     resourceType: 'AI',
@@ -91,7 +99,7 @@ async function logSessionEvent({ userId, companyId, sessionId, event = 'started'
       event,
       sessionId,
       route,
-      prompt,
+      prompt: safePrompt,
     },
     metadata: {
       route,

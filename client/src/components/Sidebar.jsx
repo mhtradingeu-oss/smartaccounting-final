@@ -1,8 +1,8 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
-import { useRole, roles } from '../context/RoleContext';
+import React from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useAuth } from "../context/AuthContext";
+import { useRole, roles } from "../context/RoleContext";
 import {
   HomeIcon,
   DocumentTextIcon,
@@ -19,7 +19,7 @@ import {
   UsersIcon,
   DocumentMagnifyingGlassIcon,
   ChatBubbleLeftEllipsisIcon,
-} from '@heroicons/react/24/outline';
+} from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
   DocumentTextIcon as DocumentTextIconSolid,
@@ -31,9 +31,9 @@ import {
   ShieldCheckIcon as ShieldCheckIconSolid,
   BuildingOfficeIcon as BuildingOfficeIconSolid,
   UsersIcon as UsersIconSolid,
-} from '@heroicons/react/24/solid';
-import { FEATURE_FLAGS } from '../lib/constants';
-import { isOCRPreviewEnabled, isAIAssistantEnabled } from '../lib/featureFlags';
+} from "@heroicons/react/24/solid";
+import { FEATURE_FLAGS } from "../lib/constants";
+import { isOCRPreviewEnabled, isAIAssistantEnabled } from "../lib/featureFlags";
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { t } = useTranslation();
@@ -45,8 +45,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const managementNavigation = [
     {
-      name: t('navigation.companies'),
-      href: '/companies',
+      name: t("navigation.companies"),
+      href: "/companies",
       icon: BuildingOfficeIcon,
       iconSolid: BuildingOfficeIconSolid,
       enabled: true,
@@ -55,8 +55,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const adminNavigation = [
     {
-      name: t('navigation.users'),
-      href: '/users',
+      name: t("navigation.users"),
+      href: "/users",
       icon: UsersIcon,
       iconSolid: UsersIconSolid,
       enabled: role === roles.ADMIN,
@@ -69,79 +69,87 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   // Role-based navigation filtering
   const mainNavigation = [
     {
-      name: t('navigation.dashboard'),
-      href: '/dashboard',
+      name: t("navigation.dashboard"),
+      href: "/dashboard",
       icon: HomeIcon,
       iconSolid: HomeIconSolid,
       badge: null,
-      description: 'Overview & Analytics',
+      description: "Overview & Analytics",
     },
     {
-      name: t('navigation.ai_assistant'),
-      href: '/ai-assistant',
-      icon: ChatBubbleLeftEllipsisIcon,
-      iconSolid: ChatBubbleLeftEllipsisIconSolid,
-      badge: 'AI',
-      description: 'Conversational read-only advisor',
-      enabled: isAIAssistantEnabled(),
-    },
-    {
-      name: t('navigation.invoices'),
-      href: '/invoices',
-      icon: DocumentTextIcon,
-      iconSolid: DocumentTextIconSolid,
-      badge: null, // No static badge in production
-      description: 'Create & Manage Invoices',
-    },
-    {
-      name: t('navigation.bank_statements'),
-      href: '/bank-statements',
-      icon: BanknotesIcon,
-      iconSolid: BanknotesIconSolid,
-      badge: null,
-      description: 'Bank Transactions',
-    },
-    {
-      name: t('navigation.ocr_preview'),
-      href: '/ocr-preview',
-      icon: DocumentMagnifyingGlassIcon,
-      iconSolid: DocumentMagnifyingGlassIconSolid,
-      badge: 'Preview',
-      description: 'Preview OCR extractions',
-      enabled: ocrPreviewEnabled,
-    },
-    {
-      name: t('navigation.german_tax'),
-      href: '/german-tax-reports',
-      icon: DocumentChartBarIcon,
-      iconSolid: DocumentChartBarIconSolid,
-      badge: FEATURE_FLAGS.GERMAN_TAX.enabled ? 'NEW' : null,
-      description: 'German Tax Compliance',
-      enabled: FEATURE_FLAGS.GERMAN_TAX.enabled,
-    },
-    {
-      name: t('navigation.billing'),
-      href: '/billing',
+      name: t("navigation.expenses"),
+      href: "/expenses",
       icon: CreditCardIcon,
       iconSolid: CreditCardIconSolid,
       badge: null,
-      description: 'Subscription & Billing',
+      description: "Expenses",
+    },
+    {
+      name: t("navigation.ai_assistant"),
+      href: "/ai-assistant",
+      icon: ChatBubbleLeftEllipsisIcon,
+      iconSolid: ChatBubbleLeftEllipsisIconSolid,
+      badge: "AI",
+      description: "Conversational read-only advisor",
+      enabled: isAIAssistantEnabled(),
+    },
+    {
+      name: t("navigation.invoices"),
+      href: "/invoices",
+      icon: DocumentTextIcon,
+      iconSolid: DocumentTextIconSolid,
+      badge: null, // No static badge in production
+      description: "Create & Manage Invoices",
+    },
+    {
+      name: t("navigation.bank_statements"),
+      href: "/bank-statements",
+      icon: BanknotesIcon,
+      iconSolid: BanknotesIconSolid,
+      badge: null,
+      description: "Bank Transactions",
+    },
+    {
+      name: t("navigation.ocr_preview"),
+      href: "/ocr-preview",
+      icon: DocumentMagnifyingGlassIcon,
+      iconSolid: DocumentMagnifyingGlassIconSolid,
+      badge: "Preview",
+      description: "Preview OCR extractions",
+      enabled: ocrPreviewEnabled,
+    },
+    {
+      name: t("navigation.german_tax"),
+      href: "/german-tax-reports",
+      icon: DocumentChartBarIcon,
+      iconSolid: DocumentChartBarIconSolid,
+      badge: FEATURE_FLAGS.GERMAN_TAX.enabled ? "NEW" : null,
+      description: "German Tax Compliance",
+      enabled: FEATURE_FLAGS.GERMAN_TAX.enabled,
+    },
+    {
+      name: t("navigation.billing"),
+      href: "/billing",
+      icon: CreditCardIcon,
+      iconSolid: CreditCardIconSolid,
+      badge: null,
+      description: "Subscription & Billing",
       enabled: FEATURE_FLAGS.STRIPE_BILLING.enabled,
     },
     {
-      name: t('navigation.compliance'),
-      href: '/compliance',
+      name: t("navigation.compliance"),
+      href: "/compliance",
       icon: ShieldCheckIcon,
       iconSolid: ShieldCheckIconSolid,
       badge: null,
-      description: 'GDPR & GoBD Compliance',
+      description: "GDPR & GoBD Compliance",
       enabled: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
     },
   ];
 
   // Example: Only admin/accountant can see invoices, viewers cannot
   const filteredMainNavigation = mainNavigation.filter((item) => {
-    if (item.href === '/invoices' && role === roles.VIEWER) {
+    if (item.href === "/invoices" && role === roles.VIEWER) {
       return false;
     }
     return true;
@@ -159,11 +167,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const isActiveLink = (href) => {
     return (
-      location.pathname === href || (href !== '/dashboard' && location.pathname.startsWith(href))
+      location.pathname === href || (href !== "/dashboard" && location.pathname.startsWith(href))
     );
   };
 
-  const renderNavItem = (item, index, sectionKey = '') => {
+  const renderNavItem = (item, index, sectionKey = "") => {
     const isEnabled = item.enabled !== false;
     const isActive = item.href && isActiveLink(item.href);
 
@@ -175,16 +183,16 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           to={item.href}
           className={`relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
             isActive
-              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25'
-              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800'
+              ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800"
           }`}
-          aria-current={isActive ? 'page' : undefined}
+          aria-current={isActive ? "page" : undefined}
           onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.href}-${index}`)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           <div className="flex items-center w-full">
             <div
-              className={`flex-shrink-0 ${isActive ? 'transform scale-110' : ''} transition-transform duration-200`}
+              className={`flex-shrink-0 ${isActive ? "transform scale-110" : ""} transition-transform duration-200`}
             >
               <IconComponent className="h-5 w-5" />
             </div>
@@ -195,10 +203,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                   <span
                     className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       isActive
-                        ? 'bg-white/20 text-white'
-                        : item.badge === 'NEW'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                        ? "bg-white/20 text-white"
+                        : item.badge === "NEW"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                     }`}
                   >
                     {item.badge}
@@ -216,7 +224,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         key={`${sectionKey}-${item.name}`}
         type="button"
         className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-60 cursor-not-allowed text-gray-500 dark:text-gray-400"
-        title={item.description ? `${item.description} (Coming soon)` : 'Coming soon'}
+        title={item.description ? `${item.description} (Coming soon)` : "Coming soon"}
         aria-disabled="true"
         disabled
         onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.name}-${index}`)}
@@ -226,9 +234,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           <div className="flex-shrink-0">
             <IconComponent className="h-5 w-5" aria-hidden="true" />
           </div>
-          {!isCollapsed && (
-            <span className="flex-1 text-left truncate">{item.name}</span>
-          )}
+          {!isCollapsed && <span className="flex-1 text-left truncate">{item.name}</span>}
         </div>
       </button>
     );
@@ -289,7 +295,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   return (
     <div
       className={`fixed inset-y-0 left-0 z-30 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-700 ${
-        isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'
+        isCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
       }`}
     >
       {/* Enhanced Header */}
@@ -312,7 +318,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           type="button"
           onClick={onToggleCollapse}
           className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all duration-200 shadow-sm"
-          aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+          aria-label={isCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
         >
           {isCollapsed ? (
             <ChevronRightIcon className="h-4 w-4" />
@@ -324,7 +330,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
       {/* Enhanced User Profile */}
       <div
-        className={`p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 ${isCollapsed ? 'px-3' : ''}`}
+        className={`p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 ${isCollapsed ? "px-3" : ""}`}
       >
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0 relative">
@@ -339,10 +345,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               <p className="text-xs text-gray-500 truncate dark:text-gray-400">{user?.email}</p>
               <div className="mt-2 flex items-center space-x-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-100 to-blue-100 text-primary-800 dark:from-primary-900/40 dark:to-blue-900/40 dark:text-primary-200">
-                  {user?.subscriptionPlan || 'Professional'}
+                  {user?.subscriptionPlan || "Professional"}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
-                  {user?.role || 'Admin'}
+                  {user?.role || "Admin"}
                 </span>
               </div>
             </div>
@@ -352,21 +358,25 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
       {/* Enhanced Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
-        {renderSection(t('navigation.main'), visibleMainNavigation, 'main', HomeIcon)}
+        {renderSection(t("navigation.main"), visibleMainNavigation, "main", HomeIcon)}
         {filteredManagementNavigation.length > 0 &&
           renderSection(
-            t('navigation.management'),
+            t("navigation.management"),
             filteredManagementNavigation,
-            'management',
+            "management",
             Cog6ToothIcon,
           )}
         {filteredAdminNavigation.length > 0 &&
-          renderSection(t('navigation.administration'), filteredAdminNavigation, 'admin', ShieldCheckIcon)}
+          renderSection(
+            t("navigation.administration"),
+            filteredAdminNavigation,
+            "admin",
+            ShieldCheckIcon,
+          )}
         {/* Only render system section if not null and has items */}
         {systemNavigation &&
-          renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
+          renderSection(t("navigation.system"), systemNavigation, "system", BellIcon)}
       </nav>
-
     </div>
   );
 };

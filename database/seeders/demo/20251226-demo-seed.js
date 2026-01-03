@@ -359,7 +359,7 @@ module.exports = {
       }
       if (missing.length > 0) {
         throw new Error(
-          `[DEMO SEED] ${template.email} missing required fields: ${missing.join(', ')}`,
+          `[DEMO SEED] ${template.email} ${missing.join(', ')}`,
         );
       }
       const userPayload = {

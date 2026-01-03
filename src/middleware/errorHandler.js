@@ -26,6 +26,8 @@ const errorHandler = (err, req, res, next) => {
   let code = err.code;
   let details;
 
+  const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
+
   const operationalTags = [];
 
   // ---------- Known / operational errors ----------
@@ -62,7 +64,7 @@ const errorHandler = (err, req, res, next) => {
 
   // ---------- Logging ----------
   const logPayload = {
-    requestId: req.id,
+    requestId,
     message: err.message,
     code,
     method: req.method,
@@ -79,7 +81,7 @@ const errorHandler = (err, req, res, next) => {
   if (telemetryReporter && !isOperational && TELEMETRY_ENABLED) {
     try {
       telemetryReporter.reportError({
-        requestId: req.id,
+        requestId,
         route: req.route?.path || req.originalUrl,
         method: req.method,
         statusCode,
@@ -96,7 +98,7 @@ const errorHandler = (err, req, res, next) => {
   const response = {
     status: 'error',
     message,
-    requestId: req.id,
+    requestId,
   };
 
   if (code) {

@@ -1,4 +1,6 @@
+import { API_BASE_URL } from '../services/api';
 
+const LOG_ENDPOINT = `${API_BASE_URL}/logs`;
 
 class Logger {
   constructor() {
@@ -35,12 +37,21 @@ class Logger {
   }
 
   async sendToBackend(level, message, meta) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const token = window.localStorage?.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
     try {
-      await fetch('/api/logs', {
+      await fetch(LOG_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           level,
           message,

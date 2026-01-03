@@ -1,0 +1,90 @@
+const logger = require('../lib/logger');
+
+const API_PREFIX = process.env.API_BASE_URL || '/api';
+
+const DEFAULT_TIMEOUT_MS = Number(process.env.API_REQUEST_TIMEOUT_MS) || 500;
+const DASHBOARD_TIMEOUT_MS = Number(process.env.DASHBOARD_REQUEST_TIMEOUT_MS) || 800;
+
+const TIMEOUT_OVERRIDES = [
+  {
+    prefix: `${API_PREFIX}/dashboard`,
+    timeoutMs: DASHBOARD_TIMEOUT_MS,
+  },
+];
+
+const resolveTimeoutMs = (req, overrides, defaultMs = DEFAULT_TIMEOUT_MS) => {
+  const base = req.baseUrl || '';
+  const path = req.path || '';
+  const requestPath = `${base}${path}` || req.originalUrl || '';
+  const override = (overrides || TIMEOUT_OVERRIDES).find((entry) =>
+    requestPath.startsWith(entry.prefix),
+  );
+  return override?.timeoutMs ?? defaultMs;
+};
+
+const preventPostTimeoutWrites = (res, hasTimedOutRef) => {
+  const methods = ['send', 'json', 'end'];
+  methods.forEach((methodName) => {
+    if (typeof res[methodName] !== 'function') {
+      return;
+    }
+    const original = res[methodName].bind(res);
+    res[methodName] = (...args) => {
+      if (hasTimedOutRef.value) {
+        return res;
+      }
+      return original(...args);
+    };
+  });
+};
+
+const createApiTimeoutMiddleware = (options = {}) => {
+  const defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const overrides = options.overrides ?? TIMEOUT_OVERRIDES;
+
+  return (req, res, next) => {
+    const timeoutMs = resolveTimeoutMs(req, overrides, defaultTimeoutMs);
+    res.set('X-API-Timeout', `${timeoutMs}ms`);
+    const timeoutState = { value: false };
+    const timer = setTimeout(timedOut, timeoutMs);
+    const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
+
+    const cleanup = () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+
+    const timedOut = () => {
+      timeoutState.value = true;
+      if (res.headersSent) {
+        return;
+      }
+      logger.warn('API request exceeded timeout threshold', {
+        timeoutMs,
+        route: `${req.baseUrl}${req.path}`,
+        requestId,
+        method: req.method,
+        userId: req.user?.id,
+      });
+      res.status(504).json({
+        status: 'error',
+        message: 'Request timed out',
+        timeoutMs,
+        requestId,
+      });
+    };
+
+    preventPostTimeoutWrites(res, timeoutState);
+
+    res.once('finish', cleanup);
+    res.once('close', cleanup);
+    req.once('aborted', cleanup);
+
+    next();
+  };
+};
+
+module.exports = {
+  createApiTimeoutMiddleware,
+};

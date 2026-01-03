@@ -14,6 +14,7 @@ const buildEnvConfig = (targetEnv) => {
       dialect: 'sqlite',
       storage: ':memory:',
       logging: false,
+      benchmark: false,
     };
   }
 
@@ -29,6 +30,7 @@ const buildEnvConfig = (targetEnv) => {
       dialect: 'sqlite',
       storage: sqliteStorage,
       logging: dbConfig.logging ?? false,
+      benchmark: dbConfig.benchmark ?? false,
     };
   }
 
@@ -39,6 +41,7 @@ const buildEnvConfig = (targetEnv) => {
     pool: dbConfig.pool,
     logging: dbConfig.logging ?? false,
     dialectOptions: dbConfig.dialectOptions,
+    benchmark: dbConfig.benchmark ?? false,
   };
 };
 

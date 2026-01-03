@@ -37,10 +37,11 @@ This Phase 3 guide summarizes the lightweight, fail-safe telemetry that can run 
   - `METRICS_ENABLED`: set to `true` to activate runtime metrics logging (defaults to `false`).
   - `REQUEST_LOGGING`: set to `false` if you want to keep the request log silent (defaults to `true`).
   - `LOG_SLOW_REQUEST_MS`: slow-request threshold in milliseconds (defaults to `1000`).
+  - `LOG_SLOW_QUERY_MS`: slow-database-query threshold in milliseconds (defaults to `500`, set `0` to disable slow-query warnings).
   - `METRICS_SNAPSHOT_INTERVAL_MS`: snapshot cadence for runtime metrics (defaults to `60000`).
 - `validateEnv.js` now warns when these are missing or set to unexpected values, but it never fails the startup — observability remains optional and toggleable.
 
 ## Usage Notes
 
 - To correlate a customer-visible failure, reproduce it via the API, look for the returned `code`/`status`, then search logs for the same `requestId` (every log record carries it).
-- `GET /metrics` is the single Prometheus-compatible scrape endpoint; it serves a minimal `smartaccounting_up` gauge so external monitoring can still observe service availability without internal counters.
+- `GET /metrics` now exposes Prometheus-style gauges (uptime, request/error counts, slow rates, memory and CPU usage) so a single scrape captures availability and runtime health.

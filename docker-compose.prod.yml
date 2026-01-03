@@ -42,7 +42,7 @@ services:
         condition: service_healthy
 
     ports:
-      - "5001:5000"
+      - "5050:5000"
 
     volumes:
       # Runtime data only (NOT code)

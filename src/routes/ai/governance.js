@@ -26,7 +26,7 @@ function redactPrompt(prompt) {
 // GET /api/ai/governance
 router.get('/governance', async (req, res) => {
   const requestId =
-    req.requestId || req.id || req.headers['x-request-id'] || require('crypto').randomUUID();
+    req.requestId || req.headers['x-request-id'] || require('crypto').randomUUID();
   const policyVersion = '10.0.0';
   const disclaimer =
     'AI output is for informational purposes only. Please review all results for compliance.';

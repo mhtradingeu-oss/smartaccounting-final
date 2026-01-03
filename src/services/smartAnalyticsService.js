@@ -1,30 +1,72 @@
-const { Invoice } = require('../models');
+const { Invoice, sequelize } = require('../models');
 
-const parseAmount = (value) => (value ? Number(value) : 0);
+const parseNumber = (value) => {
+  const num = Number(value);
+  return Number.isNaN(num) ? 0 : num;
+};
+
+const formatLatestInvoice = (invoice) => {
+  if (!invoice) {
+    return null;
+  }
+
+  const amount = invoice.total || invoice.amount || 0;
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status || 'unknown',
+    amount: parseNumber(amount),
+  };
+};
 
 const getInvoiceStats = async (companyId) => {
-  const invoices = await Invoice.findAll({ where: { companyId } });
-  const totalRevenue = invoices.reduce((sum, invoice) => sum + parseAmount(invoice.total || invoice.amount), 0);
-  const invoiceCount = invoices.length;
+  const baseWhere = { companyId };
 
-  const statusBreakdown = invoices.reduce((acc, invoice) => {
-    const status = invoice.status || 'unknown';
-    acc[status] = (acc[status] || 0) + 1;
+  const totalRevenueExpr = sequelize.fn(
+    'SUM',
+    sequelize.fn('COALESCE', sequelize.col('total'), sequelize.col('amount'), 0),
+  );
+
+  const aggregate = await Invoice.findOne({
+    where: baseWhere,
+    attributes: [
+      [sequelize.fn('COUNT', sequelize.col('id')), 'invoiceCount'],
+      [totalRevenueExpr, 'totalRevenue'],
+    ],
+    raw: true,
+  });
+
+  const statusRows = await Invoice.findAll({
+    where: baseWhere,
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('status')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  });
+
+  const latestInvoice = await Invoice.findOne({
+    where: baseWhere,
+    order: [['createdAt', 'DESC']],
+    attributes: ['id', 'invoiceNumber', 'status', 'total', 'amount'],
+    raw: true,
+  });
+
+  const totalRevenue = parseNumber(aggregate?.totalRevenue);
+  const invoiceCount = parseNumber(aggregate?.invoiceCount);
+
+  const statusBreakdown = statusRows.reduce((acc, row) => {
+    const status = row.status || 'unknown';
+    acc[status] = parseNumber(row.count);
     return acc;
   }, {});
-
-  const latestInvoice = invoices.sort((a, b) => b.createdAt - a.createdAt)[0] || null;
 
   return {
     totalRevenue,
     invoiceCount,
     statusBreakdown,
-    latestInvoice: latestInvoice ? {
-      id: latestInvoice.id,
-      invoiceNumber: latestInvoice.invoiceNumber,
-      status: latestInvoice.status,
-      amount: latestInvoice.amount,
-    } : null,
+    latestInvoice: formatLatestInvoice(latestInvoice),
   };
 };
 

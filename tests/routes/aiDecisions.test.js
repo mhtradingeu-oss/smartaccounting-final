@@ -59,9 +59,7 @@ describe('POST /api/ai/insights/:id/decisions (read-only)', () => {
       .send({ decision: 'accepted', reason: 'test' });
 
     expect(res.status).toBe(501);
-    expect(res.body).toEqual({
-      feature: 'AI decision capture',
-      status: 'disabled',
-    });
+    expect(res.body.error).toBe('AI decision capture is disabled');
+    expect(typeof res.body.requestId).toBe('string');
   });
 });

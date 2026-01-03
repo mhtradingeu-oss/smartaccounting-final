@@ -10,28 +10,18 @@ if (typeof window !== 'undefined' && window.location) {
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
 import './i18n';
-import AppErrorBoundary from './components/AppErrorBoundary';
 import { validateClientEnv } from './lib/envGuards';
-
-import { AuthProvider } from './context/AuthContext';
-import { RoleProvider } from './context/RoleContext';
-import { CompanyProvider } from './context/CompanyContext';
 
 validateClientEnv();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      <AppErrorBoundary>
-        <CompanyProvider>
-          <RoleProvider>
-            <App />
-          </RoleProvider>
-        </CompanyProvider>
-      </AppErrorBoundary>
-    </AuthProvider>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </React.StrictMode>,
 );

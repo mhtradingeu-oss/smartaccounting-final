@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const logger = require('../lib/logger');
 
 const parseNumberEnv = (value) => {
   if (value === undefined || value === null) {
@@ -6,6 +7,66 @@ const parseNumberEnv = (value) => {
   }
   const parsed = Number(value);
   return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const DEFAULT_SLOW_QUERY_THRESHOLD_MS = 500;
+
+const sanitizeSql = (sql) => {
+  if (typeof sql !== 'string') {
+    return '';
+  }
+
+  return sql.replace(/\s+/g, ' ').trim().slice(0, 1024);
+};
+
+const buildSequelizeLoggingOptions = (isTestEnv) => {
+  const rawThreshold = process.env.LOG_SLOW_QUERY_MS;
+  let threshold;
+
+  if (rawThreshold === undefined || rawThreshold === null) {
+    threshold = DEFAULT_SLOW_QUERY_THRESHOLD_MS;
+  } else {
+    const parsed = parseNumberEnv(rawThreshold);
+    threshold = parsed === undefined ? DEFAULT_SLOW_QUERY_THRESHOLD_MS : parsed;
+  }
+
+  const logAllQueries = process.env.SEQUELIZE_LOGGING === 'true';
+  const shouldLogSlowQueries = !isTestEnv && threshold > 0;
+
+  if (logAllQueries) {
+    return {
+      logging: (sql, timing) => {
+        logger.debug('Database query executed', {
+          sql: sanitizeSql(sql),
+          durationMs: typeof timing === 'number' ? Number(timing.toFixed(2)) : undefined,
+        });
+      },
+      benchmark: true,
+    };
+  }
+
+  if (shouldLogSlowQueries) {
+    return {
+      logging: (sql, timing) => {
+        if (typeof timing !== 'number') {
+          return;
+        }
+        if (timing >= threshold) {
+          logger.performance('Slow database query', {
+            sql: sanitizeSql(sql),
+            durationMs: Number(timing.toFixed(2)),
+            thresholdMs: threshold,
+          });
+        }
+      },
+      benchmark: true,
+    };
+  }
+
+  return {
+    logging: false,
+    benchmark: false,
+  };
 };
 
 function createDatabaseConfig(targetEnv) {
@@ -38,13 +99,16 @@ function createDatabaseConfig(targetEnv) {
         }
       : undefined;
 
+  const loggingOptions = buildSequelizeLoggingOptions(isTestEnv);
+
   return {
     env: normalizedEnv,
     isTest: isTestEnv,
     isSqlite: forceSqlite || (databaseUrl && databaseUrl.startsWith('sqlite:')),
     storage,
     databaseUrl,
-    logging: process.env.SEQUELIZE_LOGGING === 'true' ? console.log : false,
+    logging: loggingOptions.logging,
+    benchmark: loggingOptions.benchmark,
     pool: hasPool ? poolConfig : undefined,
     dialectOptions,
   };
@@ -62,7 +126,8 @@ function getSequelize(targetEnv) {
     sequelize = new Sequelize({
       dialect: 'sqlite',
       storage: dbConfig.storage || ':memory:',
-      logging: false,
+      logging: dbConfig.logging ?? false,
+      benchmark: dbConfig.benchmark ?? false,
     });
   } else {
     if (!dbConfig.databaseUrl) {
@@ -71,6 +136,7 @@ function getSequelize(targetEnv) {
 
     sequelize = new Sequelize(dbConfig.databaseUrl, {
       logging: dbConfig.logging ?? false,
+      benchmark: dbConfig.benchmark ?? false,
       pool: dbConfig.pool,
       dialectOptions: dbConfig.dialectOptions,
     });

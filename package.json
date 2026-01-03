@@ -15,6 +15,7 @@
     "build": "npm run build --prefix client",
     "build:server": "echo 'Backend build complete.'",
     "smoke:frontend": "npm ci --prefix client && npm run build --prefix client",
+    "smoke:dev": "node scripts/dev-smoke.js",
     "migrate:prod": "node scripts/migrate-prod.js",
     "seed:demo:prod": "node scripts/seed-demo-prod.js",
     "deploy:prod": "npm run migrate:prod && npm run smoke:frontend && docker build --tag smartaccounting:prod .",
