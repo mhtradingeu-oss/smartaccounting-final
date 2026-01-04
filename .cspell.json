@@ -7,10 +7,14 @@
     "csrf",
     "datev",
     "gobd",
+    "healthcheck",
     "IBAN",
+    "isready",
     "jwt",
+    "pgdata",
     "refresh_token",
     "refreshtoken",
+    "smartaccounting",
     "traineddata"
   ]
 }

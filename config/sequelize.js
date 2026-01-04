@@ -5,11 +5,11 @@ if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_MIGRATION) 
 const path = require('path');
 const { createDatabaseConfig } = require('../src/config/database');
 
-const buildEnvConfig = (targetEnv) => {
-  const dbConfig = createDatabaseConfig(targetEnv);
+const buildEnvConfig = (targetEnv, overrideDbConfig) => {
+  const dbConfig = overrideDbConfig || createDatabaseConfig(targetEnv);
 
-  // Always use SQLite in-memory for tests
-  if (dbConfig.isTest) {
+  // SQLITE (runtime/CI) for sqlite-backed tests
+  if (dbConfig.isTest && dbConfig.isSqlite) {
     return {
       dialect: 'sqlite',
       storage: ':memory:',
@@ -18,7 +18,6 @@ const buildEnvConfig = (targetEnv) => {
     };
   }
 
-  // SQLITE (runtime, not CLI)
   if (dbConfig.isSqlite) {
     const sqliteStorage =
       dbConfig.storage ||
@@ -45,6 +44,20 @@ const buildEnvConfig = (targetEnv) => {
   };
 };
 
+const buildPostgresConfig = (dbConfig) => ({
+  dialect: 'postgres',
+  url: dbConfig.databaseUrl,
+  pool: dbConfig.pool,
+  logging: dbConfig.logging ?? false,
+  dialectOptions: dbConfig.dialectOptions,
+  benchmark: dbConfig.benchmark ?? false,
+});
+
+const testDbConfig = createDatabaseConfig('test');
+const testConfig = testDbConfig.isSqlite
+  ? buildEnvConfig('test', testDbConfig)
+  : buildPostgresConfig(testDbConfig);
+
 module.exports = {
   // 👇 NEW: explicit sqlite env for sequelize-cli
   sqlite: {
@@ -54,6 +67,6 @@ module.exports = {
   },
 
   development: buildEnvConfig('development'),
-  test: buildEnvConfig('test'),
+  test: testConfig,
   production: buildEnvConfig('production'),
 };

@@ -3,10 +3,14 @@ const { EventEmitter } = require('events');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// Force SQLite in test environment and ignore DATABASE_URL
+// Allow overriding USE_SQLITE when Postgres is required
 process.env.NODE_ENV = 'test';
-process.env.USE_SQLITE = 'true';
-delete process.env.DATABASE_URL;
+if (typeof process.env.USE_SQLITE === 'undefined') {
+  process.env.USE_SQLITE = 'true';
+}
+if (process.env.USE_SQLITE === 'true') {
+  delete process.env.DATABASE_URL;
+}
 const { sequelize } = require('../src/lib/database');
 
 // ===============================
@@ -34,28 +38,49 @@ process.env.STRIPE_SECRET_KEY = 'test-stripe-key';
 
 beforeAll(async () => {
   await sequelize.authenticate();
-  await sequelize.sync({ force: true });
+  if (process.env.USE_SQLITE === 'true') {
+    await sequelize.sync({ force: true });
+  }
   const { AuditLog, User, Company } = require('../src/models');
   // Create test company first
-  global.testCompany = await Company.create({
-    name: 'Test Company',
-    taxId: 'DE000000001',
-    address: 'Test Address 123',
-    city: 'Berlin',
-    postalCode: '10115',
-    country: 'Germany',
-    aiEnabled: true,
+  const [testCompany] = await Company.findOrCreate({
+    where: { taxId: 'DE000000001' },
+    defaults: {
+      name: 'Test Company',
+      address: 'Test Address 123',
+      city: 'Berlin',
+      postalCode: '10115',
+      country: 'Germany',
+      aiEnabled: true,
+    },
   });
+  global.testCompany = testCompany;
+  // Create another company for cross-company tests
+  const [otherCompany] = await Company.findOrCreate({
+    where: { taxId: 'DE000000002' },
+    defaults: {
+      name: 'Other Company',
+      address: 'Other Address 456',
+      city: 'Munich',
+      postalCode: '80331',
+      country: 'Germany',
+      aiEnabled: false,
+    },
+  });
+  global.otherCompany = otherCompany;
   // Create test user with correct companyId
-  global.testUser = await User.create({
-    email: 'test@example.com',
-    password: await bcrypt.hash('testpass123', 10),
-    firstName: 'Test',
-    lastName: 'User',
-    role: 'admin',
-    isAnonymized: false,
-    companyId: global.testCompany.id,
+  const [testUser] = await User.findOrCreate({
+    where: { email: 'test@example.com' },
+    defaults: {
+      password: await bcrypt.hash('testpass123', 10),
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'admin',
+      isAnonymized: false,
+      companyId: global.testCompany.id,
+    },
   });
+  global.testUser = testUser;
   // Now create an AuditLog record using the real testUser and testCompany
   try {
     await AuditLog.create({

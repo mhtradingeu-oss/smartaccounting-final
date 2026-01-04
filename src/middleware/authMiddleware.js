@@ -26,6 +26,8 @@ const authenticate = async (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, getJwtSecret());
+    req.tokenPayload = decoded;
+    req.tokenCompanyId = decoded.companyId || null;
     const tokenJti = decoded.jti || null;
     const tokenExp = decoded.exp ? new Date(decoded.exp * 1000) : null;
     if (tokenJti && (await revokedTokenService.isTokenRevoked(tokenJti))) {
