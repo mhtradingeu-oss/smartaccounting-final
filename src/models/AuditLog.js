@@ -79,8 +79,9 @@ module.exports = (sequelize, DataTypes) => {
   // Patch create to skip in test unless explicitly allowed
   const origCreate = AuditLog.create.bind(AuditLog);
   AuditLog.create = async function (values, options = {}) {
-    if (process.env.NODE_ENV === 'test' && !options.allowTestAuditLog) {
-      // Simulate as if log was created, but do nothing
+    const isSqliteTest = process.env.NODE_ENV === 'test' && process.env.USE_SQLITE === 'true';
+    if (isSqliteTest && !options.allowTestAuditLog) {
+      // Simulate as if log was created, but do nothing while SQLite tests are scrubbing data
       return null;
     }
     return origCreate(values, options);

@@ -65,7 +65,7 @@ services:
       context: ./client
 
     environment:
-      VITE_API_URL: http://localhost:5001/api
+      VITE_API_URL: http://backend:5000/api
 
     depends_on:
       backend:

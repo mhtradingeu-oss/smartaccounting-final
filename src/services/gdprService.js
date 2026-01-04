@@ -75,7 +75,7 @@ async function exportUserData(requestingUser, targetUserId) {
     auditLogs = await AuditLog.findAll({ where: { userId: targetUser.id } });
   }
 
-  return {
+  const exportPayload = {
     user: userExport,
     company,
     invoices,
@@ -83,6 +83,34 @@ async function exportUserData(requestingUser, targetUserId) {
     attachments,
     auditLogs,
   };
+
+  await logGdprExport({
+    requestingUser,
+    targetUser,
+    invoices,
+    expenses,
+    attachments,
+  });
+
+  return exportPayload;
+}
+
+async function logGdprExport({ requestingUser, targetUser, invoices, expenses, attachments }) {
+  await AuditLogService.appendEntry({
+    action: 'GDPR_EXPORT_USER_DATA',
+    resourceType: 'User',
+    resourceId: String(targetUser.id),
+    userId: requestingUser.id,
+    oldValues: null,
+    newValues: {
+      exported: {
+        invoices: invoices.length,
+        expenses: expenses.length,
+        attachments: attachments.length,
+      },
+    },
+    reason: 'GDPR user data export',
+  });
 }
 
 /**
