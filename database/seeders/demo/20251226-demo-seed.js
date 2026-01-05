@@ -36,7 +36,7 @@ const INVOICE_TEMPLATES = [
   },
   {
     invoiceNumber: 'SA-INV-2026-002',
-    status: 'SENT',
+    status: 'PARTIALLY_PAID',
     clientName: 'Berlin BioTech GmbH',
     notes: 'Monthly compliance & CFO support',
     ownerKey: 'accountant',
@@ -73,7 +73,7 @@ const INVOICE_TEMPLATES = [
   },
   {
     invoiceNumber: 'SA-INV-2026-005',
-    status: 'SENT',
+    status: 'PARTIALLY_PAID',
     clientName: 'Märkisches Ventures GmbH',
     notes: 'Fractional CFO hours for growth planning',
     ownerKey: 'accountant',
@@ -109,7 +109,7 @@ const INVOICE_TEMPLATES = [
   },
   {
     invoiceNumber: 'SA-INV-2026-008',
-    status: 'SENT',
+    status: 'PARTIALLY_PAID',
     clientName: 'Kunsthaus Verlag GmbH',
     notes: 'Reduced rate supply of compliance manuals',
     ownerKey: 'accountant',
@@ -145,7 +145,7 @@ const INVOICE_TEMPLATES = [
   },
   {
     invoiceNumber: 'SA-INV-2026-011',
-    status: 'SENT',
+    status: 'PARTIALLY_PAID',
     clientName: 'Märkisches Ventures GmbH',
     notes: 'Reporting dashboard design',
     ownerKey: 'accountant',
@@ -495,6 +495,7 @@ const BANK_TRANSACTION_SPECS = [
   {
     label: 'Partial payment SA-INV-2026-002',
     matchReference: 'SA-INV-2026-002',
+    transactionReference: 'SA-INV-2026-002-PARTIAL-1',
     transactionDate: '2026-02-16',
     valueDate: '2026-02-16',
     description: 'Partial payment from Berlin BioTech',
@@ -507,6 +508,7 @@ const BANK_TRANSACTION_SPECS = [
   {
     label: 'First partial SA-INV-2026-005',
     matchReference: 'SA-INV-2026-005',
+    transactionReference: 'SA-INV-2026-005-PARTIAL-1',
     transactionDate: '2026-03-18',
     valueDate: '2026-03-18',
     description: 'First instalment from Märkisches Ventures',
@@ -519,6 +521,7 @@ const BANK_TRANSACTION_SPECS = [
   {
     label: 'Second partial SA-INV-2026-005',
     matchReference: 'SA-INV-2026-005',
+    transactionReference: 'SA-INV-2026-005-PARTIAL-2',
     transactionDate: '2026-03-28',
     valueDate: '2026-03-28',
     description: 'Additional instalment from Märkisches Ventures',
@@ -531,6 +534,7 @@ const BANK_TRANSACTION_SPECS = [
   {
     label: 'Partial payment SA-INV-2026-011',
     matchReference: 'SA-INV-2026-011',
+    transactionReference: 'SA-INV-2026-011-PARTIAL-1',
     transactionDate: '2026-05-02',
     valueDate: '2026-05-02',
     description: 'Partial payment for reporting dashboard',
@@ -543,6 +547,7 @@ const BANK_TRANSACTION_SPECS = [
   {
     label: 'Intro payment SA-INV-2026-008',
     matchReference: 'SA-INV-2026-008',
+    transactionReference: 'SA-INV-2026-008-PARTIAL-1',
     transactionDate: '2026-04-05',
     valueDate: '2026-04-05',
     description: 'Initial payment for printed manuals',
@@ -834,6 +839,53 @@ const insertRecordAndReturnId = async (
     return rows.length > 0 ? rows[0].id : null;
   }
   return null;
+};
+
+const ensurePartialPaymentTransaction = async ({
+  queryInterface,
+  spec,
+  amount,
+  companyId,
+  ownerId,
+  now,
+  transactionIdByReference,
+}) => {
+  const reference = spec.transactionReference;
+  if (!reference) {
+    return null;
+  }
+  if (transactionIdByReference[reference]) {
+    return transactionIdByReference[reference];
+  }
+  const transactionPayload = {
+    id: uuidv4(),
+    company_id: companyId,
+    user_id: ownerId || null,
+    transaction_date: spec.transactionDate,
+    description: spec.description,
+    amount,
+    currency: 'EUR',
+    type: 'income',
+    category: spec.category || 'REVENUE',
+    vat_rate: null,
+    vat_amount: null,
+    reference,
+    non_deductible: false,
+    credit_amount: amount,
+    debit_amount: null,
+    is_reconciled: false,
+    created_at: now,
+    updated_at: now,
+  };
+  const partialTransactionId = await insertRecordAndReturnId(
+    queryInterface,
+    'transactions',
+    transactionPayload,
+    'SELECT id FROM transactions WHERE reference = :reference AND company_id = :companyId LIMIT 1;',
+    { reference, companyId },
+  );
+  transactionIdByReference[reference] = partialTransactionId;
+  return partialTransactionId;
 };
 
 const logAuditEntry = async ({ action, resourceType, resourceId, newValues, reason, userId }) => {
@@ -1207,19 +1259,32 @@ module.exports = {
 
     const bankTransactionIds = {};
     for (const spec of BANK_TRANSACTION_SPECS) {
+      const invoiceMatch = invoiceSummaries.find((inv) => inv.invoiceNumber === spec.matchReference);
+      const expenseMatch = expenseSummaries.find((exp) => exp.description === spec.matchReference);
       let amount = spec.amountOverride;
-      let reconciledWith = null;
       if (!amount && spec.matchReference) {
-        const baseAmount =
-          invoiceSummaries.find((inv) => inv.invoiceNumber === spec.matchReference)?.total ||
-          expenseSummaries.find((exp) => exp.description === spec.matchReference)?.amount ||
-          0;
+        const baseAmount = invoiceMatch?.total || expenseMatch?.amount || 0;
         const fraction = spec.matchFraction || 1;
         amount = formatMoney(baseAmount * fraction);
-        reconciledWith = transactionIdByReference[spec.matchReference];
       }
       if (!amount) {
         amount = formatMoney(spec.amountOverride || 0);
+      }
+      const reconciliationReference = spec.transactionReference || spec.matchReference;
+      let reconciledWith = null;
+      if (spec.transactionReference) {
+        const ownerId = invoiceMatch?.ownerId || userMap.accountant;
+        reconciledWith = await ensurePartialPaymentTransaction({
+          queryInterface,
+          spec,
+          amount,
+          companyId,
+          ownerId,
+          now,
+          transactionIdByReference,
+        });
+      } else if (reconciliationReference) {
+        reconciledWith = transactionIdByReference[reconciliationReference];
       }
       const bankTxPayload = {
         bankStatementId,
@@ -1364,7 +1429,7 @@ module.exports = {
       if (existing.length > 0) {
         continue;
       }
-      const insightId = await insertRecordAndReturnId(
+      await insertRecordAndReturnId(
         queryInterface,
         'ai_insights',
         payload,
