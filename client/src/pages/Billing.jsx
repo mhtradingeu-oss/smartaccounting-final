@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -8,13 +9,14 @@ import { FEATURE_FLAGS } from '../lib/constants';
 import api from '../services/api';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import FeatureGate from '../components/FeatureGate';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const Billing = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const isBillingDisabled = !FEATURE_FLAGS.STRIPE_BILLING.enabled;
+  const billingEnabled = FEATURE_FLAGS.STRIPE_BILLING.enabled;
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [billingHistory, setBillingHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,14 +24,29 @@ const Billing = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (isBillingDisabled) {
+    if (!billingEnabled) {
       setLoading(false);
       setError(null);
+      setSubscriptionStatus(null);
+      setBillingHistory([]);
       return;
     }
 
     fetchBillingData();
-  }, [isBillingDisabled]);
+  }, [billingEnabled]);
+
+  if (!billingEnabled) {
+    return (
+      <FeatureGate
+        enabled={billingEnabled}
+        featureName="Stripe billing"
+        description="Stripe billing is disabled for this release. Enable STRIPE_BILLING to unlock the billing console."
+        ctaLabel="View pricing plans"
+        ctaPath="/pricing"
+        help="The backend currently returns 501 for /api/stripe when the feature is off."
+      />
+    );
+  }
 
   const fetchBillingData = async () => {
     try {
@@ -42,7 +59,7 @@ const Billing = () => {
       setBillingHistory(historyResponse.data?.history || []);
       setError(null);
     } catch (err) {
-      logger.error('Failed to load billing data', err);
+      logger.error('Failed to load billing data', getSafeErrorMeta(err));
       setError('Billing data is unavailable right now.');
     } finally {
       setLoading(false);
@@ -276,19 +293,34 @@ const Billing = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Invoice
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Actions
                     </th>
                   </tr>

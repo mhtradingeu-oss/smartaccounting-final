@@ -12,14 +12,14 @@ const heroFeatures = [
     tag: 'Live',
   },
   {
-    title: 'Compliance & reporting',
-    description: 'GDPR, Elster, and investor-ready exports built for European teams.',
-    tag: 'Trusted',
+    title: 'Compliance readiness',
+    description: 'GDPR posture and investor-ready exports today with German tax automation coming soon.',
+    tag: 'Coming soon',
   },
   {
-    title: 'Stripe billing & automation',
-    description: 'Generate invoices from Stripe checkout events and automate reminders.',
-    tag: 'Coming soon',
+    title: 'AI-assisted advisories',
+    description: 'Explainable insights, risk highlights, and a conversational assistant keep your team aligned.',
+    tag: 'Live',
   },
 ];
 
@@ -128,7 +128,7 @@ export default function Landing() {
               <ul className="mt-6 space-y-3 text-sm text-slate-300">
                 <li>• Bank feed reconciliation with AI categorization</li>
                 <li>• Audit-ready exports for investors and auditors</li>
-                <li>• Billing automation wired to Stripe and German compliance</li>
+                <li>• Billing automation, Stripe workflows, and German compliance readiness (coming soon)</li>
               </ul>
             </div>
             <Card className="bg-slate-800 text-white">

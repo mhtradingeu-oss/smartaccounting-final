@@ -92,7 +92,7 @@ const MetricCard = ({
         {(description || trend) && (
           <div className="flex items-center justify-between text-sm">
             {description && <p className="text-gray-500 dark:text-gray-400">{description}</p>}
-            {trend && <div className="text-xs text-gray-400 dark:text-gray-500">{trend}</div>}
+            {trend && <div className="text-xs text-gray-500 dark:text-gray-400">{trend}</div>}
           </div>
         )}
       </div>

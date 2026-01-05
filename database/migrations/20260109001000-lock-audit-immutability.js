@@ -1,7 +1,9 @@
 'use strict';
 
+const Sequelize = require('sequelize');
+
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface) {
     await queryInterface.changeColumn('audit_logs', 'createdAt', {
       type: Sequelize.DATE,
       allowNull: false,

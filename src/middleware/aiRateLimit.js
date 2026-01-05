@@ -20,6 +20,7 @@ module.exports = async function aiRateLimit(req, res, next) {
       companyId: req.user.companyId,
       route: req.originalUrl,
       queryType: req.query.queryType,
+      requestId: req.requestId,
       prompt: req.query.prompt,
     });
     return res.status(429).json({

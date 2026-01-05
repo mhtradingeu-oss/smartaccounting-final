@@ -40,7 +40,21 @@ const verifySchema = () => {
   }
 };
 
-const requireProduction = () => {
+const refuseRealProductionWithoutOverride = () => {
+  const initialEnv = process.env.NODE_ENV;
+  const allowProdRun = process.env.ALLOW_DEMO_SEED_PROD === 'true';
+  if (initialEnv === 'production' && !allowProdRun) {
+    console.error(
+      '[seed:demo:prod] aborting: running inside a production NODE_ENV requires ALLOW_DEMO_SEED_PROD=true to proceed.',
+    );
+    console.error(
+      `[seed:demo:prod] current flags: DEMO_MODE=${process.env.DEMO_MODE || 'undefined'} ALLOW_DEMO_SEED=${process.env.ALLOW_DEMO_SEED || 'undefined'} ALLOW_DEMO_SEED_PROD=${process.env.ALLOW_DEMO_SEED_PROD || 'undefined'}`,
+    );
+    process.exit(1);
+  }
+};
+
+const ensureProductionNodeEnv = () => {
   if (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') {
     console.warn(
       `[seed:demo:prod] NODE_ENV=${process.env.NODE_ENV}. Resetting to production for migration safety.`,
@@ -59,10 +73,10 @@ const configureDemoPassword = () => {
 };
 
 const DEMO_USERS = [
-  { email: 'demo-admin@demo.com', role: 'admin' },
-  { email: 'demo-accountant@demo.com', role: 'accountant' },
-  { email: 'demo-auditor@demo.com', role: 'auditor' },
-  { email: 'demo-viewer@demo.com', role: 'viewer' },
+  { email: 'admin@demo.de', role: 'admin' },
+  { email: 'accountant@demo.de', role: 'accountant' },
+  { email: 'auditor@demo.de', role: 'auditor' },
+  { email: 'viewer@demo.de', role: 'viewer' },
 ];
 
 const printLoginSheet = () => {
@@ -91,7 +105,8 @@ const runCommand = (command, args) => {
 };
 
 requireDemoMode();
-requireProduction();
+refuseRealProductionWithoutOverride();
+ensureProductionNodeEnv();
 verifySchema();
 configureDemoPassword();
 

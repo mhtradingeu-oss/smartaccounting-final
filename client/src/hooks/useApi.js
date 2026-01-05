@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { api } from '../services/api';
+import { api, formatApiError } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export const useApi = () => {
@@ -22,9 +22,9 @@ export const useApi = () => {
           throw new Error('Session expired. Please log in again.');
         }
 
-        const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
-        setError(errorMessage);
-        throw new Error(errorMessage);
+        const { message } = formatApiError(err, 'An error occurred.');
+        setError(message);
+        throw new Error(message);
       } finally {
         setLoading(false);
       }

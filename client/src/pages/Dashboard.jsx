@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../services/dashboardAPI';
 import api, { formatApiError } from '../services/api';
 import { Button } from '../components/ui/Button';
+import Card from '../components/Card';
+import { Modal } from '../components/ui/Modal';
 import { PageLoadingState, PageEmptyState, PageErrorState } from '../components/ui/PageStates';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
@@ -15,6 +17,7 @@ const Dashboard = () => {
   const { user } = useAuth();
 
   const isReadOnly = isReadOnlyRole(user?.role);
+  const canViewInvestorDashboard = ['auditor', 'accountant', 'admin'].includes(user?.role);
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -122,48 +125,84 @@ const Dashboard = () => {
 
       {/* Demo Modal */}
       {showDemoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-gray-900 p-8 rounded-xl w-full max-w-md shadow-lg border border-gray-200 dark:border-gray-800">
-            <h2 className="text-2xl font-extrabold text-primary-700 dark:text-primary-300 mb-3 tracking-tight">
-              Load Demo Data
-            </h2>
-            <p className="text-base text-gray-600 dark:text-gray-300 mb-5">
-              This will generate demo invoices, expenses and bank statements.
-            </p>
+        <Modal
+          open={showDemoModal}
+          onClose={() => setShowDemoModal(false)}
+          title="Load Demo Data"
+          ariaLabel="Confirm loading demo data"
+          className="max-w-md space-y-4"
+        >
+          <p className="text-base text-gray-600 dark:text-gray-300 mb-0">
+            This will generate demo invoices, expenses and bank statements.
+          </p>
 
-            {demoError && <div className="text-red-600 text-sm mb-3">{demoError}</div>}
-            {demoSuccess && (
-              <div className="text-green-600 text-sm mb-3">Demo data loaded successfully.</div>
-            )}
-
-            <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="secondary"
-                size="md"
-                className="border border-gray-300 dark:border-gray-700"
-                onClick={() => setShowDemoModal(false)}
-                disabled={demoLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="md"
-                className="font-bold shadow-sm border border-red-200 dark:border-red-700"
-                onClick={handleLoadDemoData}
-                disabled={demoLoading || demoSuccess}
-              >
-                {demoLoading ? 'Loading…' : 'Confirm'}
-              </Button>
+          {demoError && (
+            <div
+              className="text-red-600 text-sm"
+              role="alert"
+              aria-live="assertive"
+            >
+              {demoError}
             </div>
+          )}
+          {demoSuccess && (
+            <div
+              className="text-green-600 text-sm"
+              role="status"
+              aria-live="polite"
+            >
+              Demo data loaded successfully.
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="secondary"
+              size="md"
+              className="border border-gray-300 dark:border-gray-700"
+              onClick={() => setShowDemoModal(false)}
+              disabled={demoLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              className="font-bold shadow-sm border border-red-200 dark:border-red-700"
+              onClick={handleLoadDemoData}
+              disabled={demoLoading || demoSuccess}
+            >
+              {demoLoading ? 'Loading…' : 'Confirm'}
+            </Button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Dashboard Content */}
       <div className="space-y-12">
         {isReadOnly && (
         <ReadOnlyBanner mode="Viewer" message={t('states.read_only.dashboard_notice')} />
+        )}
+
+        {canViewInvestorDashboard && (
+          <Card className="border border-dashed border-blue-200 bg-white/80 p-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+                  Auditor tools
+                </p>
+                <h2 className="text-xl font-semibold text-gray-900">Investor dashboard</h2>
+                <p className="text-sm text-gray-600">
+                  Jump into the auditor-friendly KPI surface without leaving the main workspace.
+                </p>
+              </div>
+              <Link to="/investor-dashboard">
+                <Button variant="primary" size="md">
+                  Open investor dashboard
+                </Button>
+              </Link>
+            </div>
+          </Card>
         )}
 
         {/* KPI Metrics */}

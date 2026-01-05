@@ -15,14 +15,15 @@ function extractPrompt(req) {
 async function handleRejection(req, res, { status = 403, error, reason }) {
   const prompt = extractPrompt(req);
   try {
-    await logRejected({
-      userId: req.user?.id,
-      companyId: req.companyId,
-      queryType: req.originalUrl,
-      route: req.originalUrl,
-      prompt,
-      reason,
-    });
+      await logRejected({
+        userId: req.user?.id,
+        companyId: req.companyId,
+        queryType: req.originalUrl,
+        route: req.originalUrl,
+        prompt,
+        requestId: req.requestId,
+        reason,
+      });
   } catch (logError) {
     // Avoid throwing if logging fails
     if (process.env.NODE_ENV !== 'test') {

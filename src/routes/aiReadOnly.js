@@ -35,7 +35,17 @@ const safePromptFromRequest = (prompt) => redactPII(prompt || '');
 // Enforce GET-only, authentication, company scoping, and rate limiting
 router.use(authenticate, requireCompany, aiRouteGuard(), rateLimit);
 
-async function rejectIfMutationIntent({ userId, companyId, queryType, route, prompt, safePrompt, req, res }) {
+async function rejectIfMutationIntent({
+  userId,
+  companyId,
+  queryType,
+  route,
+  prompt,
+  safePrompt,
+  requestId,
+  req,
+  res,
+}) {
   const intent = detectMutationIntent(prompt);
   if (!intent.detected) {
     return false;
@@ -46,6 +56,7 @@ async function rejectIfMutationIntent({ userId, companyId, queryType, route, pro
     queryType,
     route,
     prompt: safePrompt,
+    requestId,
     reason: intent.reason,
   });
   respondWithError(req, res, 400, 'Mutation intent detected. AI is advisory only.');
@@ -62,6 +73,7 @@ router.get('/invoice-summary', async (req, res, next) => {
     const userId = req.user.id;
     const route = req.originalUrl;
     const queryType = 'invoice_summary';
+    const requestId = req.requestId;
     if (!companyId) {
       await logRejected({
         userId,
@@ -69,6 +81,7 @@ router.get('/invoice-summary', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         reason: 'Missing companyId',
       });
       return respondWithError(req, res, 403, 'companyId required');
@@ -80,6 +93,7 @@ router.get('/invoice-summary', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         reason: 'Query not allowed',
       });
       return respondWithError(req, res, 400, 'Query not allowed');
@@ -92,6 +106,7 @@ router.get('/invoice-summary', async (req, res, next) => {
         route,
         prompt,
         safePrompt,
+        requestId,
         req,
         res,
       })
@@ -112,6 +127,7 @@ router.get('/invoice-summary', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         ...extra,
         meta,
       });
@@ -124,6 +140,7 @@ router.get('/invoice-summary', async (req, res, next) => {
       queryType,
       route,
       prompt: safePrompt,
+      requestId,
       meta,
       responseMeta: { insightCount: summary ? 1 : 0 },
     });
@@ -143,6 +160,7 @@ router.get('/monthly-overview', async (req, res, next) => {
     const userId = req.user.id;
     const route = req.originalUrl;
     const queryType = 'monthly_overview';
+    const requestId = req.requestId;
     if (!companyId) {
       await logRejected({
         userId,
@@ -150,6 +168,7 @@ router.get('/monthly-overview', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         reason: 'Missing companyId',
       });
       return respondWithError(req, res, 403, 'companyId required');
@@ -161,6 +180,7 @@ router.get('/monthly-overview', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         reason: 'Query not allowed',
       });
       return respondWithError(req, res, 400, 'Query not allowed');
@@ -173,6 +193,7 @@ router.get('/monthly-overview', async (req, res, next) => {
         route,
         prompt,
         safePrompt,
+        requestId,
         req,
         res,
       })
@@ -192,6 +213,7 @@ router.get('/monthly-overview', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         ...extra,
         meta,
       });
@@ -204,6 +226,7 @@ router.get('/monthly-overview', async (req, res, next) => {
       queryType,
       route,
       prompt: safePrompt,
+      requestId,
       meta,
       responseMeta: { insightCount: overview ? 1 : 0 },
     });
@@ -223,6 +246,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
     const userId = req.user.id;
     const route = req.originalUrl;
     const queryType = 'reconciliation_summary';
+    const requestId = req.requestId;
     if (!companyId) {
       await logRejected({
         userId,
@@ -230,6 +254,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         reason: 'Missing companyId',
       });
       return respondWithError(req, res, 403, 'companyId required');
@@ -241,6 +266,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         reason: 'Query not allowed',
       });
       return respondWithError(req, res, 400, 'Query not allowed');
@@ -253,6 +279,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
         route,
         prompt,
         safePrompt,
+        requestId,
         req,
         res,
       })
@@ -272,6 +299,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         ...extra,
         meta,
       });
@@ -284,6 +312,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
       queryType,
       route,
       prompt: safePrompt,
+      requestId,
       meta,
       responseMeta: { insightCount: summary ? 1 : 0 },
     });
@@ -322,6 +351,7 @@ router.get('/assistant', async (req, res, next) => {
     const userId = req.user.id;
     const route = req.originalUrl;
     const queryType = `assistant_${intent || 'unknown'}`;
+    const requestId = req.requestId;
     if (!intent) {
       return respondWithError(req, res, 400, 'intent is required');
     }
@@ -342,6 +372,7 @@ router.get('/assistant', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         ...extra,
         meta,
       });
@@ -357,6 +388,7 @@ router.get('/assistant', async (req, res, next) => {
       queryType,
       route,
       prompt: safePrompt,
+      requestId,
       meta,
       responseMeta: { sessionId, targetInsightId },
       sessionId,
@@ -378,6 +410,7 @@ router.get('/session', async (req, res, next) => {
     const userId = req.user.id;
     const route = req.originalUrl;
     const queryType = 'assistant_session';
+    const requestId = req.requestId;
     const sessionId = randomUUID();
     const meta = getPromptMeta(queryType);
     let hasLoggedRequest = false;
@@ -392,6 +425,7 @@ router.get('/session', async (req, res, next) => {
         queryType,
         route,
         prompt: safePrompt,
+        requestId,
         ...extra,
         meta,
       });
@@ -400,6 +434,7 @@ router.get('/session', async (req, res, next) => {
     await logSessionEvent({
       userId,
       companyId,
+      requestId,
       sessionId,
       event: 'started',
       route,
@@ -411,6 +446,7 @@ router.get('/session', async (req, res, next) => {
       queryType,
       route,
       prompt: safePrompt,
+      requestId,
       meta,
       responseMeta: { sessionId },
       sessionId,

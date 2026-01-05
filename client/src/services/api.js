@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 
 /**
  * API BASE URL
@@ -63,12 +64,10 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
   }
 
   if (error.response) {
-    const { status, data } = error.response;
+    const { status } = error.response;
     formatted.status = status;
 
-    if (data?.message) {
-      formatted.message = data.message;
-    }
+    // Keep fallback message or type-specific overrides only
 
     if (status === 401) {
       formatted.type = 'unauthorized';
@@ -150,7 +149,7 @@ api.interceptors.response.use(
     }
     if (error.response) {
       const { status } = error.response;
-      logError(`❌ API Error ${status}`, error.response.data);
+      logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
       if (status === 401) {
         emitForceLogout();
       }

@@ -124,11 +124,21 @@ const Expenses = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Vendor</th>
-              <th>Actions</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Date
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Description
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Amount
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Vendor
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>

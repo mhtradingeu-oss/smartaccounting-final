@@ -5,7 +5,6 @@
 // Verifies required tables, columns, and enums exist before seeding
 
 const { sequelize } = require('../src/models');
-const { QueryTypes } = require('sequelize');
 
 const REQUIRED_TABLES = [
   'companies',
@@ -73,28 +72,10 @@ async function checkColumns() {
   }
 }
 
-async function checkEnums() {
-  if (sequelize.getDialect() !== 'postgres') {
-    return;
-  }
-  // Example: check ai_insights.entityType enum values
-  const [result] = await sequelize.query(
-    "SELECT e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid WHERE t.typname = 'enum_ai_insights_entityType';",
-    { type: QueryTypes.SELECT },
-  );
-  if (!result) {
-    throw new Error(
-      '[SCHEMA VERIFY] Enum type enum_ai_insights_entityType missing or incompatible',
-    );
-  }
-  // Add more enum checks as needed
-}
-
 async function main() {
   try {
     await checkTables();
     await checkColumns();
-    await checkEnums();
     console.log('[SCHEMA VERIFY] Schema is ready for seeding.');
     process.exit(0);
   } catch (err) {

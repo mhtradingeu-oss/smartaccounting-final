@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const vatComplianceService = require('../services/vatComplianceService');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
-const jwtTenantContext = require('../middleware/jwtTenantContext');
 const AuditLogService = require('../services/auditLogService');
 
 // VAT/UStG compliance validation endpoint

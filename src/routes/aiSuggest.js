@@ -14,7 +14,7 @@ router.get('/suggest', async (req, res) => {
   const { userId, companyId } = req;
   const { prompt, context } = req.query;
   try {
-    const suggestion = await getSuggestion({ userId, companyId, prompt, context });
+    const suggestion = await getSuggestion({ userId, companyId, prompt, context, requestId: req.requestId });
     res.json({ suggestion, requestId: req.requestId });
   } catch (err) {
     respondWithError(req, res, err.status || 400, err.message || 'Suggestion request failed');

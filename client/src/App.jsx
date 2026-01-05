@@ -105,78 +105,283 @@ function LoginRoute() {
   return withSuspense(<Login />);
 }
 
+const routeElementResolver = (route, context = {}) => {
+  if (typeof route.element === 'function') {
+    return route.element(context);
+  }
+  return route.element;
+};
+
+export const ROUTE_DEFINITIONS = [
+  {
+    path: '/',
+    element: wrapRoute(<LandingRoute />),
+    componentFile: 'client/src/pages/Landing.jsx',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/login',
+    element: wrapRoute(<LoginRoute />),
+    componentFile: 'client/src/pages/Login.jsx',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/pricing',
+    element: wrapRoute(withSuspense(<Pricing />)),
+    componentFile: 'client/src/pages/Pricing.jsx',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/request-access',
+    element: wrapRoute(withSuspense(<RequestAccess />)),
+    componentFile: 'client/src/pages/RequestAccess.jsx',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/onboarding',
+    element: renderProtectedRoute(<OnboardingWizard />),
+    componentFile: 'client/src/pages/OnboardingWizard.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/rbac',
+    element: renderProtectedRoute(<RBACManagement />, 'admin'),
+    componentFile: 'client/src/pages/RBACManagement.jsx',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: [],
+  },
+  {
+    path: '/investor-dashboard',
+    element: renderProtectedRoute(<InvestorDashboard />, 'auditor'),
+    componentFile: 'client/src/pages/InvestorDashboard.jsx',
+    authRequired: true,
+    requiredRole: 'auditor',
+    featureFlags: [],
+  },
+  {
+    path: '/analytics',
+    element: renderProtectedRoute(<Analytics />),
+    componentFile: 'client/src/pages/Analytics.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/ai-advisor',
+    element: renderProtectedRoute(<AIInsights />),
+    componentFile: 'client/src/pages/AIInsights.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/ai-assistant',
+    element: renderProtectedRoute(<AIAssistant />),
+    componentFile: 'client/src/pages/AIAssistant.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: ['AI_ASSISTANT_ENABLED'],
+  },
+  {
+    path: '/dashboard',
+    element: renderProtectedRoute(<Dashboard />),
+    componentFile: 'client/src/pages/Dashboard.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/invoices',
+    element: renderProtectedRoute(<Invoices />),
+    componentFile: 'client/src/pages/Invoices.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/expenses',
+    element: renderProtectedRoute(<Expenses />),
+    componentFile: 'client/src/pages/Expenses.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/expenses/create',
+    element: renderProtectedRoute(<ExpensesCreate />),
+    componentFile: 'client/src/pages/ExpensesCreate.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/invoices/create',
+    element: renderProtectedRoute(<InvoiceCreate />),
+    componentFile: 'client/src/pages/InvoiceCreate.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/invoices/:invoiceId/edit',
+    element: renderProtectedRoute(<InvoiceEdit />),
+    componentFile: 'client/src/pages/InvoiceEdit.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/bank-statements',
+    element: renderProtectedRoute(<BankStatements />),
+    componentFile: 'client/src/pages/BankStatements.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/bank-statements/preview',
+    element: renderProtectedRoute(<BankStatementPreview />),
+    componentFile: 'client/src/pages/BankStatementPreview.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/ocr-preview',
+    element: renderProtectedRoute(<OCRPreview />),
+    componentFile: 'client/src/pages/OCRPreview.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: ['OCR_PREVIEW_ENABLED'],
+  },
+  {
+    path: '/bank-statements/import',
+    element: renderProtectedRoute(<BankStatementImport />),
+    componentFile: 'client/src/pages/BankStatementImport.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/bank-statements/:statementId/reconciliation-preview',
+    element: renderProtectedRoute(<BankStatementReconciliationPreview />, 'accountant'),
+    componentFile: 'client/src/pages/BankStatementReconciliationPreview.jsx',
+    authRequired: true,
+    requiredRole: 'accountant',
+    featureFlags: [],
+  },
+  {
+    path: '/bank-statements/:statementId',
+    element: renderProtectedRoute(<BankStatementDetail />),
+    componentFile: 'client/src/pages/BankStatementDetail.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/billing',
+    element: renderProtectedRoute(<Billing />),
+    componentFile: 'client/src/pages/Billing.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: ['STRIPE_BILLING'],
+  },
+  {
+    path: '/german-tax-reports/*',
+    element: ({ activeCompany: company }) =>
+      renderProtectedRoute(
+        <GermanTaxReports key={company?.id || 'no-company'} />,
+      ),
+    componentFile: 'client/src/pages/GermanTaxReports.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: ['GERMAN_TAX'],
+  },
+  {
+    path: '/companies',
+    element: renderProtectedRoute(<Companies />),
+    componentFile: 'client/src/pages/Companies.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/users',
+    element: renderProtectedRoute(<Users />, 'admin'),
+    componentFile: 'client/src/pages/Users.jsx',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: [],
+  },
+  {
+    path: '/compliance',
+    element: renderProtectedRoute(<ComplianceDashboard />, 'admin'),
+    componentFile: 'client/src/pages/ComplianceDashboard.jsx',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: ['ELSTER_COMPLIANCE'],
+  },
+  {
+    path: '/audit-logs',
+    element: renderProtectedRoute(<AuditLogs />, 'admin'),
+    componentFile: 'client/src/pages/AuditLogs.jsx',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: [],
+  },
+  {
+    path: '/gdpr-actions',
+    element: renderProtectedRoute(<GDPRActions />),
+    componentFile: 'client/src/pages/GDPRActions.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/compliance-dashboard',
+    element: wrapRoute(
+      <ProtectedRoute requiredRole="admin">
+        <Navigate to="/compliance" replace />
+      </ProtectedRoute>,
+    ),
+    componentFile: 'client/src/App.jsx (compliance redirect)',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: ['ELSTER_COMPLIANCE'],
+  },
+  {
+    path: '*',
+    element: wrapRoute(<NotFound />),
+    componentFile: 'client/src/App.jsx (NotFound)',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+];
+
 export const AppRoutes = () => {
   const { activeCompany } = useCompany();
 
   return (
     <Routes>
-      <Route path="/" element={wrapRoute(<LandingRoute />)} />
-      <Route path="/login" element={wrapRoute(<LoginRoute />)} />
-      <Route path="/pricing" element={wrapRoute(withSuspense(<Pricing />))} />
-      <Route path="/request-access" element={wrapRoute(withSuspense(<RequestAccess />))} />
-      <Route path="/onboarding" element={renderProtectedRoute(<OnboardingWizard />)} />
-      <Route
-        path="/rbac"
-        element={renderProtectedRoute(<RBACManagement />, 'admin')}
-      />
-      <Route
-        path="/investor-dashboard"
-        element={renderProtectedRoute(<InvestorDashboard />, 'auditor')}
-      />
-      <Route path="/analytics" element={renderProtectedRoute(<Analytics />)} />
-      <Route path="/ai-advisor" element={renderProtectedRoute(<AIInsights />)} />
-      <Route path="/ai-assistant" element={renderProtectedRoute(<AIAssistant />)} />
-      <Route path="/dashboard" element={renderProtectedRoute(<Dashboard />)} />
-      <Route path="/invoices" element={renderProtectedRoute(<Invoices />)} />
-      <Route path="/expenses" element={renderProtectedRoute(<Expenses />)} />
-      <Route path="/expenses/create" element={renderProtectedRoute(<ExpensesCreate />)} />
-      <Route path="/invoices/create" element={renderProtectedRoute(<InvoiceCreate />)} />
-      <Route path="/invoices/:invoiceId/edit" element={renderProtectedRoute(<InvoiceEdit />)} />
-      <Route path="/bank-statements" element={renderProtectedRoute(<BankStatements />)} />
-      <Route
-        path="/bank-statements/preview"
-        element={renderProtectedRoute(<BankStatementPreview />)}
-      />
-      <Route path="/ocr-preview" element={renderProtectedRoute(<OCRPreview />)} />
-      <Route
-        path="/bank-statements/import"
-        element={renderProtectedRoute(<BankStatementImport />)}
-      />
-      <Route
-        path="/bank-statements/:statementId/reconciliation-preview"
-        element={renderProtectedRoute(<BankStatementReconciliationPreview />, 'accountant')}
-      />
-      <Route
-        path="/bank-statements/:statementId"
-        element={renderProtectedRoute(<BankStatementDetail />)}
-      />
-      <Route path="/billing" element={renderProtectedRoute(<Billing />)} />
-      <Route
-        path="/german-tax-reports/*"
-        element={renderProtectedRoute(
-          <GermanTaxReports key={activeCompany?.id || 'no-company'} />,
-        )}
-      />
-      <Route path="/companies" element={renderProtectedRoute(<Companies />)} />
-      <Route path="/users" element={renderProtectedRoute(<Users />, 'admin')} />
-      <Route
-        path="/compliance"
-        element={renderProtectedRoute(<ComplianceDashboard />, 'admin')}
-      />
-      <Route
-        path="/audit-logs"
-        element={renderProtectedRoute(<AuditLogs />, 'admin')}
-      />
-      <Route path="/gdpr-actions" element={renderProtectedRoute(<GDPRActions />)} />
-      <Route
-        path="/compliance-dashboard"
-        element={wrapRoute(
-          <ProtectedRoute requiredRole="admin">
-            <Navigate to="/compliance" replace />
-          </ProtectedRoute>,
-        )}
-      />
-      <Route path="*" element={wrapRoute(<NotFound />)} />
+      {ROUTE_DEFINITIONS.map((route) => (
+        <Route
+          key={route.path}
+          path={route.path}
+          element={routeElementResolver(route, { activeCompany })}
+        />
+      ))}
     </Routes>
   );
 };

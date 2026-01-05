@@ -10,6 +10,7 @@ describe('Explainability', () => {
       companyId: 1,
       context: { prompt: 'find duplicates' },
       method: 'GET',
+      requestId: 'explainability-test',
     });
     expect(Array.isArray(suggestions)).toBe(true);
     for (const s of suggestions) {

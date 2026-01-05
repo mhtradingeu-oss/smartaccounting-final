@@ -3,6 +3,16 @@ import clsx from 'clsx';
 
 import { designTokens } from '../../lib/designTokens';
 
+const FOCUSABLE_SELECTORS = [
+  'a[href]:not([tabindex="-1"])',
+  'area[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'button:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 export function Modal({
   open,
   onClose,
@@ -18,15 +28,45 @@ export function Modal({
     if (!open) {
       return undefined;
     }
+
+    const focusableElements = containerRef.current
+      ? Array.from(containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS))
+      : [];
+    const firstFocusable = focusableElements[0] ?? containerRef.current;
+    const lastFocusable =
+      focusableElements.length > 0 ? focusableElements[focusableElements.length - 1] : containerRef.current;
+    const focusTarget = firstFocusable;
+
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault();
         onClose?.();
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        if (focusableElements.length === 0) {
+          event.preventDefault();
+          focusTarget?.focus();
+          return;
+        }
+
+        if (event.shiftKey && event.target === firstFocusable) {
+          event.preventDefault();
+          lastFocusable?.focus();
+          return;
+        }
+
+        if (!event.shiftKey && event.target === lastFocusable) {
+          event.preventDefault();
+          firstFocusable?.focus();
+        }
       }
     };
+
     document.addEventListener('keydown', handleKeyDown);
     const previouslyFocused = document.activeElement;
-    containerRef.current?.focus();
+    focusTarget?.focus();
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       previouslyFocused?.focus?.();

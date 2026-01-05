@@ -4,6 +4,7 @@ const { QueryTypes } = require('sequelize');
 
 const UUID_TABLES = [
   { table: 'audit_logs', column: 'id' },
+  { table: 'audit_logs', column: 'requestId' },
   { table: 'ai_insights', column: 'id' },
   { table: 'ai_insight_decisions', column: 'id' },
   { table: 'bank_statement_import_dry_runs', column: 'id' },

@@ -9,7 +9,7 @@ import PermissionGuard from '../components/PermissionGuard';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { formatApiError } from '../services/api';
-import { isReadOnlyRole } from '../lib/permissions';
+import { can, isReadOnlyRole } from '../lib/permissions';
 import {
   PageLoadingState,
   PageEmptyState,
@@ -41,6 +41,7 @@ const BankStatements = () => {
   const activeCompanyId = activeCompany?.id;
   const navigate = useNavigate();
   const isReadOnlyUser = isReadOnlyRole(user?.role);
+  const hasBankWriteAccess = can('bank:write', user?.role);
 
   const loadStatements = useCallback(
     async (signal) => {
@@ -145,6 +146,13 @@ const BankStatements = () => {
   }, [statements]);
 
   const statementCount = summary.totalStatements;
+  const summaryTitle = isReadOnlyUser ? 'Read-only summary' : 'Statement summary';
+  const summarySubtitle = isReadOnlyUser
+    ? 'Totals reflect the statements currently available for viewing.'
+    : 'Totals reflect the statements currently available to your team.';
+  const summaryDetail = isReadOnlyUser
+    ? 'Data updates automatically in read-only mode.'
+    : 'Data refreshes after every successful import.';
 
   if (!activeCompany) {
     return <PageNoAccessState />;
@@ -152,7 +160,9 @@ const BankStatements = () => {
 
   return (
     <div className="space-y-6">
-      <ReadOnlyBanner message={t('states.read_only.bank_statements_notice')} />
+      {isReadOnlyUser && (
+        <ReadOnlyBanner message={t('states.read_only.bank_statements_notice')} />
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
@@ -160,7 +170,7 @@ const BankStatements = () => {
           <p className="text-sm text-gray-500">Bank statements overview</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <PermissionGuard action="bank:write" role={user?.role} showDisabled>
+          <PermissionGuard action="bank:write" role={user?.role}>
             <Button
               variant="secondary"
               size="medium"
@@ -206,19 +216,17 @@ const BankStatements = () => {
       </div>
 
       <section
-        aria-label="Read-only summary"
+        aria-label={summaryTitle}
         className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-6 py-5 mb-2 space-y-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Read-only summary
+              {summaryTitle}
             </p>
-            <p className="text-sm text-gray-500">
-              Totals reflect the statements currently available for viewing.
-            </p>
+            <p className="text-sm text-gray-500">{summarySubtitle}</p>
           </div>
-          <p className="text-xs font-medium text-gray-500">Data updates automatically in read-only mode.</p>
+          <p className="text-xs font-medium text-gray-500">{summaryDetail}</p>
         </div>
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex flex-col">
@@ -299,28 +307,31 @@ const BankStatements = () => {
                     View transactions
                   </Button>
                 </Link>
-                <PermissionGuard action="bank:write" role={user?.role} showDisabled>
-                  <Button
-                    variant="danger"
-                    size="medium"
-                    onClick={() => {
-                      /* delete logic here */
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </PermissionGuard>
-                <PermissionGuard action="bank:write" role={user?.role} showDisabled>
-                  <Button
-                    variant="secondary"
-                    size="medium"
-                    onClick={() => {
-                      /* reprocess logic here */
-                    }}
-                  >
-                    Reprocess
-                  </Button>
-                </PermissionGuard>
+                {hasBankWriteAccess && (
+                  <div className="flex flex-col gap-1 text-right text-xs text-gray-500">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="danger"
+                        size="medium"
+                        className="opacity-70 cursor-not-allowed"
+                        disabled
+                        title="Statement deletion is shipping in the next release."
+                      >
+                        Delete (coming soon)
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="medium"
+                        className="opacity-70 cursor-not-allowed"
+                        disabled
+                        title="Reprocessing statements is coming in a future release."
+                      >
+                        Reprocess (coming soon)
+                      </Button>
+                    </div>
+                    <span>Per-statement delete & reprocess are planned for Q3.</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -43,7 +43,6 @@ const RequestAccess = () => {
       await new Promise((resolve) => setTimeout(resolve, 700));
       setSubmissionState('success');
     } catch (submitError) {
-      console.error('Request access submit error', submitError);
       setError('We could not process your request just yet. Please try again.');
       setSubmissionState('idle');
     }

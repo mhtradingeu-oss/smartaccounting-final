@@ -40,7 +40,12 @@ const AIInsights = () => {
 
   if (loading) {
     return (
-      <div className="py-12">
+      <div
+        className="py-12"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading AI insights"
+      >
         <Skeleton className="h-8 w-1/3 mb-4" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -106,6 +111,11 @@ const AIInsights = () => {
           <AISuggestionCard key={suggestion.id} suggestion={suggestion} />
         ))}
       </div>
+      <p className="sr-only" role="status" aria-live="polite">
+        {insights.length
+          ? `${insights.length} AI insights loaded.`
+          : 'No AI insights are currently available.'}
+      </p>
       <div className="mt-8 text-xs text-gray-500 text-center">
         <span role="img" aria-label="info">
           ℹ️

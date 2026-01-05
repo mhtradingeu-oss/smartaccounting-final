@@ -50,11 +50,36 @@ export default function AuditLogs() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actor</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Timestamp
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Actor
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Action
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Target
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Reason
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
