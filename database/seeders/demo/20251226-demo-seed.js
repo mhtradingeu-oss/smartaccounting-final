@@ -770,6 +770,19 @@ const requireDemoSeedEnabled = (phase) => {
 
 const formatMoney = (value) => Number(Number(value || 0).toFixed(2));
 
+const prepareEvidenceValue = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+};
+
 const buildInvoiceItems = (items = []) =>
   (items || []).map((item) => {
     const quantity = Number(item.quantity || 1);
@@ -1295,7 +1308,8 @@ module.exports = {
         amount,
         currency: 'EUR',
         transaction_type: spec.transactionType,
-        reference: spec.reference || spec.matchReference || spec.label,
+        reference:
+          spec.reference || spec.transactionReference || spec.matchReference || spec.label,
         category: spec.category,
         vat_category: spec.vatCategory,
         counterparty_name: spec.counterpartyName,
@@ -1347,6 +1361,20 @@ module.exports = {
     // === AI INSIGHTS ===
     const aiInsightPayloads = [];
     const lateInvoice = invoiceIdByNumber['SA-INV-2026-002'];
+    const latePartialSpec = BANK_TRANSACTION_SPECS.find(
+      (spec) => spec.transactionReference === 'SA-INV-2026-002-PARTIAL-1',
+    );
+    const latePartialInvoice = invoiceSummaries.find(
+      (inv) => inv.invoiceNumber === latePartialSpec?.matchReference,
+    );
+    const latePartialAmount =
+      latePartialSpec && latePartialInvoice
+        ? formatMoney(latePartialInvoice.total * (latePartialSpec.matchFraction || 1))
+        : null;
+    const formattedPartialAmount =
+      Number.isFinite(latePartialAmount) && latePartialAmount !== null
+        ? `${latePartialAmount.toFixed(2)} EUR`
+        : 'a partial payment';
     const vatExpense = expenseIdByDescription['Berlin summit hospitality'];
     const duplicateInvoice = invoiceIdByNumber['SA-INV-2026-011'];
     if (lateInvoice) {
@@ -1357,14 +1385,13 @@ module.exports = {
         type: 'late-payment-risk',
         severity: 'medium',
         confidenceScore: 0.86,
-        summary: 'SA-INV-2026-002 is overdue with only a partial 40% payment received.',
-        why: 'Due date passed while Berlin BioTech only paid 40% of the total.',
+        summary: `SA-INV-2026-002 is overdue despite ${formattedPartialAmount} being reconciled so far.`,
+        why: `Due date passed while Berlin BioTech only cleared ${formattedPartialAmount}; GoBD §239 and UStG §14 require tracking the remaining receivable.`,
         legalContext: 'GoBD § 239 and UStG § 14 require tracking outstanding receivables.',
-        evidence: {
+        evidence: prepareEvidenceValue({
           invoiceNumber: 'SA-INV-2026-002',
           dueDate: '2026-02-22',
-          paidPortion: 0.4,
-        },
+        }),
         ruleId: AI_INSIGHT_RULES.latePayment,
         modelVersion: 'demo-v1.0',
         featureFlag: 'ai-demo-mode',
@@ -1384,11 +1411,11 @@ module.exports = {
         summary: 'Travel hospitality expense uses reduced VAT rate.',
         why: 'Berlin summit hospitality is booked under Travel but flagged with 7% VAT.',
         legalContext: 'UStG § 14 Abs. 4 requires accurate VAT rate application.',
-        evidence: {
+        evidence: prepareEvidenceValue({
           description: 'Berlin summit hospitality',
           vatRate: 0.07,
           category: 'Travel',
-        },
+        }),
         ruleId: AI_INSIGHT_RULES.vatAnomaly,
         modelVersion: 'demo-v1.0',
         featureFlag: 'ai-demo-mode',
@@ -1408,11 +1435,11 @@ module.exports = {
         summary: 'Second invoice for Märkisches Ventures duplicates the amount of SA-INV-2026-005.',
         why: 'Two invoices for Märkisches Ventures share the same gross amount (3.570 EUR) a few weeks apart.',
         legalContext: 'GoBD § 239 and UStG § 14 on transparent invoicing.',
-        evidence: {
+        evidence: prepareEvidenceValue({
           currentInvoice: 'SA-INV-2026-011',
           similarInvoice: 'SA-INV-2026-005',
           amount: 3570,
-        },
+        }),
         ruleId: AI_INSIGHT_RULES.duplicateInvoice,
         modelVersion: 'demo-v1.0',
         featureFlag: 'ai-demo-mode',

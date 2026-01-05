@@ -19,7 +19,7 @@ RUN npm ci --omit=dev=false
 # Copy application files required at runtime.
 COPY . .
 
-# ✅ هذا السطر مهم جدًا
+
 RUN ls -la tests || true
 
 # Runtime directories expected by containers and host mounts.
