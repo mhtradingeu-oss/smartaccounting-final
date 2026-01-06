@@ -1,12 +1,22 @@
 #!/usr/bin/env node
 const { spawnSync } = require('child_process');
+const fs = require('fs');
+// Defensive: Check that seeder file exists
+if (!fs.existsSync('database/seeders/demo/20251226-demo-seed.js')) {
+  console.error('[seed:demo:prod] demo seed file missing.');
+  process.exit(1);
+}
 
 const requireDemoMode = () => {
   const demoModeEnabled = process.env.DEMO_MODE === 'true';
   const demoSeedAllowed = process.env.ALLOW_DEMO_SEED === 'true';
   const missing = [];
-  if (!demoModeEnabled) {missing.push('DEMO_MODE=true');}
-  if (!demoSeedAllowed) {missing.push('ALLOW_DEMO_SEED=true');}
+  if (!demoModeEnabled) {
+    missing.push('DEMO_MODE=true');
+  }
+  if (!demoSeedAllowed) {
+    missing.push('ALLOW_DEMO_SEED=true');
+  }
   if (missing.length) {
     console.error(
       `[seed:demo:prod] aborted: ${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} required to run the demo seeder.`,
@@ -72,12 +82,12 @@ const configureDemoPassword = () => {
   console.log(`[seed:demo:prod] using deterministic demo password: ${password}`);
 };
 
-const DEMO_USERS = [
-  { email: 'admin@demo.de', role: 'admin' },
-  { email: 'accountant@demo.de', role: 'accountant' },
-  { email: 'auditor@demo.de', role: 'auditor' },
-  { email: 'viewer@demo.de', role: 'viewer' },
-];
+const { DEMO_EMAILS } = require('./demo-users');
+const DEMO_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
+const DEMO_USERS = DEMO_EMAILS.map((email, idx) => ({
+  email,
+  role: DEMO_ROLES[idx] || 'viewer',
+}));
 
 const printLoginSheet = () => {
   const password = process.env.DEMO_PASSWORD || 'Demo123!';
@@ -110,6 +120,7 @@ ensureProductionNodeEnv();
 verifySchema();
 configureDemoPassword();
 
+console.log(`[seed:demo:prod] Target DB: ${process.env.DATABASE_URL || 'sqlite'}`);
 console.log('[seed:demo:prod] running guarded demo seeder...');
 runCommand('npx', [
   'sequelize-cli',
@@ -121,3 +132,9 @@ runCommand('npx', [
 ]);
 console.log('[seed:demo:prod] demo seeder completed.');
 printLoginSheet();
+console.log('\n========================================');
+console.log('[seed:demo:prod] DEMO READY ✅');
+console.log('[seed:demo:prod] Base URL: http://localhost:3000');
+console.log('[seed:demo:prod] API: http://localhost:5001/api');
+console.log('[seed:demo:prod] Use the credentials above to login');
+console.log('========================================\n');

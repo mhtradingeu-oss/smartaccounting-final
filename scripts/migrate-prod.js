@@ -1,8 +1,17 @@
 #!/usr/bin/env node
+'use strict';
+
+/**
+ * scripts/migrate-prod.js
+ * Production-safe migration runner with verification
+ */
+
 const { spawnSync } = require('child_process');
 const { QueryTypes } = require('sequelize');
 const validateEnvironment = require('../src/utils/validateEnv');
-const { sequelize } = require('../src/lib/database');
+
+// 🔑 SINGLE SOURCE OF TRUTH
+const { sequelize } = require('../src/models');
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
@@ -15,14 +24,24 @@ const REQUIRED_MIGRATIONS = [
   '20260106000000-add-audit-log-immutable.js',
 ];
 
+function logContext() {
+  console.log('[migrate:prod] Environment context:');
+  console.log('  NODE_ENV:', process.env.NODE_ENV);
+  console.log('  Dialect:', sequelize.getDialect());
+  console.log(
+    '  Database:',
+    process.env.POSTGRES_DB || process.env.DB_NAME || process.env.PGDATABASE || '(sqlite)',
+  );
+}
+
 function runCommand(command, args) {
   const result = spawnSync(command, args, {
     stdio: 'inherit',
     env: process.env,
   });
   if (result.error) {
-    console.error(`Failed to run ${command} ${args.join(' ')}`, result.error);
-    process.exit(result.status || 1);
+    console.error(`[migrate:prod] Failed to run ${command}`, result.error);
+    process.exit(1);
   }
   if (result.status !== 0) {
     process.exit(result.status);
@@ -30,42 +49,51 @@ function runCommand(command, args) {
 }
 
 async function verifySequelizeMeta() {
-  const rows = await sequelize.query(
-    'SELECT name FROM "SequelizeMeta" WHERE name IN (:names);',
-    {
-      type: QueryTypes.SELECT,
-      replacements: { names: REQUIRED_MIGRATIONS },
-    },
-  );
+  const dialect = sequelize.getDialect();
+
+  if (dialect === 'sqlite') {
+    console.log('[migrate:prod] SQLite detected → skipping SequelizeMeta strict verification');
+    return;
+  }
+
+  const rows = await sequelize.query('SELECT name FROM "SequelizeMeta" WHERE name IN (:names);', {
+    type: QueryTypes.SELECT,
+    replacements: { names: REQUIRED_MIGRATIONS },
+  });
+
   const applied = rows.map((row) => row.name);
   const missing = REQUIRED_MIGRATIONS.filter((name) => !applied.includes(name));
+
   if (missing.length > 0) {
-    throw new Error(`Missing SequelizeMeta entries: ${missing.join(', ')}`);
+    throw new Error(`[migrate:prod] Missing required migrations: ${missing.join(', ')}`);
   }
-  console.log('[migrate:prod] SequelizeMeta contains expected migrations.');
+
+  console.log('[migrate:prod] SequelizeMeta verification passed.');
 }
 
 async function main() {
   try {
-    console.log('[migrate:prod] validating environment...');
+    console.log('[migrate:prod] Validating environment...');
     validateEnvironment();
-  } catch (error) {
-    console.error('[migrate:prod] environment validation failed:', error.message);
-    process.exit(1);
-  }
 
-  console.log('[migrate:prod] running Sequelize migrations (production)...');
-  runCommand('npx', ['sequelize-cli', 'db:migrate']);
-  console.log('[migrate:prod] migrations completed.');
+    logContext();
 
-  try {
+    console.log('[migrate:prod] Running Sequelize migrations...');
+    runCommand('npx', ['sequelize-cli', 'db:migrate']);
+
+    console.log('[migrate:prod] Migrations completed.');
+
     await verifySequelizeMeta();
+  } catch (error) {
+    console.error('[migrate:prod] FAILED:', error.message);
+    process.exit(1);
   } finally {
-    await sequelize.close();
+    try {
+      await sequelize.close();
+    } catch (err) {
+      console.error('[migrate:prod] Failed to close DB:', err.message);
+    }
   }
 }
 
-main().catch((error) => {
-  console.error('[migrate:prod] failed during verification:', error.message);
-  process.exit(1);
-});
+main();

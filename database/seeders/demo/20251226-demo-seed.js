@@ -54,9 +54,7 @@ const INVOICE_TEMPLATES = [
     ownerKey: 'accountant',
     date: '2026-02-12',
     dueDate: '2026-02-26',
-    items: [
-      { description: 'Audit readiness review', quantity: 1, unitPrice: 980, vatRate: 0.19 },
-    ],
+    items: [{ description: 'Audit readiness review', quantity: 1, unitPrice: 980, vatRate: 0.19 }],
   },
   {
     invoiceNumber: 'SA-INV-2026-004',
@@ -79,9 +77,7 @@ const INVOICE_TEMPLATES = [
     ownerKey: 'accountant',
     date: '2026-03-03',
     dueDate: '2026-03-17',
-    items: [
-      { description: 'Fractional CFO hours', quantity: 20, unitPrice: 150, vatRate: 0.19 },
-    ],
+    items: [{ description: 'Fractional CFO hours', quantity: 20, unitPrice: 150, vatRate: 0.19 }],
   },
   {
     invoiceNumber: 'SA-INV-2026-006',
@@ -92,7 +88,12 @@ const INVOICE_TEMPLATES = [
     date: '2026-03-09',
     dueDate: '2026-03-23',
     items: [
-      { description: 'Automation readiness implementation', quantity: 1, unitPrice: 2900, vatRate: 0.19 },
+      {
+        description: 'Automation readiness implementation',
+        quantity: 1,
+        unitPrice: 2900,
+        vatRate: 0.19,
+      },
     ],
   },
   {
@@ -104,7 +105,12 @@ const INVOICE_TEMPLATES = [
     date: '2026-03-15',
     dueDate: '2026-03-29',
     items: [
-      { description: 'GoBD compliance training (15 pax)', quantity: 15, unitPrice: 120, vatRate: 0.19 },
+      {
+        description: 'GoBD compliance training (15 pax)',
+        quantity: 15,
+        unitPrice: 120,
+        vatRate: 0.19,
+      },
     ],
   },
   {
@@ -116,7 +122,12 @@ const INVOICE_TEMPLATES = [
     date: '2026-03-24',
     dueDate: '2026-04-07',
     items: [
-      { description: 'Custom printed compliance manuals', quantity: 200, unitPrice: 3.5, vatRate: 0.07 },
+      {
+        description: 'Custom printed compliance manuals',
+        quantity: 200,
+        unitPrice: 3.5,
+        vatRate: 0.07,
+      },
     ],
   },
   {
@@ -140,7 +151,12 @@ const INVOICE_TEMPLATES = [
     date: '2026-04-10',
     dueDate: '2026-04-24',
     items: [
-      { description: 'Interim controller support (12d)', quantity: 12, unitPrice: 180, vatRate: 0.19 },
+      {
+        description: 'Interim controller support (12d)',
+        quantity: 12,
+        unitPrice: 180,
+        vatRate: 0.19,
+      },
     ],
   },
   {
@@ -743,7 +759,13 @@ const AI_INSIGHT_RULES = {
 
 const TAX_PERIOD_TARGETS = [
   { quarter: 1, year: 2026, status: 'draft', elsterStatus: 'pending', ticket: 'DEMO-ELSTER-Q1' },
-  { quarter: 2, year: 2026, status: 'submitted', elsterStatus: 'submitted', ticket: 'DEMO-ELSTER-Q2' },
+  {
+    quarter: 2,
+    year: 2026,
+    status: 'submitted',
+    elsterStatus: 'submitted',
+    ticket: 'DEMO-ELSTER-Q2',
+  },
 ];
 
 const AUDIT_LOG_REASONS = {
@@ -1014,7 +1036,12 @@ module.exports = {
         { replacements: { invoiceNumber: template.invoiceNumber, companyId } },
       );
       const ownerId = userMap[template.ownerKey] || userMap.accountant;
-      const { invoice: invoicePayload, items } = buildDemoInvoice(template, ownerId, companyId, now);
+      const { invoice: invoicePayload, items } = buildDemoInvoice(
+        template,
+        ownerId,
+        companyId,
+        now,
+      );
       let invoiceId;
       if (existingInvoices.length === 0) {
         invoiceId = await insertRecordAndReturnId(
@@ -1198,7 +1225,8 @@ module.exports = {
         currency: 'EUR',
         type: 'expense',
         category: expense.category.toUpperCase(),
-        vat_rate: EXPENSE_TEMPLATES.find((x) => x.description === expense.description)?.vatRate || 0,
+        vat_rate:
+          EXPENSE_TEMPLATES.find((x) => x.description === expense.description)?.vatRate || 0,
         vat_amount: expense.vatAmount,
         reference: expense.description,
         non_deductible: false,
@@ -1272,7 +1300,9 @@ module.exports = {
 
     const bankTransactionIds = {};
     for (const spec of BANK_TRANSACTION_SPECS) {
-      const invoiceMatch = invoiceSummaries.find((inv) => inv.invoiceNumber === spec.matchReference);
+      const invoiceMatch = invoiceSummaries.find(
+        (inv) => inv.invoiceNumber === spec.matchReference,
+      );
       const expenseMatch = expenseSummaries.find((exp) => exp.description === spec.matchReference);
       let amount = spec.amountOverride;
       if (!amount && spec.matchReference) {
@@ -1308,8 +1338,7 @@ module.exports = {
         amount,
         currency: 'EUR',
         transaction_type: spec.transactionType,
-        reference:
-          spec.reference || spec.transactionReference || spec.matchReference || spec.label,
+        reference: spec.reference || spec.transactionReference || spec.matchReference || spec.label,
         category: spec.category,
         vat_category: spec.vatCategory,
         counterparty_name: spec.counterpartyName,
@@ -1451,7 +1480,13 @@ module.exports = {
     for (const payload of aiInsightPayloads) {
       const [existing] = await queryInterface.sequelize.query(
         'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-        { replacements: { ruleId: payload.ruleId, entityId: payload.entityId, companyId } },
+        {
+          replacements: {
+            ruleId: String(payload.ruleId),
+            entityId: String(payload.entityId),
+            companyId,
+          },
+        },
       );
       if (existing.length > 0) {
         continue;
@@ -1461,17 +1496,140 @@ module.exports = {
         'ai_insights',
         payload,
         'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-        { ruleId: payload.ruleId, entityId: payload.entityId, companyId },
+        { ruleId: String(payload.ruleId), entityId: String(payload.entityId), companyId },
       );
       await logAuditEntry({
         action: 'ai_insight_generated',
         resourceType: 'ai_insight',
-        resourceId: payload.ruleId,
+        resourceId: String(payload.ruleId),
         userId: userMap.admin,
-        newValues: { entityId: payload.entityId, type: payload.type },
+        newValues: { entityId: String(payload.entityId), type: payload.type },
         reason: AUDIT_LOG_REASONS.aiInsight,
       });
     }
+
+    // === DEMO FILE ATTACHMENTS & DECISIONS ===
+    // Attach demo files to Expense and Invoice with correct schema and linkage
+    const [firstExpense] = expenseSummaries;
+    const [firstInvoice] = invoiceSummaries;
+    const demoAttachments = [];
+
+    // Expense attachment
+    if (firstExpense?.id) {
+      demoAttachments.push({
+        id: uuidv4(),
+        file_name: 'expense-receipt-demo.pdf',
+        original_name: 'expense-receipt-demo.pdf',
+        file_path: '/uploads/demo/expense-receipt-demo.pdf',
+        url: '/uploads/demo/expense-receipt-demo.pdf',
+        file_size: 123456,
+        file_type: 'application/pdf',
+        attached_to_type: 'expense',
+        attached_to_id:
+          typeof firstExpense.id === 'string' && /^[0-9a-fA-F-]{36}$/.test(firstExpense.id)
+            ? firstExpense.id
+            : null,
+        company_id: companyId,
+        user_id: userMap.accountant,
+        uploaded_by: userMap.accountant,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    // Invoice attachment
+    if (firstInvoice?.id) {
+      demoAttachments.push({
+        id: uuidv4(),
+        file_name: 'invoice-demo.pdf',
+        original_name: 'invoice-demo.pdf',
+        file_path: '/uploads/demo/invoice-demo.pdf',
+        url: '/uploads/demo/invoice-demo.pdf',
+        file_size: 234567,
+        file_type: 'application/pdf',
+        attached_to_type: 'invoice',
+        attached_to_id:
+          typeof firstInvoice.id === 'string' && /^[0-9a-fA-F-]{36}$/.test(firstInvoice.id)
+            ? firstInvoice.id
+            : null,
+        company_id: companyId,
+        user_id: userMap.admin,
+        uploaded_by: userMap.admin,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    if (demoAttachments.length > 0) {
+      await queryInterface.bulkInsert('file_attachments', demoAttachments);
+    }
+
+    // === DEMO AI INSIGHT DECISIONS ===
+    // Fetch inserted ai_insights for demo decisions
+    const [latePaymentInsight] = await queryInterface.sequelize.query(
+      'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
+      {
+        replacements: {
+          ruleId: String(AI_INSIGHT_RULES.latePayment),
+          entityId: String(invoiceIdByNumber['SA-INV-2026-002']),
+          companyId,
+        },
+      },
+    );
+    const [vatAnomalyInsight] = await queryInterface.sequelize.query(
+      'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
+      {
+        replacements: {
+          ruleId: String(AI_INSIGHT_RULES.vatAnomaly),
+          entityId: String(expenseIdByDescription['Berlin summit hospitality']),
+          companyId,
+        },
+      },
+    );
+    const [duplicateInvoiceInsight] = await queryInterface.sequelize.query(
+      'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
+      {
+        replacements: {
+          ruleId: String(AI_INSIGHT_RULES.duplicateInvoice),
+          entityId: String(invoiceIdByNumber['SA-INV-2026-011']),
+          companyId,
+        },
+      },
+    );
+
+    const aiInsightDecisions = [
+      {
+        id: uuidv4(),
+        companyId,
+        actorUserId: userMap.admin,
+        insightId: latePaymentInsight?.[0]?.id || null,
+        decision: 'accepted',
+        reason: 'Demo: Payment delay accepted for trusted client.',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: uuidv4(),
+        companyId,
+        actorUserId: userMap.accountant,
+        insightId: vatAnomalyInsight?.[0]?.id || null,
+        decision: 'rejected',
+        reason: 'Demo: VAT anomaly flagged as false positive.',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: uuidv4(),
+        companyId,
+        actorUserId: userMap.auditor,
+        insightId: duplicateInvoiceInsight?.[0]?.id || null,
+        decision: 'overridden',
+        reason: 'Demo: Needs further review next quarter.',
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+    await queryInterface.bulkInsert('ai_insight_decisions', aiInsightDecisions);
 
     // === TAX REPORTS ===
     for (const period of TAX_PERIOD_TARGETS) {
@@ -1483,8 +1641,12 @@ module.exports = {
       const expensesForPeriod = expenseSummaries.filter(
         (exp) => getQuarterKey(exp.expenseDate) === periodKey,
       );
-      const totalOutputTax = formatMoney(invoicesForPeriod.reduce((sum, inv) => sum + inv.vatTotal, 0));
-      const totalInputTax = formatMoney(expensesForPeriod.reduce((sum, exp) => sum + exp.vatAmount, 0));
+      const totalOutputTax = formatMoney(
+        invoicesForPeriod.reduce((sum, inv) => sum + inv.vatTotal, 0),
+      );
+      const totalInputTax = formatMoney(
+        expensesForPeriod.reduce((sum, exp) => sum + exp.vatAmount, 0),
+      );
       const vatPayable = formatMoney(totalOutputTax - totalInputTax);
       const reportData = {
         summary: {
@@ -1498,13 +1660,20 @@ module.exports = {
           periodDescription: `Q${period.quarter} ${period.year}`,
         },
       };
+      const statusMap = {
+        DRAFT: 'draft',
+        SUBMITTED: 'submitted',
+        ACCEPTED: 'accepted',
+        REJECTED: 'rejected',
+      };
+      const normalizedStatus = statusMap[period.status?.toUpperCase()] || 'draft';
       const [existingReports] = await queryInterface.sequelize.query(
         'SELECT id FROM tax_reports WHERE "companyId" = :companyId AND "reportType" = :reportType AND "period" = :period LIMIT 1;',
         {
           replacements: {
             companyId,
-            reportType: 'USt',
-            period: periodString,
+            reportType: String('USt'),
+            period: String(periodString),
           },
         },
       );
@@ -1516,10 +1685,10 @@ module.exports = {
         reportType: 'USt',
         period: periodString,
         year: period.year,
-        status: period.status,
+        status: normalizedStatus,
         data: JSON.stringify(reportData),
         generatedAt: now,
-        submittedAt: period.status === 'submitted' ? now : null,
+        submittedAt: normalizedStatus === 'submitted' ? now : null,
         submittedBy: userMap.accountant,
         elsterStatus: period.elsterStatus,
         elsterTransferTicket: period.ticket,
@@ -1533,8 +1702,8 @@ module.exports = {
         'SELECT id FROM tax_reports WHERE "companyId" = :companyId AND "reportType" = :reportType AND "period" = :period LIMIT 1;',
         {
           companyId,
-          reportType: 'USt',
-          period: periodString,
+          reportType: String('USt'),
+          period: String(periodString),
         },
       );
       await logAuditEntry({
@@ -1542,7 +1711,7 @@ module.exports = {
         resourceType: 'tax_report',
         resourceId: periodString,
         userId: userMap.accountant,
-        newValues: { status: period.status, vatPayable },
+        newValues: { status: normalizedStatus, vatPayable },
         reason: AUDIT_LOG_REASONS.taxReport,
       });
     }
@@ -1584,8 +1753,8 @@ module.exports = {
       {},
     );
 
-    const bankTransactionReferences = BANK_TRANSACTION_SPECS.map((spec) =>
-      spec.reference || spec.matchReference || spec.label,
+    const bankTransactionReferences = BANK_TRANSACTION_SPECS.map(
+      (spec) => spec.reference || spec.matchReference || spec.label,
     );
     await queryInterface.bulkDelete(
       'bank_transactions',
@@ -1595,11 +1764,21 @@ module.exports = {
 
     await queryInterface.bulkDelete(
       'transactions',
-      { company_id: companyId, reference: [...INVOICE_TEMPLATES.map((t) => t.invoiceNumber), ...EXPENSE_TEMPLATES.map((t) => t.description)] },
+      {
+        company_id: companyId,
+        reference: [
+          ...INVOICE_TEMPLATES.map((t) => t.invoiceNumber),
+          ...EXPENSE_TEMPLATES.map((t) => t.description),
+        ],
+      },
       {},
     );
 
-    await queryInterface.bulkDelete('bank_statements', { companyId, fileName: BANK_STATEMENT_TEMPLATE.fileName }, {});
+    await queryInterface.bulkDelete(
+      'bank_statements',
+      { companyId, fileName: BANK_STATEMENT_TEMPLATE.fileName },
+      {},
+    );
 
     await queryInterface.bulkDelete(
       'expenses',

@@ -3,88 +3,58 @@ module.exports = (sequelize, DataTypes) => {
     'FileAttachment',
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
       },
+
       fileName: {
         type: DataTypes.STRING,
         allowNull: false,
         field: 'file_name',
       },
-      originalName: {
+
+      fileType: {
         type: DataTypes.STRING,
-        allowNull: false,
-        field: 'original_name',
+        allowNull: true,
+        field: 'file_type',
       },
-      filePath: {
+
+      url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+
+      attachedToType: {
         type: DataTypes.STRING,
-        allowNull: false,
-        field: 'file_path',
+        allowNull: true,
+        field: 'attached_to_type',
       },
-      fileSize: {
-        type: DataTypes.INTEGER,
-        field: 'file_size',
+
+      attachedToId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        field: 'attached_to_id',
       },
-      mimeType: {
-        type: DataTypes.STRING,
-        field: 'mime_type',
-      },
-      fileHash: {
-        type: DataTypes.STRING,
-        field: 'file_hash',
-      },
-      documentType: {
-        type: DataTypes.STRING,
-        field: 'document_type',
-      },
+
       userId: {
         type: DataTypes.INTEGER,
         field: 'user_id',
       },
+
       companyId: {
         type: DataTypes.INTEGER,
         field: 'company_id',
       },
-      uploadedBy: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'uploaded_by',
-      },
-      ocrText: {
-        type: DataTypes.TEXT,
-        field: 'ocr_text',
-      },
-      ocrConfidence: {
-        type: DataTypes.FLOAT,
-        field: 'ocr_confidence',
-      },
-      extractedData: {
-        type: DataTypes.JSON,
-        field: 'extracted_data',
-      },
-      processingStatus: {
-        type: DataTypes.STRING,
-        field: 'processing_status',
-      },
-      archived: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
-      retentionPeriod: {
-        type: DataTypes.INTEGER,
-        field: 'retention_period',
-        defaultValue: 10,
-      },
-      expenseId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'expense_id',
-      },
+
       invoiceId: {
         type: DataTypes.INTEGER,
-        allowNull: true,
         field: 'invoice_id',
+      },
+
+      expenseId: {
+        type: DataTypes.INTEGER,
+        field: 'expense_id',
       },
     },
     {
@@ -95,26 +65,10 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   FileAttachment.associate = (models) => {
-    FileAttachment.belongsTo(models.User, {
-      foreignKey: 'uploadedBy',
-      as: 'uploader',
-    });
-    FileAttachment.belongsTo(models.Company, {
-      foreignKey: 'companyId',
-      as: 'company',
-    });
-    FileAttachment.belongsTo(models.User, {
-      foreignKey: 'userId',
-      as: 'user',
-    });
-    FileAttachment.belongsTo(models.Expense, {
-      foreignKey: 'expenseId',
-      as: 'expense',
-    });
-    FileAttachment.belongsTo(models.Invoice, {
-      foreignKey: 'invoiceId',
-      as: 'invoice',
-    });
+    FileAttachment.belongsTo(models.Company, { foreignKey: 'companyId' });
+    FileAttachment.belongsTo(models.User, { foreignKey: 'userId' });
+    FileAttachment.belongsTo(models.Invoice, { foreignKey: 'invoiceId' });
+    FileAttachment.belongsTo(models.Expense, { foreignKey: 'expenseId' });
   };
 
   return FileAttachment;

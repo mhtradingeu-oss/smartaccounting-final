@@ -1,0 +1,53 @@
+{
+  "mode": "demo",
+  "version": "1.0.0",
+
+  "company": {
+    "name": "SmartAccounting Demo GmbH",
+    "country": "DE",
+    "currency": "EUR",
+    "taxId": "DE123456789"
+  },
+
+  "credentials": {
+    "password": "Demo123!"
+  },
+
+  "users": [
+    {
+      "email": "admin@demo.de",
+      "role": "admin",
+      "description": "Full system access"
+    },
+    {
+      "email": "accountant@demo.de",
+      "role": "accountant",
+      "description": "Accounting & VAT management"
+    },
+    {
+      "email": "auditor@demo.de",
+      "role": "auditor",
+      "description": "Audit & compliance (read-only)"
+    },
+    {
+      "email": "viewer@demo.de",
+      "role": "viewer",
+      "description": "Dashboard & reports (read-only)"
+    }
+  ],
+
+  "features": [
+    "login",
+    "dashboard",
+    "companies",
+    "invoices",
+    "invoice-items",
+    "expenses",
+    "transactions",
+    "bank-statements",
+    "bank-transactions",
+    "ai-insights",
+    "tax-reports",
+    "audit-logs"
+  ]
+}

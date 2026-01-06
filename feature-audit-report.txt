@@ -1,0 +1,12 @@
+========================================
+SMARTACCOUNTING FEATURE WALKTHROUGH AUDIT
+Started: 2026-01-06 15:22:14 UTC
+API: http://localhost:5001
+Frontend: http://localhost:3000
+========================================
+
+▶ 0) Load demo contract (single source of truth)
+✅ Demo credentials loaded (admin@demo.de)
+▶ 1) Start Docker Local (fresh)
+❌ docker compose up failed
+AUDIT FAILED ❌

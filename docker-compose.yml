@@ -95,7 +95,8 @@ services:
       NODE_ENV: development
       VITE_APP_ENV: development
       VITE_AI_ASSISTANT_ENABLED: "true"
-      VITE_API_URL: http://backend:5000/api
+      # VITE_API_URL: (leave empty to use Vite proxy, or set to http://localhost:5001/api for direct)
+      VITE_API_URL: http://localhost:5001/api
     volumes:
       - ./client:/usr/src/client
       - client-node-modules:/usr/src/client/node_modules

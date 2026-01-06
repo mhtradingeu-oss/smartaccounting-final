@@ -54,7 +54,8 @@ async function run() {
   const loginResponse = await request('/api/auth/login', {
     method: 'post',
     data: {
-      email: 'demo-admin@demo.com',
+      // Use centralized demo email
+      email: require('./demo-users').DEMO_EMAILS[0],
       password: 'Demo123!',
     },
   });
@@ -72,7 +73,9 @@ async function run() {
   const companies = await request('/api/companies', {
     headers: authHeaders,
   });
-  log(`/api/companies returned ${Array.isArray(companies.data?.companies) ? companies.data.companies.length : 'N/A'} entries`);
+  log(
+    `/api/companies returned ${Array.isArray(companies.data?.companies) ? companies.data.companies.length : 'N/A'} entries`,
+  );
 
   await request('/api/invoices', {
     headers: authHeaders,

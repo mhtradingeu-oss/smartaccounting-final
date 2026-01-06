@@ -12,6 +12,11 @@ let API_BASE_URL = '/api';
 
 if (raw) {
   const isSafe = /^https?:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(raw);
+  if (typeof window !== 'undefined' && raw.includes('backend:')) {
+    throw new Error(
+      'VITE_API_URL must not use docker service names in browser. Use http://localhost:5001/api or leave empty.',
+    );
+  }
   if (isSafe) {
     API_BASE_URL = raw;
   } else {

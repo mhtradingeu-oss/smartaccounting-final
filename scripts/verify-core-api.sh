@@ -1,47 +1,95 @@
-#!/bin/bash
-# Verifies core API endpoints using demo-accountant credentials
+#!/usr/bin/env bash
+# Verifies core API endpoints using DEMO users (RBAC-aware)
+
 set -euo pipefail
 
-API_URL="http://localhost:3000/api"
-EMAIL="demo-accountant@demo.com"
-PASSWORD="demopass2"
-
-# Get JWT token
-TOKEN=$(curl -s -X POST "$API_URL/auth/login" \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"'$EMAIL'","password":"'$PASSWORD'"}' | jq -r '.token')
-
-if [[ "$TOKEN" == "null" || -z "$TOKEN" ]]; then
-  echo "[FAIL] Login failed for $EMAIL"
+REPORT="core-api-audit.txt"
+API_URL="${API_URL:-http://localhost:5001/api}"
+if [[ "$API_URL" == *"backend:"* ]] || [[ "$API_URL" != http://localhost* ]]; then
+  echo "❌ API_URL must point to localhost, never docker service name (backend:)."
   exit 1
 fi
+EMAIL="${DEMO_EMAIL:-accountant@demo.de}"
+PASSWORD="${DEMO_PASSWORD:-Demo123!}"
 
-echo "[OK] Login succeeded. Token acquired."
+START="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
-# Endpoints to check
-endpoints=(
-  "/companies"
-  "/invoices"
-  "/expenses"
-  "/bank-statements"
+echo "========================================" | tee "$REPORT"
+echo "SMARTACCOUNTING CORE API AUDIT" | tee -a "$REPORT"
+echo "Started: $START" | tee -a "$REPORT"
+echo "API_URL: $API_URL" | tee -a "$REPORT"
+echo "User: $EMAIL" | tee -a "$REPORT"
+echo "========================================" | tee -a "$REPORT"
+echo "" | tee -a "$REPORT"
+
+require() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "❌ Missing dependency: $1" | tee -a "$REPORT"
+    exit 1
+  }
+}
+
+require curl
+require jq
+
+log(){ echo "▶ $1" | tee -a "$REPORT"; }
+pass(){ echo "✅ $1" | tee -a "$REPORT"; }
+fail(){ echo "❌ $1" | tee -a "$REPORT"; exit 1; }
+
+# --------------------------------------------------
+log "1) Login as demo accountant"
+
+LOGIN_JSON="$(curl -fsS --retry 5 --retry-delay 2 \
+  -X POST "$API_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")" \
+  || fail "Login request failed"
+
+TOKEN="$(echo "$LOGIN_JSON" | jq -r '.token // empty')"
+
+[[ -n "$TOKEN" ]] \
+  && pass "Login successful (token acquired)" \
+  || fail "Login did not return token: $LOGIN_JSON"
+
+AUTH=(-H "Authorization: Bearer $TOKEN")
+
+# --------------------------------------------------
+log "2) Core endpoints (read-only, accountant role)"
+
+declare -A endpoints=(
+  ["/companies"]="200"
+  ["/invoices"]="200"
+  ["/expenses"]="200"
+  ["/bank-statements"]="200"
 )
 
-for ep in "${endpoints[@]}"; do
-  echo -n "Checking $API_URL$ep ... "
-  http_code=$(curl -s -o response.json -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$API_URL$ep")
-  if [[ "$http_code" != "200" ]]; then
-    echo "[FAIL] HTTP $http_code"
-    cat response.json
+for ep in "${!endpoints[@]}"; do
+  expected="${endpoints[$ep]}"
+  echo -n "Checking $ep ... " | tee -a "$REPORT"
+
+  http_code="$(curl -s -o response.json -w "%{http_code}" \
+    "${AUTH[@]}" "$API_URL$ep")"
+
+  if [[ "$http_code" != "$expected" ]]; then
+    echo "[FAIL $http_code]" | tee -a "$REPORT"
+    cat response.json | tee -a "$REPORT"
     exit 2
   fi
-  if ! jq empty response.json 2>/dev/null; then
-    echo "[FAIL] Response is not valid JSON"
-    cat response.json
+
+  if ! jq empty response.json >/dev/null 2>&1; then
+    echo "[FAIL invalid JSON]" | tee -a "$REPORT"
+    cat response.json | tee -a "$REPORT"
     exit 3
   fi
-  echo "[OK]"
+
+  echo "[OK]" | tee -a "$REPORT"
 done
 
 rm -f response.json
 
-echo "[SUCCESS] All core API endpoints returned 200 and valid JSON."
+pass "All core API endpoints returned expected responses"
+
+END="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+echo "" | tee -a "$REPORT"
+echo "Finished: $END" | tee -a "$REPORT"
+echo "========================================" | tee -a "$REPORT"
