@@ -1,45 +1,45 @@
-import { useEffect, useMemo, useState } from "react";
-import Button from "../Button";
-import FormField from "../ui/FormField";
-import Label from "../ui/Label";
+import { useEffect, useMemo, useState } from 'react';
+import Button from '../Button';
+import FormField from '../ui/FormField';
+import Label from '../ui/Label';
 
 const INITIAL_FORM_STATE = {
-  invoiceNumber: "",
-  clientName: "",
-  date: "",
-  dueDate: "",
-  currency: "EUR",
-  subtotal: "",
-  total: "",
-  notes: "",
+  invoiceNumber: '',
+  clientName: '',
+  date: '',
+  dueDate: '',
+  currency: 'EUR',
+  subtotal: '',
+  total: '',
+  notes: '',
   items: [
     {
-      description: "",
+      description: '',
       quantity: 1,
-      unitPrice: "",
-      vatRate: "",
-      netAmount: "",
-      vatAmount: "",
-      grossAmount: "",
+      unitPrice: '',
+      vatRate: '',
+      netAmount: '',
+      vatAmount: '',
+      grossAmount: '',
     },
   ],
 };
 
 const normalizeNumericField = (value) =>
-  value === undefined || value === null ? "" : String(value);
+  value === undefined || value === null ? '' : String(value);
 
 const InvoiceForm = ({
   initialValues = {},
   disabled = false,
   loading = false,
-  submitLabel = "Save invoice",
+  submitLabel = 'Save invoice',
   onSubmit = () => {},
 }) => {
   const normalizedInitial = useMemo(
     () => ({
       ...INITIAL_FORM_STATE,
       ...initialValues,
-      currency: (initialValues.currency || "EUR").toUpperCase(),
+      currency: (initialValues.currency || 'EUR').toUpperCase(),
       subtotal: normalizeNumericField(initialValues.subtotal),
       total: normalizeNumericField(initialValues.total),
     }),
@@ -61,7 +61,7 @@ const InvoiceForm = ({
   const handleItemChange = (idx, field, value) => {
     setFormState((prev) => {
       const items = prev.items.map((item, i) => {
-        if (i !== idx) return item;
+        if (i !== idx) {return item;}
         const updated = { ...item, [field]: value };
         // Auto-calc net/vat/gross if relevant fields change
         const qty = parseFloat(updated.quantity) || 0;
@@ -82,13 +82,13 @@ const InvoiceForm = ({
       items: [
         ...prev.items,
         {
-          description: "",
+          description: '',
           quantity: 1,
-          unitPrice: "",
-          vatRate: "",
-          netAmount: "",
-          vatAmount: "",
-          grossAmount: "",
+          unitPrice: '',
+          vatRate: '',
+          netAmount: '',
+          vatAmount: '',
+          grossAmount: '',
         },
       ],
     }));
@@ -120,7 +120,7 @@ const InvoiceForm = ({
       clientName: formState.clientName.trim(),
       date: formState.date,
       dueDate: formState.dueDate,
-      currency: (formState.currency || "EUR").toUpperCase(),
+      currency: (formState.currency || 'EUR').toUpperCase(),
       subtotal,
       total,
       notes: formState.notes ? formState.notes.trim() : null,
@@ -130,7 +130,7 @@ const InvoiceForm = ({
   };
 
   const inputBaseClasses =
-    "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500";
+    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -214,7 +214,7 @@ const InvoiceForm = ({
                   <input
                     className={inputBaseClasses}
                     value={item.description}
-                    onChange={(e) => handleItemChange(idx, "description", e.target.value)}
+                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
                     disabled={disabled}
                     required
                   />
@@ -225,7 +225,7 @@ const InvoiceForm = ({
                     min="1"
                     className={inputBaseClasses}
                     value={item.quantity}
-                    onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                    onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
                     disabled={disabled}
                     required
                   />
@@ -237,7 +237,7 @@ const InvoiceForm = ({
                     min="0"
                     className={inputBaseClasses}
                     value={item.unitPrice}
-                    onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value)}
+                    onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
                     disabled={disabled}
                     required
                   />
@@ -249,7 +249,7 @@ const InvoiceForm = ({
                     min="0"
                     className={inputBaseClasses}
                     value={item.vatRate}
-                    onChange={(e) => handleItemChange(idx, "vatRate", e.target.value)}
+                    onChange={(e) => handleItemChange(idx, 'vatRate', e.target.value)}
                     disabled={disabled}
                     required
                   />
