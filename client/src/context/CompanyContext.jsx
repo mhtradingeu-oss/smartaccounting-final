@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import { resetClientState } from '../lib/resetClientState';
 
 // CompanyContext will provide the current company and a setter
@@ -20,9 +20,19 @@ export const CompanyProvider = ({ children }) => {
     // Optionally: clear other state here (e.g., user, dashboard, etc.)
   }, []);
 
+  const didInitRef = useRef(false);
+
   useEffect(() => {
+    if (didInitRef.current) {
+      return;
+    }
+
     if (!activeCompany && companies.length > 0) {
-      switchCompany(companies[0], { reset: false });
+      didInitRef.current = true;
+      // Defer setState to avoid cascading renders in effect
+      Promise.resolve().then(() => {
+        switchCompany(companies[0], { reset: false });
+      });
     }
   }, [activeCompany, companies, switchCompany]);
 
