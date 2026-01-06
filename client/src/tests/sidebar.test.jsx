@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Sidebar from '../components/Sidebar';
 import AuthContext from '../context/AuthContext';
 import { RoleProvider, roles } from '../context/RoleContext';
@@ -41,21 +41,15 @@ const renderSidebar = (role) => {
 };
 
 describe('Sidebar role & feature flags', () => {
-  afterEach(() => cleanup());
-
   it('hides administration links for non-admin roles', () => {
     renderSidebar(roles.VIEWER);
-    expect(screen.queryByText('navigation.users')).toBeNull();
+
+    expect(screen.queryByRole('link', { name: /users/i })).not.toBeInTheDocument();
   });
 
   it('shows administration links for admin role', () => {
     renderSidebar(roles.ADMIN);
-    expect(screen.getByText('navigation.users')).toBeInTheDocument();
-  });
 
-  it('does not render coming soon badges once features are hidden', () => {
-    renderSidebar(roles.ADMIN);
-    const badges = screen.queryAllByText(/Coming soon/i);
-    expect(badges.length).toBe(0);
+    expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
   });
 });

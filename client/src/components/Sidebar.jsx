@@ -3,7 +3,8 @@ import clsx from 'clsx';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { useRole } from '../context/RoleContext';
+import { useRole, roles } from '../context/RoleContext';
+
 import {
   HomeIcon,
   Cog6ToothIcon,
@@ -49,7 +50,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const mainNavigation = enrichNavigation(MAIN_NAVIGATION_ITEMS);
   const managementNavigation = enrichNavigation(MANAGEMENT_NAVIGATION_ITEMS);
-  const adminNavigation = enrichNavigation(ADMIN_NAVIGATION_ITEMS);
+  const ADMIN_ROLES = [roles.ADMIN, roles.SUPER_ADMIN];
+  const adminNavigation = ADMIN_ROLES.includes(role)
+    ? enrichNavigation(ADMIN_NAVIGATION_ITEMS)
+    : [];
   const systemNavigation = enrichNavigation(SYSTEM_NAVIGATION_ITEMS);
 
   const shouldRenderSection = (items) => Array.isArray(items) && items.length > 0;
@@ -261,12 +265,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             Cog6ToothIcon,
           )}
         {shouldRenderSection(adminNavigation) &&
-          renderSection(
-            t('navigation.administration'),
-            adminNavigation,
-            'admin',
-            ShieldCheckIcon,
-          )}
+          renderSection(t('navigation.administration'), adminNavigation, 'admin', ShieldCheckIcon)}
         {shouldRenderSection(systemNavigation) &&
           renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
       </nav>
