@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { useRole, roles } from '../context/RoleContext';
+import { useRole } from '../context/RoleContext';
 import {
   HomeIcon,
   Cog6ToothIcon,
@@ -17,6 +17,7 @@ import {
   MAIN_NAVIGATION_ITEMS,
   MANAGEMENT_NAVIGATION_ITEMS,
   ADMIN_NAVIGATION_ITEMS,
+  SYSTEM_NAVIGATION_ITEMS,
 } from '../navigation/sidebarNavigation';
 
 const NAV_LINK_BASE_CLASSES =
@@ -31,7 +32,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const evaluateEnabled = (item) => {
     if (typeof item.enabled === 'function') {
-      return item.enabled();
+      return item.enabled({ role, user });
     }
     if (typeof item.enabled === 'boolean') {
       return item.enabled;
@@ -49,28 +50,9 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const mainNavigation = enrichNavigation(MAIN_NAVIGATION_ITEMS);
   const managementNavigation = enrichNavigation(MANAGEMENT_NAVIGATION_ITEMS);
   const adminNavigation = enrichNavigation(ADMIN_NAVIGATION_ITEMS);
+  const systemNavigation = enrichNavigation(SYSTEM_NAVIGATION_ITEMS);
 
-  // Set to null to avoid rendering empty section
-  const systemNavigation = null;
-
-  // Role-based navigation filtering
-  // Example: Only admin/accountant can see invoices, viewers cannot
-  const filteredMainNavigation = mainNavigation.filter((item) => {
-    if (item.href === '/invoices' && role === roles.VIEWER) {
-      return false;
-    }
-    return true;
-  });
-
-  const visibleMainNavigation = filteredMainNavigation.filter((item) => item.enabled !== false);
-
-  // Example: Only admin can see adminNavigation
-  const filteredAdminNavigation = (adminNavigation || []).filter(() => role === roles.ADMIN);
-
-  // Example: Only admin/accountant can see managementNavigation
-  const filteredManagementNavigation = (managementNavigation || []).filter(
-    () => role !== roles.VIEWER,
-  );
+  const shouldRenderSection = (items) => Array.isArray(items) && items.length > 0;
 
   const isActiveLink = (href) => {
     return (
@@ -81,7 +63,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const renderNavItem = (item, index, sectionKey = '') => {
     const isEnabled = item.enabled !== false;
     const isActive = item.href && isActiveLink(item.href);
-
     const IconComponent = isActive && item.iconSolid ? item.iconSolid : item.icon;
     if (isEnabled) {
       return (
@@ -126,25 +107,29 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         </NavLink>
       );
     }
-    // DISABLED (not clickable, with tooltip)
+    // DISABLED (not clickable, with FeatureGate tooltip)
+    const tooltipPrimary = item.description || 'Feature unavailable';
+    const tooltipSecondary = item.disabledReason || 'This feature is currently disabled.';
     return (
-      <button
+      <div
         key={`${sectionKey}-${item.name}`}
-        type="button"
         className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-60 cursor-not-allowed text-gray-500 dark:text-gray-400"
-        title={item.description ? `${item.description} (Coming soon)` : 'Coming soon'}
         aria-disabled="true"
-        disabled
-        onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.name}-${index}`)}
-        onMouseLeave={() => setHoveredItem(null)}
       >
+        <div
+          role="tooltip"
+          className="absolute left-full top-1/2 -translate-y-1/2 hidden max-w-xs rounded bg-gray-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block"
+        >
+          <p className="font-semibold">{tooltipPrimary}</p>
+          <p className="text-gray-200">{tooltipSecondary}</p>
+        </div>
         <div className="flex items-center w-full gap-3">
           <div className="flex-shrink-0">
             <IconComponent className="h-5 w-5" aria-hidden="true" />
           </div>
           {!isCollapsed && <span className="flex-1 text-left truncate">{item.name}</span>}
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -266,23 +251,23 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
       {/* Enhanced Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
-        {renderSection(t('navigation.main'), visibleMainNavigation, 'main', HomeIcon)}
-        {filteredManagementNavigation.length > 0 &&
+        {shouldRenderSection(mainNavigation) &&
+          renderSection(t('navigation.main'), mainNavigation, 'main', HomeIcon)}
+        {shouldRenderSection(managementNavigation) &&
           renderSection(
             t('navigation.management'),
-            filteredManagementNavigation,
+            managementNavigation,
             'management',
             Cog6ToothIcon,
           )}
-        {filteredAdminNavigation.length > 0 &&
+        {shouldRenderSection(adminNavigation) &&
           renderSection(
             t('navigation.administration'),
-            filteredAdminNavigation,
+            adminNavigation,
             'admin',
             ShieldCheckIcon,
           )}
-        {/* Only render system section if not null and has items */}
-        {systemNavigation &&
+        {shouldRenderSection(systemNavigation) &&
           renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
       </nav>
     </div>

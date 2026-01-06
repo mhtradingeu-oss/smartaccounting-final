@@ -47,34 +47,36 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const companyId = activeCompany?.id ?? null;
 
   const fetchExpenses = useCallback(async () => {
-    if (!activeCompany) {
+    if (!companyId) {
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
-      const data = await expensesAPI.list({ companyId: activeCompany.id });
+      const data = await expensesAPI.list({ companyId });
       setExpenses(Array.isArray(data) ? data : []);
     } catch (fetchError) {
       setError(formatApiError(fetchError, 'Unable to load expenses.'));
     } finally {
       setLoading(false);
     }
-  }, [activeCompany]);
+  }, [companyId]);
 
   useEffect(() => {
-    if (!activeCompany) {
+    if (!companyId) {
       setExpenses([]);
       setError(null);
       setLoading(false);
-      return;
+      return undefined;
     }
 
     fetchExpenses();
-  }, [activeCompany, fetchExpenses]);
+    return undefined;
+  }, [companyId, fetchExpenses]);
 
   if (!activeCompany) {
     return <PageNoAccessState />;

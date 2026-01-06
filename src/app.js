@@ -9,6 +9,14 @@ const { sequelize } = require('./models');
 const app = express();
 const API_PREFIX = process.env.API_BASE_URL || '/api';
 app.set('apiPrefix', API_PREFIX);
+const normalizedApiPrefix = API_PREFIX.replace(/\/$/, '');
+
+const registerPublicMonitorEndpoint = (path, handler) => {
+  app.get(path, handler);
+  if (normalizedApiPrefix) {
+    app.get(`${normalizedApiPrefix}${path}`, handler);
+  }
+};
 
 // --------------------------------------------------
 // Core imports
@@ -110,8 +118,7 @@ app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || '1
 const swaggerDocsPath = `${API_PREFIX}/docs`;
 app.use(swaggerDocsPath, serve, setup(specs, swaggerOptions));
 
-// Health
-app.get('/health', async (req, res) => {
+const healthHandler = async (req, res) => {
   const timestamp = new Date().toISOString();
   const cacheStatus = getCacheStatus();
   const queueStatus = getQueueStatus();
@@ -141,10 +148,9 @@ app.get('/health', async (req, res) => {
   }
 
   res.status(dbStatus === 'connected' ? 200 : 503).json(payload);
-});
+};
 
-// Readiness
-app.get('/ready', async (req, res) => {
+const readyHandler = async (req, res) => {
   const timestamp = new Date().toISOString();
   const cacheStatus = getCacheStatus();
   const queueStatus = getQueueStatus();
@@ -172,10 +178,9 @@ app.get('/ready', async (req, res) => {
       error: err.message,
     });
   }
-});
+};
 
-// Metrics (Prometheus-style)
-app.get('/metrics', (req, res) => {
+const metricsHandler = (req, res) => {
   const metrics = performanceMonitor.getMetrics();
   const memory = metrics.memory || {};
   const cpu = metrics.cpu || {};
@@ -216,7 +221,11 @@ app.get('/metrics', (req, res) => {
 
   res.set('Content-Type', 'text/plain');
   res.send(lines.join('\n'));
-});
+};
+
+registerPublicMonitorEndpoint('/health', healthHandler);
+registerPublicMonitorEndpoint('/ready', readyHandler);
+registerPublicMonitorEndpoint('/metrics', metricsHandler);
 
 // --------------------------------------------------
 // API-wide middlewares (protected)

@@ -52,8 +52,34 @@ const { validationResult } = require('express-validator');
 const logger = require('../lib/logger');
 const { METRICS_ENABLED, LOG_SLOW_REQUEST_MS, recordMetrics } = require('./metrics');
 
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const FRONTEND_URL = process.env.FRONTEND_URL;
+const isProduction = NODE_ENV === 'production';
+
 const REQUEST_LOGGING_ENABLED = process.env.REQUEST_LOGGING !== 'false';
+const RATE_LIMIT_SKIP_PATHS = [
+  '/health',
+  '/ready',
+  '/metrics',
+  '/api/health',
+  '/api/ready',
+  '/api/metrics',
+];
+const DEV_RATE_LIMIT_WHITELIST = ['/api/companies'];
+
+const shouldSkipRateLimit = (req) => {
+  const path = req.path;
+  if (RATE_LIMIT_SKIP_PATHS.includes(path)) {
+    return true;
+  }
+  if (!isProduction && DEV_RATE_LIMIT_WHITELIST.includes(path)) {
+    return true;
+  }
+  return false;
+};
+
 const createRateLimiter = (options = {}) => {
+  const { skip: customSkip, ...restOptions } = options;
   const defaults = {
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -63,8 +89,8 @@ const createRateLimiter = (options = {}) => {
       error: 'Too many requests from this IP, please try again later.',
       retryAfter: '15 minutes',
     },
-    skip: (req) => ['/health', '/ready', '/metrics'].includes(req.path),
-    ...options,
+    skip: (req) => shouldSkipRateLimit(req) || (typeof customSkip === 'function' ? customSkip(req) : false),
+    ...restOptions,
   };
   return rateLimit(defaults);
 };
@@ -99,12 +125,6 @@ const speedLimiter = slowDown({
   delayAfter: 50,
   delayMs: 500,
 });
-
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const FRONTEND_URL = process.env.FRONTEND_URL;
-
-const isProduction = NODE_ENV === 'production';
-
 const scriptSrc = ['\'self\''];
 if (!isProduction) {
   // Swagger UI and dev tooling sometimes require inline/eval scripts

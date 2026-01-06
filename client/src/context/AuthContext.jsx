@@ -4,6 +4,7 @@ import { formatApiError } from '../services/api';
 import { getSafeErrorMeta } from '../lib/errorMeta';
 import { authAPI } from '../services/authAPI';
 import { AUTH_FORCE_LOGOUT_EVENT } from '../services/api';
+import { companiesAPI } from '../services/companiesAPI';
 
 // Create the AuthContext
 const AuthContext = createContext();
@@ -34,6 +35,7 @@ export const AuthProvider = ({ children }) => {
 
   const applyUnauthenticated = useCallback(() => {
     localStorage.removeItem('token');
+    companiesAPI.clearCache();
     setAuthState((prev) => ({
       ...prev,
       status: 'unauthenticated',

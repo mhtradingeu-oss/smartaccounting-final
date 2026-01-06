@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 import { dashboardAPI } from '../services/dashboardAPI';
 import api, { formatApiError } from '../services/api';
 import { Button } from '../components/ui/Button';
@@ -15,6 +16,7 @@ import { ChartBarIcon } from '@heroicons/react/24/outline';
 const Dashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { activeCompany } = useCompany();
 
   const isReadOnly = isReadOnlyRole(user?.role);
   const canViewInvestorDashboard = ['auditor', 'accountant', 'admin'].includes(user?.role);
@@ -23,6 +25,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [disabled, setDisabled] = useState(false);
   const [error, setError] = useState(null);
+  const [rateLimitMessage, setRateLimitMessage] = useState(null);
+  const [cooldownExpiresAt, setCooldownExpiresAt] = useState(null);
+  const [timeNow, setTimeNow] = useState(Date.now());
 
   // Demo Data (Admin only)
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -30,12 +35,14 @@ const Dashboard = () => {
   const [demoError, setDemoError] = useState(null);
   const [demoSuccess, setDemoSuccess] = useState(false);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (options = {}) => {
     setLoading(true);
     setError(null);
+    setRateLimitMessage(null);
+    setCooldownExpiresAt(null);
 
     try {
-      const result = await dashboardAPI.getStats();
+      const result = await dashboardAPI.getStats(options);
 
       if (result?.disabled) {
         setDisabled(true);
@@ -47,6 +54,12 @@ const Dashboard = () => {
     } catch (err) {
       setDisabled(false);
       setDashboardData(null);
+      if (err?.rateLimited || err?.status === 429) {
+        setRateLimitMessage(err.message || 'Too many requests. Please try again shortly.');
+        setTimeNow(Date.now());
+        setCooldownExpiresAt(Date.now() + (err.cooldownMs || 60000));
+        return;
+      }
       setError(formatApiError(err, 'Unable to load dashboard metrics.'));
     } finally {
       setLoading(false);
@@ -56,6 +69,33 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  useEffect(() => {
+    if (!activeCompany?.id) {
+      return;
+    }
+    dashboardAPI.clearCache();
+    fetchDashboardData({ force: true });
+  }, [fetchDashboardData, activeCompany?.id]);
+
+  useEffect(() => {
+    if (!cooldownExpiresAt) {
+      return undefined;
+    }
+    const tick = () => {
+      setTimeNow(Date.now());
+    };
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [cooldownExpiresAt]);
+
+  useEffect(() => {
+    if (cooldownExpiresAt && timeNow >= cooldownExpiresAt) {
+      setCooldownExpiresAt(null);
+      setRateLimitMessage(null);
+    }
+  }, [cooldownExpiresAt, timeNow]);
 
   const metrics = dashboardData?.metrics || [];
 
@@ -81,12 +121,42 @@ const Dashboard = () => {
     }
   };
 
+  const cooldownRemaining = cooldownExpiresAt
+    ? Math.max(0, Math.ceil((cooldownExpiresAt - timeNow) / 1000))
+    : 0;
+
   if (loading) {
     return <PageLoadingState />;
   }
 
   if (error) {
     return <PageErrorState onRetry={fetchDashboardData} />;
+  }
+
+  if (rateLimitMessage) {
+    return (
+      <div
+        className="mx-auto max-w-md space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center text-amber-900 shadow-sm"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-lg font-semibold">Rate limit reached</p>
+        <p className="text-sm text-amber-900">{rateLimitMessage}</p>
+        {cooldownRemaining > 0 && (
+          <p className="text-xs text-amber-700">
+            Cooldown resets in {cooldownRemaining} second{cooldownRemaining !== 1 ? 's' : ''}
+          </p>
+        )}
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => fetchDashboardData({ force: true })}
+          disabled={cooldownRemaining > 0}
+        >
+          Retry now
+        </Button>
+      </div>
+    );
   }
 
   if (disabled) {

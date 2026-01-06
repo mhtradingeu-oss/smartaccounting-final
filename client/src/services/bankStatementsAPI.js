@@ -18,6 +18,16 @@ export const inferFormat = (filename = '') => {
 
 const unwrapData = (response) => response?.data ?? response;
 
+const getDemoStatementTransactions = (statementId) =>
+  DEMO_DATA.bankStatementTransactions?.[statementId] ??
+  DEMO_DATA.bankStatementTransactions?.default ??
+  [];
+
+const getDemoAuditLogs = (statementId) =>
+  DEMO_DATA.bankStatementAuditLogs?.[statementId] ??
+  DEMO_DATA.bankStatementAuditLogs?.default ??
+  [];
+
 export const bankStatementsAPI = {
   list: async (config = {}) => {
     const response = await api.get('/bank-statements', config);
@@ -69,7 +79,16 @@ export const bankStatementsAPI = {
   },
   transactions: async (statementId, config = {}) => {
     const response = await api.get(`/bank-statements/${statementId}/transactions`, config);
-    return unwrapData(response);
+    const data = unwrapData(response);
+    if (isDemoMode()) {
+      const normalized = Array.isArray(data)
+        ? data
+        : data?.transactions ?? data?.data ?? [];
+      if (normalized.length === 0) {
+        return getDemoStatementTransactions(statementId);
+      }
+    }
+    return data;
   },
   updateTransaction: async (transactionId, payload = {}, config = {}) => {
     const response = await api.put(
@@ -97,7 +116,14 @@ export const bankStatementsAPI = {
   },
   auditLogs: async (statementId, config = {}) => {
     const response = await api.get(`/bank-statements/${statementId}/audit-logs`, config);
-    return unwrapData(response);
+    const data = unwrapData(response);
+    if (isDemoMode()) {
+      const normalized = Array.isArray(data) ? data : data?.logs ?? data?.data ?? [];
+      if (normalized.length === 0) {
+        return getDemoAuditLogs(statementId);
+      }
+    }
+    return data;
   },
 };
 

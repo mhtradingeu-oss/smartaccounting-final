@@ -1,39 +1,55 @@
-import axios from 'axios';
-import { getSafeErrorMeta } from '../lib/errorMeta';
+import axios from "axios";
+import { getSafeErrorMeta } from "../lib/errorMeta";
 
 /**
  * API BASE URL
  * - Production: /api (Nginx proxy)
  * - Dev: VITE_API_URL (required for docker/dev setups)
  */
-const viteApiUrl = import.meta.env.VITE_API_URL?.trim();
-export const API_BASE_URL = viteApiUrl || '/api';
+
+const raw = import.meta.env.VITE_API_URL?.trim();
+let API_BASE_URL = "/api";
+
+if (raw) {
+  const isSafe = /^https?:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(raw);
+  if (isSafe) {
+    API_BASE_URL = raw;
+  } else {
+    console.warn(
+      `[api] Invalid VITE_API_URL "${raw}". Docker service names are not allowed in browser. Falling back to "/api".`,
+    );
+  }
+} else {
+  console.info('[api] Using "/api" via Vite proxy');
+}
+
+export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
   withCredentials: true, // required for cookies / auth
   headers: {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
+    Accept: "application/json",
+    "Content-Type": "application/json",
   },
 });
 
 /* ================================
    AUTH FORCE LOGOUT EVENT
 ================================ */
-export const AUTH_FORCE_LOGOUT_EVENT = 'smartaccounting:force-logout';
+export const AUTH_FORCE_LOGOUT_EVENT = "smartaccounting:force-logout";
 
 const emitForceLogout = () => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
 
-  localStorage.removeItem('token');
+  localStorage.removeItem("token");
   window.dispatchEvent(new CustomEvent(AUTH_FORCE_LOGOUT_EVENT));
 
-  if (window.location.pathname !== '/login') {
-    window.location.replace('/login');
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
   }
 };
 
@@ -51,12 +67,12 @@ const logError = (...args) => {
 /* ================================
    API ERROR FORMATTER
 ================================ */
-export const formatApiError = (error, fallbackMessage = 'An error occurred. Please try again.') => {
+export const formatApiError = (error, fallbackMessage = "An error occurred. Please try again.") => {
   const formatted = {
     status: null,
     message: fallbackMessage,
     retryable: false,
-    type: 'generic',
+    type: "generic",
   };
 
   if (!error) {
@@ -70,26 +86,26 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
     // Keep fallback message or type-specific overrides only
 
     if (status === 401) {
-      formatted.type = 'unauthorized';
+      formatted.type = "unauthorized";
     } else if (status === 403) {
-      formatted.type = 'forbidden';
-      formatted.message = 'Not allowed';
+      formatted.type = "forbidden";
+      formatted.message = "Not allowed";
     } else if (status === 429) {
-      formatted.type = 'rate_limit';
+      formatted.type = "rate_limit";
       formatted.retryable = true;
-      formatted.message = 'Too many requests. Please try again later.';
+      formatted.message = "Too many requests. Please try again later.";
     } else if (status >= 500) {
-      formatted.type = 'server_error';
+      formatted.type = "server_error";
       formatted.retryable = true;
-      formatted.message = 'Server is temporarily unavailable. Please try again shortly.';
+      formatted.message = "Server is temporarily unavailable. Please try again shortly.";
     } else {
-      formatted.type = 'http';
+      formatted.type = "http";
     }
   } else if (error.request) {
-    formatted.type = 'network';
+    formatted.type = "network";
     formatted.retryable = true;
 
-    formatted.message = 'Unable to reach the server. Check your connection and try again.';
+    formatted.message = "Unable to reach the server. Check your connection and try again.";
   } else if (error.message) {
     formatted.message = error.message;
   }
@@ -102,7 +118,7 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
 ================================ */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -115,7 +131,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    logError('❌ Request error:', error);
+    logError("❌ Request error:", error);
     return Promise.reject(error);
   },
 );
@@ -124,15 +140,15 @@ api.interceptors.request.use(
    RESPONSE INTERCEPTOR
 ================================ */
 // Global for last requestId (safe, not PII)
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.__LAST_REQUEST_ID__ = null;
 }
 
 api.interceptors.response.use(
   (response) => {
     // Capture X-Request-Id from headers
-    const reqId = response.headers?.['x-request-id'] || response.headers?.['X-Request-Id'];
-    if (reqId && typeof window !== 'undefined') {
+    const reqId = response.headers?.["x-request-id"] || response.headers?.["X-Request-Id"];
+    if (reqId && typeof window !== "undefined") {
       window.__LAST_REQUEST_ID__ = reqId;
     }
     if (isDev) {
@@ -143,8 +159,8 @@ api.interceptors.response.use(
   (error) => {
     // Also try to capture from error responses
     const reqId =
-      error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['X-Request-Id'];
-    if (reqId && typeof window !== 'undefined') {
+      error?.response?.headers?.["x-request-id"] || error?.response?.headers?.["X-Request-Id"];
+    if (reqId && typeof window !== "undefined") {
       window.__LAST_REQUEST_ID__ = reqId;
     }
     if (error.response) {
@@ -154,9 +170,9 @@ api.interceptors.response.use(
         emitForceLogout();
       }
     } else if (error.request) {
-      logError('🌐 Network error:', error.message);
+      logError("🌐 Network error:", error.message);
     } else {
-      logError('❌ Unknown API error:', error.message);
+      logError("❌ Unknown API error:", error.message);
     }
     return Promise.reject(error);
   },

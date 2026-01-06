@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -6,6 +7,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import FeatureGate from '../components/FeatureGate';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
@@ -53,6 +55,9 @@ const initialMessageText = (context) => {
 
 const AIAssistant = () => {
   const { user } = useAuth();
+  const { activeCompany } = useCompany();
+  const activeCompanyId = activeCompany?.id;
+  const navigate = useNavigate();
   const [context, setContext] = useState(null);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
@@ -61,7 +66,15 @@ const AIAssistant = () => {
   const [askError, setAskError] = useState(null);
   const [isAsking, setIsAsking] = useState(false);
   const initialMessageSent = useRef(false);
+  const lastLoadedCompanyIdRef = useRef(null);
   const aiAssistantEnabled = isAIAssistantEnabled();
+  const aiFeatureGateProps = {
+    enabled: aiAssistantEnabled,
+    featureName: 'AI Assistant',
+    description: 'Enable AI_ASSISTANT_ENABLED to open the conversational advisor.',
+    ctaLabel: 'Back to dashboard',
+    ctaPath: '/dashboard',
+  };
 
   const latestAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -72,15 +85,47 @@ const AIAssistant = () => {
     return null;
   }, [messages]);
 
+  const resetAssistantState = () => {
+    setContext(null);
+    setSessionId(null);
+    setMessages([]);
+    initialMessageSent.current = false;
+    setAskError(null);
+    setContextError(null);
+    setIsAsking(false);
+  };
+
   useEffect(() => {
+    const prepareForLoad = () => {
+      aiAssistantAPI.reset();
+      resetAssistantState();
+    };
+
     if (!aiAssistantEnabled) {
+      prepareForLoad();
+      setLoading(false);
+      lastLoadedCompanyIdRef.current = null;
       return;
     }
+
+    if (!activeCompanyId) {
+      prepareForLoad();
+      setLoading(false);
+      lastLoadedCompanyIdRef.current = null;
+      return;
+    }
+
+    if (lastLoadedCompanyIdRef.current === activeCompanyId) {
+      return;
+    }
+
+    lastLoadedCompanyIdRef.current = activeCompanyId;
+    prepareForLoad();
+
     let cancelled = false;
 
     const loadAssistantData = async () => {
       setLoading(true);
-      setContextError(null);
       try {
         const [sessionResp, contextResp] = await Promise.all([
           aiAssistantAPI.startSession(),
@@ -105,7 +150,7 @@ const AIAssistant = () => {
     return () => {
       cancelled = true;
     };
-  }, [aiAssistantEnabled]);
+  }, [aiAssistantEnabled, activeCompanyId]);
 
   useEffect(() => {
     if (!context || initialMessageSent.current) {
@@ -117,8 +162,11 @@ const AIAssistant = () => {
   }, [context]);
 
   const invoiceStatusBreakdown = useMemo(() => {
+    if (!context?.invoices) {
+      return {};
+    }
     const breakdown = {};
-    (context?.invoices || []).forEach((invoice) => {
+    context.invoices.forEach((invoice) => {
       const status = invoice.status || 'unknown';
       breakdown[status] = (breakdown[status] || 0) + 1;
     });
@@ -126,8 +174,11 @@ const AIAssistant = () => {
   }, [context]);
 
   const expenseStatusBreakdown = useMemo(() => {
+    if (!context?.expenses) {
+      return {};
+    }
     const breakdown = {};
-    (context?.expenses || []).forEach((expense) => {
+    context.expenses.forEach((expense) => {
       const status = expense.status || 'draft';
       breakdown[status] = (breakdown[status] || 0) + 1;
     });
@@ -135,8 +186,27 @@ const AIAssistant = () => {
   }, [context]);
 
   const unreconciledCount = useMemo(() => {
-    return (context?.bankTransactions || []).filter((tx) => !tx.isReconciled).length;
+    if (!context?.bankTransactions) {
+      return 0;
+    }
+    return context.bankTransactions.filter((tx) => !tx.isReconciled).length;
   }, [context]);
+
+  if (!activeCompany) {
+    return (
+      <FeatureGate {...aiFeatureGateProps}>
+        <EmptyState
+          title="Select a company"
+          description="Choose an active company to load the AI assistant context."
+          action={
+            <Button variant="primary" onClick={() => navigate('/companies')}>
+              Select company
+            </Button>
+          }
+        />
+      </FeatureGate>
+    );
+  }
 
   const handleIntent = async (intentId, options = {}) => {
     if (!sessionId) {
@@ -175,12 +245,7 @@ const AIAssistant = () => {
 
   if (loading && !context) {
     return (
-      <div
-        className="space-y-4"
-        role="status"
-        aria-live="polite"
-        aria-label="Loading AI assistant"
-      >
+      <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading AI assistant">
         <Skeleton className="h-8 w-1/3" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-36 w-full" />
@@ -203,13 +268,7 @@ const AIAssistant = () => {
   }
 
   return (
-    <FeatureGate
-      enabled={aiAssistantEnabled}
-      featureName="AI Assistant"
-      description="Enable AI_ASSISTANT_ENABLED to open the conversational advisor."
-      ctaLabel="Back to dashboard"
-      ctaPath="/dashboard"
-    >
+    <FeatureGate {...aiFeatureGateProps}>
       <div className="space-y-6">
         {isReadOnlyRole(user?.role) && (
           <ReadOnlyBanner
@@ -396,11 +455,7 @@ const AIAssistant = () => {
               </div>
               <span className="text-xs text-gray-500 dark:text-gray-400">Read-only advisor</span>
             </div>
-            <div
-              className="sr-only"
-              role="status"
-              aria-live="polite"
-            >
+            <div className="sr-only" role="status" aria-live="polite">
               {latestAssistantMessage
                 ? `Assistant answered: ${latestAssistantMessage.text}`
                 : 'The assistant is ready for your request.'}

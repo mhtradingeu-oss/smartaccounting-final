@@ -11,9 +11,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CompanyProvider, useCompany } from './context/CompanyContext';
 import { RoleProvider } from './context/RoleContext';
 
-const withSuspense = (children) => (
-  <Suspense fallback={<PageLoadingState />}>{children}</Suspense>
-);
+const withSuspense = (children) => <Suspense fallback={<PageLoadingState />}>{children}</Suspense>;
 
 const wrapRoute = (element) => <RouteErrorBoundary>{element}</RouteErrorBoundary>;
 
@@ -40,6 +38,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Invoices = lazy(() => import('./pages/Invoices'));
 const InvoiceCreate = lazy(() => import('./pages/InvoiceCreate'));
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const InvoiceEdit = lazy(() => import('./pages/InvoiceEdit'));
 const Expenses = lazy(() => import('./pages/Expenses'));
 const ExpensesCreate = lazy(() => import('./pages/ExpensesCreate'));
@@ -149,6 +148,14 @@ export const ROUTE_DEFINITIONS = [
     path: '/onboarding',
     element: renderProtectedRoute(<OnboardingWizard />),
     componentFile: 'client/src/pages/OnboardingWizard.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/profile-settings',
+    element: renderProtectedRoute(<ProfileSettings />),
+    componentFile: 'client/src/pages/ProfileSettings.jsx',
     authRequired: true,
     requiredRole: null,
     featureFlags: [],
@@ -300,9 +307,7 @@ export const ROUTE_DEFINITIONS = [
   {
     path: '/german-tax-reports/*',
     element: ({ activeCompany: company }) =>
-      renderProtectedRoute(
-        <GermanTaxReports key={company?.id || 'no-company'} />,
-      ),
+      renderProtectedRoute(<GermanTaxReports key={company?.id || 'no-company'} />),
     componentFile: 'client/src/pages/GermanTaxReports.jsx',
     authRequired: true,
     requiredRole: null,

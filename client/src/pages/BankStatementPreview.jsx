@@ -9,6 +9,7 @@ import { formatApiError } from '../services/api';
 import { isReadOnlyRole } from '../lib/permissions';
 import { isBankImportEnabled } from '../lib/featureFlags';
 import { formatCurrency, formatDate } from '../lib/utils/formatting';
+import { PageNoAccessState } from '../components/ui/PageStates';
 
 const MAX_FILE_SIZE = 12 * 1024 * 1024;
 const READ_ONLY_BANNER_MESSAGE = 'Preview only – no data has been saved.';
@@ -36,6 +37,7 @@ const BankStatementPreview = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const companyName = activeCompany?.name ?? 'Company';
+  const hasCompany = Boolean(activeCompany?.id);
   const isReadOnlySession = isReadOnlyRole(user?.role);
   const bankImportEnabled = isBankImportEnabled();
 
@@ -161,6 +163,10 @@ const BankStatementPreview = () => {
       setConfirming(false);
     }
   };
+
+  if (!hasCompany) {
+    return <PageNoAccessState />;
+  }
 
   return (
     <div className="space-y-6">

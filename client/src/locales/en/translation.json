@@ -35,7 +35,8 @@
   },
   "sidebar": {
     "expand": "Expand sidebar",
-    "collapse": "Collapse sidebar"
+    "collapse": "Collapse sidebar",
+    "profile_settings": "Profile & Settings"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -81,14 +82,22 @@
     "system": "System",
     "dashboard": "Dashboard",
     "expenses": "Expenses",
+    "analytics": "Analytics",
     "invoices": "Invoices",
     "bank_statements": "Bank Statements",
     "ocr_preview": "OCR Preview",
+    "ai_insights": "AI Insights",
     "german_tax": "German Tax",
+    "tax_reports": "Tax Reports",
     "billing": "Billing",
     "compliance": "Compliance",
     "companies": "Companies",
     "users": "Users",
+    "audit_logs": "Audit Logs",
+    "exports": "Exports",
+    "profile_settings": "Profile & Settings",
+    "investor_dashboard": "Investor Insights",
+    "rbac": "RBAC Console",
     "administration": "Administration",
     "ai_assistant": "AI Assistant"
   },

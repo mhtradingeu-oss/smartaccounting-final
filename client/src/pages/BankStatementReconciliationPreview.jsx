@@ -7,6 +7,7 @@ import AsyncModal from '../components/ui/AsyncModal';
 import { useCompany } from '../context/CompanyContext';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { formatCurrency, formatDate } from '../lib/utils/formatting';
+import { PageNoAccessState } from '../components/ui/PageStates';
 
 const SIMULATION_INVOICE_TEMPLATES = [
   { number: 'INV-5421', description: 'Monthly bookkeeping bundle' },
@@ -23,6 +24,7 @@ const BankStatementReconciliationPreview = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeCompany } = useCompany();
+  const hasCompany = Boolean(activeCompany?.id);
 
   const initialTransactions = location.state?.transactions;
   const [transactions, setTransactions] = useState(initialTransactions ?? []);
@@ -34,7 +36,7 @@ const BankStatementReconciliationPreview = () => {
   const hasInitialTransactions = initialTransactions?.length > 0;
 
   useEffect(() => {
-    if (hasInitialTransactions || !statementId) {
+    if (!hasCompany || hasInitialTransactions || !statementId) {
       return undefined;
     }
 
@@ -62,7 +64,7 @@ const BankStatementReconciliationPreview = () => {
     return () => {
       controller.abort();
     };
-  }, [hasInitialTransactions, statementId]);
+  }, [hasInitialTransactions, statementId, hasCompany]);
 
   const simulation = useMemo(() => buildSimulationInsights(transactions), [transactions]);
   const hasTransactions = Boolean(transactions.length);
@@ -70,6 +72,10 @@ const BankStatementReconciliationPreview = () => {
   const hasMoreUnmatched = simulation.unmatched.length > unmatchedPreview.length;
 
   const renderDate = (value) => (value ? formatDate(value) : '—');
+
+  if (!hasCompany) {
+    return <PageNoAccessState />;
+  }
 
   return (
     <div className="space-y-6">

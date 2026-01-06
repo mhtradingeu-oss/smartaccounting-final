@@ -1,3 +1,13 @@
+// DEV-only whitelist for rate limiting
+function shouldSkipRateLimit(req) {
+  if (process.env.NODE_ENV !== 'production') {
+    const whitelist = ['/api/companies', '/api/health', '/api/ready'];
+    if (whitelist.includes(req.originalUrl.split('?')[0])) {
+      return true;
+    }
+  }
+  return false;
+}
 const rateLimit = require('express-rate-limit');
 
 const toInt = (value, fallback) => {
@@ -42,7 +52,7 @@ const loginLimiter = createLimiter({
     success: false,
     message: 'Too many login attempts, please try again later',
   },
-  skip: isAuthRateLimitDisabled,
+  skip: (req) => isAuthRateLimitDisabled() || shouldSkipRateLimit(req),
 });
 
 const registerLimiter = createLimiter({
@@ -52,6 +62,7 @@ const registerLimiter = createLimiter({
     success: false,
     message: 'Too many registration attempts, please try again later',
   },
+  skip: shouldSkipRateLimit,
 });
 
 const ocrLimiter = createLimiter({
@@ -61,6 +72,7 @@ const ocrLimiter = createLimiter({
     success: false,
     message: 'Too many OCR submissions, please try again later',
   },
+  skip: shouldSkipRateLimit,
 });
 
 const elsterLimiter = createLimiter({
@@ -70,6 +82,7 @@ const elsterLimiter = createLimiter({
     success: false,
     message: 'Too many ELSTER requests, please try again later',
   },
+  skip: shouldSkipRateLimit,
 });
 
 module.exports = {
