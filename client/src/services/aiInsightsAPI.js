@@ -1,14 +1,25 @@
 // aiInsightsAPI.js (real data, read-only, explainable)
 
 import api from './api';
+import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 
 export const aiInsightsAPI = {
   async list() {
     const res = await api.get('/ai/insights');
     const payload = res.data || {};
+    const insights = payload.insights ?? [];
+    const viewerLimited = Boolean(payload.viewerLimited);
+
+    if (isDemoMode() && (!Array.isArray(insights) || insights.length === 0)) {
+      return {
+        insights: DEMO_DATA.aiInsights ?? [],
+        viewerLimited: false,
+      };
+    }
+
     return {
-      insights: payload.insights ?? [],
-      viewerLimited: Boolean(payload.viewerLimited),
+      insights,
+      viewerLimited,
     };
   },
   async decide(insightId, decision, reason) {

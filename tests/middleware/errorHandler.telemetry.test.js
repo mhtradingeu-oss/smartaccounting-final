@@ -7,7 +7,7 @@ function makeReqRes({ statusCode = 500, id = 'test-req-id' } = {}) {
     url: '/test',
     headers: { 'x-request-id': id },
   });
-  req.id = id;
+  req.requestId = id;
 
   const res = httpMocks.createResponse();
   res.setHeader('X-Request-Id', id);

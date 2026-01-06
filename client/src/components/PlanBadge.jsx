@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 
 import { useState, useEffect } from 'react';
 import api from '../services/api';
@@ -16,7 +17,7 @@ const PlanBadge = () => {
       const response = await api.get('/stripe/subscription');
       setSubscriptionStatus(response.data?.subscription || response.data);
     } catch (error) {
-      logger.error('Failed to fetch subscription status', error);
+      logger.error('Failed to fetch subscription status', getSafeErrorMeta(error));
     } finally {
       setLoading(false);
     }

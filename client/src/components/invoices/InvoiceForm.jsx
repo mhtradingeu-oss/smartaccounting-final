@@ -12,6 +12,17 @@ const INITIAL_FORM_STATE = {
   subtotal: '',
   total: '',
   notes: '',
+  items: [
+    {
+      description: '',
+      quantity: 1,
+      unitPrice: '',
+      vatRate: '',
+      netAmount: '',
+      vatAmount: '',
+      grossAmount: '',
+    },
+  ],
 };
 
 const normalizeNumericField = (value) =>
@@ -46,17 +57,74 @@ const InvoiceForm = ({
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Line items logic
+  const handleItemChange = (idx, field, value) => {
+    setFormState((prev) => {
+      const items = prev.items.map((item, i) => {
+        if (i !== idx) {return item;}
+        const updated = { ...item, [field]: value };
+        // Auto-calc net/vat/gross if relevant fields change
+        const qty = parseFloat(updated.quantity) || 0;
+        const unit = parseFloat(updated.unitPrice) || 0;
+        const vatR = parseFloat(updated.vatRate) || 0;
+        updated.netAmount = (qty * unit).toFixed(2);
+        updated.vatAmount = ((qty * unit * vatR) / 100).toFixed(2);
+        updated.grossAmount = (qty * unit + (qty * unit * vatR) / 100).toFixed(2);
+        return updated;
+      });
+      return { ...prev, items };
+    });
+  };
+
+  const handleAddItem = () => {
+    setFormState((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          description: '',
+          quantity: 1,
+          unitPrice: '',
+          vatRate: '',
+          netAmount: '',
+          vatAmount: '',
+          grossAmount: '',
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveItem = (idx) => {
+    setFormState((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx),
+    }));
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
+    const items = formState.items.map((item) => ({
+      description: item.description,
+      quantity: parseFloat(item.quantity) || 0,
+      unitPrice: parseFloat(item.unitPrice) || 0,
+      vatRate: parseFloat(item.vatRate) || 0,
+      netAmount: parseFloat(item.netAmount) || 0,
+      vatAmount: parseFloat(item.vatAmount) || 0,
+      grossAmount: parseFloat(item.grossAmount) || 0,
+    }));
+    // Recompute subtotal/total from items
+    const subtotal = items.reduce((sum, i) => sum + (i.netAmount || 0), 0);
+    const total = items.reduce((sum, i) => sum + (i.grossAmount || 0), 0);
     const payload = {
       invoiceNumber: formState.invoiceNumber.trim(),
       clientName: formState.clientName.trim(),
       date: formState.date,
       dueDate: formState.dueDate,
       currency: (formState.currency || 'EUR').toUpperCase(),
-      subtotal: parseFloat(formState.subtotal) || 0,
-      total: parseFloat(formState.total) || parseFloat(formState.subtotal) || 0,
+      subtotal,
+      total,
       notes: formState.notes ? formState.notes.trim() : null,
+      items,
     };
     onSubmit(payload);
   };
@@ -121,6 +189,125 @@ const InvoiceForm = ({
             required
           />
         </FormField>
+      </div>
+
+      {/* Line Items Table */}
+      <div>
+        <Label required>Line Items</Label>
+        <table className="min-w-full divide-y divide-gray-200 mt-2 mb-2">
+          <thead>
+            <tr>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Description</th>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Qty</th>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Unit Price</th>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">VAT %</th>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Net</th>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">VAT</th>
+              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">Gross</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {formState.items.map((item, idx) => (
+              <tr key={idx}>
+                <td className="px-2 py-1">
+                  <input
+                    className={inputBaseClasses}
+                    value={item.description}
+                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                    disabled={disabled}
+                    required
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    min="1"
+                    className={inputBaseClasses}
+                    value={item.quantity}
+                    onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                    disabled={disabled}
+                    required
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className={inputBaseClasses}
+                    value={item.unitPrice}
+                    onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
+                    disabled={disabled}
+                    required
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className={inputBaseClasses}
+                    value={item.vatRate}
+                    onChange={(e) => handleItemChange(idx, 'vatRate', e.target.value)}
+                    disabled={disabled}
+                    required
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    className={inputBaseClasses}
+                    value={item.netAmount}
+                    disabled
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    className={inputBaseClasses}
+                    value={item.vatAmount}
+                    disabled
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    className={inputBaseClasses}
+                    value={item.grossAmount}
+                    disabled
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  {formState.items.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="xs"
+                      onClick={() => handleRemoveItem(idx)}
+                      disabled={disabled}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleAddItem}
+          disabled={disabled}
+        >
+          Add Item
+        </Button>
+      </div>
+
+      {/* Totals */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label={<Label required>Subtotal</Label>} required>
           <input
             type="number"
@@ -128,9 +315,10 @@ const InvoiceForm = ({
             min="0"
             className={inputBaseClasses}
             name="subtotal"
-            value={formState.subtotal}
-            onChange={handleChange}
-            disabled={disabled}
+            value={formState.items
+              .reduce((sum, i) => sum + (parseFloat(i.netAmount) || 0), 0)
+              .toFixed(2)}
+            disabled
             required
             placeholder="0.00"
           />
@@ -142,13 +330,15 @@ const InvoiceForm = ({
             min="0"
             className={inputBaseClasses}
             name="total"
-            value={formState.total}
-            onChange={handleChange}
-            disabled={disabled}
+            value={formState.items
+              .reduce((sum, i) => sum + (parseFloat(i.grossAmount) || 0), 0)
+              .toFixed(2)}
+            disabled
             placeholder="Auto = subtotal"
           />
         </FormField>
       </div>
+
       <FormField label={<Label>Notes (optional)</Label>}>
         <textarea
           className={`${inputBaseClasses} min-h-[110px] resize-none`}

@@ -1,15 +1,24 @@
 #!/usr/bin/env node
+'use strict';
+
+/**
+ * Demo verification script
+ * - Logs in using seeded demo credentials
+ * - Verifies core API endpoints return data
+ * - Designed for local Docker demo + CI
+ */
+
 const { EventEmitter } = require('events');
 const httpMocks = require('node-mocks-http');
 
 require('dotenv').config();
 
-// Default to the local demo stack when env is missing.
+/* ------------------------------------------------------------------ */
+/* Environment defaults (SAFE for demo only)                           */
+/* ------------------------------------------------------------------ */
+
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'demo-jwt-secret';
-
-const app = require('../src/app');
-const authService = require('../src/services/authService');
 
 if (process.env.DATABASE_URL) {
   process.env.USE_SQLITE = process.env.USE_SQLITE || 'false';
@@ -17,32 +26,56 @@ if (process.env.DATABASE_URL) {
   process.env.USE_SQLITE = process.env.USE_SQLITE || 'true';
 }
 
-const requestApp = ({ method = 'GET', url = '/', headers = {}, body }) =>
-  new Promise((resolve, reject) => {
-    const req = httpMocks.createRequest({ method, url, headers, body });
+/* ------------------------------------------------------------------ */
+/* App & services                                                      */
+/* ------------------------------------------------------------------ */
+
+const app = require('../src/app');
+const authService = require('../src/services/authService');
+
+/* ------------------------------------------------------------------ */
+/* Internal request helper (no HTTP server needed)                     */
+/* ------------------------------------------------------------------ */
+
+function requestApp({ method = 'GET', url = '/', headers = {}, body }) {
+  return new Promise((resolve, reject) => {
+    const req = httpMocks.createRequest({
+      method,
+      url,
+      headers,
+      body,
+    });
+
     req.socket = req.socket || {
       setTimeout: () => {},
       setNoDelay: () => {},
       setKeepAlive: () => {},
     };
+
     if (typeof req.setTimeout !== 'function') {
-      req.setTimeout = function (timeout) {
+      req.setTimeout = function setTimeoutCompat(timeout) {
         if (this.socket && typeof this.socket.setTimeout === 'function') {
           this.socket.setTimeout(timeout);
         }
       };
     }
-    const res = httpMocks.createResponse({ eventEmitter: EventEmitter });
+
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+
     res.on('end', () => {
       const raw = res._getData();
       let parsed = raw;
+
       if (typeof raw === 'string') {
         try {
           parsed = JSON.parse(raw);
-        } catch (err) {
+        } catch (_) {
           parsed = raw;
         }
       }
+
       resolve({
         status: res.statusCode,
         body: parsed,
@@ -50,54 +83,82 @@ const requestApp = ({ method = 'GET', url = '/', headers = {}, body }) =>
         text: typeof raw === 'string' ? raw : undefined,
       });
     });
+
     res.on('error', reject);
+
     app.handle(req, res, (err) => {
       if (err) {
         reject(err);
       }
     });
   });
+}
 
-const verifySeededEndpoints = async () => {
-  console.log('[DEMO VERIFY] Logging in as seeded demo admin...');
-  const credentials = { email: 'demo-admin@demo.com', password: 'Demo123!' };
+/* ------------------------------------------------------------------ */
+/* Demo verification logic                                             */
+/* ------------------------------------------------------------------ */
+
+async function verifySeededEndpoints() {
+  console.log('[DEMO VERIFY] Logging in as demo admin...');
+
+  const credentials = {
+    email: process.env.DEMO_EMAIL || 'admin@demo.de',
+    password: process.env.DEMO_PASSWORD || 'Demo123!',
+  };
+
   const loginResult = await authService.login(credentials);
-  if (!loginResult?.token) {
-    throw new Error('Demo login did not return a token');
-  }
-  const token = loginResult.token;
-  const routes = ['/api/companies', '/api/invoices', '/api/bank-statements'];
 
-  for (const route of routes) {
+  if (!loginResult || !loginResult.token) {
+    throw new Error('Demo login failed – no token returned');
+  }
+
+  const token = loginResult.token;
+
+  const endpoints = [
+    { url: '/api/companies', key: 'companies' },
+    { url: '/api/invoices', key: 'invoices' },
+    { url: '/api/expenses', key: 'expenses' },
+    { url: '/api/bank-statements', key: 'statements' },
+    { url: '/api/ai/insights', key: 'data', allowEmpty: true },
+  ];
+
+  for (const endpoint of endpoints) {
     const response = await requestApp({
       method: 'GET',
-      url: route,
+      url: endpoint.url,
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
     if (![200, 201].includes(response.status)) {
-      throw new Error(`Unexpected response for ${route}: ${response.status}`);
+      throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
     }
 
-    const resultList =
-      response.body?.companies ||
-      response.body?.invoices ||
-      response.body?.statements ||
-      response.body?.data ||
-      [];
-    const itemsCount = Array.isArray(resultList) ? resultList.length : 0;
-    console.log(`[DEMO VERIFY] ${route} returned status ${response.status} with ${itemsCount} seeded items`);
-  }
-};
+    const payload = response.body?.[endpoint.key] ?? response.body?.data ?? [];
 
-verifySeededEndpoints()
-  .then(() => {
-    console.log('[DEMO VERIFY] All seeded endpoints responded as expected.');
+    const count = Array.isArray(payload) ? payload.length : 0;
+
+    if (!endpoint.allowEmpty && count === 0) {
+      throw new Error(`Endpoint ${endpoint.url} returned empty result set`);
+    }
+
+    console.log(`[DEMO VERIFY] ${endpoint.url} OK (${count} records)`);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Run                                                                 */
+/* ------------------------------------------------------------------ */
+
+(async () => {
+  try {
+    await verifySeededEndpoints();
+    console.log('[DEMO VERIFY] ✅ Demo verification PASSED');
     process.exit(0);
-  })
-  .catch((error) => {
-    console.error('[DEMO VERIFY] Verification failed:', error);
+  } catch (error) {
+    console.error('[DEMO VERIFY] ❌ Demo verification FAILED');
+    console.error(error);
     process.exit(1);
-  });
+  }
+})();

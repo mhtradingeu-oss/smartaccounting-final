@@ -13,10 +13,18 @@ const {
 const normalizeEmail = (email) => (email || '').toLowerCase().trim();
 
 const buildToken = (payload, jti) =>
-  jwt.sign(payload, getJwtSecret(), {
-    expiresIn: getJwtExpiresIn(),
-    jwtid: jti,
-  });
+  // Always include userId, role, companyId, iat, exp, jti in payload
+  jwt.sign(
+    {
+      ...payload,
+      // iat, exp, jti are set by jwt.sign options below
+    },
+    getJwtSecret(),
+    {
+      expiresIn: getJwtExpiresIn(),
+      jwtid: jti,
+    },
+  );
 
 const ACCESS_TOKEN_TTL_MS = parseDurationMs(getJwtExpiresIn(), 60 * 60 * 1000);
 const REFRESH_TOKEN_TTL_MS = parseDurationMs(getRefreshExpiresIn(), 7 * 24 * 60 * 60 * 1000);
@@ -39,7 +47,7 @@ const register = async (data) => {
   }
   const { email, password, firstName, lastName, role = 'viewer', companyId } = data || {};
   if (!email || !password || !firstName || !lastName) {
-    const error = new Error('Missing required fields');
+    const error = new Error();
     error.status = 400;
     throw error;
   }
@@ -129,6 +137,7 @@ const login = async ({ email, password }) => {
       userId: user.id,
       role: user.role,
       companyId: user.companyId,
+      // iat, exp, jti will be set by jwt.sign
     },
     tokenId,
   );

@@ -1,39 +1,27 @@
 import React from 'react';
+import clsx from 'clsx';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { useRole, roles } from '../context/RoleContext';
+import { useRole } from '../context/RoleContext';
 import {
   HomeIcon,
-  DocumentTextIcon,
-  BanknotesIcon,
-  DocumentChartBarIcon,
-  CreditCardIcon,
   Cog6ToothIcon,
+  ShieldCheckIcon,
+  BellIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   UserCircleIcon,
-  ShieldCheckIcon,
-  BellIcon,
-  BuildingOfficeIcon,
-  UsersIcon,
-  DocumentMagnifyingGlassIcon,
-  ChatBubbleLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
 import {
-  HomeIcon as HomeIconSolid,
-  DocumentTextIcon as DocumentTextIconSolid,
-  BanknotesIcon as BanknotesIconSolid,
-  DocumentChartBarIcon as DocumentChartBarIconSolid,
-  DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
-  ChatBubbleLeftEllipsisIcon as ChatBubbleLeftEllipsisIconSolid,
-  CreditCardIcon as CreditCardIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid,
-  BuildingOfficeIcon as BuildingOfficeIconSolid,
-  UsersIcon as UsersIconSolid,
-} from '@heroicons/react/24/solid';
-import { FEATURE_FLAGS } from '../lib/constants';
-import { isOCRPreviewEnabled, isAIAssistantEnabled } from '../lib/featureFlags';
+  MAIN_NAVIGATION_ITEMS,
+  MANAGEMENT_NAVIGATION_ITEMS,
+  ADMIN_NAVIGATION_ITEMS,
+  SYSTEM_NAVIGATION_ITEMS,
+} from '../navigation/sidebarNavigation';
+
+const NAV_LINK_BASE_CLASSES =
+  'relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { t } = useTranslation();
@@ -41,121 +29,30 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { role } = useRole();
   const location = useLocation();
   const [, setHoveredItem] = React.useState(null);
-  const ocrPreviewEnabled = isOCRPreviewEnabled();
 
-  const managementNavigation = [
-    {
-      name: t('navigation.companies'),
-      href: '/companies',
-      icon: BuildingOfficeIcon,
-      iconSolid: BuildingOfficeIconSolid,
-      enabled: true,
-    },
-  ];
-
-  const adminNavigation = [
-    {
-      name: t('navigation.users'),
-      href: '/users',
-      icon: UsersIcon,
-      iconSolid: UsersIconSolid,
-      enabled: role === roles.ADMIN,
-    },
-  ];
-
-  // Set to null to avoid rendering empty section
-  const systemNavigation = null;
-
-  // Role-based navigation filtering
-  const mainNavigation = [
-    {
-      name: t('navigation.dashboard'),
-      href: '/dashboard',
-      icon: HomeIcon,
-      iconSolid: HomeIconSolid,
-      badge: null,
-      description: 'Overview & Analytics',
-    },
-    {
-      name: t('navigation.ai_assistant'),
-      href: '/ai-assistant',
-      icon: ChatBubbleLeftEllipsisIcon,
-      iconSolid: ChatBubbleLeftEllipsisIconSolid,
-      badge: 'AI',
-      description: 'Conversational read-only advisor',
-      enabled: isAIAssistantEnabled(),
-    },
-    {
-      name: t('navigation.invoices'),
-      href: '/invoices',
-      icon: DocumentTextIcon,
-      iconSolid: DocumentTextIconSolid,
-      badge: null, // No static badge in production
-      description: 'Create & Manage Invoices',
-    },
-    {
-      name: t('navigation.bank_statements'),
-      href: '/bank-statements',
-      icon: BanknotesIcon,
-      iconSolid: BanknotesIconSolid,
-      badge: null,
-      description: 'Bank Transactions',
-    },
-    {
-      name: t('navigation.ocr_preview'),
-      href: '/ocr-preview',
-      icon: DocumentMagnifyingGlassIcon,
-      iconSolid: DocumentMagnifyingGlassIconSolid,
-      badge: 'Preview',
-      description: 'Preview OCR extractions',
-      enabled: ocrPreviewEnabled,
-    },
-    {
-      name: t('navigation.german_tax'),
-      href: '/german-tax-reports',
-      icon: DocumentChartBarIcon,
-      iconSolid: DocumentChartBarIconSolid,
-      badge: FEATURE_FLAGS.GERMAN_TAX.enabled ? 'NEW' : null,
-      description: 'German Tax Compliance',
-      enabled: FEATURE_FLAGS.GERMAN_TAX.enabled,
-    },
-    {
-      name: t('navigation.billing'),
-      href: '/billing',
-      icon: CreditCardIcon,
-      iconSolid: CreditCardIconSolid,
-      badge: null,
-      description: 'Subscription & Billing',
-      enabled: FEATURE_FLAGS.STRIPE_BILLING.enabled,
-    },
-    {
-      name: t('navigation.compliance'),
-      href: '/compliance',
-      icon: ShieldCheckIcon,
-      iconSolid: ShieldCheckIconSolid,
-      badge: null,
-      description: 'GDPR & GoBD Compliance',
-      enabled: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
-    },
-  ];
-
-  // Example: Only admin/accountant can see invoices, viewers cannot
-  const filteredMainNavigation = mainNavigation.filter((item) => {
-    if (item.href === '/invoices' && role === roles.VIEWER) {
-      return false;
+  const evaluateEnabled = (item) => {
+    if (typeof item.enabled === 'function') {
+      return item.enabled({ role, user });
+    }
+    if (typeof item.enabled === 'boolean') {
+      return item.enabled;
     }
     return true;
-  });
+  };
 
-  const visibleMainNavigation = filteredMainNavigation.filter((item) => item.enabled !== false);
+  const enrichNavigation = (items) =>
+    items.map((item) => ({
+      ...item,
+      name: t(item.nameKey),
+      enabled: evaluateEnabled(item),
+    }));
 
-  // Example: Only admin can see adminNavigation
-  const filteredAdminNavigation = (adminNavigation || []).filter(() => role === roles.ADMIN);
+  const mainNavigation = enrichNavigation(MAIN_NAVIGATION_ITEMS);
+  const managementNavigation = enrichNavigation(MANAGEMENT_NAVIGATION_ITEMS);
+  const adminNavigation = enrichNavigation(ADMIN_NAVIGATION_ITEMS);
+  const systemNavigation = enrichNavigation(SYSTEM_NAVIGATION_ITEMS);
 
-  // Example: Only admin/accountant can see managementNavigation
-  const filteredManagementNavigation = (managementNavigation || []).filter(
-    () => role !== roles.VIEWER,
-  );
+  const shouldRenderSection = (items) => Array.isArray(items) && items.length > 0;
 
   const isActiveLink = (href) => {
     return (
@@ -166,18 +63,18 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const renderNavItem = (item, index, sectionKey = '') => {
     const isEnabled = item.enabled !== false;
     const isActive = item.href && isActiveLink(item.href);
-
     const IconComponent = isActive && item.iconSolid ? item.iconSolid : item.icon;
     if (isEnabled) {
       return (
         <NavLink
           key={`${sectionKey}-${item.href}`}
           to={item.href}
-          className={`relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+          className={clsx(
+            NAV_LINK_BASE_CLASSES,
             isActive
               ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25'
-              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800'
-          }`}
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800',
+          )}
           aria-current={isActive ? 'page' : undefined}
           onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.href}-${index}`)}
           onMouseLeave={() => setHoveredItem(null)}
@@ -210,27 +107,29 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         </NavLink>
       );
     }
-    // DISABLED (not clickable, with tooltip)
+    // DISABLED (not clickable, with FeatureGate tooltip)
+    const tooltipPrimary = item.description || 'Feature unavailable';
+    const tooltipSecondary = item.disabledReason || 'This feature is currently disabled.';
     return (
-      <button
+      <div
         key={`${sectionKey}-${item.name}`}
-        type="button"
         className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-60 cursor-not-allowed text-gray-500 dark:text-gray-400"
-        title={item.description ? `${item.description} (Coming soon)` : 'Coming soon'}
         aria-disabled="true"
-        disabled
-        onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.name}-${index}`)}
-        onMouseLeave={() => setHoveredItem(null)}
       >
+        <div
+          role="tooltip"
+          className="absolute left-full top-1/2 -translate-y-1/2 hidden max-w-xs rounded bg-gray-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block"
+        >
+          <p className="font-semibold">{tooltipPrimary}</p>
+          <p className="text-gray-200">{tooltipSecondary}</p>
+        </div>
         <div className="flex items-center w-full gap-3">
           <div className="flex-shrink-0">
             <IconComponent className="h-5 w-5" aria-hidden="true" />
           </div>
-          {!isCollapsed && (
-            <span className="flex-1 text-left truncate">{item.name}</span>
-          )}
+          {!isCollapsed && <span className="flex-1 text-left truncate">{item.name}</span>}
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -246,7 +145,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           <div className="px-3 pt-4 pb-2">
             <div className="flex items-center space-x-2">
               {SectionIcon && <SectionIcon className="h-4 w-4 text-gray-300 dark:text-gray-600" />}
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider dark:text-gray-500">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
                 {title}
               </h3>
             </div>
@@ -311,7 +210,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all duration-200 shadow-sm"
+          className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all duration-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900"
           aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
         >
           {isCollapsed ? (
@@ -328,7 +227,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       >
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0 relative">
-            <UserCircleIcon className="h-10 w-10 text-gray-400" />
+            <UserCircleIcon className="h-10 w-10 text-gray-500 dark:text-gray-400" />
             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800"></div>
           </div>
           {!isCollapsed && (
@@ -352,21 +251,25 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
       {/* Enhanced Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
-        {renderSection(t('navigation.main'), visibleMainNavigation, 'main', HomeIcon)}
-        {filteredManagementNavigation.length > 0 &&
+        {shouldRenderSection(mainNavigation) &&
+          renderSection(t('navigation.main'), mainNavigation, 'main', HomeIcon)}
+        {shouldRenderSection(managementNavigation) &&
           renderSection(
             t('navigation.management'),
-            filteredManagementNavigation,
+            managementNavigation,
             'management',
             Cog6ToothIcon,
           )}
-        {filteredAdminNavigation.length > 0 &&
-          renderSection(t('navigation.administration'), filteredAdminNavigation, 'admin', ShieldCheckIcon)}
-        {/* Only render system section if not null and has items */}
-        {systemNavigation &&
+        {shouldRenderSection(adminNavigation) &&
+          renderSection(
+            t('navigation.administration'),
+            adminNavigation,
+            'admin',
+            ShieldCheckIcon,
+          )}
+        {shouldRenderSection(systemNavigation) &&
           renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
       </nav>
-
     </div>
   );
 };

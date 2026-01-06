@@ -4,36 +4,51 @@ const VALID_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
 
 class User extends Model {
   static associate(models) {
-    User.belongsTo(models.Company, {
-      foreignKey: 'companyId',
-      as: 'company',
+    const safeAssociate = (targetModel, alias, associateFn) => {
+      if (
+        !targetModel ||
+        targetModel.sequelize !== this.sequelize ||
+        this.associations?.[alias]
+      ) {
+        return;
+      }
+      associateFn(targetModel);
+    };
+
+    safeAssociate(models.Company, 'company', (target) => {
+      this.belongsTo(target, {
+        foreignKey: 'companyId',
+        as: 'company',
+      });
     });
 
-    User.hasMany(models.Invoice, {
-      foreignKey: 'userId',
-      as: 'invoices',
+    safeAssociate(models.Invoice, 'invoices', (target) => {
+      this.hasMany(target, {
+        foreignKey: 'userId',
+        as: 'invoices',
+      });
     });
 
-    if (models.Transaction) {
-      User.hasMany(models.Transaction, {
+    safeAssociate(models.Transaction, 'transactions', (target) => {
+      this.hasMany(target, {
         foreignKey: 'userId',
         as: 'transactions',
       });
-    }
+    });
 
-    if (models.AuditLog) {
-      User.hasMany(models.AuditLog, {
+    safeAssociate(models.AuditLog, 'auditLogs', (target) => {
+      this.hasMany(target, {
         foreignKey: 'userId',
         as: 'auditLogs',
       });
-    }
+    });
 
-    if (models.FileAttachment) {
-      User.hasMany(models.FileAttachment, {
+    safeAssociate(models.FileAttachment, 'uploadedFiles', (target) => {
+      this.hasMany(target, {
         foreignKey: 'uploadedBy',
         as: 'uploadedFiles',
       });
-    }
+    });
   }
 
   toJSON() {

@@ -20,7 +20,12 @@ import { Card } from './Card';
  */
 export function EmptyState({ icon, title, description, action, help }) {
   return (
-    <Card className="flex flex-col items-center justify-center py-12 px-6 text-center max-w-xl mx-auto bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-900/80 dark:to-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm">
+    <Card
+      className="flex flex-col items-center justify-center py-12 px-6 text-center max-w-xl mx-auto bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-900/80 dark:to-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {icon && <div className="mb-5 scale-110 opacity-90">{icon}</div>}
       <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
         {title}

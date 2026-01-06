@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import PermissionGuard from '../components/PermissionGuard';
 import { isReadOnlyRole } from '../lib/permissions';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 
 const createInitialState = () => ({
   loading: false,
@@ -103,7 +104,7 @@ const Analytics = () => {
         data: hasData ? result.data : null,
       });
     } catch (error) {
-      logger.error('Failed to load analytics data', error);
+      logger.error('Failed to load analytics data', getSafeErrorMeta(error));
       setAnalyticsState({
         loading: false,
         disabled: false,

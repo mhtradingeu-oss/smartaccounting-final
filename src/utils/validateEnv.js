@@ -22,6 +22,8 @@ const observabilityEnvHints = {
     'REQUEST_LOGGING toggles HTTP request logs (set false to silence, default true).',
   LOG_SLOW_REQUEST_MS:
     'LOG_SLOW_REQUEST_MS adjusts the slow request warning threshold in milliseconds (default 1000).',
+  LOG_SLOW_QUERY_MS:
+    'LOG_SLOW_QUERY_MS controls how long a database query must run before a warning is emitted (default 500).',
 };
 
 const allowedNodeEnvs = ['development', 'production', 'test'];
@@ -115,6 +117,13 @@ function validateEnvironment() {
     const threshold = Number(process.env.LOG_SLOW_REQUEST_MS);
     if (!Number.isFinite(threshold) || threshold <= 0) {
       warnings.push('LOG_SLOW_REQUEST_MS must be a positive number');
+    }
+  }
+
+  if (process.env.LOG_SLOW_QUERY_MS) {
+    const queryThreshold = Number(process.env.LOG_SLOW_QUERY_MS);
+    if (!Number.isFinite(queryThreshold) || queryThreshold < 0) {
+      warnings.push('LOG_SLOW_QUERY_MS must be zero or a positive number');
     }
   }
 

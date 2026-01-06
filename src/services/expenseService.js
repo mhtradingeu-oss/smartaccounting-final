@@ -46,6 +46,7 @@ const createExpense = async (data, userId, companyId) => {
 
   assertProvidedMatches(data.vatAmount, vat, 'vatAmount');
   assertProvidedMatches(data.grossAmount, gross, 'grossAmount');
+  assertProvidedMatches(data.amount, gross, 'amount');
 
   ensureVatTotalsMatch({
     net,
@@ -55,6 +56,8 @@ const createExpense = async (data, userId, companyId) => {
     currency,
   });
 
+  const expenseDate = data.expenseDate || data.date || new Date();
+
   const expensePayload = {
     vendorName: data.vendorName,
     description: data.description,
@@ -62,10 +65,13 @@ const createExpense = async (data, userId, companyId) => {
     netAmount: net,
     vatAmount: vat,
     grossAmount: gross,
+    amount: gross,
     vatRate,
     status: data.status ?? 'draft',
-    expenseDate: data.expenseDate || data.date || new Date(),
+    expenseDate,
+    date: expenseDate,
     createdByUserId: userId,
+    userId,
     companyId,
     notes: data.notes || null,
     currency,

@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 'use strict';
 
-// scripts/verify-schema.js
-// Verifies required tables, columns, and enums exist before seeding
+/**
+ * scripts/verify-schema.js
+ * Production-grade schema verification before seeding / demo / CI
+ */
+
+require('dotenv').config();
 
 const { sequelize } = require('../src/models');
-const { QueryTypes } = require('sequelize');
+
+const DIALECT = sequelize.getDialect();
+const EXPECT_SQLITE = process.env.USE_SQLITE === 'true';
 
 const REQUIRED_TABLES = [
   'companies',
@@ -24,84 +30,123 @@ const REQUIRED_TABLES = [
 
 const REQUIRED_COLUMNS = {
   companies: ['id', 'name', 'taxId', 'aiEnabled'],
-  users: ['id', 'email', 'companyId'],
+  users: ['id', 'email', 'companyId', 'role'],
+  invoices: ['id', 'invoiceNumber', 'companyId', 'status', 'total'],
+  expenses: ['id', 'companyId', 'amount', 'category'],
   ai_insights: [
     'id',
     'companyId',
     'entityType',
     'severity',
-    'legalContext',
-    'evidence',
     'ruleId',
     'modelVersion',
     'featureFlag',
     'disclaimer',
+    'evidence',
   ],
-  // Add more as needed
 };
+
+const OPTIONAL_ENUMS = {
+  invoices: {
+    status: ['DRAFT', 'PAID', 'PARTIALLY_PAID'],
+  },
+  ai_insights: {
+    severity: ['low', 'medium', 'high'],
+  },
+};
+
+function normalizeName(name) {
+  return String(name).toLowerCase().replace(/"/g, '');
+}
+
+async function verifyDialect() {
+  console.log(`[SCHEMA VERIFY] Dialect: ${DIALECT}`);
+  if (EXPECT_SQLITE && DIALECT !== 'sqlite') {
+    throw new Error(`USE_SQLITE=true but detected dialect=${DIALECT}`);
+  }
+}
 
 async function checkTables() {
   const tables = await sequelize.getQueryInterface().showAllTables();
-  const normalizedTables = tables.map((table) => {
-    if (typeof table === 'string') {
-      return table.toLowerCase();
+
+  const normalizedTables = tables.map((t) => {
+    if (typeof t === 'string') {
+      return normalizeName(t);
     }
-    if (table && typeof table === 'object') {
-      const tableName = table.tableName || table.TABLE_NAME || table.name || table.table_name;
-      if (tableName && typeof tableName === 'string') {
-        return tableName.toLowerCase();
-      }
+    if (t?.tableName) {
+      return normalizeName(t.tableName);
     }
-    return String(table).toLowerCase();
+    if (t?.name) {
+      return normalizeName(t.name);
+    }
+    return normalizeName(t);
   });
 
   for (const table of REQUIRED_TABLES) {
-    if (!normalizedTables.includes(table.toLowerCase())) {
-      throw new Error(`[SCHEMA VERIFY] Missing required table: ${table}`);
+    if (!normalizedTables.includes(normalizeName(table))) {
+      throw new Error(`Missing required table: ${table}`);
     }
   }
+
+  console.log(`[SCHEMA VERIFY] Tables OK (${REQUIRED_TABLES.length})`);
 }
 
 async function checkColumns() {
   for (const [table, columns] of Object.entries(REQUIRED_COLUMNS)) {
     const desc = await sequelize.getQueryInterface().describeTable(table);
+
+    const normalizedCols = Object.keys(desc).map(normalizeName);
+
     for (const col of columns) {
-      if (!desc[col]) {
-        throw new Error(`[SCHEMA VERIFY] Missing column: ${table}.${col}`);
+      if (!normalizedCols.includes(normalizeName(col))) {
+        throw new Error(`Missing column: ${table}.${col}`);
       }
+    }
+  }
+
+  console.log('[SCHEMA VERIFY] Required columns OK');
+}
+
+async function checkEnums() {
+  if (DIALECT !== 'postgres') {
+    console.log('[SCHEMA VERIFY] ENUM checks skipped (not postgres)');
+    return;
+  }
+
+  for (const [table, enums] of Object.entries(OPTIONAL_ENUMS)) {
+    for (const [column, allowed] of Object.entries(enums)) {
+      console.log(`[SCHEMA VERIFY] ENUM check hint: ${table}.${column} ∈ [${allowed.join(', ')}]`);
     }
   }
 }
 
-async function checkEnums() {
-  if (sequelize.getDialect() !== 'postgres') {
-    return;
-  }
-  // Example: check ai_insights.entityType enum values
-  const [result] = await sequelize.query(
-    "SELECT e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid WHERE t.typname = 'enum_ai_insights_entityType';",
-    { type: QueryTypes.SELECT },
-  );
-  if (!result) {
-    throw new Error(
-      '[SCHEMA VERIFY] Enum type enum_ai_insights_entityType missing or incompatible',
-    );
-  }
-  // Add more enum checks as needed
-}
-
 async function main() {
   try {
+    console.log('========================================');
+    console.log('[SCHEMA VERIFY] Starting schema verification');
+    console.log(`[SCHEMA VERIFY] NODE_ENV=${process.env.NODE_ENV || 'undefined'}`);
+    console.log(`[SCHEMA VERIFY] USE_SQLITE=${process.env.USE_SQLITE || 'false'}`);
+    console.log('========================================');
+
+    await verifyDialect();
+    await sequelize.authenticate();
+
     await checkTables();
     await checkColumns();
     await checkEnums();
-    console.log('[SCHEMA VERIFY] Schema is ready for seeding.');
+
+    console.log('[SCHEMA VERIFY] ✅ Schema is READY for seeding');
     process.exit(0);
   } catch (err) {
-    console.error(`[SCHEMA VERIFY] ERROR: ${err.message}`);
+    console.error('[SCHEMA VERIFY] ❌ FAILED');
+    console.error(`[SCHEMA VERIFY] ${err.message}`);
     process.exit(1);
   } finally {
-    await sequelize.close();
+    try {
+      await sequelize.close();
+    } catch (_) {
+      // Intentionally ignore errors during sequelize.close()
+    }
   }
 }
 

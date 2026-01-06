@@ -40,8 +40,8 @@ const options = {
     },
     servers: [
       {
-        url: process.env.API_BASE_URL || 'http://localhost:3000',
-        description: 'Development server',
+        url: process.env.API_BASE_URL || '/api',
+        description: 'Configurable API host (defaults to /api)',
       },
       {
         url: 'https://api.smartaccounting.com',

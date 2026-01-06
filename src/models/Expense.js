@@ -11,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'createdByUserId',
         as: 'createdBy',
       });
+      Expense.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user',
+      });
       Expense.hasMany(models.FileAttachment, {
         foreignKey: 'expenseId',
         as: 'attachments',
@@ -33,6 +37,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
       createdByUserId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -40,6 +48,10 @@ module.exports = (sequelize, DataTypes) => {
       vendorName: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      date: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
       },
       expenseDate: {
         type: DataTypes.DATEONLY,
@@ -62,6 +74,10 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       grossAmount: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+      },
+      amount: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
       },

@@ -206,25 +206,46 @@ const Invoices = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Invoice #
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Client
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Issue Date
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Due Date
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Amount
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      >
                         Actions
                       </th>
                     </tr>

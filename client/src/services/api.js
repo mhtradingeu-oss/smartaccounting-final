@@ -1,12 +1,34 @@
 import axios from 'axios';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 
 /**
  * API BASE URL
  * - Production: /api (Nginx proxy)
  * - Dev: VITE_API_URL (required for docker/dev setups)
  */
-const viteApiUrl = import.meta.env.VITE_API_URL?.trim();
-export const API_BASE_URL = viteApiUrl || '/api';
+
+const raw = import.meta.env.VITE_API_URL?.trim();
+let API_BASE_URL = '/api';
+
+if (raw) {
+  const isSafe = /^https?:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(raw);
+  if (typeof window !== 'undefined' && raw.includes('backend:')) {
+    throw new Error(
+      'VITE_API_URL must not use docker service names in browser. Use http://localhost:5001/api or leave empty.',
+    );
+  }
+  if (isSafe) {
+    API_BASE_URL = raw;
+  } else {
+    console.warn(
+      `[api] Invalid VITE_API_URL "${raw}". Docker service names are not allowed in browser. Falling back to "/api".`,
+    );
+  }
+} else {
+  console.info('[api] Using "/api" via Vite proxy');
+}
+
+export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -63,12 +85,10 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
   }
 
   if (error.response) {
-    const { status, data } = error.response;
+    const { status } = error.response;
     formatted.status = status;
 
-    if (data?.message) {
-      formatted.message = data.message;
-    }
+    // Keep fallback message or type-specific overrides only
 
     if (status === 401) {
       formatted.type = 'unauthorized';
@@ -150,7 +170,7 @@ api.interceptors.response.use(
     }
     if (error.response) {
       const { status } = error.response;
-      logError(`❌ API Error ${status}`, error.response.data);
+      logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
       if (status === 401) {
         emitForceLogout();
       }

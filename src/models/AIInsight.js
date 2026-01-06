@@ -1,6 +1,25 @@
+'use strict';
+
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  const AIInsight = sequelize.define(
-    'AIInsight',
+  class AIInsight extends Model {
+    static associate(models) {
+      const decisionsModel = models?.AIInsightDecision;
+      if (
+        decisionsModel &&
+        decisionsModel.sequelize === this.sequelize &&
+        !this.associations?.decisions
+      ) {
+        this.hasMany(decisionsModel, {
+          foreignKey: 'insightId',
+          as: 'decisions',
+        });
+      }
+    }
+  }
+
+  AIInsight.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -10,76 +29,34 @@ module.exports = (sequelize, DataTypes) => {
       companyId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: { model: 'companies', key: 'id' },
       },
       entityType: {
-        type: DataTypes.ENUM('invoice', 'expense', 'bankTransaction', 'taxReport', 'user'),
+        type: DataTypes.STRING,
         allowNull: false,
       },
       entityId: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      severity: {
-        type: DataTypes.ENUM('low', 'medium', 'high'),
-        allowNull: false,
-      },
-      confidenceScore: {
-        type: DataTypes.FLOAT,
-        allowNull: false,
-      },
-      summary: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      why: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      legalContext: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      evidence: {
-        type: DataTypes.JSONB,
-        allowNull: false,
-      },
-      ruleId: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      modelVersion: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      featureFlag: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      disclaimer: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
+      type: DataTypes.STRING,
+      severity: DataTypes.STRING,
+      confidenceScore: DataTypes.FLOAT,
+      summary: DataTypes.TEXT,
+      why: DataTypes.TEXT,
+      legalContext: DataTypes.TEXT,
+      evidence: sequelize.getDialect() === 'postgres' ? DataTypes.JSONB : DataTypes.JSON,
+      ruleId: DataTypes.STRING,
+      modelVersion: DataTypes.STRING,
+      featureFlag: DataTypes.STRING,
+      disclaimer: DataTypes.STRING,
     },
     {
-      indexes: [
-        { fields: ['companyId', 'createdAt'] },
-        { fields: ['companyId', 'type'] },
-        { fields: ['entityId'] },
-      ],
-      timestamps: true,
+      sequelize,
+      modelName: 'AIInsight',
       tableName: 'ai_insights',
+      timestamps: true,
     },
   );
-
-  AIInsight.associate = (models) => {
-    AIInsight.hasMany(models.AIInsightDecision, { foreignKey: 'insightId', as: 'decisions' });
-    AIInsight.belongsTo(models.Company, { foreignKey: 'companyId', as: 'company' });
-  };
 
   return AIInsight;
 };

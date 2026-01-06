@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
 import Footer from './Footer';
+import DevHealthCheck from './DevHealthCheck';
 
 const getInitialDarkMode = () => {
   const savedTheme = localStorage.getItem('theme');
@@ -101,7 +102,8 @@ const Layout = ({ children }) => {
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto pt-16 main-content">
           <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+              <DevHealthCheck />
               {/* Render children if provided, else render <Outlet /> for nested routes */}
               {children ?? <Outlet />}
             </div>

@@ -2,9 +2,16 @@
 const { AuditLog } = require('../../models');
 
 const crypto = require('crypto');
+const { redactPII } = require('./governance');
+
+function sanitizePrompt(prompt) {
+  const normalized = typeof prompt === 'string' ? prompt : '';
+  return redactPII(normalized);
+}
 
 function hashPrompt(prompt) {
-  return prompt ? crypto.createHash('sha256').update(prompt).digest('hex') : undefined;
+  const sanitized = sanitizePrompt(prompt);
+  return sanitized ? crypto.createHash('sha256').update(sanitized).digest('hex') : undefined;
 }
 
 function sanitizeMeta(meta) {
@@ -22,6 +29,7 @@ function sanitizeMeta(meta) {
 async function logRequested({
   userId,
   companyId,
+  requestId,
   queryType,
   route,
   prompt,
@@ -29,13 +37,16 @@ async function logRequested({
   sessionId,
   meta,
 }) {
+  const safeRequestId = requestId || 'unknown';
   await AuditLog.create({
     action: 'AI_QUERY_REQUESTED',
     resourceType: 'AI',
     resourceId: null,
     userId,
     companyId,
+    requestId: safeRequestId,
     metadata: {
+      requestId: safeRequestId,
       route,
       queryType,
       promptHash: hashPrompt(prompt),
@@ -52,6 +63,7 @@ async function logRequested({
 async function logResponded({
   userId,
   companyId,
+  requestId,
   queryType,
   route,
   prompt,
@@ -59,13 +71,16 @@ async function logResponded({
   sessionId,
   meta,
 }) {
+  const safeRequestId = requestId || 'unknown';
   await AuditLog.create({
     action: 'AI_QUERY_RESPONDED',
     resourceType: 'AI',
     resourceId: null,
     userId,
     companyId,
+    requestId: safeRequestId,
     metadata: {
+      requestId: safeRequestId,
       route,
       queryType,
       promptHash: hashPrompt(prompt),
@@ -80,20 +95,33 @@ async function logResponded({
 }
 
 // eslint-disable-next-line no-unused-vars -- consumed via aiReadOnly session endpoint logging
-async function logSessionEvent({ userId, companyId, sessionId, event = 'started', route, prompt }) {
+// eslint-disable-next-line no-unused-vars -- consumed via aiReadOnly session endpoint logging
+async function logSessionEvent({
+  userId,
+  companyId,
+  requestId,
+  sessionId,
+  event = 'started',
+  route,
+  prompt,
+}) {
+  const safePrompt = sanitizePrompt(prompt);
+  const safeRequestId = requestId || 'unknown';
   await AuditLog.create({
     action: 'AI_ASSISTANT_SESSION',
     resourceType: 'AI',
     resourceId: sessionId,
     userId,
     companyId,
+    requestId: safeRequestId,
     newValues: {
       event,
       sessionId,
       route,
-      prompt,
+      prompt: safePrompt,
     },
     metadata: {
+      requestId: safeRequestId,
       route,
       promptHash: hashPrompt(prompt),
     },
@@ -112,6 +140,7 @@ async function logSuggestionEvent(params) {
     eventType, // 'AI_SUGGESTION_REQUESTED' | 'AI_SUGGESTION_REJECTED'
     userId,
     companyId,
+    requestId,
     prompt,
     suggestion,
     reason,
@@ -122,13 +151,16 @@ async function logSuggestionEvent(params) {
     queryType,
     summary,
   } = params;
+  const safeRequestId = requestId || 'unknown';
   await AuditLog.create({
     action: eventType,
     resourceType: 'AI_SUGGESTION',
     resourceId: relatedEntityId || null,
     userId,
     companyId,
+    requestId: safeRequestId,
     metadata: {
+      requestId: safeRequestId,
       route: '/api/ai/suggest',
       promptHash: prompt ? hashPrompt(prompt) : undefined,
       suggestion: suggestion ? JSON.stringify(suggestion) : undefined,
@@ -143,14 +175,17 @@ async function logSuggestionEvent(params) {
   });
 }
 
-async function logRejected({ userId, companyId, queryType, route, prompt, reason }) {
+async function logRejected({ userId, companyId, requestId, queryType, route, prompt, reason }) {
+  const safeRequestId = requestId || 'unknown';
   await AuditLog.create({
     action: 'AI_QUERY_REJECTED',
     resourceType: 'AI',
     resourceId: null,
     userId,
     companyId,
+    requestId: safeRequestId,
     metadata: {
+      requestId: safeRequestId,
       route,
       queryType,
       promptHash: hashPrompt(prompt),
@@ -162,14 +197,24 @@ async function logRejected({ userId, companyId, queryType, route, prompt, reason
   });
 }
 
-async function logRateLimited({ userId, companyId, route, queryType, prompt }) {
+async function logRateLimited({
+  userId,
+  companyId,
+  requestId,
+  route,
+  queryType,
+  prompt,
+}) {
+  const safeRequestId = requestId || 'unknown';
   await AuditLog.create({
     action: 'AI_RATE_LIMITED',
     resourceType: 'AI',
     resourceId: null,
     userId,
     companyId,
+    requestId: safeRequestId,
     metadata: {
+      requestId: safeRequestId,
       route,
       queryType,
       promptHash: hashPrompt(prompt),

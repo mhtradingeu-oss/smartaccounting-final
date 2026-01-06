@@ -7,13 +7,14 @@
 | `/pricing` | Stripe-agnostic pricing marketing page with plan cards, plan comparison, and contact CTA. | Public marketing experience; highlights Stripe / compliance readiness before checkout is enabled. |
 | `/request-access` | Request access form for invite-only preview and updates. | Public; collects name/email/company, surfaces accessible messaging, and links back to pricing/landing. |
 | `/onboarding` | SaaS onboarding wizard inside the main layout. | `ProtectedRoute` (any authenticated user) + `Layout`. |
+| `/profile-settings` | Profile & personal settings console (contact data, plan, security) surfaced via the sidebar. | `ProtectedRoute` + `Layout`. |
 | `/rbac` | Role-based access control console. | `ProtectedRoute` + `requiredRole="admin"`; wrapped in `Layout`. |
 | `/investor-dashboard` | Auditor/investor KPI surface. | `ProtectedRoute` + `requiredRole="auditor"`. |
 | `/analytics` | Experimental analytics/insights board. | Public (no `ProtectedRoute`). |
 | `/ai-advisor` | AI Advisor insights feed. | `ProtectedRoute` + `Layout`; read-only advisory data from the AI insights service. |
 | `/ai-assistant` | Conversational read-only AI assistant referencing company context, invoices, expenses, bank statements, and AI insights. | `ProtectedRoute` + `Layout`; guarded by `AI_ASSISTANT_ENABLED`, each question is routed through `/api/ai/read/assistant` to keep responses explainable and audit-logged. |
 | `/dashboard` | Main KPI dashboards. | `ProtectedRoute` + `Layout`. |
-| `/invoices` | Invoice list. | `ProtectedRoute` + `Layout`; viewers are hidden from the sidebar. |
+| `/invoices` | Invoice list; accountant/admin roles can click the nav link while viewers see it disabled with a FeatureGate tooltip. | `ProtectedRoute` + `Layout`. |
 | `/invoices/create` | Invoice creation form. | `ProtectedRoute` + `Layout`. |
 | `/invoices/:invoiceId/edit` | Invoice edit flow. | `ProtectedRoute` + `Layout`. |
 | `/expenses` | Expense list. | `ProtectedRoute` + `Layout`. |
@@ -23,11 +24,11 @@
 | `/bank-statements/upload` | Upload placeholder (coming soon). | `ProtectedRoute` + `Layout`; placeholder explains upcoming capability. |
 | `/bank-statements/:statementId` | Bank statement detail view. | `ProtectedRoute` + `Layout`. |
 | `/billing` | Billing/subscription management UI. | `ProtectedRoute` + `Layout`; sidebar renders a "Coming soon" badge when `FEATURE_FLAGS.STRIPE_BILLING.enabled === false`. |
-| `/german-tax-reports/*` | German VAT/tax reporting workspace (feature flagged). | `ProtectedRoute` + `Layout`; sidebar shows a "Coming soon" badge and the page surfaces availability messaging when the backend returns `501/disabled`. |
+| `/german-tax-reports/*` | German VAT/tax reporting workspace (feature flagged, surfaced in the main nav as “Tax Reports”). | `ProtectedRoute` + `Layout`; sidebar shows a "Coming soon" badge and the page surfaces availability messaging when the backend returns `501/disabled`. |
 | `/companies` | Company profile and settings. | `ProtectedRoute` + `Layout`. |
 | `/users` | User administration. | `ProtectedRoute` + `Layout` + `requiredRole="admin"`. |
 | `/compliance` | Compliance dashboard (Elster/GDPR). | `ProtectedRoute` + `Layout` + `requiredRole="admin"`; feature flagged if `FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled` is false. |
 | `/compliance-dashboard` | Legacy alias that navigates to `/compliance`. | Same guards as `/compliance`. |
-| `/audit-logs` | Audit trails. | `ProtectedRoute` + `Layout` + `requiredRole="admin"`. |
-| `/gdpr-actions` | GDPR action center. | `ProtectedRoute` + `Layout`. |
+| `/audit-logs` | Audit trails export feed (admin navigation entry surfaces the gated link). | `ProtectedRoute` + `Layout` + `requiredRole="admin"`. |
+| `/gdpr-actions` | GDPR action center (now promoted as the System → Exports sidebar entry for data exports & anonymization). | `ProtectedRoute` + `Layout`. |
 | `*` | Fallback not-found screen (renders the inline `NotFound` component). | Public catch-all. |

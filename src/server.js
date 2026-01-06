@@ -5,6 +5,7 @@ const app = require('./app');
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 const API_PREFIX = app.get('apiPrefix') || process.env.API_BASE_URL || '/api';
+const swaggerDocsPath = `${API_PREFIX.replace(/\/$/, '')}/docs`;
 
 let serverInstance = null;
 let signalsAttached = false;
@@ -61,7 +62,7 @@ async function startServer() {
       apiPrefix: API_PREFIX,
       environment: process.env.NODE_ENV || 'development',
     });
-    logger.info(`Swagger docs available at http://localhost:${PORT}/api/docs`);
+    logger.info(`Swagger docs available at http://localhost:${PORT}${swaggerDocsPath}`);
   });
 
   attachSignalHandlers();

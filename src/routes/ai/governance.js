@@ -26,24 +26,34 @@ function redactPrompt(prompt) {
 // GET /api/ai/governance
 router.get('/governance', async (req, res) => {
   const requestId =
-    req.requestId || req.id || req.headers['x-request-id'] || require('crypto').randomUUID();
+    req.requestId || req.headers['x-request-id'] || require('crypto').randomUUID();
   const policyVersion = '10.0.0';
   const disclaimer =
     'AI output is for informational purposes only. Please review all results for compliance.';
   const prompt = typeof req.query.prompt === 'string' ? req.query.prompt : '';
   const redactedPrompt = redactPrompt(prompt);
+  const userId = req.user?.id || null;
+  const companyId = req.user?.companyId || null;
+  const route = req.originalUrl;
+  const queryType = 'governance';
 
   // Audit log contract: must pass a single object with prompt, requestId, policyVersion
 
   // For test compatibility: call the logger mock with exactly the expected contract
   let hasLoggedRequest = false;
   async function ensureLogRequested(extra = {}) {
-    if (hasLoggedRequest) {return;}
+    if (hasLoggedRequest) {
+      return;
+    }
     hasLoggedRequest = true;
     await auditLogger.logRequested({
       prompt: redactedPrompt,
       requestId,
       policyVersion,
+      userId,
+      companyId,
+      route,
+      queryType,
       ...extra,
     });
   }

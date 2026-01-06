@@ -8,8 +8,15 @@ const { updateRequestContext } = require('../lib/logger/context');
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-
+  // Enforce strict Bearer token usage
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'Authorization header must be in the format: Bearer <token>',
+      code: 'AUTH_MISSING',
+    });
+  }
+  const token = authHeader.slice(7);
   if (!token) {
     return res.status(401).json({
       status: 'error',
@@ -17,9 +24,10 @@ const authenticate = async (req, res, next) => {
       code: 'AUTH_MISSING',
     });
   }
-
   try {
     const decoded = jwt.verify(token, getJwtSecret());
+    req.tokenPayload = decoded;
+    req.tokenCompanyId = decoded.companyId || null;
     const tokenJti = decoded.jti || null;
     const tokenExp = decoded.exp ? new Date(decoded.exp * 1000) : null;
     if (tokenJti && (await revokedTokenService.isTokenRevoked(tokenJti))) {
@@ -32,15 +40,13 @@ const authenticate = async (req, res, next) => {
     const user = await User.findByPk(decoded.userId, {
       include: [{ model: Company, as: 'company' }],
     });
-
     if (!user || !user.isActive) {
       return res.status(401).json({
         status: 'error',
         message: 'Invalid authentication token',
-        code: 'AUTH_INVALID',
+        code: 'TOKEN_INVALID',
       });
     }
-
     req.user = user;
     req.userId = user.id;
     req.companyId = user.companyId;
@@ -48,7 +54,6 @@ const authenticate = async (req, res, next) => {
     req.token = token;
     req.tokenJti = tokenJti;
     req.tokenExp = tokenExp;
-
     // Temporary debug logging for test environment only
     if (process.env.NODE_ENV === 'test') {
       // eslint-disable-next-line no-console
@@ -60,12 +65,19 @@ const authenticate = async (req, res, next) => {
         user.companyId,
       );
     }
-
     next();
   } catch (error) {
+    // Distinguish between expired and invalid tokens
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Token expired',
+        code: 'TOKEN_INVALID',
+      });
+    }
     return res.status(401).json({
       status: 'error',
-      message: 'Invalid or expired token',
+      message: 'Invalid token',
       code: 'TOKEN_INVALID',
     });
   }

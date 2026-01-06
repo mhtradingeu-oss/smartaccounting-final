@@ -1,21 +1,23 @@
-// aiSuggest.js
-// Phase 12: AI Suggestions route (read-only, human-in-the-loop)
-
 const express = require('express');
-const router = express.Router();
 const { getSuggestion } = require('../services/ai/aiSuggestionService');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
+const aiRouteGuard = require('../middleware/aiRouteGuard');
 
-// GET /api/ai/suggest — strictly read-only, advisory only
-router.get('/suggest', authenticate, requireCompany, async (req, res) => {
+const router = express.Router();
+
+const respondWithError = (req, res, status, error) =>
+  res.status(status).json({ error, requestId: req.requestId });
+
+router.use(authenticate, requireCompany, aiRouteGuard());
+
+router.get('/suggest', async (req, res) => {
   const { userId, companyId } = req;
   const { prompt, context } = req.query;
-
   try {
-    const suggestion = await getSuggestion({ userId, companyId, prompt, context });
-    res.json({ suggestion });
+    const suggestion = await getSuggestion({ userId, companyId, prompt, context, requestId: req.requestId });
+    res.json({ suggestion, requestId: req.requestId });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    respondWithError(req, res, err.status || 400, err.message || 'Suggestion request failed');
   }
 });
 

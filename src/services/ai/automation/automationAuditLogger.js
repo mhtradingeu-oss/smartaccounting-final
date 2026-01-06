@@ -23,11 +23,12 @@ function safeHash(input) {
  * @param {string} [param0.detector]
  * @param {Object} [param0.meta] - Only safe summaries/hashes
  */
-async function logAutomationEvent({ eventType, userId, companyId, detector, meta }) {
+async function logAutomationEvent({ eventType, userId, companyId, requestId, detector, meta }) {
   await logSuggestionEvent({
     eventType,
     userId,
     companyId,
+    requestId,
     detector,
     createdAt: new Date(),
     action: eventType,

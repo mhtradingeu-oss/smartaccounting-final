@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { logger } from '../lib/logger';
+import { formatApiError } from '../services/api';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 import { authAPI } from '../services/authAPI';
 import { AUTH_FORCE_LOGOUT_EVENT } from '../services/api';
+import { companiesAPI } from '../services/companiesAPI';
 
 // Create the AuthContext
 const AuthContext = createContext();
@@ -32,6 +35,7 @@ export const AuthProvider = ({ children }) => {
 
   const applyUnauthenticated = useCallback(() => {
     localStorage.removeItem('token');
+    companiesAPI.clearCache();
     setAuthState((prev) => ({
       ...prev,
       status: 'unauthenticated',
@@ -71,13 +75,13 @@ export const AuthProvider = ({ children }) => {
               }
             }
           } catch (refreshErr) {
-            logger.error('Silent refresh failed:', refreshErr);
+            logger.error('Silent refresh failed', getSafeErrorMeta(refreshErr));
           }
         }
 
         applyUnauthenticated();
       } catch (error) {
-        if (error?.response?.data?.message?.toLowerCase().includes('expired')) {
+        if (error?.response?.status === 401) {
           try {
             const refreshResp = await authAPI.refresh();
             if (refreshResp?.success && refreshResp.token) {
@@ -89,10 +93,10 @@ export const AuthProvider = ({ children }) => {
               }
             }
           } catch (refreshErr) {
-            logger.error('Silent refresh failed:', refreshErr);
+            logger.error('Silent refresh failed', getSafeErrorMeta(refreshErr));
           }
         }
-        logger.error('Auth restore failed:', error);
+        logger.error('Auth restore failed', getSafeErrorMeta(error));
         applyUnauthenticated();
       }
     };
@@ -131,23 +135,22 @@ export const AuthProvider = ({ children }) => {
       }
 
       applyUnauthenticated();
-      return { success: false, error: payload?.message || 'Login failed' };
+      return { success: false, error: 'Login failed. Please check your credentials.' };
     } catch (error) {
-      logger.error('Login failed:', error);
-      // Handle rate limit error
+      logger.error('Login failed', getSafeErrorMeta(error));
+      const sanitizedError = formatApiError(error, 'Login failed. Please try again.');
       if (error?.response?.status === 429) {
         setAuthState((prev) => ({
           ...prev,
           rateLimit: true,
-          rateLimitMessage:
-            error.response?.data?.message || 'Too many requests. Please wait and try again.',
+          rateLimitMessage: 'Too many requests. Please wait and try again.',
         }));
       } else {
         applyUnauthenticated();
       }
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'Login failed',
+        error: sanitizedError.message,
       };
     }
   };

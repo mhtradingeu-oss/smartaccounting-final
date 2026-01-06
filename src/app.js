@@ -3,11 +3,60 @@ require('dotenv').config();
 
 const express = require('express');
 const { serve, setup } = require('swagger-ui-express');
-const { createSecurityMiddleware } = require('./middleware/security');
+const { cache } = require('./lib/cache');
+const { sequelize } = require('./models');
+
+const app = express();
+const API_PREFIX = process.env.API_BASE_URL || '/api';
+app.set('apiPrefix', API_PREFIX);
+const normalizedApiPrefix = API_PREFIX.replace(/\/$/, '');
+
+const registerPublicMonitorEndpoint = (path, handler) => {
+  app.get(path, handler);
+  if (normalizedApiPrefix) {
+    app.get(`${normalizedApiPrefix}${path}`, handler);
+  }
+};
+
+// --------------------------------------------------
+// Core imports
+// --------------------------------------------------
+const authMiddleware = require('./middleware/authMiddleware');
+const permissionGuard = require('./security/permissionGuard');
 const errorHandler = require('./middleware/errorHandler');
+const { createSecurityMiddleware } = require('./middleware/security');
+const { createPerformanceMiddleware, performanceMonitor } = require('./middleware/performance');
+const { createApiTimeoutMiddleware } = require('./middleware/apiTimeout');
 const { specs, swaggerOptions } = require('./config/swagger');
 const appVersion = require('./config/appVersion');
 
+const getCacheStatus = () => {
+  if (!cache || typeof cache.getStats !== 'function') {
+    return { redis: 'not_configured' };
+  }
+
+  try {
+    const stats = cache.getStats();
+    return {
+      redis: stats.redisStatus || 'unknown',
+      hits: stats.hits ?? 0,
+      misses: stats.misses ?? 0,
+      hitRate: stats.hitRate || '0%',
+    };
+  } catch (error) {
+    return { redis: 'error', error: error.message };
+  }
+};
+
+const getQueueStatus = () => ({
+  name: 'background',
+  status: 'not_configured',
+  detail: 'No asynchronous queue client has been configured in this deployment.',
+});
+
+// --------------------------------------------------
+// Routes
+// --------------------------------------------------
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const invoiceRoutes = require('./routes/invoices');
@@ -27,97 +76,175 @@ const exportRoutes = require('./routes/exports');
 const emailTestRoutes = require('./routes/emailTest');
 const germanTaxComplianceRoutes = require('./routes/germanTaxCompliance');
 const expenseRoutes = require('./routes/expenses');
+const telemetryRoutes = require('./routes/telemetry');
+const aiRoutes = require('./routes/ai');
+const adminRoutes = require('./routes/admin');
+const gdprRoutes = require('./routes/gdpr');
 
-const app = express();
-const API_PREFIX = process.env.API_BASE_URL || '/api';
-
-app.set('apiPrefix', API_PREFIX);
-
-/*
- * v0.1 scope guard:
- * 1) Enabled: Auth (login/register), company/profile management, user CRUD, invoices,
- *    dashboard stats, bank statement import/list.
- * 2) Disabled: VAT/tax services, Stripe billing, German compliance/Elster exports.
- * 3) Out of scope: advanced analytics, OCR intelligence, multi-entity billing.
- * Disabled endpoints return 501 + {status:'disabled', version:'v0.1', feature:'...'}.
- */
-/*
- * API surface v0.1 (all prefixed with API_PREFIX)
- * Public: POST /auth/login, POST /auth/register
- * Authenticated: GET /auth/me
- * Companies: GET /companies, PUT /companies
- * Users: GET/POST /users, PUT/DELETE /users/:userId
- * Invoices: GET/POST /invoices, PUT /invoices/:invoiceId
- * Dashboard: GET /dashboard/stats
- * Bank statements: GET /bank-statements, POST /bank-statements/import, GET /bank-statements/:id/transactions, POST /bank-statements/reconcile, PUT /bank-statements/transactions/:id/categorize
- */
-
+// --------------------------------------------------
+// Proxy / Trust
+// --------------------------------------------------
 if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-// --- Middleware Order: requestId, CORS, Security, Rate/Security, Performance, Routes, ErrorHandler ---
-
-const requestIdMiddleware = require('./middleware/requestId');
-const corsMiddleware = require('./middleware/cors');
-const { createPerformanceMiddleware } = require('./middleware/performance');
+// --------------------------------------------------
+// Middleware Order (FINAL & APPROVED)
+// --------------------------------------------------
 
 // 1. Request ID
+const requestIdMiddleware = require('./middleware/requestId');
 app.use(requestIdMiddleware);
 
 // 2. CORS
+const corsMiddleware = require('./middleware/cors');
 app.use(corsMiddleware);
 
-// 3. Security (ordered)
+// 3. Security headers, rate limits, etc.
 createSecurityMiddleware().forEach((mw) => app.use(mw));
 
-// 4. Performance/monitoring
+// 4. Performance / monitoring
 createPerformanceMiddleware().forEach((mw) => app.use(mw));
 
-// 5. Body parsers (after security, before routes)
+// 5. Body parsers
 app.use(express.json({ limit: process.env.JSON_LIMIT || '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || '10mb' }));
 
-// 6. Docs and routes
-app.use('/api/docs', serve, setup(specs, swaggerOptions));
+// --------------------------------------------------
+// Public / Unprotected endpoints
+// --------------------------------------------------
 
-// Health and observability endpoints
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    version: appVersion.version,
-  });
-});
-// Readiness check ensures the primary database remains reachable.
-app.get('/ready', async (req, res) => {
+// Swagger docs
+const swaggerDocsPath = `${API_PREFIX}/docs`;
+app.use(swaggerDocsPath, serve, setup(specs, swaggerOptions));
+
+const healthHandler = async (req, res) => {
+  const timestamp = new Date().toISOString();
+  const cacheStatus = getCacheStatus();
+  const queueStatus = getQueueStatus();
+  let dbStatus = 'unknown';
+  let dbError;
+
   try {
-    await require('./models').sequelize.authenticate();
+    await sequelize.authenticate();
+    dbStatus = 'connected';
+  } catch (err) {
+    dbStatus = 'disconnected';
+    dbError = err.message;
+  }
+
+  const payload = {
+    status: dbStatus === 'connected' ? 'ok' : 'degraded',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp,
+    version: appVersion.version,
+    db: { status: dbStatus },
+    cache: cacheStatus,
+    queue: queueStatus,
+  };
+
+  if (dbError) {
+    payload.db.error = dbError;
+  }
+
+  res.status(dbStatus === 'connected' ? 200 : 503).json(payload);
+};
+
+const readyHandler = async (req, res) => {
+  const timestamp = new Date().toISOString();
+  const cacheStatus = getCacheStatus();
+  const queueStatus = getQueueStatus();
+
+  try {
+    await sequelize.authenticate();
     res.status(200).json({
       status: 'ready',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp,
+      version: appVersion.version,
       db: 'connected',
-      timestamp: new Date().toISOString(),
+      cache: cacheStatus,
+      queue: queueStatus,
     });
   } catch (err) {
     res.status(503).json({
       status: 'not-ready',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp,
+      version: appVersion.version,
       db: 'disconnected',
+      cache: cacheStatus,
+      queue: queueStatus,
       error: err.message,
     });
   }
-});
-// Minimal Prometheus endpoint to signal uptime.
-app.get('/metrics', (req, res) => {
-  res.set('Content-Type', 'text/plain');
-  res.send(
-    '# HELP smartaccounting_up 1 if up\n# TYPE smartaccounting_up gauge\nsmartaccounting_up 1\n',
-  );
-});
-const telemetryRoutes = require('./routes/telemetry');
-app.use(`${API_PREFIX}/telemetry`, telemetryRoutes);
+};
 
+const metricsHandler = (req, res) => {
+  const metrics = performanceMonitor.getMetrics();
+  const memory = metrics.memory || {};
+  const cpu = metrics.cpu || {};
+  const [load1 = 0, load5 = 0, load15 = 0] = metrics.load || [];
+  const uptimeSeconds = typeof metrics.uptime === 'number' ? metrics.uptime : 0;
+
+  const lines = [
+    '# HELP smartaccounting_up 1 if up',
+    '# TYPE smartaccounting_up gauge',
+    'smartaccounting_up 1',
+
+    `smartaccounting_requests_total ${metrics.requests}`,
+
+    `smartaccounting_errors_total ${metrics.errors}`,
+
+    `smartaccounting_avg_response_time_ms ${metrics.averageResponseTime}`,
+
+    `smartaccounting_slow_request_rate_percent ${metrics.slowRequestRate}`,
+
+    `smartaccounting_error_rate_percent ${metrics.errorRate}`,
+
+    `smartaccounting_memory_rss_bytes ${memory.rss || 0}`,
+
+    `smartaccounting_memory_heap_used_bytes ${memory.heapUsed || 0}`,
+
+    `smartaccounting_cpu_user_usec ${cpu.user || 0}`,
+
+    `smartaccounting_cpu_system_usec ${cpu.system || 0}`,
+
+    `smartaccounting_uptime_seconds ${uptimeSeconds.toFixed(2)}`,
+
+    `smartaccounting_load_avg_1m ${load1}`,
+
+    `smartaccounting_load_avg_5m ${load5}`,
+
+    `smartaccounting_load_avg_15m ${load15}`,
+  ];
+
+  res.set('Content-Type', 'text/plain');
+  res.send(lines.join('\n'));
+};
+
+registerPublicMonitorEndpoint('/health', healthHandler);
+registerPublicMonitorEndpoint('/ready', readyHandler);
+registerPublicMonitorEndpoint('/metrics', metricsHandler);
+
+// --------------------------------------------------
+// API-wide middlewares (protected)
+// --------------------------------------------------
+
+// Timeout only for API
+app.use(API_PREFIX, createApiTimeoutMiddleware());
+
+// Mount public auth routes BEFORE authentication middleware
 app.use(`${API_PREFIX}/auth`, authRoutes);
+
+// Authentication & RBAC (protect all other /api routes)
+app.use(API_PREFIX, authMiddleware.authenticate);
+app.use(API_PREFIX, permissionGuard());
+
+// --------------------------------------------------
+// API Routes
+// --------------------------------------------------
+app.use(`${API_PREFIX}/telemetry`, telemetryRoutes);
 app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
 app.use(`${API_PREFIX}/invoices`, invoiceRoutes);
 app.use(`${API_PREFIX}/bank-statements`, bankStatementRoutes);
@@ -129,12 +256,8 @@ app.use(`${API_PREFIX}/tax-reports`, taxReportRoutes);
 app.use(`${API_PREFIX}/compliance`, complianceRoutes);
 app.use(`${API_PREFIX}/german-tax-compliance`, germanTaxComplianceRoutes);
 app.use(`${API_PREFIX}/elster`, elsterRoutes);
-const aiRoutes = require('./routes/ai');
 app.use(`${API_PREFIX}/ai`, aiRoutes);
-
-const adminRoutes = require('./routes/admin');
 app.use(`${API_PREFIX}/admin`, adminRoutes);
-const gdprRoutes = require('./routes/gdpr');
 app.use(`${API_PREFIX}/gdpr`, gdprRoutes);
 app.use(`${API_PREFIX}/ocr`, ocrRoutes);
 app.use(`${API_PREFIX}/system`, systemRoutes);
@@ -144,6 +267,9 @@ app.use(`${API_PREFIX}/exports`, exportRoutes);
 app.use(`${API_PREFIX}/email-test`, emailTestRoutes);
 app.use(`${API_PREFIX}/expenses`, expenseRoutes);
 
+// --------------------------------------------------
+// Fallback & Error handling
+// --------------------------------------------------
 app.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',

@@ -32,19 +32,24 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     {
-      indexes: [
-        { fields: ['companyId', 'createdAt'] },
-        { fields: ['insightId'] },
-      ],
+      indexes: [{ fields: ['companyId', 'createdAt'] }, { fields: ['insightId'] }],
       timestamps: true,
       tableName: 'ai_insight_decisions',
     },
   );
 
   AIInsightDecision.associate = (models) => {
-    AIInsightDecision.belongsTo(models.AIInsight, { foreignKey: 'insightId', as: 'insight' });
-    AIInsightDecision.belongsTo(models.Company, { foreignKey: 'companyId', as: 'company' });
-    AIInsightDecision.belongsTo(models.User, { foreignKey: 'actorUserId', as: 'actor' });
+    const insightModel = models?.AIInsight;
+    if (
+      insightModel &&
+      insightModel.sequelize === AIInsightDecision.sequelize &&
+      !AIInsightDecision.associations?.insight
+    ) {
+      AIInsightDecision.belongsTo(insightModel, {
+        foreignKey: 'insightId',
+        as: 'insight',
+      });
+    }
   };
 
   return AIInsightDecision;

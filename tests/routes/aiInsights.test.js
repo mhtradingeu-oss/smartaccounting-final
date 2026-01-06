@@ -41,7 +41,8 @@ describe('AI Insights API', () => {
       ]).toContain(res.body.error);
     } else {
       expect(res.res.statusCode).toBe(501);
-      expect(res.body).toEqual({ status: 'disabled', feature: 'AI Insights' });
+      expect(res.body.error).toBe('AI is disabled for this company');
+      expect(typeof res.body.requestId).toBe('string');
     }
 
     await company.update({ aiEnabled: true });
@@ -117,7 +118,8 @@ describe('AI Insights API', () => {
       .send({ decision: 'accepted', reason: 'Test' });
 
     expect(res.res.statusCode).toBe(501);
-    expect(res.body).toHaveProperty('feature', 'AI decision capture');
+    expect(res.body.error).toBe('AI decision capture is disabled');
+    expect(typeof res.body.requestId).toBe('string');
   });
 
   it('should flag viewers as limited and cap the feed', async () => {

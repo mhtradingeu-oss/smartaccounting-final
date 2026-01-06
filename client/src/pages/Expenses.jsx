@@ -47,34 +47,36 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const companyId = activeCompany?.id ?? null;
 
   const fetchExpenses = useCallback(async () => {
-    if (!activeCompany) {
+    if (!companyId) {
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
-      const data = await expensesAPI.list({ companyId: activeCompany.id });
+      const data = await expensesAPI.list({ companyId });
       setExpenses(Array.isArray(data) ? data : []);
     } catch (fetchError) {
       setError(formatApiError(fetchError, 'Unable to load expenses.'));
     } finally {
       setLoading(false);
     }
-  }, [activeCompany]);
+  }, [companyId]);
 
   useEffect(() => {
-    if (!activeCompany) {
+    if (!companyId) {
       setExpenses([]);
       setError(null);
       setLoading(false);
-      return;
+      return undefined;
     }
 
     fetchExpenses();
-  }, [activeCompany, fetchExpenses]);
+    return undefined;
+  }, [companyId, fetchExpenses]);
 
   if (!activeCompany) {
     return <PageNoAccessState />;
@@ -124,11 +126,21 @@ const Expenses = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Vendor</th>
-              <th>Actions</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Date
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Description
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Amount
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Vendor
+              </th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>

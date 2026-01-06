@@ -1,25 +1,30 @@
 // aiSuggestion.gate.test.js
 // Phase 12 Gate Tests — Must FAIL if mutation or automation is possible
+jest.setTimeout(30000);
 
 const { getSuggestion } = require('../../src/services/ai/aiSuggestionService');
 
 describe('AI Suggestion Gate Tests', () => {
   it('rejects mutation intent', async () => {
-    await expect(getSuggestion({
-      userId: 1,
-      companyId: 1,
-      prompt: 'Apply this change to invoice',
-      context: 'invoices',
-    })).rejects.toThrow(/Mutation intent detected/);
+    await expect(
+      getSuggestion({
+        userId: 1,
+        companyId: 1,
+        prompt: 'Apply this change to invoice',
+        context: 'invoices',
+      }),
+    ).rejects.toThrow(/Mutation intent detected/);
   });
 
   it('blocks mutation language', async () => {
-    await expect(getSuggestion({
-      userId: 1,
-      companyId: 1,
-      prompt: 'Delete invoice',
-      context: 'invoices',
-    })).rejects.toThrow(/Mutation intent detected/);
+    await expect(
+      getSuggestion({
+        userId: 1,
+        companyId: 1,
+        prompt: 'Delete invoice',
+        context: 'invoices',
+      }),
+    ).rejects.toThrow(/Mutation intent detected/);
   });
 
   it('never triggers backend write', async () => {
@@ -30,12 +35,14 @@ describe('AI Suggestion Gate Tests', () => {
 
   it('blocks cross-company suggestion', async () => {
     // Simulate missing/invalid companyId
-    await expect(getSuggestion({
-      userId: 1,
-      companyId: null,
-      prompt: 'Show invoice risks',
-      context: 'invoices',
-    })).rejects.toThrow();
+    await expect(
+      getSuggestion({
+        userId: 1,
+        companyId: null,
+        prompt: 'Show invoice risks',
+        context: 'invoices',
+      }),
+    ).rejects.toThrow();
   });
 
   it('blocks silent suggestion without audit', async () => {

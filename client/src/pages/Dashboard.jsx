@@ -2,9 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 import { dashboardAPI } from '../services/dashboardAPI';
-import { formatApiError } from '../services/api';
+import api, { formatApiError } from '../services/api';
 import { Button } from '../components/ui/Button';
+import Card from '../components/Card';
+import { Modal } from '../components/ui/Modal';
 import { PageLoadingState, PageEmptyState, PageErrorState } from '../components/ui/PageStates';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
@@ -13,13 +16,18 @@ import { ChartBarIcon } from '@heroicons/react/24/outline';
 const Dashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { activeCompany } = useCompany();
 
   const isReadOnly = isReadOnlyRole(user?.role);
+  const canViewInvestorDashboard = ['auditor', 'accountant', 'admin'].includes(user?.role);
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [disabled, setDisabled] = useState(false);
   const [error, setError] = useState(null);
+  const [rateLimitMessage, setRateLimitMessage] = useState(null);
+  const [cooldownExpiresAt, setCooldownExpiresAt] = useState(null);
+  const [timeNow, setTimeNow] = useState(Date.now());
 
   // Demo Data (Admin only)
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -27,12 +35,14 @@ const Dashboard = () => {
   const [demoError, setDemoError] = useState(null);
   const [demoSuccess, setDemoSuccess] = useState(false);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (options = {}) => {
     setLoading(true);
     setError(null);
+    setRateLimitMessage(null);
+    setCooldownExpiresAt(null);
 
     try {
-      const result = await dashboardAPI.getStats();
+      const result = await dashboardAPI.getStats(options);
 
       if (result?.disabled) {
         setDisabled(true);
@@ -44,6 +54,12 @@ const Dashboard = () => {
     } catch (err) {
       setDisabled(false);
       setDashboardData(null);
+      if (err?.rateLimited || err?.status === 429) {
+        setRateLimitMessage(err.message || 'Too many requests. Please try again shortly.');
+        setTimeNow(Date.now());
+        setCooldownExpiresAt(Date.now() + (err.cooldownMs || 60000));
+        return;
+      }
       setError(formatApiError(err, 'Unable to load dashboard metrics.'));
     } finally {
       setLoading(false);
@@ -54,6 +70,33 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  useEffect(() => {
+    if (!activeCompany?.id) {
+      return;
+    }
+    dashboardAPI.clearCache();
+    fetchDashboardData({ force: true });
+  }, [fetchDashboardData, activeCompany?.id]);
+
+  useEffect(() => {
+    if (!cooldownExpiresAt) {
+      return undefined;
+    }
+    const tick = () => {
+      setTimeNow(Date.now());
+    };
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [cooldownExpiresAt]);
+
+  useEffect(() => {
+    if (cooldownExpiresAt && timeNow >= cooldownExpiresAt) {
+      setCooldownExpiresAt(null);
+      setRateLimitMessage(null);
+    }
+  }, [cooldownExpiresAt, timeNow]);
+
   const metrics = dashboardData?.metrics || [];
 
   const handleLoadDemoData = async () => {
@@ -62,16 +105,11 @@ const Dashboard = () => {
     setDemoSuccess(false);
 
     try {
-      const res = await fetch('/api/admin/demo-data/load', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await api.post('/admin/demo-data/load');
+      const data = response?.data || response;
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to load demo data');
+      if (!data?.success) {
+        throw new Error(data?.message || 'Failed to load demo data');
       }
 
       setDemoSuccess(true);
@@ -83,12 +121,42 @@ const Dashboard = () => {
     }
   };
 
+  const cooldownRemaining = cooldownExpiresAt
+    ? Math.max(0, Math.ceil((cooldownExpiresAt - timeNow) / 1000))
+    : 0;
+
   if (loading) {
     return <PageLoadingState />;
   }
 
   if (error) {
     return <PageErrorState onRetry={fetchDashboardData} />;
+  }
+
+  if (rateLimitMessage) {
+    return (
+      <div
+        className="mx-auto max-w-md space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center text-amber-900 shadow-sm"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-lg font-semibold">Rate limit reached</p>
+        <p className="text-sm text-amber-900">{rateLimitMessage}</p>
+        {cooldownRemaining > 0 && (
+          <p className="text-xs text-amber-700">
+            Cooldown resets in {cooldownRemaining} second{cooldownRemaining !== 1 ? 's' : ''}
+          </p>
+        )}
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => fetchDashboardData({ force: true })}
+          disabled={cooldownRemaining > 0}
+        >
+          Retry now
+        </Button>
+      </div>
+    );
   }
 
   if (disabled) {
@@ -127,48 +195,84 @@ const Dashboard = () => {
 
       {/* Demo Modal */}
       {showDemoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-gray-900 p-8 rounded-xl w-full max-w-md shadow-lg border border-gray-200 dark:border-gray-800">
-            <h2 className="text-2xl font-extrabold text-primary-700 dark:text-primary-300 mb-3 tracking-tight">
-              Load Demo Data
-            </h2>
-            <p className="text-base text-gray-600 dark:text-gray-300 mb-5">
-              This will generate demo invoices, expenses and bank statements.
-            </p>
+        <Modal
+          open={showDemoModal}
+          onClose={() => setShowDemoModal(false)}
+          title="Load Demo Data"
+          ariaLabel="Confirm loading demo data"
+          className="max-w-md space-y-4"
+        >
+          <p className="text-base text-gray-600 dark:text-gray-300 mb-0">
+            This will generate demo invoices, expenses and bank statements.
+          </p>
 
-            {demoError && <div className="text-red-600 text-sm mb-3">{demoError}</div>}
-            {demoSuccess && (
-              <div className="text-green-600 text-sm mb-3">Demo data loaded successfully.</div>
-            )}
-
-            <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="secondary"
-                size="md"
-                className="border border-gray-300 dark:border-gray-700"
-                onClick={() => setShowDemoModal(false)}
-                disabled={demoLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="md"
-                className="font-bold shadow-sm border border-red-200 dark:border-red-700"
-                onClick={handleLoadDemoData}
-                disabled={demoLoading || demoSuccess}
-              >
-                {demoLoading ? 'Loading…' : 'Confirm'}
-              </Button>
+          {demoError && (
+            <div
+              className="text-red-600 text-sm"
+              role="alert"
+              aria-live="assertive"
+            >
+              {demoError}
             </div>
+          )}
+          {demoSuccess && (
+            <div
+              className="text-green-600 text-sm"
+              role="status"
+              aria-live="polite"
+            >
+              Demo data loaded successfully.
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="secondary"
+              size="md"
+              className="border border-gray-300 dark:border-gray-700"
+              onClick={() => setShowDemoModal(false)}
+              disabled={demoLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              className="font-bold shadow-sm border border-red-200 dark:border-red-700"
+              onClick={handleLoadDemoData}
+              disabled={demoLoading || demoSuccess}
+            >
+              {demoLoading ? 'Loading…' : 'Confirm'}
+            </Button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Dashboard Content */}
       <div className="space-y-12">
         {isReadOnly && (
         <ReadOnlyBanner mode="Viewer" message={t('states.read_only.dashboard_notice')} />
+        )}
+
+        {canViewInvestorDashboard && (
+          <Card className="border border-dashed border-blue-200 bg-white/80 p-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+                  Auditor tools
+                </p>
+                <h2 className="text-xl font-semibold text-gray-900">Investor dashboard</h2>
+                <p className="text-sm text-gray-600">
+                  Jump into the auditor-friendly KPI surface without leaving the main workspace.
+                </p>
+              </div>
+              <Link to="/investor-dashboard">
+                <Button variant="primary" size="md">
+                  Open investor dashboard
+                </Button>
+              </Link>
+            </div>
+          </Card>
         )}
 
         {/* KPI Metrics */}

@@ -118,13 +118,11 @@ class DashboardService {
       }
 
       const currentYear = new Date().getFullYear();
-      const monthlyData = [];
 
-      for (let month = 0; month < 12; month++) {
-        const startDate = new Date(currentYear, month, 1);
-        const endDate = new Date(currentYear, month + 1, 0);
-
-        const [revenue, invoiceCount] = await Promise.all([
+      const monthPromises = Array.from({ length: 12 }, (_, monthIndex) => {
+        const startDate = new Date(currentYear, monthIndex, 1);
+        const endDate = new Date(currentYear, monthIndex + 1, 0);
+        return Promise.all([
           Invoice.sum('total', {
             where: {
               companyId,
@@ -142,15 +140,15 @@ class DashboardService {
               },
             },
           }),
-        ]);
-
-        monthlyData.push({
+        ]).then(([revenue, invoiceCount]) => ({
           month: startDate.toLocaleString('en-US', { month: 'short' }),
           revenue: parseFloat(revenue || 0),
           invoices: invoiceCount,
           date: startDate.toISOString(),
-        });
-      }
+        }));
+      });
+
+      const monthlyData = await Promise.all(monthPromises);
 
       return monthlyData;
     } catch (error) {

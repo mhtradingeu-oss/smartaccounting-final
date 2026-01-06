@@ -54,6 +54,16 @@ class AuditLogService {
       }
       const lastLog = await AuditLog.findOne(findOptions);
       const previousHash = lastLog ? lastLog.hash : null;
+      const userRecord = await User.findByPk(userId, {
+        attributes: ['companyId'],
+        transaction,
+      });
+      const companyId = userRecord?.companyId;
+      if (!companyId) {
+        throw new Error(
+          'Audit log entry must include valid company context derived from the associated user',
+        );
+      }
       const hashInput = JSON.stringify({
         action,
         resourceType,
@@ -66,6 +76,7 @@ class AuditLogService {
         timestamp: isoTimestamp,
         previousHash,
         reason,
+        companyId,
       });
       const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
       await AuditLog.create(
@@ -83,6 +94,7 @@ class AuditLogService {
           previousHash,
           reason,
           immutable: true,
+          companyId,
         },
         { transaction, allowTestAuditLog: true },
       );

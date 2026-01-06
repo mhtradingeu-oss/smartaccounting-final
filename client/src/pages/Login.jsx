@@ -8,6 +8,7 @@ import Footer from '../components/Footer';
 import RateLimitBanner from '../components/RateLimitBanner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Input } from '../components/ui/Input';
+import { getSafeErrorMeta } from '../lib/errorMeta';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ const Login = () => {
       }
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.error('Login error:', error);
+        console.error('Login error', getSafeErrorMeta(error));
       }
       setError('An unexpected error occurred. Please try again.');
     } finally {

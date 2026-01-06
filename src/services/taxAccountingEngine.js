@@ -301,18 +301,22 @@ class TaxAccountingEngine {
       const vatSummary = await this.calculateVATSummary(companyId, periodStart, periodEnd);
       const incomeTaxEstimate = await this.calculateIncomeTaxEstimate(companyId, periodStart, periodEnd);
 
-      const monthlyReports = [];
-      for (let month = 1; month <= 12; month++) {
+      const monthlyPromises = Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
         const monthStart = `${year}-${month.toString().padStart(2, '0')}-01`;
         const monthEnd = new Date(year, month, 0).toISOString().split('T')[0];
-
-        const monthlyVAT = await this.calculateVATSummary(companyId, monthStart, monthEnd);
-        monthlyReports.push({
-          month,
-          monthName: new Date(year, month - 1).toLocaleDateString('de-DE', { month: 'long' }),
-          ...monthlyVAT,
+        const monthName = new Date(year, month - 1).toLocaleDateString('de-DE', {
+          month: 'long',
         });
-      }
+
+        return this.calculateVATSummary(companyId, monthStart, monthEnd).then(monthlyVAT => ({
+          month,
+          monthName,
+          ...monthlyVAT,
+        }));
+      });
+
+      const monthlyReports = await Promise.all(monthlyPromises);
 
       return {
         companyId,

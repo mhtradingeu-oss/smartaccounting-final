@@ -192,19 +192,19 @@ const Users = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                     Actions
                   </th>
                 </tr>

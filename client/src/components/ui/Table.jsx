@@ -9,9 +9,16 @@ export function Table({ columns, data, loading, emptyMessage = 'No data', onSort
             {columns.map((col) => (
               <th
                 key={col.key}
+                scope={col.scope || 'col'}
                 className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none"
                 onClick={() => onSort && onSort(col.key)}
-                aria-sort={sortKey === col.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={
+                  sortKey === col.key
+                    ? sortDirection === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                }
               >
                 {col.label}
                 {sortKey === col.key && (

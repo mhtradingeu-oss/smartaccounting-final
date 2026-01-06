@@ -21,6 +21,8 @@ const initialFormState = {
   country: '',
 };
 
+const RATE_LIMIT_RETRY_DELAYS = [500, 1000];
+
 const Companies = () => {
   const { companies, setCompanies, activeCompany, switchCompany } = useCompany();
   const { user } = useAuth();
@@ -41,17 +43,36 @@ const Companies = () => {
   const refreshCompanies = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
-    try {
-      const data = await companiesAPI.list();
-      const list = Array.isArray(data) ? data : data?.companies ?? [];
-      setCompanies(list);
-      if (list.length) {
-        const matchedActive = list.find((c) => c.id === activeCompanyRef.current);
-        const newActive = matchedActive || list[0];
-        switchCompany(newActive, { reset: false });
-      } else {
-        switchCompany(null, { reset: false });
+
+    let attempt = 0;
+
+    const attemptFetch = async () => {
+      attempt += 1;
+      try {
+        const data = await companiesAPI.list({ force: true });
+        const list = Array.isArray(data) ? data : data?.companies ?? [];
+        setCompanies(list);
+        if (list.length) {
+          const matchedActive = list.find((c) => c.id === activeCompanyRef.current);
+          const newActive = matchedActive || list[0];
+          switchCompany(newActive, { reset: false });
+        } else {
+          switchCompany(null, { reset: false });
+        }
+        return;
+      } catch (error) {
+        const status = error?.response?.status ?? error?.status;
+        if (status === 429 && attempt <= RATE_LIMIT_RETRY_DELAYS.length) {
+          const delay = RATE_LIMIT_RETRY_DELAYS[attempt - 1];
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          return attemptFetch();
+        }
+        throw error;
       }
+    };
+
+    try {
+      await attemptFetch();
     } catch (error) {
       setLoadError(formatApiError(error, 'Unable to load company data.'));
     } finally {

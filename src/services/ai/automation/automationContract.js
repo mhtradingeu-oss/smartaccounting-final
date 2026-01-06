@@ -45,7 +45,7 @@ function validateAutomationSuggestion(suggestion) {
   ];
   for (const field of requiredFields) {
     if (suggestion[field] === undefined) {
-      throw new Error(`Missing required field: ${field}`);
+      throw new Error(` ${field}`);
     }
   }
   if (suggestion.requiresHumanApproval !== true) {

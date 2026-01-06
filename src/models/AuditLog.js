@@ -18,11 +18,20 @@ module.exports = (sequelize, DataTypes) => {
       resourceId: {
         type: DataTypes.STRING,
       },
+      metadata: {
+        type: DataTypes.JSON,
+        allowNull: true,
+      },
       oldValues: {
         type: DataTypes.JSON,
       },
       newValues: {
         type: DataTypes.JSON,
+      },
+      requestId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        defaultValue: DataTypes.UUIDV4,
       },
       ipAddress: {
         type: DataTypes.STRING,
@@ -65,6 +74,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: true,
       },
+      companyId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'companies',
+          key: 'id',
+        },
+      },
     },
     {
       tableName: 'audit_logs',
@@ -74,13 +91,15 @@ module.exports = (sequelize, DataTypes) => {
 
   AuditLog.associate = (models) => {
     AuditLog.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    AuditLog.belongsTo(models.Company, { foreignKey: 'companyId', as: 'company' });
   };
 
   // Patch create to skip in test unless explicitly allowed
   const origCreate = AuditLog.create.bind(AuditLog);
   AuditLog.create = async function (values, options = {}) {
-    if (process.env.NODE_ENV === 'test' && !options.allowTestAuditLog) {
-      // Simulate as if log was created, but do nothing
+    const isSqliteTest = process.env.NODE_ENV === 'test' && process.env.USE_SQLITE === 'true';
+    if (isSqliteTest && !options.allowTestAuditLog) {
+      // Simulate as if log was created, but do nothing while SQLite tests are scrubbing data
       return null;
     }
     return origCreate(values, options);

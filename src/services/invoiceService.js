@@ -6,10 +6,18 @@ const {
 } = require('../utils/vatIntegrity');
 const { buildCompanyFilter } = require('../utils/companyFilter');
 
-const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'];
+const VALID_STATUS = [
+  'DRAFT',
+  'SENT',
+  'PAID',
+  'OVERDUE',
+  'CANCELLED',
+  'PARTIALLY_PAID',
+];
 const STATUS_TRANSITIONS = {
   DRAFT: ['SENT'],
-  SENT: ['PAID', 'OVERDUE', 'CANCELLED'],
+  SENT: ['PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'],
+  PARTIALLY_PAID: ['PAID', 'OVERDUE', 'CANCELLED'],
   OVERDUE: ['PAID', 'CANCELLED'],
   PAID: [],
   CANCELLED: [],

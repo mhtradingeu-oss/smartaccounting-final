@@ -67,12 +67,12 @@ async function aiReadGateway(input) {
         normalized,
         safePrompt,
         meta,
-        reason: `Missing required field: ${missingField}`,
+        reason: `${missingField}`,
       }),
     );
     return {
       status: 403,
-      body: { error: `Missing required field: ${missingField}` },
+      body: { error: `${missingField}` },
     };
   }
   // ...existing code...

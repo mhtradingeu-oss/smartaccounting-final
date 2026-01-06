@@ -50,7 +50,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'),
+        type: DataTypes.ENUM(
+          'DRAFT',
+          'SENT',
+          'PAID',
+          'OVERDUE',
+          'CANCELLED',
+          'PARTIALLY_PAID',
+        ),
         allowNull: false,
         defaultValue: 'DRAFT',
       },
@@ -104,7 +111,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'invoiceId',
       as: 'attachments',
     });
-    const FINAL_STATUSES = new Set(['SENT', 'PAID', 'OVERDUE', 'CANCELLED']);
+    const FINAL_STATUSES = new Set(['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID']);
     const ALLOWED_FINAL_UPDATE_FIELDS = new Set(['status', 'updatedAt']);
     Invoice.addHook('beforeUpdate', (invoice) => {
       const prevStatus = (invoice._previousDataValues?.status || '').toUpperCase();

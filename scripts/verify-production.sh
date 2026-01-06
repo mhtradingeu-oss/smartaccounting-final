@@ -1,68 +1,98 @@
 #!/usr/bin/env bash
+# SmartAccounting production-grade verification script
+# Works for: Docker local, host, CI
+
 set -euo pipefail
 
-EMAIL="${VERIFY_EMAIL:-demo-accountant@demo.com}"
+REPORT="verify-production-report.txt"
+START="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+
+EMAIL="${VERIFY_EMAIL:-accountant@demo.de}"
 PASSWORD="${VERIFY_PASSWORD:-Demo123!}"
 
 HOST_MARKER="/.dockerenv"
 
-
 DOCKER_URL="http://localhost:5000"
-
 HOST_URL="http://localhost:5001"
 
-
 BASE_URL="${PRODUCTION_VERIFY_BASE_URL:-}"
-if [ -z "$BASE_URL" ]; then
-  if [ -f "$HOST_MARKER" ]; then
-    echo "[verify] Running inside Docker container."
+if [[ -z "$BASE_URL" ]]; then
+  if [[ -f "$HOST_MARKER" ]]; then
+    ENV_MODE="docker-container"
     BASE_URL="$DOCKER_URL"
   else
-    echo "[verify] Running on host."
+    ENV_MODE="host"
     BASE_URL="$HOST_URL"
   fi
+else
+  ENV_MODE="explicit"
 fi
 BASE_URL="${BASE_URL%/}"
 
-curl -fsS "$BASE_URL/health" >/dev/null
-echo "[verify] /health OK"
-
-curl -fsS "$BASE_URL/ready" >/dev/null
-echo "[verify] /ready OK"
-
-LOGIN_RESPONSE="/tmp/verify-production-login.json"
-TOKEN_FILE="/tmp/verify-production-token.txt"
-
-cleanup() {
-  rm -f "$LOGIN_RESPONSE" "$TOKEN_FILE"
+require() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "❌ Missing dependency: $1" | tee -a "$REPORT"
+    exit 1
+  }
 }
-trap cleanup EXIT
 
-LOGIN_PAYLOAD="{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
+require curl
+require jq
 
-curl -fsS -X POST "$BASE_URL/api/auth/login" \
+log(){ echo "▶ $1" | tee -a "$REPORT"; }
+pass(){ echo "✅ $1" | tee -a "$REPORT"; }
+fail(){ echo "❌ $1" | tee -a "$REPORT"; exit 1; }
+
+echo "========================================" | tee "$REPORT"
+echo "SMARTACCOUNTING PRODUCTION VERIFY" | tee -a "$REPORT"
+echo "Started: $START" | tee -a "$REPORT"
+echo "Mode: $ENV_MODE" | tee -a "$REPORT"
+echo "Base URL: $BASE_URL" | tee -a "$REPORT"
+echo "User: $EMAIL" | tee -a "$REPORT"
+echo "========================================" | tee -a "$REPORT"
+echo "" | tee -a "$REPORT"
+
+# --------------------------------------------------
+log "1) Wait for /health"
+for i in {1..15}; do
+  if curl -fsS "$BASE_URL/health" >/dev/null 2>&1; then
+    pass "/health OK"
+    break
+  fi
+  sleep 2
+  [[ $i -eq 15 ]] && fail "/health not ready"
+done
+
+log "2) Wait for /ready"
+for i in {1..15}; do
+  if curl -fsS "$BASE_URL/ready" >/dev/null 2>&1; then
+    pass "/ready OK"
+    break
+  fi
+  sleep 2
+  [[ $i -eq 15 ]] && fail "/ready not ready"
+done
+
+# --------------------------------------------------
+log "3) Login as demo accountant"
+
+LOGIN_JSON="$(curl -fsS -X POST "$BASE_URL/api/auth/login" \
   -H 'Content-Type: application/json' \
-  -d "$LOGIN_PAYLOAD" \
-  > "$LOGIN_RESPONSE"
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")" \
+  || fail "Login request failed"
 
-grep -o '"token":"[^"]*"' "$LOGIN_RESPONSE" | sed 's/.*"token":"\([^\"]*\)".*/\1/' > "$TOKEN_FILE"
-if ! [ -s "$TOKEN_FILE" ]; then
-  echo "[verify] FAIL: /api/auth/login did not return a token"
-  echo "[verify] Response:"
-  cat "$LOGIN_RESPONSE"
-  exit 1
-fi
+TOKEN="$(echo "$LOGIN_JSON" | jq -r '.token // empty')"
 
-TOKEN="$(cat "$TOKEN_FILE")"
-if [ -z "$TOKEN" ]; then
-  echo "[verify] FAIL: /api/auth/login returned empty token"
-  cat "$LOGIN_RESPONSE"
-  exit 1
-fi
+[[ -n "$TOKEN" && "$TOKEN" != "null" ]] \
+  && pass "Login successful (JWT issued)" \
+  || fail "Login did not return token: $LOGIN_JSON"
 
-echo "[verify] /api/auth/login OK"
+AUTH=(-H "Authorization: Bearer $TOKEN")
 
-AUTH_ENDPOINTS=(
+# --------------------------------------------------
+log "4) Authenticated endpoints (RBAC-safe)"
+
+ENDPOINTS=(
   "/api/dashboard/stats"
   "/api/invoices"
   "/api/expenses"
@@ -70,10 +100,17 @@ AUTH_ENDPOINTS=(
   "/api/ai/insights"
 )
 
-for endpoint in "${AUTH_ENDPOINTS[@]}"; do
-  curl -fsS -H "Authorization: Bearer $TOKEN" "$BASE_URL$endpoint" >/dev/null
-  echo "[verify] $endpoint OK"
+for ep in "${ENDPOINTS[@]}"; do
+  curl -fsS "${AUTH[@]}" "$BASE_URL$ep" >/dev/null \
+    && pass "$ep OK" \
+    || fail "$ep FAILED"
 done
 
-echo "[verify] ALL CHECKS PASSED"
+# --------------------------------------------------
+END="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
+echo "" | tee -a "$REPORT"
+echo "========================================" | tee -a "$REPORT"
+echo "VERIFY COMPLETED SUCCESSFULLY ✅" | tee -a "$REPORT"
+echo "Finished: $END" | tee -a "$REPORT"
+echo "========================================" | tee -a "$REPORT"

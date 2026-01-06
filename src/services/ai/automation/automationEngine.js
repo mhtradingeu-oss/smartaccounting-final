@@ -12,7 +12,7 @@ const { buildSuggestionFromFinding } = require('./recommendationBuilder');
  * @param {Object} params - { userId, companyId, context, method }
  * @returns {Promise<AutomationSuggestion[]>}
  */
-async function runAutomation({ userId, companyId, context, method = 'GET' }) {
+async function runAutomation({ userId, companyId, context, method = 'GET', requestId }) {
   assertReadOnlyContext({ method });
   assertNoMutationIntent(context?.prompt);
 
@@ -21,6 +21,7 @@ async function runAutomation({ userId, companyId, context, method = 'GET' }) {
     eventType: 'AUTOMATION_TRIGGERED',
     userId,
     companyId,
+    requestId,
     meta: { contextHash: safeHash(JSON.stringify(context)) },
   });
 
@@ -38,6 +39,7 @@ async function runAutomation({ userId, companyId, context, method = 'GET' }) {
         eventType: 'AUTOMATION_PRODUCED',
         userId,
         companyId,
+        requestId,
         meta: { suggestionId: suggestion.id, type: suggestion.type },
       });
     } catch (err) {
@@ -45,6 +47,7 @@ async function runAutomation({ userId, companyId, context, method = 'GET' }) {
         eventType: 'AUTOMATION_REJECTED',
         userId,
         companyId,
+        requestId,
         meta: { error: err.message },
       });
       throw err;

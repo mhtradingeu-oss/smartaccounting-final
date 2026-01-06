@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const vatComplianceService = require('../services/vatComplianceService');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
-const jwtTenantContext = require('../middleware/jwtTenantContext');
 const AuditLogService = require('../services/auditLogService');
 
 // VAT/UStG compliance validation endpoint
@@ -77,11 +76,32 @@ router.get('/overview', authenticate, async (req, res) => {
 });
 
 // Tenant-safe: companyId is derived from the tenant token context
-router.get('/reports/:type', jwtTenantContext, (req, res) => {
-  if (!req.user || !req.user.companyId) {
+router.get('/reports/:type', (req, res) => {
+  const authenticatedCompanyId = req.user?.companyId;
+  const tokenCompanyId = req.tokenCompanyId;
+
+  if (!req.user || !authenticatedCompanyId) {
     return res.status(403).json({
       success: false,
       message: 'Company context required',
+    });
+  }
+
+  // Enforce tenant safety: JWT companyId must match user's real companyId
+  if (tokenCompanyId && tokenCompanyId !== authenticatedCompanyId) {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: companyId mismatch',
+    });
+  }
+
+  if (
+    typeof req.companyId !== 'undefined' &&
+    req.companyId !== authenticatedCompanyId
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: company context mismatch',
     });
   }
 
