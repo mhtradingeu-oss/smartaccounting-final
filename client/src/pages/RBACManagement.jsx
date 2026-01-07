@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { usersAPI } from '../services/usersAPI';
 import { formatApiError } from '../services/api';
 import LoadingState from '../components/LoadingState';
@@ -60,11 +61,11 @@ export default function RBACManagement() {
     setUpdating((prev) => ({ ...prev, [userId]: true }));
     try {
       // Only allow role change if not self and current user is admin
-      if (currentUser?.role !== 'admin' || currentUser?.id === userId) {return;}
+      if (currentUser?.role !== 'admin' || currentUser?.id === userId) {
+        return;
+      }
       await usersAPI.update(userId, { role: newRole });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)),
-      );
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
     } catch (err) {
       setActionError(formatApiError(err, 'Unable to change role.'));
     } finally {
@@ -74,8 +75,13 @@ export default function RBACManagement() {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4">
-      <h1 className="text-3xl font-bold mb-4">Role-Based Access Control (RBAC)</h1>
-      <p className="mb-6 text-gray-600">Manage users, roles, and permissions for your organization. Only admins can access this page.</p>
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'RBAC' }]} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">RBAC</h1>
+        <p className="text-sm text-gray-500">
+          Manage user roles and permissions for your organization. Only admins can access this page.
+        </p>
+      </div>
       <div className="bg-white rounded shadow p-6">
         <div className="mb-4 flex justify-between items-center">
           <span className="font-semibold">Users & Roles</span>
@@ -92,7 +98,11 @@ export default function RBACManagement() {
         ) : error ? (
           <ErrorState message={error?.message} onRetry={fetchUsers} />
         ) : users.length === 0 ? (
-          <EmptyState title="No users found" description="No users are registered for this organization." />
+          <EmptyState
+            title="No users yet"
+            description="No users are registered for this organization. Only admins can add users."
+            help="Once users are added, you can assign and update their roles here."
+          />
         ) : (
           <>
             {actionError && (
@@ -104,28 +114,31 @@ export default function RBACManagement() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th
+                      scope="col"
+                      className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                    >
                       Name
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      Email
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      Role
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-2"
-                      aria-label="Actions"
-                    ></th>
+                      className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                    >
+                      Email
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                    >
+                      Role
+                    </th>
+                    <th scope="col" className="px-4 py-2" aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {users.map((u) => (
                     <tr key={u.id} className={u.id === currentUser?.id ? 'bg-blue-50' : ''}>
-                      <td className="px-4 py-2 font-medium text-gray-900">
-                        {u.name || u.email}
-                      </td>
+                      <td className="px-4 py-2 font-medium text-gray-900">{u.name || u.email}</td>
                       <td className="px-4 py-2 text-gray-700">{u.email}</td>
                       <td className="px-4 py-2">
                         {currentUser?.role === 'admin' && u.id !== currentUser?.id ? (

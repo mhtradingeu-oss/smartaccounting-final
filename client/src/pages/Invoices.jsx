@@ -50,6 +50,8 @@ const formatCurrency = (value, currency = 'EUR') => {
 };
 
 const Invoices = () => {
+  // GDPR retention period (Germany: 10 years)
+  const RETENTION_PERIOD_YEARS = 10;
   const { activeCompany } = useCompany();
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -130,6 +132,34 @@ const Invoices = () => {
 
   return (
     <div className="space-y-6">
+      {/* GDPR Retention Banner */}
+      <div className="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-2 text-xs text-blue-900">
+        <strong>Retention period:</strong> {RETENTION_PERIOD_YEARS} years (GoBD, HGB, AO).
+        Accounting records cannot be deleted during this time, even for GDPR requests. Personal data
+        is masked unless required by law.
+      </div>
+      {/* Contextual AI entry point */}
+      <div className="flex justify-end mb-2">
+        <button
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100 text-sm font-medium shadow-sm"
+          title="Ask AI about invoices"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent('open-ai-assistant', { detail: { context: 'invoices' } }),
+            )
+          }
+        >
+          <span role="img" aria-label="AI">
+            🤖
+          </span>{' '}
+          Ask AI
+        </button>
+      </div>
+      <div className="mb-2 text-xs text-gray-500">
+        <span className="font-semibold">What does AI see?</span> The assistant will only see your
+        current company’s invoices, status, and visible details on this page. No generic
+        questions—AI answers are always based on the invoices you see here.
+      </div>
       {/* Page header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
         <div>
@@ -149,7 +179,7 @@ const Invoices = () => {
         </div>
       </div>
       {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner mode="Viewer" message={t('states.read_only.invoices_notice')} />
+        <ReadOnlyBanner mode="Read-only" message={t('states.read_only.invoices_notice')} />
       )}
       <Card>
         <div className="space-y-6">
@@ -256,7 +286,13 @@ const Invoices = () => {
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {invoice.invoiceNumber}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{invoice.clientName}</td>
+                        {/* Mask client name unless strictly needed */}
+                        <td
+                          className="px-4 py-3 text-sm text-gray-600"
+                          title="Personal data masked for GDPR compliance"
+                        >
+                          {invoice.status === 'draft' ? invoice.clientName : 'Masked'}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {formatDate(invoice.date)}
                         </td>
@@ -268,16 +304,64 @@ const Invoices = () => {
                         </td>
                         <td className="px-4 py-3">
                           <InvoiceStatusBadge status={invoice.status} />
+                          <span className="ml-2 text-xs text-gray-500" title="Status meaning">
+                            {invoice.status === 'draft' &&
+                              'Draft: You can edit or issue this invoice.'}
+                            {invoice.status === 'issued' &&
+                              'Issued: This invoice is legally binding and cannot be edited.'}
+                            {invoice.status === 'paid' &&
+                              'Paid: This invoice is settled and locked.'}
+                            {invoice.status === 'cancelled' &&
+                              'Cancelled: This invoice is void and locked.'}
+                          </span>
+                          {invoice.status !== 'draft' && (
+                            <span
+                              className="ml-2 inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
+                              title="GoBD Immutability"
+                            >
+                              Legally locked (GoBD)
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          <PermissionGuard action="invoice.edit" role={user?.role}>
-                            <Link
-                              to={`/invoices/${invoice.id}/edit`}
-                              className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                            >
-                              Edit
-                            </Link>
-                          </PermissionGuard>
+                          {invoice.status === 'draft' ? (
+                            <PermissionGuard action="invoice.edit" role={user?.role}>
+                              <Link
+                                to={`/invoices/${invoice.id}/edit`}
+                                className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                              >
+                                Edit
+                              </Link>
+                            </PermissionGuard>
+                          ) : (
+                            <div className="flex flex-col items-start">
+                              <span
+                                className="inline-block px-3 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium cursor-not-allowed"
+                                title="GoBD Immutability"
+                              >
+                                Edits blocked
+                              </span>
+                              <span className="mt-1 text-xs text-red-700 font-semibold">
+                                This record is legally locked (GoBD). Edits and deletions are
+                                prohibited by German accounting law.
+                                <br />
+                                <span className="text-blue-900">
+                                  GDPR requests for deletion cannot be fulfilled for accounting
+                                  records due to mandatory retention.
+                                </span>
+                              </span>
+                              <span className="mt-1 text-xs text-gray-500">
+                                Status:{' '}
+                                {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}.{' '}
+                                {invoice.status === 'issued' &&
+                                  'You cannot revert to draft or paid directly.'}
+                                {invoice.status === 'paid' &&
+                                  'You cannot revert to issued or draft.'}
+                                {invoice.status === 'cancelled' &&
+                                  'You cannot revert to any other status.'}
+                              </span>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}

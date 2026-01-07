@@ -9,7 +9,6 @@ import { formatApiError } from '../services/api';
 import { usersAPI } from '../services/usersAPI';
 import { USER_ROLES } from '../lib/constants';
 
-
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
@@ -56,16 +55,16 @@ const Users = () => {
   }, [fetchUsers, activeCompany]);
 
   const handleRoleChange = async (userId, nextRole) => {
-    if (!nextRole || updatingUserId === userId) {return;}
+    if (!nextRole || updatingUserId === userId) {
+      return;
+    }
 
     setUpdatingUserId(userId);
     setActionError(null);
 
     try {
       await usersAPI.update(userId, { role: nextRole });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: nextRole } : u)),
-      );
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: nextRole } : u)));
     } catch (err) {
       setActionError(formatApiError(err, 'Unable to change role.'));
     } finally {
@@ -87,11 +86,7 @@ const Users = () => {
       });
 
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === targetUser.id
-            ? { ...u, isActive: !u.isActive }
-            : u,
-        ),
+        prev.map((u) => (u.id === targetUser.id ? { ...u, isActive: !u.isActive } : u)),
       );
     } catch (err) {
       setActionError(formatApiError(err, 'Unable to update user status.'));
@@ -101,7 +96,6 @@ const Users = () => {
   };
 
   /* -------------------- UI STATES -------------------- */
-
 
   if (!activeCompany) {
     return (
@@ -129,9 +123,7 @@ const Users = () => {
   if (error) {
     return (
       <div className="text-center py-16 space-y-4">
-        <p className="text-lg font-semibold text-red-600">
-          {error.message}
-        </p>
+        <p className="text-lg font-semibold text-red-600">{error.message}</p>
         {error.retryable && (
           <Button onClick={fetchUsers} variant="primary">
             Retry
@@ -145,6 +137,12 @@ const Users = () => {
 
   return (
     <div className="space-y-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <p className="text-sm text-gray-500">
+          Manage your team members, roles, and access for this company.
+        </p>
+      </div>
       {isReadOnlyRole(currentUser?.role) && (
         <ReadOnlyBanner message="You have read-only access. Editing is disabled." />
       )}
@@ -153,12 +151,8 @@ const Users = () => {
           <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">
             User Management
           </p>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Team Members
-          </h1>
-          <p className="text-sm text-gray-500">
-            Company: {activeCompany.name}
-          </p>
+          <h2 className="text-xl font-bold text-gray-900">Team Members</h2>
+          <p className="text-sm text-gray-500">Company: {activeCompany.name}</p>
         </div>
 
         <Button variant="secondary" size="small" onClick={fetchUsers}>
@@ -173,54 +167,56 @@ const Users = () => {
       )}
 
       {users.length === 0 ? (
-      <EmptyState
-        title="No users found"
-        description="No users have been added to this company yet."
-        action={
-          <Button
-            disabled
-            title="User invitations will be handled via support soon."
-            className="cursor-not-allowed"
-          >
-            Invite user
-          </Button>
-        }
-      />
+        <EmptyState
+          title="No users yet"
+          description="Users are your team members. Only admins can invite users."
+          action={null}
+        />
       ) : (
         <Card>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead>
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                    User
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+                  >
+                    Name
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+                  >
                     Email
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+                  >
                     Role
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+                  >
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+                  >
                     Actions
                   </th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-gray-100 bg-white">
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td className="px-6 py-4 text-sm font-medium">
                       {u.firstName} {u.lastName}
                     </td>
-
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {u.email}
-                    </td>
-
+                    <td className="px-6 py-4 text-sm text-gray-600">{u.email}</td>
                     <td className="px-6 py-4 text-sm">
                       <PermissionGuard action="edit" role={currentUser?.role} showDisabled>
                         <select
@@ -237,7 +233,6 @@ const Users = () => {
                         </select>
                       </PermissionGuard>
                     </td>
-
                     <td className="px-6 py-4 text-sm">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
@@ -249,7 +244,6 @@ const Users = () => {
                         {u.isActive ? 'Active' : 'Disabled'}
                       </span>
                     </td>
-
                     <td className="px-6 py-4 text-sm">
                       <PermissionGuard action="edit" role={currentUser?.role} showDisabled>
                         <Button

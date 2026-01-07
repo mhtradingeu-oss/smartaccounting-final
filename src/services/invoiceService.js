@@ -1,4 +1,146 @@
-const { Invoice, InvoiceItem, FileAttachment, sequelize } = require('../models');
+const AuditLogService = require('./auditLogService');
+// Fetch audit log for a specific invoice
+const getInvoiceAuditLog = async (invoiceId, companyId) => {
+  // Only logs for this invoice and company
+  return await AuditLogService.exportLogs({
+    format: 'json',
+    companyId,
+    resourceId: invoiceId,
+    resourceType: 'Invoice',
+  });
+};
+// Create a credit note for an invoice (Korrekturrechnung)
+const createCreditNoteForInvoice = async (invoiceId, data, userId, companyId) => {
+  const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
+  const original = await Invoice.findOne({ where, include: [{ model: InvoiceItem, as: 'items' }] });
+  if (!original) {
+    const err = new Error('Original invoice not found');
+    err.status = 404;
+    throw err;
+  }
+  if (normalizeStatus(original.status) !== 'SENT' && normalizeStatus(original.status) !== 'PAID') {
+    const err = new Error('Credit notes can only be issued for immutable invoices (SENT/PAID).');
+    err.status = 409;
+    throw err;
+  }
+  // Prepare negative items
+  const negativeItems = original.items.map((item) => ({
+    description: `[CREDIT] ${item.description}`,
+    quantity: -Math.abs(item.quantity),
+    unitPrice: -Math.abs(item.unitPrice),
+    vatRate: item.vatRate,
+    lineNet: -Math.abs(item.lineNet),
+    lineVat: -Math.abs(item.lineVat),
+    lineGross: -Math.abs(item.lineGross),
+  }));
+  // Calculate totals
+  const subtotal = negativeItems.reduce((sum, i) => sum + (i.lineNet || 0), 0);
+  const total = negativeItems.reduce((sum, i) => sum + (i.lineGross || 0), 0);
+  // Generate new invoice number (simple example)
+  const creditNoteNumber = `${original.invoiceNumber}-CN-${Date.now()}`;
+  // Transaction: create credit note, lock original
+  return await sequelize.transaction(async (t) => {
+    const creditNote = await Invoice.create(
+      {
+        invoiceNumber: creditNoteNumber,
+        subtotal,
+        total,
+        amount: total,
+        currency: original.currency,
+        status: 'SENT',
+        date: new Date(),
+        dueDate: new Date(),
+        clientName: original.clientName,
+        userId,
+        companyId,
+        notes: `[CREDIT NOTE] ${data.notes || ''}`,
+        referenceInvoiceId: original.id,
+      },
+      { transaction: t },
+    );
+    for (const item of negativeItems) {
+      await InvoiceItem.create({ ...item, invoiceId: creditNote.id }, { transaction: t });
+    }
+    // Lock original invoice (set status to CANCELLED_CREDITED or similar)
+    await original.update({ status: 'CANCELLED' }, { transaction: t });
+    // TODO: Audit-log credit note creation
+    const updatedOriginal = await getInvoiceById(original.id, companyId);
+    const finalizedCreditNote = await getInvoiceById(creditNote.id, companyId);
+    return { creditNote: finalizedCreditNote, originalInvoice: updatedOriginal };
+  });
+};
+const {
+  Invoice,
+  InvoiceItem,
+  FileAttachment,
+  sequelize,
+  InvoicePayment,
+  User,
+} = require('../models');
+// Register a payment for an invoice
+const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId) => {
+  const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
+  const invoice = await Invoice.findOne({ where });
+  if (!invoice) {
+    const err = new Error('Invoice not found');
+    err.status = 404;
+    throw err;
+  }
+  if (
+    normalizeStatus(invoice.status) !== 'SENT' &&
+    normalizeStatus(invoice.status) !== 'PARTIALLY_PAID'
+  ) {
+    const err = new Error('Payments can only be registered for SENT or PARTIALLY_PAID invoices.');
+    err.status = 409;
+    throw err;
+  }
+  // Validate payment amount
+  const paymentAmount = parseFloat(paymentData.amount);
+  if (!paymentAmount || paymentAmount <= 0) {
+    const err = new Error('Payment amount must be positive.');
+    err.status = 400;
+    throw err;
+  }
+  // Calculate new paid/remaining amounts
+  const newPaidAmount = parseFloat(invoice.paidAmount) + paymentAmount;
+  if (newPaidAmount > parseFloat(invoice.total)) {
+    const err = new Error('Payment exceeds invoice total.');
+    err.status = 400;
+    throw err;
+  }
+  const newRemainingAmount = parseFloat(invoice.total) - newPaidAmount;
+  // Determine new status
+  let newStatus = 'PARTIALLY_PAID';
+  if (newPaidAmount === parseFloat(invoice.total)) {
+    newStatus = 'PAID';
+  }
+  // Transaction: create payment, update invoice
+  return await sequelize.transaction(async (t) => {
+    const payment = await InvoicePayment.create(
+      {
+        invoiceId: invoice.id,
+        amount: paymentAmount,
+        date: paymentData.date,
+        method: paymentData.method,
+        reference: paymentData.reference,
+        userId,
+        createdAt: new Date(),
+      },
+      { transaction: t },
+    );
+    await invoice.update(
+      {
+        paidAmount: newPaidAmount,
+        remainingAmount: newRemainingAmount,
+        status: newStatus,
+      },
+      { transaction: t },
+    );
+    // TODO: Audit-log payment registration
+    const updatedInvoice = await getInvoiceById(invoice.id, companyId);
+    return { payment, invoice: updatedInvoice };
+  });
+};
 const {
   enforceCurrencyIsEur,
   ensureVatTotalsMatch,
@@ -6,14 +148,7 @@ const {
 } = require('../utils/vatIntegrity');
 const { buildCompanyFilter } = require('../utils/companyFilter');
 
-const VALID_STATUS = [
-  'DRAFT',
-  'SENT',
-  'PAID',
-  'OVERDUE',
-  'CANCELLED',
-  'PARTIALLY_PAID',
-];
+const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
 const STATUS_TRANSITIONS = {
   DRAFT: ['SENT'],
   SENT: ['PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'],
@@ -53,10 +188,37 @@ const listInvoices = async (companyId) => {
 
 const getInvoiceById = async (invoiceId, companyId) => {
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
-  return Invoice.findOne({
+  const invoice = await Invoice.findOne({
     where,
     include: invoiceIncludes,
   });
+  if (!invoice) {
+    return null;
+  }
+  // VAT summary breakdown
+  const items = invoice.items || [];
+  const vatGroups = {};
+  let totalVat = 0;
+  items.forEach((item) => {
+    const rate = Number(item.vatRate) * 100; // e.g. 0.19 → 19
+    if (!vatGroups[rate]) {
+      vatGroups[rate] = { rate, net: 0, vat: 0, gross: 0 };
+    }
+    vatGroups[rate].net += Number(item.lineNet);
+    vatGroups[rate].vat += Number(item.lineVat);
+    vatGroups[rate].gross += Number(item.lineGross);
+    totalVat += Number(item.lineVat);
+  });
+  invoice.vatSummary = {
+    items: Object.values(vatGroups).map((vg) => ({
+      rate: vg.rate,
+      net: +vg.net.toFixed(2),
+      vat: +vg.vat.toFixed(2),
+      gross: +vg.gross.toFixed(2),
+    })),
+    totalVat: +totalVat.toFixed(2),
+  };
+  return invoice;
 };
 
 // Transactional creation of invoice, items, and attachments
@@ -169,6 +331,16 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
   if (!invoice) {
     return null;
   }
+  // Immutability guard: block edits after SENT (except status/credit note)
+  const immutableStatuses = ['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
+  if (immutableStatuses.includes(normalizeStatus(invoice.status))) {
+    const err = new Error(
+      'Invoice is immutable after SENT. Only status transitions or credit notes are allowed.',
+    );
+    err.status = 409;
+    // TODO: Audit-log blocked attempt here
+    throw err;
+  }
   await invoice.update(changes);
   return await getInvoiceById(invoiceId, companyId);
 };
@@ -195,4 +367,7 @@ module.exports = {
   createInvoice,
   updateInvoice,
   updateInvoiceStatus,
+  registerInvoicePayment,
+  createCreditNoteForInvoice,
+  getInvoiceAuditLog,
 };

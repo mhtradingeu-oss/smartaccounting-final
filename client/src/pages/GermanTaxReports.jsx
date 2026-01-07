@@ -6,6 +6,8 @@ import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
+import ReadOnlyBanner from '../components/ReadOnlyBanner';
+
 import {
   DocumentTextIcon,
   ChartBarIcon,
@@ -16,6 +18,9 @@ import { useCompany } from '../context/CompanyContext';
 import api, { formatApiError } from '../services/api';
 
 const GermanTaxReports = () => {
+  // Show audit mode banner for read-only roles
+  const { user } = useAuth?.() || {};
+  const isReadOnly = isReadOnlyRole?.(user?.role);
   // All hooks must be called before any conditional return
   const { t } = useTranslation();
   const { activeCompany } = useCompany();
@@ -194,19 +199,45 @@ const GermanTaxReports = () => {
         ? 'We are verifying availability with the backend.'
         : availability.status === 'error'
           ? 'Tax reporting is currently unavailable.'
-          : undefined;
+          : availability.status === 'submitted'
+            ? 'This tax period is locked. Changes are prohibited by law after submission.'
+            : availability.status === 'accepted'
+              ? 'This tax period is closed and legally finalized. No changes allowed.'
+              : availability.status === 'rejected'
+                ? 'This report is locked and cannot be changed.'
+                : undefined;
 
   return (
     <Layout>
       <div className="space-y-6">
+        {isReadOnly && (
+          <ReadOnlyBanner mode="Read-only" message={t('states.read_only.dashboard_notice')} />
+        )}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('germanTaxReports')}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tax Reports</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {t('germanTaxReportsDescription')}
+            Generate and review German tax reports for your company. No data is sent or stored until
+            the service is enabled.
           </p>
         </div>
+
+        {/* Locked Period Banner */}
+        {(availability.status === 'submitted' || availability.status === 'accepted') && (
+          <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 mb-4">
+            <span className="inline-block px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-semibold mr-2">
+              Locked Period
+            </span>
+            <span className="font-medium text-yellow-900">
+              {availability.status === 'submitted'
+                ? 'This tax period is locked. Changes are prohibited by law after submission.'
+                : 'This tax period is closed and legally finalized. No changes allowed.'}
+            </span>
+            <div className="mt-2 text-xs text-yellow-800">
+              If reopening is legally permitted, you must follow the official process and provide
+              justification. Contact your tax advisor for details.
+            </div>
+          </div>
+        )}
 
         {renderStatusCallout()}
 

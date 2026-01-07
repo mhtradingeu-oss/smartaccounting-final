@@ -18,6 +18,9 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { activeCompany } = useCompany();
 
+  // Only show demo UI if explicitly enabled
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+
   const isReadOnly = isReadOnlyRole(user?.role);
   const canViewInvestorDashboard = ['auditor', 'accountant', 'admin'].includes(user?.role);
 
@@ -177,81 +180,80 @@ const Dashboard = () => {
     );
   }
 
+  // Page Title and Subtitle
   return (
-    <>
-      {/* Admin Demo Button */}
-      {user?.role === 'admin' && (
-        <div className="flex justify-end mb-4">
-          <Button
-            variant="danger"
-            size="md"
-            className="font-bold shadow-sm border border-red-200 dark:border-red-700"
-            onClick={() => setShowDemoModal(true)}
-          >
-            Load Demo Data
-          </Button>
-        </div>
-      )}
-
-      {/* Demo Modal */}
-      {showDemoModal && (
-        <Modal
-          open={showDemoModal}
-          onClose={() => setShowDemoModal(false)}
-          title="Load Demo Data"
-          ariaLabel="Confirm loading demo data"
-          className="max-w-md space-y-4"
-        >
-          <p className="text-base text-gray-600 dark:text-gray-300 mb-0">
-            This will generate demo invoices, expenses and bank statements.
-          </p>
-
-          {demoError && (
-            <div
-              className="text-red-600 text-sm"
-              role="alert"
-              aria-live="assertive"
-            >
-              {demoError}
-            </div>
-          )}
-          {demoSuccess && (
-            <div
-              className="text-green-600 text-sm"
-              role="status"
-              aria-live="polite"
-            >
-              Demo data loaded successfully.
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button
-              variant="secondary"
-              size="md"
-              className="border border-gray-300 dark:border-gray-700"
-              onClick={() => setShowDemoModal(false)}
-              disabled={demoLoading}
-            >
-              Cancel
-            </Button>
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{t('navigation.dashboard')}</h1>
+        <p className="text-sm text-gray-500">
+          Overview of your company’s financial health and key metrics.
+        </p>
+      </div>
+      {/* Admin Demo Button and Modal (gated by VITE_DEMO_MODE) */}
+      {isDemoMode && user?.role === 'admin' && (
+        <>
+          <div className="flex justify-end mb-4">
             <Button
               variant="danger"
               size="md"
               className="font-bold shadow-sm border border-red-200 dark:border-red-700"
-              onClick={handleLoadDemoData}
-              disabled={demoLoading || demoSuccess}
+              onClick={() => setShowDemoModal(true)}
             >
-              {demoLoading ? 'Loading…' : 'Confirm'}
+              Load Demo Data
             </Button>
           </div>
-        </Modal>
+          {showDemoModal && (
+            <Modal
+              open={showDemoModal}
+              onClose={() => setShowDemoModal(false)}
+              title="Load Demo Data"
+              ariaLabel="Confirm loading demo data"
+              className="max-w-md space-y-4"
+            >
+              <p className="text-base text-gray-600 dark:text-gray-300 mb-0">
+                This will generate demo invoices, expenses and bank statements.
+              </p>
+
+              {demoError && (
+                <div className="text-red-600 text-sm" role="alert" aria-live="assertive">
+                  {demoError}
+                </div>
+              )}
+              {demoSuccess && (
+                <div className="text-green-600 text-sm" role="status" aria-live="polite">
+                  Demo data loaded successfully.
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="border border-gray-300 dark:border-gray-700"
+                  onClick={() => setShowDemoModal(false)}
+                  disabled={demoLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
+                  className="font-bold shadow-sm border border-red-200 dark:border-red-700"
+                  onClick={handleLoadDemoData}
+                  disabled={demoLoading || demoSuccess}
+                >
+                  {demoLoading ? 'Loading…' : 'Confirm'}
+                </Button>
+              </div>
+            </Modal>
+          )}
+        </>
       )}
 
       {/* Dashboard Content */}
       <div className="space-y-12">
         {isReadOnly && (
-        <ReadOnlyBanner mode="Viewer" message={t('states.read_only.dashboard_notice')} />
+          <ReadOnlyBanner mode="Viewer" message={t('states.read_only.dashboard_notice')} />
         )}
 
         {canViewInvestorDashboard && (
@@ -313,7 +315,7 @@ const Dashboard = () => {
           </div>
         </section>
       </div>
-    </>
+    </div>
   );
 };
 

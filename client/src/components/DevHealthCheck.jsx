@@ -169,4 +169,5 @@ const DevHealthCheck = () => {
   );
 };
 
+// DevHealthCheck is not included in production builds.
 export default DevHealthCheck;

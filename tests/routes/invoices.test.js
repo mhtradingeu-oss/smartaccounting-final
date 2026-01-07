@@ -1,4 +1,129 @@
+describe('POST /api/invoices/:id/payments', () => {
+  test('registers a partial payment and updates status', async () => {
+    // Create SENT invoice
+    const invoiceData = {
+      invoiceNumber: 'INV-600',
+      currency: 'EUR',
+      status: 'pending',
+      date: new Date().toISOString().slice(0, 10),
+      dueDate: new Date().toISOString().slice(0, 10),
+      clientName: 'Test Client',
+      items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+    };
+    const createRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/invoices',
+      body: invoiceData,
+    });
+    const invoiceId = createRes.body.invoice.id;
+    await global.requestApp({
+      app,
+      method: 'PATCH',
+      url: `/api/invoices/${invoiceId}/status`,
+      body: { status: 'sent' },
+    });
+    // Register payment less than total
+    const paymentRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: `/api/invoices/${invoiceId}/payments`,
+      body: {
+        amount: 50,
+        date: new Date().toISOString().slice(0, 10),
+        method: 'bank_transfer',
+        reference: 'TXP-001',
+        reason: 'Partial payment',
+      },
+    });
+    expect(paymentRes.status).toBe(201);
+    expect(paymentRes.body.invoice.paidAmount).toBe(50);
+    expect(paymentRes.body.invoice.remainingAmount).toBeCloseTo(69);
+    expect(paymentRes.body.invoice.status).toBe('PARTIALLY_PAID');
+  });
 
+  test('registers a full payment and updates status to PAID', async () => {
+    const invoiceData = {
+      invoiceNumber: 'INV-601',
+      currency: 'EUR',
+      status: 'pending',
+      date: new Date().toISOString().slice(0, 10),
+      dueDate: new Date().toISOString().slice(0, 10),
+      clientName: 'Test Client',
+      items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+    };
+    const createRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/invoices',
+      body: invoiceData,
+    });
+    const invoiceId = createRes.body.invoice.id;
+    await global.requestApp({
+      app,
+      method: 'PATCH',
+      url: `/api/invoices/${invoiceId}/status`,
+      body: { status: 'sent' },
+    });
+    // Register full payment
+    const paymentRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: `/api/invoices/${invoiceId}/payments`,
+      body: {
+        amount: 119,
+        date: new Date().toISOString().slice(0, 10),
+        method: 'bank_transfer',
+        reference: 'TXP-002',
+        reason: 'Full payment',
+      },
+    });
+    expect(paymentRes.status).toBe(201);
+    expect(paymentRes.body.invoice.paidAmount).toBe(119);
+    expect(paymentRes.body.invoice.remainingAmount).toBe(0);
+    expect(paymentRes.body.invoice.status).toBe('PAID');
+  });
+
+  test('blocks overpayment', async () => {
+    const invoiceData = {
+      invoiceNumber: 'INV-602',
+      currency: 'EUR',
+      status: 'pending',
+      date: new Date().toISOString().slice(0, 10),
+      dueDate: new Date().toISOString().slice(0, 10),
+      clientName: 'Test Client',
+      items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+    };
+    const createRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/invoices',
+      body: invoiceData,
+    });
+    const invoiceId = createRes.body.invoice.id;
+    await global.requestApp({
+      app,
+      method: 'PATCH',
+      url: `/api/invoices/${invoiceId}/status`,
+      body: { status: 'sent' },
+    });
+    // Try to overpay
+    const paymentRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: `/api/invoices/${invoiceId}/payments`,
+      body: {
+        amount: 120,
+        date: new Date().toISOString().slice(0, 10),
+        method: 'bank_transfer',
+        reference: 'TXP-003',
+        reason: 'Overpayment',
+      },
+    });
+    expect(paymentRes.status).toBe(400);
+    expect(paymentRes.body.message).toMatch(/exceeds invoice total/i);
+  });
+});
 const express = require('express');
 const invoiceRoutes = require('../../src/routes/invoices');
 const { Invoice, User } = require('../../src/models');
@@ -6,7 +131,11 @@ const { Invoice, User } = require('../../src/models');
 let mockCurrentUser = { id: 1, role: 'admin', companyId: null };
 jest.mock('../../src/middleware/authMiddleware', () => ({
   authenticate: (req, res, next) => {
-    req.user = { id: mockCurrentUser.id, role: mockCurrentUser.role, companyId: mockCurrentUser.companyId };
+    req.user = {
+      id: mockCurrentUser.id,
+      role: mockCurrentUser.role,
+      companyId: mockCurrentUser.companyId,
+    };
     req.userId = req.user.id;
     req.companyId = req.user.companyId;
     next();
@@ -121,9 +250,7 @@ describe('Invoice Routes', () => {
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Client Bad Math',
         total: 1,
-        items: [
-          { description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 0.19 },
-        ],
+        items: [{ description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
       };
       const response = await global.requestApp({
         app,
@@ -143,9 +270,7 @@ describe('Invoice Routes', () => {
         date: new Date().toISOString().slice(0, 10),
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Client Foreign',
-        items: [
-          { description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 0.19 },
-        ],
+        items: [{ description: 'Service X', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
       };
       const response = await global.requestApp({
         app,
@@ -194,9 +319,7 @@ describe('Invoice Routes', () => {
         date: new Date().toISOString().slice(0, 10),
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Test Client',
-        items: [
-          { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 },
-        ],
+        items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
       };
       const createRes = await global.requestApp({
         app,
@@ -223,9 +346,7 @@ describe('Invoice Routes', () => {
         date: new Date().toISOString().slice(0, 10),
         dueDate: new Date().toISOString().slice(0, 10),
         clientName: 'Test Client',
-        items: [
-          { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 },
-        ],
+        items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
       };
       const createRes = await global.requestApp({
         app,
@@ -252,9 +373,7 @@ describe('Invoice Routes', () => {
       date: new Date().toISOString().slice(0, 10),
       dueDate: new Date().toISOString().slice(0, 10),
       clientName: 'Draft Client',
-      items: [
-        { description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 },
-      ],
+      items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
     });
 
     test('allows edits while the invoice is still a draft', async () => {
@@ -295,8 +414,8 @@ describe('Invoice Routes', () => {
         url: `/api/invoices/${invoiceId}`,
         body: { notes: 'Attempt correction' },
       });
-      expect(finalUpdateRes.status).toBe(400);
-      expect(finalUpdateRes.body.message).toMatch(/correction entry/i);
+      expect(finalUpdateRes.status).toBe(409);
+      expect(finalUpdateRes.body.message).toMatch(/immutable after SENT/i);
     });
   });
 });

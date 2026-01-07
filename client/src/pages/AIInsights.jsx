@@ -40,12 +40,7 @@ const AIInsights = () => {
 
   if (loading) {
     return (
-      <div
-        className="py-12"
-        role="status"
-        aria-live="polite"
-        aria-label="Loading AI insights"
-      >
+      <div className="py-12" role="status" aria-live="polite" aria-label="Loading AI insights">
         <Skeleton className="h-8 w-1/3 mb-4" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -70,13 +65,13 @@ const AIInsights = () => {
     return (
       <EmptyState
         title="No AI insights yet"
-        description="AI will generate suggestions as your data grows."
+        description="AI will generate tailored recommendations as your data grows."
         action={
           <Button variant="primary" onClick={loadInsights} disabled={loading}>
             Refresh
           </Button>
         }
-        help="AI insights are generated automatically based on your accounting data."
+        help="AI insights are generated automatically and continuously based on your accounting data."
       />
     );
   }
@@ -97,16 +92,20 @@ const AIInsights = () => {
         <ReadOnlyBanner
           mode="Viewer"
           message="You have view-only access. All outputs are advisory only."
-          details="No actions will be taken automatically."
+          details="No actions will be taken automatically. AI features are strictly read-only for safety and compliance. No actions, changes, or transactions can be executed by AI. All responses are for informational purposes only, and every interaction is logged for audit. AI is helpful, never authoritative or dangerous."
         />
       )}
-      <h1 className="text-2xl font-bold mb-6">
-        AI Suggestions{' '}
-        <span className="text-xs font-normal text-blue-600">
-          (Suggestion / Recommendation only)
-        </span>
-      </h1>
-      <div className="space-y-6">
+      <div className="mb-6 flex items-center gap-3">
+        {(() => {
+          const { AIBadge } = require('../components/AIBadge');
+          return <AIBadge label="AI" />;
+        })()}
+        <h1 className="text-2xl font-bold text-gray-900">AI Insights</h1>
+      </div>
+      <p className="text-sm text-gray-500">
+        Receive calm, clear, and actionable AI-generated recommendations for your accounting data.
+      </p>
+      <div className="space-y-6 transition-all duration-300">
         {insights.map((suggestion) => (
           <AISuggestionCard key={suggestion.id} suggestion={suggestion} />
         ))}
@@ -120,10 +119,10 @@ const AIInsights = () => {
         <span role="img" aria-label="info">
           ℹ️
         </span>{' '}
-        All suggestions are{' '}
+        All insights are{' '}
         <span className="font-semibold text-blue-700">AI-generated recommendations</span>. No
-        actions are taken automatically. Each suggestion references real data fields and is fully
-        explainable.{' '}
+        actions are taken automatically. Each suggestion is fully explainable and references real
+        data fields.
         <span className="block mt-2 text-gray-400">(Audit-safe: No data is changed by AI)</span>
       </div>
     </div>

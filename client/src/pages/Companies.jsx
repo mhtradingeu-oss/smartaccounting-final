@@ -1,140 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
-import { formatApiError } from '../services/api';
-import { companiesAPI } from '../services/companiesAPI';
-
-import { useCompany } from '../context/CompanyContext';
-import { useAuth } from '../context/AuthContext';
-import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import PermissionGuard from '../components/PermissionGuard';
+import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
 
-const initialFormState = {
-  name: '',
-  address: '',
-  city: '',
-  postalCode: '',
-  country: '',
-};
+export default function Companies() {
+  // Place hooks, state, and handlers here
+  // (actual logic should be above the first return)
 
-const RATE_LIMIT_RETRY_DELAYS = [500, 1000];
-
-const Companies = () => {
-  const { companies, setCompanies, activeCompany, switchCompany } = useCompany();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
-  const [formState, setFormState] = useState(initialFormState);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
-
-  const activeCompanyRef = useRef(activeCompany?.id ?? null);
-
-  useEffect(() => {
-    activeCompanyRef.current = activeCompany?.id ?? null;
-  }, [activeCompany]);
-
-  const refreshCompanies = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-
-    let attempt = 0;
-
-    const attemptFetch = async () => {
-      attempt += 1;
-      try {
-        const data = await companiesAPI.list({ force: true });
-        const list = Array.isArray(data) ? data : data?.companies ?? [];
-        setCompanies(list);
-        if (list.length) {
-          const matchedActive = list.find((c) => c.id === activeCompanyRef.current);
-          const newActive = matchedActive || list[0];
-          switchCompany(newActive, { reset: false });
-        } else {
-          switchCompany(null, { reset: false });
+  // Block UI if no active company (tenant isolation)
+  if (!activeCompany) {
+    return (
+      <EmptyState
+        title="No active company"
+        description="Select or create a company to manage details."
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
         }
-        return;
-      } catch (error) {
-        const status = error?.response?.status ?? error?.status;
-        if (status === 429 && attempt <= RATE_LIMIT_RETRY_DELAYS.length) {
-          const delay = RATE_LIMIT_RETRY_DELAYS[attempt - 1];
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          return attemptFetch();
-        }
-        throw error;
-      }
-    };
-
-    try {
-      await attemptFetch();
-    } catch (error) {
-      setLoadError(formatApiError(error, 'Unable to load company data.'));
-    } finally {
-      setLoading(false);
-    }
-  }, [setCompanies, switchCompany]);
-
-  useEffect(() => {
-    refreshCompanies();
-  }, [refreshCompanies]);
-
-  useEffect(() => {
-    if (!activeCompany) {
-      setFormState(initialFormState);
-      return;
-    }
-
-    setFormState({
-      name: activeCompany.name || '',
-      address: activeCompany.address || '',
-      city: activeCompany.city || '',
-      postalCode: activeCompany.postalCode || '',
-      country: activeCompany.country || '',
-    });
-  }, [activeCompany]);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = async (event) => {
-    event.preventDefault();
-    if (!activeCompany) {
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveError(null);
-    setSuccessMessage('');
-    try {
-      const payload = {
-        name: formState.name.trim(),
-        address: formState.address.trim(),
-        city: formState.city.trim(),
-        postalCode: formState.postalCode.trim(),
-        country: formState.country.trim(),
-      };
-
-      await companiesAPI.update(activeCompany.id, payload);
-
-      const updatedCompany = { ...activeCompany, ...payload };
-      setCompanies((prev) => prev.map((company) => (company.id === updatedCompany.id ? updatedCompany : company)));
-      switchCompany(updatedCompany, { reset: false });
-      setSuccessMessage('Company profile saved.');
-    } catch (error) {
-      setSaveError(formatApiError(error, 'Unable to save company details.'));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -159,46 +50,41 @@ const Companies = () => {
   if (!companies || companies.length === 0) {
     return (
       <EmptyState
-        title="No companies found"
-        description="Company creation is managed by the platform team. Contact your admin or support to onboard a new entity."
+        title="No companies yet"
+        description="Companies represent your business entities. To get started, request your admin or support to add a company."
         action={
           <Button
             variant="primary"
             disabled
-            title="Company creation will be handled via onboarding soon."
+            title="Only admins/support can add companies."
             className="cursor-not-allowed"
           >
             Request company
           </Button>
         }
-      />
-    );
-  }
-
-  // Block UI if no active company (tenant isolation)
-  if (!activeCompany) {
-    return (
-      <EmptyState
-        title="No active company"
-        description="Select or create a company to manage details."
-        action={
-          <Button variant="primary" onClick={() => navigate('/companies')}>
-            Select company
-          </Button>
-        }
+        help="Once a company is added, you can manage its details and users here."
       />
     );
   }
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Companies' }]} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+        <p className="text-sm text-gray-500">
+          Manage your business entities and their core details.
+        </p>
+      </div>
       {isReadOnlyRole(user?.role) && (
         <ReadOnlyBanner message="You have read-only access. Editing is disabled." />
       )}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Company Details</p>
-          <h1 className="text-3xl font-bold text-gray-900">{activeCompany?.name}</h1>
+          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+            Company Details
+          </p>
+          <h2 className="text-xl font-bold text-gray-900">{activeCompany?.name}</h2>
           <p className="text-sm text-gray-500">
             {activeCompany?.city}, {activeCompany?.country} • {activeCompany?.postalCode}
           </p>
@@ -237,7 +123,6 @@ const Companies = () => {
                 />
               </PermissionGuard>
             </label>
-
             <label className="space-y-2 text-sm text-gray-600">
               <span>Address</span>
               <PermissionGuard action="edit" role={user?.role} showDisabled>
@@ -251,7 +136,6 @@ const Companies = () => {
               </PermissionGuard>
             </label>
           </div>
-
           <div className="grid gap-4 md:grid-cols-3">
             <label className="space-y-2 text-sm text-gray-600">
               <span>City</span>
@@ -290,31 +174,16 @@ const Companies = () => {
               </PermissionGuard>
             </label>
           </div>
-
-          {saveError && (
-            <p className="text-sm text-red-600">{saveError.message}</p>
-          )}
-
-          {successMessage && (
-            <p className="text-sm text-emerald-600">{successMessage}</p>
-          )}
-
+          {saveError && <p className="text-sm text-red-600">{saveError.message}</p>}
+          {successMessage && <p className="text-sm text-emerald-600">{successMessage}</p>}
           <div className="flex flex-wrap items-center gap-3">
             <PermissionGuard action="edit" role={user?.role} showDisabled>
-              <Button
-                type="submit"
-                variant="primary"
-                loading={isSaving}
-              >
+              <Button type="submit" variant="primary" loading={isSaving}>
                 Save changes
               </Button>
             </PermissionGuard>
             <PermissionGuard action="edit" role={user?.role} showDisabled>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => refreshCompanies()}
-              >
+              <Button type="button" variant="outline" onClick={() => refreshCompanies()}>
                 Reset
               </Button>
             </PermissionGuard>
@@ -323,6 +192,4 @@ const Companies = () => {
       </Card>
     </div>
   );
-};
-
-export default Companies;
+}

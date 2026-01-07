@@ -16,7 +16,9 @@ const Billing = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
   const billingEnabled = FEATURE_FLAGS.STRIPE_BILLING.enabled;
+
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [billingHistory, setBillingHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,25 +28,62 @@ const Billing = () => {
   useEffect(() => {
     if (!billingEnabled) {
       setLoading(false);
-      setError(null);
-      setSubscriptionStatus(null);
-      setBillingHistory([]);
       return;
     }
 
+    const fetchBillingData = async () => {
+      try {
+        const [statusResponse, historyResponse] = await Promise.all([
+          api.get('/stripe/subscription'),
+          api.get('/stripe/billing-history'),
+        ]);
+
+        setSubscriptionStatus(statusResponse.data?.subscription || statusResponse.data);
+        setBillingHistory(historyResponse.data?.history || []);
+        setError(null);
+      } catch (err) {
+        logger.error('Failed to load billing data', getSafeErrorMeta(err));
+        setError('Billing data is unavailable right now.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchBillingData();
   }, [billingEnabled]);
+
+  /* =========================
+     EARLY RETURNS (RENDER)
+     ========================= */
 
   if (!billingEnabled) {
     return (
       <FeatureGate
         enabled={billingEnabled}
         featureName="Stripe billing"
-        description="Stripe billing is disabled for this release. Enable STRIPE_BILLING to unlock the billing console."
+        description="Billing features are not available in this version. If you need access, please contact support."
         ctaLabel="View pricing plans"
         ctaPath="/pricing"
         help="The backend currently returns 501 for /api/stripe when the feature is off."
       />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">{t('billingTitle')}</h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()}>Retry</Button>
+      </div>
     );
   }
 
@@ -54,7 +93,7 @@ const Billing = () => {
         api.get('/stripe/subscription'),
         api.get('/stripe/billing-history'),
       ]);
-      
+
       setSubscriptionStatus(statusResponse.data?.subscription || statusResponse.data);
       setBillingHistory(historyResponse.data?.history || []);
       setError(null);
@@ -67,14 +106,18 @@ const Billing = () => {
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? You will still have access until the end of your current billing period.')) {
+    if (
+      !confirm(
+        'Are you sure you want to cancel your subscription? You will still have access until the end of your current billing period.',
+      )
+    ) {
       return;
     }
 
     setCancelLoading(true);
     try {
       await api.post('/stripe/cancel-subscription');
-      await fetchBillingData(); 
+      await fetchBillingData();
       alert('Subscription will be canceled at the end of the current period.');
     } catch (error) {
       alert('Failed to cancel subscription. Please try again.');
@@ -85,7 +128,6 @@ const Billing = () => {
 
   const handleDownloadInvoicePDF = async (invoice) => {
     try {
-      
       if (invoice.pdfUrl) {
         window.open(invoice.pdfUrl, '_blank');
       } else if (invoice.invoiceUrl) {
@@ -106,16 +148,19 @@ const Billing = () => {
       incomplete: 'bg-yellow-100 text-yellow-800',
       trialing: 'bg-blue-100 text-blue-800',
     };
-
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-800'}`}
+      >
         {status?.replace('_', ' ').toUpperCase()}
       </span>
     );
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) {return '-';}
+    if (!dateString) {
+      return '-';
+    }
     return new Date(dateString).toLocaleDateString('de-DE', {
       year: 'numeric',
       month: 'long',
@@ -142,44 +187,36 @@ const Billing = () => {
   if (error) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          {t('billingTitle')}
-        </h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">{t('billingTitle')}</h2>
         <p className="text-gray-600 mb-6">{error}</p>
-        <Button onClick={fetchBillingData}>
-          Retry
-        </Button>
+        <Button onClick={fetchBillingData}>Retry</Button>
       </div>
     );
   }
 
   const statusValue = subscriptionStatus?.status || subscriptionStatus?.subscriptionStatus;
 
+  /* =========================
+     MAIN RENDER
+     ========================= */
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {t('billingTitle')}
-        </h1>
-        <p className="text-gray-600">
-          {t('billingSubtitle')}
-        </p>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Billing</h1>
+      <p className="text-sm text-gray-500 mb-8">
+        Manage your company’s subscription, plan, and billing history.
+      </p>
 
       {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <Card>
           <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {t('currentSubscription')}
-            </h2>
-            
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('currentSubscription')}</h2>
+
             {statusValue === 'none' ? (
               <div className="text-center py-4">
                 <p className="text-gray-600 mb-4">{t('noActiveSubscription')}</p>
-                <Button onClick={() => navigate('/pricing')}>
-                  {t('choosePlanButton')}
-                </Button>
+                <Button onClick={() => navigate('/pricing')}>{t('choosePlanButton')}</Button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -187,7 +224,7 @@ const Billing = () => {
                   <span className="text-sm font-medium text-gray-500">Status</span>
                   {getStatusBadge(statusValue)}
                 </div>
-                
+
                 {subscriptionStatus.plan && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-500">Plan</span>
@@ -196,7 +233,7 @@ const Billing = () => {
                     </span>
                   </div>
                 )}
-                
+
                 {subscriptionStatus.currentPeriodEnd && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-500">
@@ -207,7 +244,7 @@ const Billing = () => {
                     </span>
                   </div>
                 )}
-                
+
                 {statusValue === 'active' && user?.role === 'admin' && (
                   <div className="pt-4 border-t border-gray-200">
                     {subscriptionStatus.cancelAtPeriodEnd ? (
@@ -233,10 +270,8 @@ const Billing = () => {
 
         <Card>
           <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Quick Actions
-            </h2>
-            
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+
             <div className="space-y-3">
               <Button
                 variant="primary"
@@ -246,7 +281,7 @@ const Billing = () => {
               >
                 View All Plans
               </Button>
-              
+
               {statusValue === 'active' && (
                 <Button
                   variant="secondary"
@@ -257,7 +292,7 @@ const Billing = () => {
                   Update Payment Method (Coming soon)
                 </Button>
               )}
-              
+
               <Button
                 variant="secondary"
                 size="sm"
@@ -280,14 +315,18 @@ const Billing = () => {
       {}
       <Card>
         <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Billing History
-          </h2>
-          
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Billing History</h2>
+
           {billingHistory.length === 0 ? (
-            <p className="text-gray-600 text-center py-4">
-              No billing history available
-            </p>
+            <div className="text-gray-600 text-center py-4">
+              <p className="font-semibold">No billing history yet</p>
+              <p className="text-sm mt-1">
+                Your invoices and payment records will appear here once you activate a subscription.
+              </p>
+              <Button className="mt-4" variant="primary" onClick={() => navigate('/pricing')}>
+                Choose a plan
+              </Button>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">

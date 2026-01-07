@@ -3,12 +3,7 @@ import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 
 const isDev = process.env.NODE_ENV === 'development';
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
-const logDev = (...args) => {
-  if (isDev) {
-     
-    console.log('[dashboardAPI]', ...args);
-  }
-};
+const logDev = () => {};
 
 export const dashboardAPI = {
   inFlight: null,

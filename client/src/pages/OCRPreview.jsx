@@ -28,9 +28,7 @@ const DOCUMENT_TYPE_LABELS = {
 const SUPPORTED_MIME_HINT = 'PDF & high-resolution images (JPEG, PNG, TIFF)';
 
 const formatFieldLabel = (key) => {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const formatFieldValue = (value) => {
@@ -186,12 +184,11 @@ const OCRPreview = () => {
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {companyName}
               </p>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                OCR preview power mode
-              </h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">OCR Preview</h1>
               <p className="text-sm text-gray-500">
-                Upload a document to see how the OCR engine classifies fields, highlights confidence,
-                and explains how results were derived. This mode does not modify your data.
+                Upload a document to see how the OCR engine classifies fields, highlights
+                confidence, and explains how results were derived. This mode does not modify your
+                data.
               </p>
             </div>
             <div className="text-right text-xs text-gray-500">
@@ -289,9 +286,7 @@ const OCRPreview = () => {
 
           {previewResponse ? (
             <>
-              <div className="space-y-4">
-                {renderFields()}
-              </div>
+              <div className="space-y-4">{renderFields()}</div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-xl border border-green-200 bg-green-50/60 p-4 text-sm text-green-900 dark:border-green-700 dark:bg-green-900/40 dark:text-green-200">
@@ -309,16 +304,16 @@ const OCRPreview = () => {
               </div>
 
               <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
-                <p className="text-xs uppercase tracking-wide text-gray-500">
-                  Raw OCR text
-                </p>
+                <p className="text-xs uppercase tracking-wide text-gray-500">Raw OCR text</p>
                 <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
                   {previewResponse.rawText || 'No text was extracted.'}
                 </pre>
               </div>
             </>
           ) : (
-            <p className="text-sm text-gray-500">Upload a document to see the structured preview.</p>
+            <p className="text-sm text-gray-500">
+              Upload a document to see the structured preview.
+            </p>
           )}
 
           <p className="text-xs text-gray-500">

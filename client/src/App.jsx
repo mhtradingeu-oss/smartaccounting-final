@@ -10,6 +10,7 @@ import AppErrorBoundary from './components/AppErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CompanyProvider, useCompany } from './context/CompanyContext';
 import { RoleProvider } from './context/RoleContext';
+import FeatureGate from './components/FeatureGate';
 
 const withSuspense = (children) => <Suspense fallback={<PageLoadingState />}>{children}</Suspense>;
 
@@ -33,7 +34,6 @@ const RBACManagement = lazy(() => import('./pages/RBACManagement'));
 const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard'));
 const ComplianceDashboard = lazy(() => import('./pages/ComplianceDashboard'));
 const AuditLogs = lazy(() => import('./pages/AuditLogs'));
-const GDPRActions = lazy(() => import('./pages/GDPRActions'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Invoices = lazy(() => import('./pages/Invoices'));
@@ -54,8 +54,11 @@ const Billing = lazy(() => import('./pages/Billing'));
 const Companies = lazy(() => import('./pages/Companies'));
 const Users = lazy(() => import('./pages/Users'));
 const GermanTaxReports = lazy(() => import('./pages/GermanTaxReports'));
+
 const AIInsights = lazy(() => import('./pages/AIInsights'));
 const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
 
 function LandingRoute() {
   const { status, isAuthenticated } = useAuth();
@@ -116,6 +119,22 @@ export const ROUTE_DEFINITIONS = [
     path: '/',
     element: wrapRoute(<LandingRoute />),
     componentFile: 'client/src/pages/Landing.jsx',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/terms',
+    element: wrapRoute(withSuspense(<Terms />)),
+    componentFile: 'client/src/pages/Terms.jsx',
+    authRequired: false,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/privacy',
+    element: wrapRoute(withSuspense(<Privacy />)),
+    componentFile: 'client/src/pages/Privacy.jsx',
     authRequired: false,
     requiredRole: null,
     featureFlags: [],
@@ -298,7 +317,15 @@ export const ROUTE_DEFINITIONS = [
   },
   {
     path: '/billing',
-    element: renderProtectedRoute(<Billing />),
+    element: FEATURE_FLAGS.STRIPE_BILLING.enabled
+      ? renderProtectedRoute(<Billing />)
+      : wrapRoute(
+          <FeatureGate
+            enabled={false}
+            featureName="Billing"
+            description="Billing is not available in this environment."
+          />,
+        ),
     componentFile: 'client/src/pages/Billing.jsx',
     authRequired: true,
     requiredRole: null,
@@ -331,7 +358,15 @@ export const ROUTE_DEFINITIONS = [
   },
   {
     path: '/compliance',
-    element: renderProtectedRoute(<ComplianceDashboard />, 'admin'),
+    element: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled
+      ? renderProtectedRoute(<ComplianceDashboard />, 'admin')
+      : wrapRoute(
+          <FeatureGate
+            enabled={false}
+            featureName="Compliance"
+            description="Compliance dashboard is not available in this environment."
+          />,
+        ),
     componentFile: 'client/src/pages/ComplianceDashboard.jsx',
     authRequired: true,
     requiredRole: 'admin',
@@ -346,12 +381,20 @@ export const ROUTE_DEFINITIONS = [
     featureFlags: [],
   },
   {
-    path: '/gdpr-actions',
-    element: renderProtectedRoute(<GDPRActions />),
-    componentFile: 'client/src/pages/GDPRActions.jsx',
+    path: '/german-tax-reports',
+    element: FEATURE_FLAGS.GERMAN_TAX.enabled
+      ? renderProtectedRoute(<GermanTaxReports />)
+      : wrapRoute(
+          <FeatureGate
+            enabled={false}
+            featureName="German Tax Reports"
+            description="German tax reporting is not available in this environment."
+          />,
+        ),
+    componentFile: 'client/src/pages/GermanTaxReports.jsx',
     authRequired: true,
     requiredRole: null,
-    featureFlags: [],
+    featureFlags: ['GERMAN_TAX'],
   },
   {
     path: '/compliance-dashboard',

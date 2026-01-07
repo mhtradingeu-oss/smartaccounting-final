@@ -3,22 +3,23 @@ import clsx from 'clsx';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { useRole, roles } from '../context/RoleContext';
+import { useRole } from '../context/RoleContext';
 
 import {
   HomeIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
-  BellIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import {
   MAIN_NAVIGATION_ITEMS,
+  OPERATIONS_NAVIGATION_ITEMS,
+  COMPLIANCE_NAVIGATION_ITEMS,
   MANAGEMENT_NAVIGATION_ITEMS,
-  ADMIN_NAVIGATION_ITEMS,
-  SYSTEM_NAVIGATION_ITEMS,
+  BILLING_NAVIGATION_ITEM,
+  PROFILE_NAVIGATION_ITEM,
 } from '../navigation/sidebarNavigation';
 
 const NAV_LINK_BASE_CLASSES =
@@ -49,12 +50,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     }));
 
   const mainNavigation = enrichNavigation(MAIN_NAVIGATION_ITEMS);
+  const operationsNavigation = enrichNavigation(OPERATIONS_NAVIGATION_ITEMS);
+  const complianceNavigation = enrichNavigation(COMPLIANCE_NAVIGATION_ITEMS);
   const managementNavigation = enrichNavigation(MANAGEMENT_NAVIGATION_ITEMS);
-  const ADMIN_ROLES = [roles.ADMIN, roles.SUPER_ADMIN];
-  const adminNavigation = ADMIN_ROLES.includes(role)
-    ? enrichNavigation(ADMIN_NAVIGATION_ITEMS)
-    : [];
-  const systemNavigation = enrichNavigation(SYSTEM_NAVIGATION_ITEMS);
+  const billingNavigation = enrichNavigation([BILLING_NAVIGATION_ITEM]);
+  const profileNavigation = enrichNavigation([PROFILE_NAVIGATION_ITEM]);
 
   const shouldRenderSection = (items) => Array.isArray(items) && items.length > 0;
 
@@ -69,6 +69,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     const isActive = item.href && isActiveLink(item.href);
     const IconComponent = isActive && item.iconSolid ? item.iconSolid : item.icon;
     if (isEnabled) {
+      // Use AIBadge for AI navigation items
+      const isAIFeature = item.badge === 'AI';
+      let badgeNode = null;
+      if (isAIFeature && !isCollapsed) {
+        // Lazy import to avoid circular deps
+        const AIBadge = require('./AIBadge').AIBadge;
+        badgeNode = <AIBadge className="ml-auto" />;
+      }
       return (
         <NavLink
           key={`${sectionKey}-${item.href}`}
@@ -92,7 +100,9 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             {!isCollapsed && (
               <>
                 <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
-                {item.badge && (
+                {badgeNode}
+                {/* fallback for other badges */}
+                {!isAIFeature && item.badge && (
                   <span
                     className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       isActive
@@ -257,6 +267,13 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
         {shouldRenderSection(mainNavigation) &&
           renderSection(t('navigation.main'), mainNavigation, 'main', HomeIcon)}
+        {shouldRenderSection(operationsNavigation) &&
+          renderSection(
+            t('navigation.operations'),
+            operationsNavigation,
+            'operations',
+            DocumentTextIcon,
+          )}
         {shouldRenderSection(managementNavigation) &&
           renderSection(
             t('navigation.management'),
@@ -264,10 +281,20 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             'management',
             Cog6ToothIcon,
           )}
-        {shouldRenderSection(adminNavigation) &&
-          renderSection(t('navigation.administration'), adminNavigation, 'admin', ShieldCheckIcon)}
-        {shouldRenderSection(systemNavigation) &&
-          renderSection(t('navigation.system'), systemNavigation, 'system', BellIcon)}
+        {shouldRenderSection(complianceNavigation) &&
+          renderSection(
+            t('navigation.compliance'),
+            complianceNavigation,
+            'compliance',
+            ShieldCheckIcon,
+          )}
+        {/* Secondary actions at the bottom */}
+        <div className="mt-8 space-y-1 border-t border-gray-200 dark:border-gray-700 pt-4">
+          {shouldRenderSection(billingNavigation) &&
+            renderSection('', billingNavigation, 'billing', CreditCardIcon)}
+          {shouldRenderSection(profileNavigation) &&
+            renderSection('', profileNavigation, 'profile', UserCircleIcon)}
+        </div>
       </nav>
     </div>
   );

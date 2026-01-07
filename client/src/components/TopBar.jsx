@@ -25,6 +25,7 @@ import {
   CurrencyEuroIcon,
   BanknotesIcon,
   LockClosedIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import {
   BellIcon as BellIconSolid,
@@ -136,11 +137,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
       href: '/german-tax-reports',
     };
 
-    return [
-      baseNotifications[0],
-      taxNotification,
-      ...baseNotifications.slice(1),
-    ];
+    return [baseNotifications[0], taxNotification, ...baseNotifications.slice(1)];
   }, [t, isGermanTaxEnabled]);
 
   // Mock search results
@@ -272,17 +269,17 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
 
             {/* Enhanced Search Results */}
             {showSearchResults && filteredSearchResults.length > 0 && (
-            <div
-              className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 max-h-96 overflow-y-auto z-50"
-              role="listbox"
-              aria-label={t('topbar.search_results_title')}
-              aria-live="polite"
-            >
-              <div className="p-3">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  {t('topbar.search_results_title')}
-                </div>
-                {filteredSearchResults.map((result, _index) => (
+              <div
+                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 dark:bg-gray-800 dark:border-gray-700 max-h-96 overflow-y-auto z-50"
+                role="listbox"
+                aria-label={t('topbar.search_results_title')}
+                aria-live="polite"
+              >
+                <div className="p-3">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    {t('topbar.search_results_title')}
+                  </div>
+                  {filteredSearchResults.map((result, _index) => (
                     <Link
                       key={`${result.type}-${result.title}`}
                       to={result.href}
@@ -447,7 +444,7 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                                     className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
                                     onClick={() => setIsNotificationsOpen(false)}
                                     type="button"
-                                    >
+                                  >
                                     {notification.action} →
                                   </Link>
                                 ) : notification.action ? (
@@ -531,17 +528,17 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                     {user?.role} • {user?.subscriptionPlan || t('topbar.profile.plan_professional')}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
-                  {isReadOnlySession ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                      <LockClosedIcon className="h-3 w-3" />
-                      {t('topbar.profile.session_read_only')}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      <CheckCircleIcon className="h-3 w-3" />
-                      {t('topbar.profile.session_full_access')}
-                    </span>
-                  )}
+                    {isReadOnlySession ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        <LockClosedIcon className="h-3 w-3" />
+                        {t('topbar.profile.session_read_only')}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        <CheckCircleIcon className="h-3 w-3" />
+                        {t('topbar.profile.session_full_access')}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <ChevronDownIcon
@@ -575,22 +572,30 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
                   </div>
 
                   <div className="py-2">
-                    <button
-                      disabled
-                      className="flex items-center w-full px-4 py-3 text-sm text-gray-400 opacity-50 cursor-not-allowed"
-                      title={t('topbar.profile.profile_tooltip')}
-                      aria-label={t('topbar.profile.profile_tooltip')}
+                    <a
+                      href="/profile-settings"
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-900/20 transition-colors duration-200"
+                      title="Profile & Settings"
+                      aria-label="Profile & Settings"
                     >
                       <UserCircleIcon className="h-4 w-4 mr-3" />
-                      {t('topbar.profile.view')}
+                      Profile & Settings
                       <span className="ml-auto text-xs text-gray-400">⌘P</span>
-                    </button>
+                    </a>
+                    <a
+                      href="/billing"
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-900/20 transition-colors duration-200"
+                      title="Billing & Plan"
+                      aria-label="Billing & Plan"
+                    >
+                      <CreditCardIcon className="h-4 w-4 mr-3" />
+                      Billing & Plan
+                      <span className="ml-auto text-xs text-gray-400">⌘B</span>
+                    </a>
                   </div>
 
                   <div className="py-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                    <p className="text-xs text-gray-500">
-                      {t('topbar.profile.session_hint')}
-                    </p>
+                    <p className="text-xs text-gray-500">{t('topbar.profile.session_hint')}</p>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-3 text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors duration-200"

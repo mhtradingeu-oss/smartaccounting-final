@@ -1,33 +1,31 @@
 import {
-  ArrowDownTrayIcon,
   HomeIcon,
-  DocumentTextIcon,
-  BanknotesIcon,
   DocumentChartBarIcon,
+  DocumentTextIcon,
   CreditCardIcon,
-  ShieldCheckIcon,
+  BanknotesIcon,
   BuildingOfficeIcon,
   UsersIcon,
+  ShieldCheckIcon,
+  ArrowDownTrayIcon,
   UserCircleIcon,
   DocumentMagnifyingGlassIcon,
-  ChatBubbleLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
 import {
-  ArrowDownTrayIcon as ArrowDownTrayIconSolid,
   HomeIcon as HomeIconSolid,
-  DocumentTextIcon as DocumentTextIconSolid,
-  BanknotesIcon as BanknotesIconSolid,
   DocumentChartBarIcon as DocumentChartBarIconSolid,
-  DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
-  ChatBubbleLeftEllipsisIcon as ChatBubbleLeftEllipsisIconSolid,
+  DocumentTextIcon as DocumentTextIconSolid,
   CreditCardIcon as CreditCardIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid,
+  BanknotesIcon as BanknotesIconSolid,
   BuildingOfficeIcon as BuildingOfficeIconSolid,
   UsersIcon as UsersIconSolid,
+  ShieldCheckIcon as ShieldCheckIconSolid,
+  ArrowDownTrayIcon as ArrowDownTrayIconSolid,
   UserCircleIcon as UserCircleIconSolid,
+  DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
 } from '@heroicons/react/24/solid';
-import { FEATURE_FLAGS, USER_ROLES } from '../lib/constants';
-import { isAIAssistantEnabled, isOCRPreviewEnabled } from '../lib/featureFlags';
+import { FEATURE_FLAGS } from '../lib/constants';
+import { isOCRPreviewEnabled } from '../lib/featureFlags';
 import { roles } from '../context/RoleContext';
 
 export const MAIN_NAVIGATION_ITEMS = [
@@ -37,7 +35,7 @@ export const MAIN_NAVIGATION_ITEMS = [
     icon: HomeIcon,
     iconSolid: HomeIconSolid,
     badge: null,
-    description: 'Overview & Analytics',
+    description: 'Dashboard overview and analytics',
     enabled: true,
   },
   {
@@ -49,6 +47,18 @@ export const MAIN_NAVIGATION_ITEMS = [
     description: 'Business analytics & KPIs',
     enabled: true,
   },
+];
+export const OPERATIONS_NAVIGATION_ITEMS = [
+  {
+    nameKey: 'navigation.invoices',
+    href: '/invoices',
+    icon: DocumentTextIcon,
+    iconSolid: DocumentTextIconSolid,
+    badge: null,
+    description: 'Invoices',
+    enabled: ({ role }) => role !== roles.VIEWER,
+    disabledReason: 'Value operations are limited to accountant or admin roles.',
+  },
   {
     nameKey: 'navigation.expenses',
     href: '/expenses',
@@ -59,101 +69,31 @@ export const MAIN_NAVIGATION_ITEMS = [
     enabled: true,
   },
   {
-    nameKey: 'navigation.ai_assistant',
-    href: '/ai-assistant',
-    icon: ChatBubbleLeftEllipsisIcon,
-    iconSolid: ChatBubbleLeftEllipsisIconSolid,
-    badge: 'AI',
-    description: 'Conversational read-only advisor',
-    enabled: isAIAssistantEnabled,
-    disabledReason: 'AI Assistant needs the feature flag enabled before it becomes interactive.',
-  },
-  {
-    nameKey: 'navigation.ai_insights',
-    href: '/ai-advisor',
-    icon: DocumentTextIcon,
-    iconSolid: DocumentTextIconSolid,
-    badge: 'AI',
-    description: 'AI-generated insights feed',
-    enabled: true,
-  },
-  {
-    nameKey: 'navigation.invoices',
-    href: '/invoices',
-    icon: DocumentTextIcon,
-    iconSolid: DocumentTextIconSolid,
-    badge: null,
-    description: 'Create & Manage Invoices',
-    enabled: ({ role }) => role !== roles.VIEWER,
-    disabledReason: 'Value operations are limited to accountant or admin roles.',
-  },
-  {
     nameKey: 'navigation.bank_statements',
     href: '/bank-statements',
     icon: BanknotesIcon,
     iconSolid: BanknotesIconSolid,
     badge: null,
-    description: 'Bank Transactions',
+    description: 'Bank Statements',
     enabled: true,
   },
   {
     nameKey: 'navigation.ocr_preview',
     href: '/ocr-preview',
-    icon: DocumentMagnifyingGlassIcon,
-    iconSolid: DocumentMagnifyingGlassIconSolid,
+    icon: ArrowDownTrayIcon,
+    iconSolid: ArrowDownTrayIconSolid,
     badge: 'Preview',
-    description: 'Preview OCR extractions',
+    description: 'OCR Preview',
     enabled: isOCRPreviewEnabled,
     disabledReason: 'OCR preview is toggled by the dedicated feature flag.',
   },
   {
-    nameKey: 'navigation.tax_reports',
-    href: '/german-tax-reports',
-    icon: DocumentChartBarIcon,
-    iconSolid: DocumentChartBarIconSolid,
-    badge: 'NEW',
-    description: 'German VAT & compliance reporting',
-    enabled: () => FEATURE_FLAGS.GERMAN_TAX.enabled,
-    disabledReason: 'Tax reports appear once the German tax feature flag is active.',
-  },
-  {
-    nameKey: 'navigation.investor_dashboard',
-    href: '/investor-dashboard',
-    icon: BanknotesIcon,
-    iconSolid: BanknotesIconSolid,
-    badge: null,
-    description: 'Investor/auditor performance surface',
-    enabled: ({ role }) =>
-      [USER_ROLES.ADMIN, USER_ROLES.ACCOUNTANT, USER_ROLES.AUDITOR].includes(role),
-    disabledReason: 'Investor KPIs are gated to operational roles.',
-  },
-  {
-    nameKey: 'navigation.billing',
-    href: '/billing',
-    icon: CreditCardIcon,
-    iconSolid: CreditCardIconSolid,
-    badge: null,
-    description: 'Subscription & Billing',
-    enabled: () => FEATURE_FLAGS.STRIPE_BILLING.enabled,
-    disabledReason: 'Stripe billing flows open when the billing feature flag turns on.',
-  },
-  {
-    nameKey: 'navigation.compliance',
-    href: '/compliance',
+    nameKey: 'navigation.ai_assistant',
+    href: '/ai-assistant',
     icon: ShieldCheckIcon,
     iconSolid: ShieldCheckIconSolid,
-    badge: null,
-    description: 'GDPR & GoBD Compliance',
-    enabled: () => FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled,
-    disabledReason: 'Elster compliance exports require the ELSTER_COMPLIANCE flag.',
-  },
-  {
-    nameKey: 'navigation.profile_settings',
-    href: '/profile-settings',
-    icon: UserCircleIcon,
-    iconSolid: UserCircleIconSolid,
-    badge: null,
-    description: 'Profile & Settings',
+    badge: 'AI', // Will be rendered as a badge
+    description: 'AI Assistant',
     enabled: true,
   },
 ];
@@ -165,12 +105,9 @@ export const MANAGEMENT_NAVIGATION_ITEMS = [
     icon: BuildingOfficeIcon,
     iconSolid: BuildingOfficeIconSolid,
     badge: null,
-    description: 'Company directory',
+    description: 'Companies directory',
     enabled: true,
   },
-];
-
-export const ADMIN_NAVIGATION_ITEMS = [
   {
     nameKey: 'navigation.users',
     href: '/users',
@@ -182,35 +119,66 @@ export const ADMIN_NAVIGATION_ITEMS = [
     disabledReason: 'Only administrators can edit users.',
   },
   {
+    nameKey: 'navigation.role_management',
+    href: '/role-management',
+    icon: DocumentMagnifyingGlassIcon,
+    iconSolid: DocumentMagnifyingGlassIconSolid,
+    badge: null,
+    description: 'Role Management',
+    enabled: ({ role }) => role === roles.ADMIN,
+    disabledReason: 'Role management is restricted to admins.',
+  },
+];
+
+export const COMPLIANCE_NAVIGATION_ITEMS = [
+  {
+    nameKey: 'navigation.tax_reports',
+    href: '/tax-reports',
+    icon: DocumentChartBarIcon,
+    iconSolid: DocumentChartBarIconSolid,
+    badge: 'NEW',
+    description: 'Tax Reports',
+    enabled: () => FEATURE_FLAGS.GERMAN_TAX.enabled,
+    disabledReason: 'Tax reports appear once the German tax feature flag is active.',
+  },
+  {
+    nameKey: 'navigation.gdpr_actions',
+    href: '/gdpr-actions',
+    icon: ArrowDownTrayIcon,
+    iconSolid: ArrowDownTrayIconSolid,
+    badge: null,
+    description: 'GDPR Actions',
+    enabled: true,
+  },
+  {
     nameKey: 'navigation.audit_logs',
     href: '/audit-logs',
     icon: DocumentMagnifyingGlassIcon,
     iconSolid: DocumentMagnifyingGlassIconSolid,
     badge: null,
-    description: 'Audit trail exports',
+    description: 'Audit Logs',
     enabled: ({ role }) => role === roles.ADMIN,
     disabledReason: 'Audit exports are restricted to admins.',
   },
-  {
-    nameKey: 'navigation.rbac',
-    href: '/rbac',
-    icon: ShieldCheckIcon,
-    iconSolid: ShieldCheckIconSolid,
-    badge: null,
-    description: 'Role-based access control',
-    enabled: ({ role }) => role === roles.ADMIN,
-    disabledReason: 'RBAC management is restricted to admins.',
-  },
 ];
 
-export const SYSTEM_NAVIGATION_ITEMS = [
-  {
-    nameKey: 'navigation.exports',
-    href: '/gdpr-actions',
-    icon: ArrowDownTrayIcon,
-    iconSolid: ArrowDownTrayIconSolid,
-    badge: null,
-    description: 'GDPR exports & anonymization',
-    enabled: true,
-  },
-];
+export const BILLING_NAVIGATION_ITEM = {
+  nameKey: 'navigation.billing',
+  href: '/billing',
+  icon: CreditCardIcon,
+  iconSolid: CreditCardIconSolid,
+  badge: null,
+  description: 'Billing',
+  enabled: () => FEATURE_FLAGS.STRIPE_BILLING.enabled,
+  disabledReason: 'Stripe billing flows open when the billing feature flag turns on.',
+};
+
+export const PROFILE_NAVIGATION_ITEM = {
+  nameKey: 'navigation.profile',
+  href: '/profile',
+  icon: UserCircleIcon,
+  iconSolid: UserCircleIconSolid,
+  badge: null,
+  description: 'Profile',
+  enabled: true,
+};

@@ -35,6 +35,10 @@ const InvoiceForm = ({
   submitLabel = 'Save invoice',
   onSubmit = () => {},
 }) => {
+  // Immutability: lock form if status is immutable
+  const immutableStatuses = ['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
+  const isImmutable = immutableStatuses.includes((initialValues.status || '').toUpperCase());
+  const effectiveDisabled = disabled || isImmutable;
   const normalizedInitial = useMemo(
     () => ({
       ...INITIAL_FORM_STATE,
@@ -61,7 +65,9 @@ const InvoiceForm = ({
   const handleItemChange = (idx, field, value) => {
     setFormState((prev) => {
       const items = prev.items.map((item, i) => {
-        if (i !== idx) {return item;}
+        if (i !== idx) {
+          return item;
+        }
         const updated = { ...item, [field]: value };
         // Auto-calc net/vat/gross if relevant fields change
         const qty = parseFloat(updated.quantity) || 0;
@@ -101,8 +107,56 @@ const InvoiceForm = ({
     }));
   };
 
+  const [vatErrors, setVatErrors] = useState([]);
+
+  const validateVAT = () => {
+    const errors = [];
+    let totalNet = 0,
+      totalVat = 0,
+      totalGross = 0;
+    formState.items.forEach((item, idx) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const unit = parseFloat(item.unitPrice) || 0;
+      const vatR = parseFloat(item.vatRate);
+      const net = parseFloat(item.netAmount) || 0;
+      const vat = parseFloat(item.vatAmount) || 0;
+      const gross = parseFloat(item.grossAmount) || 0;
+      totalNet += net;
+      totalVat += vat;
+      totalGross += gross;
+      if (item.vatRate === '' || isNaN(vatR)) {
+        errors.push(`Line ${idx + 1}: VAT rate is required.`);
+      }
+      if (item.vatAmount === '' || isNaN(vat)) {
+        errors.push(`Line ${idx + 1}: VAT amount is required.`);
+      }
+      if (Math.abs(net + vat - gross) > 0.01) {
+        errors.push(`Line ${idx + 1}: Net + VAT must equal Gross.`);
+      }
+      if (vatR === 0) {
+        errors.push(
+          `Line ${idx + 1}: VAT exemption (0%) detected. Please add a note explaining exemption or reverse charge.`,
+        );
+      }
+    });
+    // Totals validation
+    const subtotal = formState.items.reduce((sum, i) => sum + (parseFloat(i.netAmount) || 0), 0);
+    const total = formState.items.reduce((sum, i) => sum + (parseFloat(i.grossAmount) || 0), 0);
+    if (Math.abs(totalNet - subtotal) > 0.01) {
+      errors.push('Subtotal does not match sum of net values.');
+    }
+    if (Math.abs(totalGross - total) > 0.01) {
+      errors.push('Total does not match sum of gross values.');
+    }
+    setVatErrors(errors);
+    return errors.length === 0;
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (!validateVAT()) {
+      return;
+    }
     const items = formState.items.map((item) => ({
       description: item.description,
       quantity: parseFloat(item.quantity) || 0,
@@ -132,8 +186,64 @@ const InvoiceForm = ({
   const inputBaseClasses =
     'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500';
 
+  // Audit trail extraction (simulate fields: createdBy, createdAt, statusHistory)
+  const audit = initialValues.audit || {};
+  const createdBy = audit.createdBy || initialValues.createdBy || 'Unknown';
+  const createdAt = audit.createdAt || initialValues.createdAt || '';
+  const statusHistory = audit.statusHistory || initialValues.statusHistory || [];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {isImmutable && (
+        <div className="bg-yellow-50 border border-yellow-300 text-yellow-900 rounded p-3 mb-2 text-sm font-semibold">
+          <span role="img" aria-label="lock" className="mr-2">
+            🔒
+          </span>
+          This invoice is immutable after being sent. No edits are allowed except status transitions
+          or credit notes. (GoBD §146)
+        </div>
+      )}
+      {/* Audit Trail Section */}
+      <div className="border border-gray-200 bg-gray-50 rounded-lg p-4 mb-4">
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">Audit Trail</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+          <div>
+            <span className="font-medium text-gray-600">Created by:</span> {createdBy}
+          </div>
+          <div>
+            <span className="font-medium text-gray-600">Created at:</span>{' '}
+            {createdAt ? new Date(createdAt).toLocaleString() : 'Unknown'}
+          </div>
+        </div>
+        <div className="mt-2">
+          <span className="font-medium text-gray-600">Status changes:</span>
+          <ul className="list-disc ml-5 mt-1 text-xs">
+            {Array.isArray(statusHistory) && statusHistory.length > 0 ? (
+              statusHistory.map((entry, idx) => (
+                <li key={idx} className="mb-1">
+                  {entry.status} by {entry.user || 'Unknown'} at{' '}
+                  {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown'}
+                </li>
+              ))
+            ) : (
+              <li>No status changes recorded.</li>
+            )}
+          </ul>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          Audit information is read-only and cannot be changed.
+        </div>
+      </div>
+      {vatErrors.length > 0 && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-2 text-sm">
+          <strong>VAT validation errors:</strong>
+          <ul className="list-disc ml-5">
+            {vatErrors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label={<Label required>Invoice Number</Label>} required>
           <input
@@ -141,7 +251,7 @@ const InvoiceForm = ({
             name="invoiceNumber"
             value={formState.invoiceNumber}
             onChange={handleChange}
-            disabled={disabled}
+            disabled={effectiveDisabled}
             required
             placeholder="INV-2024-001"
           />
@@ -152,7 +262,7 @@ const InvoiceForm = ({
             name="clientName"
             value={formState.clientName}
             onChange={handleChange}
-            disabled={disabled}
+            disabled={effectiveDisabled}
             required
             placeholder="Müller GmbH"
           />
@@ -164,7 +274,7 @@ const InvoiceForm = ({
             name="date"
             value={formState.date}
             onChange={handleChange}
-            disabled={disabled}
+            disabled={effectiveDisabled}
             required
           />
         </FormField>
@@ -175,7 +285,7 @@ const InvoiceForm = ({
             name="dueDate"
             value={formState.dueDate}
             onChange={handleChange}
-            disabled={disabled}
+            disabled={effectiveDisabled}
             required
           />
         </FormField>
@@ -185,7 +295,7 @@ const InvoiceForm = ({
             name="currency"
             value={formState.currency}
             onChange={handleChange}
-            disabled={disabled}
+            disabled={effectiveDisabled}
             required
           />
         </FormField>
@@ -215,7 +325,7 @@ const InvoiceForm = ({
                     className={inputBaseClasses}
                     value={item.description}
                     onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                    disabled={disabled}
+                    disabled={effectiveDisabled}
                     required
                   />
                 </td>
@@ -226,7 +336,7 @@ const InvoiceForm = ({
                     className={inputBaseClasses}
                     value={item.quantity}
                     onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                    disabled={disabled}
+                    disabled={effectiveDisabled}
                     required
                   />
                 </td>
@@ -238,7 +348,7 @@ const InvoiceForm = ({
                     className={inputBaseClasses}
                     value={item.unitPrice}
                     onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                    disabled={disabled}
+                    disabled={effectiveDisabled}
                     required
                   />
                 </td>
@@ -250,7 +360,7 @@ const InvoiceForm = ({
                     className={inputBaseClasses}
                     value={item.vatRate}
                     onChange={(e) => handleItemChange(idx, 'vatRate', e.target.value)}
-                    disabled={disabled}
+                    disabled={effectiveDisabled}
                     required
                   />
                 </td>
@@ -285,7 +395,7 @@ const InvoiceForm = ({
                       variant="danger"
                       size="xs"
                       onClick={() => handleRemoveItem(idx)}
-                      disabled={disabled}
+                      disabled={effectiveDisabled}
                     >
                       Remove
                     </Button>
@@ -300,7 +410,7 @@ const InvoiceForm = ({
           variant="secondary"
           size="sm"
           onClick={handleAddItem}
-          disabled={disabled}
+          disabled={effectiveDisabled}
         >
           Add Item
         </Button>
@@ -339,13 +449,43 @@ const InvoiceForm = ({
         </FormField>
       </div>
 
+      {/* VAT Breakdown Section */}
+      {initialValues.vatSummary && (
+        <div className="border border-primary-100 bg-primary-50 rounded-lg p-4 my-4">
+          <h3 className="text-md font-semibold text-primary-700 mb-2">VAT Breakdown</h3>
+          <table className="min-w-full text-sm mb-2">
+            <thead>
+              <tr>
+                <th className="px-2 py-1 text-left">Rate (%)</th>
+                <th className="px-2 py-1 text-left">Net</th>
+                <th className="px-2 py-1 text-left">VAT</th>
+                <th className="px-2 py-1 text-left">Gross</th>
+              </tr>
+            </thead>
+            <tbody>
+              {initialValues.vatSummary.items.map((row, idx) => (
+                <tr key={idx}>
+                  <td className="px-2 py-1">{row.rate}</td>
+                  <td className="px-2 py-1">{row.net.toFixed(2)}</td>
+                  <td className="px-2 py-1">{row.vat.toFixed(2)}</td>
+                  <td className="px-2 py-1">{row.gross.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="text-sm font-medium text-primary-800">
+            Total VAT: {initialValues.vatSummary.totalVat.toFixed(2)} EUR
+          </div>
+        </div>
+      )}
+
       <FormField label={<Label>Notes (optional)</Label>}>
         <textarea
           className={`${inputBaseClasses} min-h-[110px] resize-none`}
           name="notes"
           value={formState.notes}
           onChange={handleChange}
-          disabled={disabled}
+          disabled={effectiveDisabled}
         />
       </FormField>
       <div className="flex justify-end">

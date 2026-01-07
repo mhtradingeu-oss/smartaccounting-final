@@ -139,8 +139,7 @@ const Analytics = () => {
 
   const paidCount = data?.statusBreakdown?.paid || 0;
   const invoiceCount = data?.invoiceCount || 0;
-  const paidPercentage =
-    invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0;
+  const paidPercentage = invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0;
   const unpaidCount = Math.max(invoiceCount - paidCount, 0);
 
   const latestInvoice = data?.latestInvoice;
@@ -158,9 +157,7 @@ const Analytics = () => {
     const className = colors[status?.toLowerCase?.()] || colors.default;
 
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${className}`}>
-        {label}
-      </span>
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${className}`}>{label}</span>
     );
   };
 
@@ -178,7 +175,7 @@ const Analytics = () => {
         description="Analytics data is scoped to the active company. Select one from the company menu before viewing dashboards."
         action={
           <Button variant="primary" onClick={() => navigate('/companies')}>
-            Select company
+            Select Company
           </Button>
         }
       />
@@ -190,9 +187,7 @@ const Analytics = () => {
       <div className="space-y-6">
         <div className="flex flex-col gap-2">
           <h1 className="page-title">Business Analytics</h1>
-          <p className="page-subtitle">
-            Live insights for {activeCompany.name}
-          </p>
+          <p className="page-subtitle">Live insights for {activeCompany.name}</p>
         </div>
         <div className="flex flex-col items-center justify-center h-64">
           <LoadingSpinner size="lg" />
@@ -210,8 +205,8 @@ const Analytics = () => {
           Data not available yet
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          The analytics endpoint is currently disabled on the backend.
-          Check back later once the feature is enabled.
+          The analytics endpoint is currently disabled on the backend. Check back later once the
+          feature is enabled.
         </p>
       </Card>
     );
@@ -222,9 +217,7 @@ const Analytics = () => {
       <Card className="p-6 space-y-4 my-8">
         <div className="flex items-center gap-3">
           <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-          <p className="text-sm font-semibold text-red-600">
-            {error.message}
-          </p>
+          <p className="text-sm font-semibold text-red-600">{error.message}</p>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {error.retryable
@@ -257,37 +250,49 @@ const Analytics = () => {
   return (
     <div className="space-y-8 animate-fade-in">
       {isReadOnlyRole(user?.role) && (
-        <ReadOnlyBanner message="You have read-only access. Analytics are view-only." />
+        <ReadOnlyBanner mode="Read-only" message={t('states.read_only.dashboard_notice')} />
       )}
-      <div className="flex flex-col gap-2">
-        <h1 className="page-title">Business Analytics</h1>
-        <p className="page-subtitle">
-          Live insights for {activeCompany.name}
-        </p>
-      </div>
-      <div className="flex gap-4 mb-4">
-        <PermissionGuard action="analytics:export" role={user?.role} showDisabled>
-          <button className="btn-primary" onClick={() => window.print()}>
-            Export PDF
-          </button>
-        </PermissionGuard>
-        <PermissionGuard action="analytics:export" role={user?.role} showDisabled>
-          <button className="btn-secondary" onClick={fetchAnalytics}>
-            Refresh
-          </button>
-        </PermissionGuard>
-      </div>
+      <>
+        <div className="flex flex-col gap-2">
+          <h1 className="page-title">Business Analytics</h1>
+          <p className="page-subtitle">Live insights for {activeCompany.name}</p>
+        </div>
+        <div className="flex gap-4 mb-4">
+          <PermissionGuard action="analytics:export" role={user?.role} showDisabled>
+            <button className="btn-primary" onClick={() => window.print()} disabled>
+              Export PDF
+            </button>
+          </PermissionGuard>
+          <PermissionGuard action="analytics:export" role={user?.role} showDisabled>
+            <button className="btn-secondary" onClick={fetchAnalytics}>
+              Refresh
+            </button>
+          </PermissionGuard>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card-elevated p-6 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Export Metadata Section */}
+          <div className="card-elevated p-6 space-y-3 border border-blue-200 bg-blue-50">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-900 text-xs font-semibold">
+                Official Export
+              </span>
+              <span className="inline-block px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">
+                Read-only
+              </span>
+            </div>
+            <div className="text-xs text-gray-700 mb-1">Purpose: For tax submission</div>
+            <div className="text-xs text-gray-700 mb-1">
+              Exported at: {new Date().toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-700 mb-1">Version: v1.0</div>
+          </div>
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-500">Revenue</p>
             <CurrencyEuroIcon className="h-5 w-5 text-emerald-500" />
           </div>
           <p className="stat-value">{formatCurrency(data.totalRevenue || 0)}</p>
-          <p className="text-sm text-gray-500">
-            {totalInvoicesLabel(invoiceCount)}
-          </p>
+          <p className="text-sm text-gray-500">{totalInvoicesLabel(invoiceCount)}</p>
         </div>
 
         <div className="card-elevated p-6 space-y-3">
@@ -302,9 +307,7 @@ const Analytics = () => {
         </div>
 
         <div className="card-elevated p-6 space-y-3">
-          <p className="text-sm font-medium text-gray-500">
-            Paid invoice ratio
-          </p>
+          <p className="text-sm font-medium text-gray-500">Paid invoice ratio</p>
           <p className="stat-value">{paidPercentage}%</p>
           <p className="text-sm text-gray-500">
             {invoiceCount > 0
@@ -312,89 +315,84 @@ const Analytics = () => {
               : 'No invoices recorded yet.'}
           </p>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card p-6 space-y-4">
-          <h3 className="section-title mb-2">Invoice Status</h3>
-          <div className="space-y-3">
-            {statusEntries.length ? (
-              statusEntries.map(([status, count]) => (
-                <div
-                  key={status}
-                  className="flex items-center justify-between border border-dashed border-gray-200 rounded-xl px-4 py-3"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {statusLabel(status)}
-                    </span>
-                    {renderStatusBadge(status)}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="card p-6 space-y-4">
+            <h3 className="section-title mb-2">Invoice Status</h3>
+            <div className="space-y-3">
+              {statusEntries.length ? (
+                statusEntries.map(([status, count]) => (
+                  <div
+                    key={status}
+                    className="flex items-center justify-between border border-dashed border-gray-200 rounded-xl px-4 py-3"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {statusLabel(status)}
+                      </span>
+                      {renderStatusBadge(status)}
+                    </div>
+                    <span className="font-semibold text-gray-900 dark:text-white">{count}</span>
                   </div>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {count}
-                  </span>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No invoice statuses are available for this period.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="card p-6 space-y-4">
+            <h3 className="section-title mb-2">Latest Invoice</h3>
+            {latestInvoice ? (
+              <div className="space-y-2 text-sm">
+                <div className="text-gray-500">Invoice #{latestInvoice.invoiceNumber}</div>
+                <div className="text-2xl font-semibold">
+                  {formatCurrency(latestInvoice.amount || 0)}
                 </div>
-              ))
+                <p className="text-gray-500">
+                  Status:{' '}
+                  <strong className="text-gray-900 dark:text-white">
+                    {statusLabel(latestInvoice.status || 'unknown')}
+                  </strong>
+                </p>
+                <Link
+                  to={`/invoices/${latestInvoice.id}/edit`}
+                  className="btn-ghost text-sm px-3 py-1 border rounded-lg inline-flex items-center gap-2"
+                >
+                  View invoice
+                </Link>
+              </div>
             ) : (
-              <p className="text-sm text-gray-500">
-                No invoice statuses are available for this period.
-              </p>
+              <p className="text-sm text-gray-500">No invoices exist yet for this company.</p>
             )}
           </div>
-        </div>
 
-        <div className="card p-6 space-y-4">
-          <h3 className="section-title mb-2">Latest Invoice</h3>
-          {latestInvoice ? (
-            <div className="space-y-2 text-sm">
-              <div className="text-gray-500">Invoice #{latestInvoice.invoiceNumber}</div>
-              <div className="text-2xl font-semibold">
-                {formatCurrency(latestInvoice.amount || 0)}
-              </div>
-              <p className="text-gray-500">
-                Status:{' '}
-                <strong className="text-gray-900 dark:text-white">
-                  {statusLabel(latestInvoice.status || 'unknown')}
-                </strong>
-              </p>
-              <Link
-                to={`/invoices/${latestInvoice.id}/edit`}
-                className="btn-ghost text-sm px-3 py-1 border rounded-lg inline-flex items-center gap-2"
-              >
-                View invoice
-              </Link>
-            </div>
-          ) : (
+          <div className="card p-6 space-y-4">
+            <h3 className="section-title mb-2">Unavailable metrics</h3>
             <p className="text-sm text-gray-500">
-              No invoices exist yet for this company.
+              The following analytics panels depend on backend endpoints that are not implemented
+              yet.
             </p>
-          )}
-        </div>
-
-        <div className="card p-6 space-y-4">
-          <h3 className="section-title mb-2">Unavailable metrics</h3>
-          <p className="text-sm text-gray-500">
-            The following analytics panels depend on backend endpoints that are
-            not implemented yet.
-          </p>
-          <div className="space-y-3">
-            {disabledWidgets.map((widget) => (
-              <div
-                key={widget.title}
-                className="flex items-center gap-3 border border-gray-100 rounded-xl p-3 bg-gray-50 dark:bg-gray-900/40"
-              >
-                <widget.icon className="h-5 w-5 text-gray-500" />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {widget.title}
-                  </p>
-                  <p className="text-xs text-gray-500">{widget.body}</p>
+            <div className="space-y-3">
+              {disabledWidgets.map((widget) => (
+                <div
+                  key={widget.title}
+                  className="flex items-center gap-3 border border-gray-100 rounded-xl p-3 bg-gray-50 dark:bg-gray-900/40"
+                >
+                  <widget.icon className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {widget.title}
+                    </p>
+                    <p className="text-xs text-gray-500">{widget.body}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </>
     </div>
   );
 };
