@@ -1,13 +1,11 @@
+const nodemailer = require("nodemailer");
+const logger = require("../lib/logger");
+const fs = require("fs");
+const path = require("path");
+const { AuditLog } = require("../models");
 
-const nodemailer = require('nodemailer');
-const logger = require('../lib/logger');
-const fs = require('fs');
-const path = require('path');
-const { AuditLog } = require('../models');
-
-
-if (process.env.SAFE_MODE === 'true') {
-  logger.warn('SAFE_MODE enabled: Email service disabled');
+if (process.env.SAFE_MODE === "true") {
+  logger.warn("SAFE_MODE enabled: Email service disabled");
   module.exports = null;
   // No return needed at top-level
 }
@@ -18,21 +16,30 @@ class EmailService {
     this.templates = new Map();
     this.queue = [];
     this.isProcessing = false;
+    // Disable email in test mode
+    if (process.env.NODE_ENV === "test" || process.env.JEST_WORKER_ID) {
+      logger.warn("EmailService: Disabled in test mode (no transporter, no verify)");
+      return;
+    }
     this.initializeTransporter();
     this.loadTemplates();
   }
 
   initializeTransporter() {
-    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER) {
-      logger.warn('⚠️ Email configuration missing - email features disabled');
+    // Skip transporter in test mode
+    if (process.env.NODE_ENV === "test" || process.env.JEST_WORKER_ID) {
+      logger.warn("EmailService: Skipping transporter initialization in test mode");
       return;
     }
-
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER) {
+      logger.warn("⚠️ Email configuration missing - email features disabled");
+      return;
+    }
     try {
       this.transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT) || 587,
-        secure: process.env.EMAIL_PORT === '465',
+        secure: process.env.EMAIL_PORT === "465",
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
@@ -41,23 +48,21 @@ class EmailService {
           rejectUnauthorized: false,
         },
       });
-
       // Verify connection
       this.transporter.verify((error, _success) => {
         if (error) {
-          logger.error('❌ Email configuration failed:', error);
+          logger.error("❌ Email configuration failed:", error);
         } else {
-          logger.info('✅ Email service ready');
+          logger.info("✅ Email service ready");
         }
       });
-
     } catch (error) {
-      logger.error('❌ Failed to initialize email transporter:', error);
+      logger.error("❌ Failed to initialize email transporter:", error);
     }
   }
 
   loadTemplates() {
-    const templateDir = path.join(__dirname, '../templates/email');
+    const templateDir = path.join(__dirname, "../templates/email");
 
     // Create templates directory if it doesn't exist
     if (!fs.existsSync(templateDir)) {
@@ -69,23 +74,23 @@ class EmailService {
     try {
       const templateFiles = fs.readdirSync(templateDir);
 
-      templateFiles.forEach(file => {
-        if (file.endsWith('.html')) {
-          const templateName = path.basename(file, '.html');
-          const templateContent = fs.readFileSync(path.join(templateDir, file), 'utf-8');
+      templateFiles.forEach((file) => {
+        if (file.endsWith(".html")) {
+          const templateName = path.basename(file, ".html");
+          const templateContent = fs.readFileSync(path.join(templateDir, file), "utf-8");
           this.templates.set(templateName, templateContent);
         }
       });
 
       logger.debug(`✅ Loaded ${this.templates.size} email templates`);
     } catch (error) {
-      logger.error('❌ Failed to load email templates:', error);
+      logger.error("❌ Failed to load email templates:", error);
     }
   }
 
   createDefaultTemplates(templateDir) {
     const templates = {
-      'welcome': `
+      welcome: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -120,7 +125,7 @@ class EmailService {
 </body>
 </html>`,
 
-      'password-reset': `
+      "password-reset": `
 <!DOCTYPE html>
 <html>
 <head>
@@ -163,7 +168,7 @@ class EmailService {
 </body>
 </html>`,
 
-      'invoice-created': `
+      "invoice-created": `
 <!DOCTYPE html>
 <html>
 <head>
@@ -204,7 +209,7 @@ class EmailService {
 </body>
 </html>`,
 
-      'tax-report-ready': `
+      "tax-report-ready": `
 <!DOCTYPE html>
 <html>
 <head>
@@ -250,7 +255,7 @@ class EmailService {
       fs.writeFileSync(path.join(templateDir, `${name}.html`), content);
     });
 
-    logger.debug('✅ Created default email templates');
+    logger.debug("✅ Created default email templates");
   }
 
   renderTemplate(templateName, variables) {
@@ -261,7 +266,7 @@ class EmailService {
 
     let rendered = template;
     Object.entries(variables).forEach(([key, value]) => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
+      const regex = new RegExp(`{{${key}}}`, "g");
       rendered = rendered.replace(regex, value);
     });
 
@@ -270,7 +275,7 @@ class EmailService {
 
   async sendEmail(options) {
     if (!this.transporter) {
-      logger.warn('Email service not configured - skipping email');
+      logger.warn("Email service not configured - skipping email");
       return false;
     }
 
@@ -288,7 +293,7 @@ class EmailService {
         to,
         subject,
         html: html || text,
-        text: text || html?.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+        text: text || html?.replace(/<[^>]*>/g, ""), // Strip HTML for text version
       };
 
       const result = await this.transporter.sendMail(mailOptions);
@@ -298,22 +303,21 @@ class EmailService {
         to,
         subject,
         template,
-        status: 'sent',
+        status: "sent",
         messageId: result.messageId,
       });
 
       logger.info(`✅ Email sent to ${to}: ${subject}`);
       return result;
-
     } catch (error) {
-      logger.error('❌ Failed to send email:', error);
+      logger.error("❌ Failed to send email:", error);
 
       // Log email failure
       await this.logEmail({
         to: options.to,
         subject: options.subject,
         template: options.template,
-        status: 'failed',
+        status: "failed",
         error: error.message,
       });
 
@@ -323,7 +327,7 @@ class EmailService {
 
   async logEmail(emailData = {}) {
     try {
-      if (!AuditLog || typeof AuditLog.create !== 'function') {
+      if (!AuditLog || typeof AuditLog.create !== "function") {
         return;
       }
 
@@ -333,8 +337,8 @@ class EmailService {
       }
 
       await AuditLog.create({
-        action: 'email_sent',
-        resourceType: 'email',
+        action: "email_sent",
+        resourceType: "email",
         resourceId: emailData.messageId || emailData.to,
         newValues: {
           to: emailData.to,
@@ -344,10 +348,10 @@ class EmailService {
           error: emailData.error,
         },
         userId: emailData.userId,
-        reason: `Email ${emailData.status || 'sent'}`,
+        reason: `Email ${emailData.status || "sent"}`,
       });
     } catch (error) {
-      logger.error('Failed to log email', { error: error.message });
+      logger.error("Failed to log email", { error: error.message });
     }
   }
 
@@ -355,11 +359,11 @@ class EmailService {
   async sendWelcomeEmail(user, company) {
     return this.sendEmail({
       to: user.email,
-      subject: 'Welcome to SmartAccounting',
-      template: 'welcome',
+      subject: "Welcome to SmartAccounting",
+      template: "welcome",
       variables: {
         name: user.firstName || user.email,
-        company: company?.name || 'Your Company',
+        company: company?.name || "Your Company",
         role: user.role,
         loginUrl: `${process.env.FRONTEND_URL}/login`,
       },
@@ -369,8 +373,8 @@ class EmailService {
   async sendPasswordResetEmail(user, resetToken, ipAddress) {
     return this.sendEmail({
       to: user.email,
-      subject: 'Password Reset Request - SmartAccounting',
-      template: 'password-reset',
+      subject: "Password Reset Request - SmartAccounting",
+      template: "password-reset",
       variables: {
         name: user.firstName || user.email,
         resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
@@ -384,7 +388,7 @@ class EmailService {
     return this.sendEmail({
       to: user.email,
       subject: `Invoice ${invoice.invoiceNumber} Created`,
-      template: 'invoice-created',
+      template: "invoice-created",
       variables: {
         name: user.firstName || user.email,
         invoiceNumber: invoice.invoiceNumber,
@@ -400,7 +404,7 @@ class EmailService {
     return this.sendEmail({
       to: user.email,
       subject: `Tax Report Ready - ${report.period}`,
-      template: 'tax-report-ready',
+      template: "tax-report-ready",
       variables: {
         name: user.firstName || user.email,
         period: report.period,
@@ -415,7 +419,7 @@ class EmailService {
   // Test email configuration
   async testConfiguration() {
     if (!this.transporter) {
-      throw new Error('Email service not configured');
+      throw new Error("Email service not configured");
     }
 
     try {
@@ -424,7 +428,7 @@ class EmailService {
       // Send test email
       const testResult = await this.sendEmail({
         to: process.env.EMAIL_USER,
-        subject: 'SmartAccounting - Email Test',
+        subject: "SmartAccounting - Email Test",
         html: `
           <h2>Email Configuration Test</h2>
           <p>✅ Email service is working correctly!</p>
@@ -434,10 +438,9 @@ class EmailService {
 
       return {
         success: true,
-        message: 'Email configuration is working',
+        message: "Email configuration is working",
         testResult,
       };
-
     } catch (error) {
       throw new Error(`Email test failed: ${error.message}`);
     }
