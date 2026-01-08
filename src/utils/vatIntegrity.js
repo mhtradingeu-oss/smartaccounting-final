@@ -31,6 +31,8 @@ function ensureVatTotalsMatch({ net, vat, gross, vatRate, currency = 'EUR' }) {
   const message = errors.map((err) => `${err.code}: ${err.message}`).join(' ');
   const error = new Error(message);
   error.status = 400;
+  error.statusCode = 400;
+  error.code = 'VAT_INTEGRITY_ERROR';
   error.codes = errors.map((err) => err.code);
   throw error;
 }
@@ -42,6 +44,8 @@ function assertProvidedMatches(provided, expected, label) {
   if (Number(provided) !== Number(expected)) {
     const err = new Error(`${label} mismatch: expected ${expected}, got ${provided}`);
     err.status = 400;
+    err.statusCode = 400;
+    err.code = 'VAT_INTEGRITY_ERROR';
     throw err;
   }
 }

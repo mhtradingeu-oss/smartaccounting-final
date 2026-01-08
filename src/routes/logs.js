@@ -1,5 +1,3 @@
-
-
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
@@ -15,6 +13,9 @@ const logsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+router.use(logsLimiter);
+router.use(authenticate);
+
 // Allowlist fields for logs
 const ALLOWED_FIELDS = [
   'level',
@@ -26,7 +27,8 @@ const ALLOWED_FIELDS = [
   'stackHash',
   'context',
 ];
-const FORBIDDEN_KEYS = /email|name|address|token|password|iban|bic|phone|user|company|session|auth|jwt/i;
+const FORBIDDEN_KEYS =
+  /email|name|address|token|password|iban|bic|phone|user|company|session|auth|jwt/i;
 
 function sanitizeContext(obj) {
   if (!obj || typeof obj !== 'object') {

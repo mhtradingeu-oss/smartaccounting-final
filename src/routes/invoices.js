@@ -1,3 +1,13 @@
+const express = require('express');
+const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
+const invoiceService = require('../services/invoiceService');
+const { withAuditLog } = require('../services/withAuditLog');
+
+const router = express.Router();
+
+router.use(authenticate);
+router.use(requireCompany);
+
 // Get audit log for invoice
 router.get(
   '/:invoiceId/audit-log',
@@ -11,6 +21,7 @@ router.get(
     }
   },
 );
+
 // Create credit note for invoice (legal correction)
 router.post(
   '/:invoiceId/credit-note',
@@ -49,6 +60,7 @@ router.post(
     }
   },
 );
+
 // Register payment for invoice (partial/full)
 router.post(
   '/:invoiceId/payments',
@@ -57,38 +69,40 @@ router.post(
     try {
       const paymentData = req.body;
       const oldInvoice = await invoiceService.getInvoiceById(req.params.invoiceId, req.companyId);
-      const result = await withAuditLog(
-        {
-          action: 'invoice_payment_register',
-          resourceType: 'Invoice',
-          resourceId: req.params.invoiceId,
-          userId: req.userId,
-          oldValues: oldInvoice,
-          newValues: paymentData,
-          ipAddress: req.ip,
-          userAgent: req.headers['user-agent'],
-          reason: paymentData.reason || 'Register payment',
-        },
-        async () =>
-          invoiceService.registerInvoicePayment(
-            req.params.invoiceId,
-            paymentData,
-            req.userId,
-            req.companyId,
-          ),
-      );
+      let result;
+      try {
+        result = await withAuditLog(
+          {
+            action: 'invoice_payment_register',
+            resourceType: 'Invoice',
+            resourceId: req.params.invoiceId,
+            userId: req.userId,
+            oldValues: oldInvoice,
+            newValues: paymentData,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            reason: paymentData.reason || 'Register payment',
+          },
+          async () =>
+            invoiceService.registerInvoicePayment(
+              req.params.invoiceId,
+              paymentData,
+              req.userId,
+              req.companyId,
+            ),
+        );
+      } catch (err) {
+        if (err && (err.status === 400 || err.status === 409)) {
+          return res.status(err.status).json({ success: false, message: err.message });
+        }
+        throw err;
+      }
       res.status(201).json({ success: true, payment: result.payment, invoice: result.invoice });
     } catch (error) {
       next(error);
     }
   },
 );
-const express = require('express');
-const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
-const invoiceService = require('../services/invoiceService');
-const { withAuditLog } = require('../services/withAuditLog');
-
-const router = express.Router();
 
 router.use(authenticate);
 router.use(requireCompany);
@@ -177,19 +191,27 @@ router.patch('/:invoiceId/status', requireRole(['admin', 'accountant']), async (
   try {
     const { status } = req.body;
     const oldInvoice = await invoiceService.getInvoiceById(req.params.invoiceId, req.companyId);
-    const invoice = await withAuditLog(
-      {
-        action: 'invoice_status_change',
-        resourceType: 'Invoice',
-        resourceId: req.params.invoiceId,
-        userId: req.userId,
-        oldValues: oldInvoice,
-        newValues: { status },
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
-      },
-      async () => invoiceService.updateInvoiceStatus(req.params.invoiceId, status, req.companyId),
-    );
+    let invoice;
+    try {
+      invoice = await withAuditLog(
+        {
+          action: 'invoice_status_change',
+          resourceType: 'Invoice',
+          resourceId: req.params.invoiceId,
+          userId: req.userId,
+          oldValues: oldInvoice,
+          newValues: { status },
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        },
+        async () => invoiceService.updateInvoiceStatus(req.params.invoiceId, status, req.companyId),
+      );
+    } catch (err) {
+      if (err && (err.status === 400 || err.status === 409)) {
+        return res.status(err.status).json({ success: false, message: err.message });
+      }
+      throw err;
+    }
     if (!invoice) {
       return res
         .status(404)

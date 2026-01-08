@@ -186,3 +186,15 @@ sha
 !docs/**
 database/dev.sqlite
 database/dev.sqlite
+# local debug artifacts
+invoice-test-debug.json
+.reports/
+coverage/
+*.log
+
+# local sqlite files
+.data/*.sqlite
+.data/*.sqlite-*
+
+# local scratch tests (if not intended to ship)
+tests/user.create.smoke.js

@@ -19,9 +19,10 @@ const buildMissingCountsError = (counts) => {
 
 module.exports = {
   async up(queryInterface) {
+    const dialect = queryInterface.sequelize.getDialect();
     const transaction = await queryInterface.sequelize.transaction();
-
     try {
+      // Data updates and validation (run for all dialects)
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -30,7 +31,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -39,7 +39,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -48,7 +47,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -57,7 +55,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -68,7 +65,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -79,7 +75,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       await queryInterface.sequelize.query(
         `
         UPDATE "expenses"
@@ -93,7 +88,6 @@ module.exports = {
       `,
         { transaction },
       );
-
       const [missingCounts] = await queryInterface.sequelize.query(
         `
         SELECT
@@ -106,33 +100,35 @@ module.exports = {
       `,
         { transaction, type: QueryTypes.SELECT },
       );
-
       const errorMessage = buildMissingCountsError(missingCounts);
       if (errorMessage) {
         throw new Error(errorMessage);
       }
-
-      await queryInterface.sequelize.query(
-        `ALTER TABLE "expenses" DROP CONSTRAINT IF EXISTS "${LEGACY_CONSTRAINT}";`,
-        { transaction },
-      );
-
-      await queryInterface.sequelize.query(
-        `
-        ALTER TABLE "expenses"
-        ADD CONSTRAINT "${NEW_CONSTRAINT}"
-        CHECK (
-          "netAmount" >= 0
-          AND "vatAmount" >= 0
-          AND "grossAmount" >= 0
-          AND "vatRate" >= 0
-          AND "grossAmount" = "netAmount" + "vatAmount"
-          AND "vatAmount" = "netAmount" * "vatRate"
+      // Constraint logic: only for Postgres
+      if (dialect === 'postgres') {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE "expenses" DROP CONSTRAINT IF EXISTS "${LEGACY_CONSTRAINT}";`,
+          { transaction },
         );
-      `,
-        { transaction },
-      );
-
+        await queryInterface.sequelize.query(
+          `
+          ALTER TABLE "expenses"
+          ADD CONSTRAINT "${NEW_CONSTRAINT}"
+          CHECK (
+            "netAmount" >= 0
+            AND "vatAmount" >= 0
+            AND "grossAmount" >= 0
+            AND "vatRate" >= 0
+            AND "grossAmount" = "netAmount" + "vatAmount"
+            AND "vatAmount" = "netAmount" * "vatRate"
+          );
+        `,
+          { transaction },
+        );
+      } else if (dialect === 'sqlite') {
+        // SQLite does not support adding/dropping constraints after table creation.
+        // Data is validated, but constraint is not enforced at DB level.
+      }
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
@@ -141,35 +137,40 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    const dialect = queryInterface.sequelize.getDialect();
     await queryInterface.sequelize.transaction(async (transaction) => {
-      await queryInterface.sequelize.query(
-        `ALTER TABLE "expenses" DROP CONSTRAINT IF EXISTS "${NEW_CONSTRAINT}";`,
-        { transaction },
-      );
-
-      await queryInterface.sequelize.query(
-        `
-        ALTER TABLE "expenses"
-        ADD CONSTRAINT "${LEGACY_CONSTRAINT}"
-        CHECK (
-          ("netAmount" IS NULL AND "vatAmount" IS NULL AND "grossAmount" IS NULL AND "vatRate" IS NULL)
-          OR
-          (
-            "netAmount" IS NOT NULL
-            AND "vatAmount" IS NOT NULL
-            AND "grossAmount" IS NOT NULL
-            AND "vatRate" IS NOT NULL
-            AND "netAmount" >= 0
-            AND "vatAmount" >= 0
-            AND "grossAmount" >= 0
-            AND "vatRate" >= 0
-            AND "grossAmount" = "netAmount" + "vatAmount"
-            AND "vatAmount" = "netAmount" * "vatRate"
-          )
+      if (dialect === 'postgres') {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE "expenses" DROP CONSTRAINT IF EXISTS "${NEW_CONSTRAINT}";`,
+          { transaction },
         );
-      `,
-        { transaction },
-      );
+        await queryInterface.sequelize.query(
+          `
+          ALTER TABLE "expenses"
+          ADD CONSTRAINT "${LEGACY_CONSTRAINT}"
+          CHECK (
+            ("netAmount" IS NULL AND "vatAmount" IS NULL AND "grossAmount" IS NULL AND "vatRate" IS NULL)
+            OR
+            (
+              "netAmount" IS NOT NULL
+              AND "vatAmount" IS NOT NULL
+              AND "grossAmount" IS NOT NULL
+              AND "vatRate" IS NOT NULL
+              AND "netAmount" >= 0
+              AND "vatAmount" >= 0
+              AND "grossAmount" >= 0
+              AND "vatRate" >= 0
+              AND "grossAmount" = "netAmount" + "vatAmount"
+              AND "vatAmount" = "netAmount" * "vatRate"
+            )
+          );
+        `,
+          { transaction },
+        );
+      } else if (dialect === 'sqlite') {
+        // SQLite does not support adding/dropping constraints after table creation.
+        // No-op for SQLite.
+      }
     });
   },
 };

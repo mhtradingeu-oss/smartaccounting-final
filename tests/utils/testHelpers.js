@@ -1,3 +1,55 @@
+/**
+ * Create a test expense with all required fields.
+ * @param {Object} overrides - Fields to override in the expense.
+ * @returns {Promise<Expense>}
+ */
+async function createTestExpense(overrides = {}) {
+  await assertSequelizeReady();
+  const { Expense, User, Company } = require('../../src/models');
+  let user = null,
+    company = null;
+  // Prefer explicit user/company objects if provided
+  if (overrides.user) {
+    user = overrides.user;
+  } else if (overrides.createdByUserId) {
+    user = await User.findByPk(overrides.createdByUserId);
+  }
+  if (!user) {
+    user = await createTestUser();
+  }
+  if (overrides.company) {
+    company = overrides.company;
+  } else if (overrides.companyId) {
+    company = await Company.findByPk(overrides.companyId);
+  }
+  if (!company) {
+    company = (await Company.findByPk(user.companyId)) || (await createTestCompany());
+  }
+  const now = new Date();
+  const grossAmount = overrides.grossAmount !== undefined ? overrides.grossAmount : 119;
+  const netAmount = overrides.netAmount !== undefined ? overrides.netAmount : 100;
+  const expenseDate = overrides.expenseDate || now;
+  const { user: _u, company: _c, ...restOverrides } = overrides;
+  const defaultExpense = {
+    vendorName: 'Test Vendor',
+    description: 'Test expense',
+    category: 'Travel',
+    netAmount,
+    vatAmount: 19,
+    grossAmount,
+    vatRate: 0.19,
+    expenseDate,
+    date: expenseDate,
+    companyId: company.id,
+    createdByUserId: user.id,
+    userId: user.id,
+    amount: grossAmount,
+    currency: 'EUR',
+    status: 'draft',
+    source: 'manual',
+  };
+  return Expense.create({ ...defaultExpense, ...restOverrides });
+}
 const { User, Invoice, Company, sequelize } = require('../../src/models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -24,8 +76,6 @@ async function createAdminAndLogin() {
 
 async function createTestUser(overrides = {}) {
   await assertSequelizeReady();
-  const companyId = overrides.companyId;
-
   const defaultUser = {
     email: `test-${Date.now()}@example.com`,
     password: await bcrypt.hash('testpass123', 10),
@@ -36,34 +86,54 @@ async function createTestUser(overrides = {}) {
   };
 
   let user;
+  let company;
 
-  if (!companyId) {
-    // Create user first
-    user = await User.create({ ...defaultUser, ...overrides });
-
-    // Then create company and associate user as owner
-    const company = await Company.create({
-      name: `Test Company ${Date.now()}`,
-      taxId: `DE${Math.random().toString().slice(2, 11)}`,
-      address: 'Test Address 123',
-      city: 'Berlin',
-      postalCode: '10115',
-      country: 'Germany',
-      userId: user.id,
-    });
-
-    // Update user with companyId
-    await user.update({ companyId: company.id });
-    // Ensure company references user as owner/admin if not already
-    await company.update({ userId: user.id });
-    return user;
+  // If static email provided, check for existing user
+  if (overrides.email) {
+    user = await User.findOne({ where: { email: overrides.email } });
+    if (user) {
+      // Ensure user has a company
+      if (!user.companyId) {
+        company = await Company.create({
+          name: `Test Company ${Date.now()}`,
+          taxId: `DE${Math.random().toString().slice(2, 11)}`,
+          address: 'Test Address 123',
+          city: 'Berlin',
+          postalCode: '10115',
+          country: 'Germany',
+          userId: user.id,
+        });
+        await user.update({ companyId: company.id });
+        await company.update({ userId: user.id });
+      } else {
+        company = await Company.findByPk(user.companyId);
+      }
+      // Optionally update password if provided
+      if (overrides.password) {
+        const hashed = await bcrypt.hash(overrides.password, 10);
+        await user.update({ password: hashed });
+      }
+      return user;
+    }
   }
 
-  // If companyId provided, ensure company exists
-  let company = await Company.findByPk(companyId);
-  if (!company) {
+  // Always create/find company first
+  if (overrides.companyId) {
+    company = await Company.findByPk(overrides.companyId);
+    if (!company) {
+      company = await Company.create({
+        id: overrides.companyId,
+        name: `Test Company ${Date.now()}`,
+        taxId: `DE${Math.random().toString().slice(2, 11)}`,
+        address: 'Test Address 123',
+        city: 'Berlin',
+        postalCode: '10115',
+        country: 'Germany',
+        userId: null,
+      });
+    }
+  } else {
     company = await Company.create({
-      id: companyId,
       name: `Test Company ${Date.now()}`,
       taxId: `DE${Math.random().toString().slice(2, 11)}`,
       address: 'Test Address 123',
@@ -73,11 +143,15 @@ async function createTestUser(overrides = {}) {
       userId: null,
     });
   }
+
+  // Now create user, always setting companyId
   user = await User.create({ ...defaultUser, ...overrides, companyId: company.id });
+
   // Optionally associate user as owner/admin if company has no userId
   if (!company.userId) {
     await company.update({ userId: user.id });
   }
+
   return user;
 }
 
@@ -237,30 +311,39 @@ function mockStripeCustomer() {
   return {
     id: 'cus_test123',
     email: 'test@example.com',
-    created: Math.floor(Date.now() / 1000),
-    subscriptions: {
-      data: [],
-    },
+    data: [
+      {
+        price: {
+          id: 'price_test123',
+          recurring: { interval: 'month' },
+        },
+      },
+    ],
   };
 }
 
-function mockStripeSubscription() {
+// =========================
+// Unified SystemContext Helper
+// =========================
+/**
+ * Create a fully valid SystemContext for audit logging in tests.
+ * @param {Object} opts
+ * @param {Object} opts.user - User object
+ * @param {Object} opts.company - Company object
+ * @param {string} [opts.status='SUCCESS'] - Status for the context (SUCCESS or DENIED)
+ * @returns {Object} Valid SystemContext
+ */
+function createValidSystemContext({ user, company, status = 'SUCCESS' }) {
   return {
-    id: 'sub_test123',
-    customer: 'cus_test123',
-    status: 'active',
-    current_period_start: Math.floor(Date.now() / 1000),
-    current_period_end: Math.floor((Date.now() + 30 * 24 * 60 * 60 * 1000) / 1000),
-    items: {
-      data: [
-        {
-          price: {
-            id: 'price_test123',
-            recurring: { interval: 'month' },
-          },
-        },
-      ],
-    },
+    actorType: 'USER',
+    actorId: user.id,
+    companyId: company.id,
+    reason: 'Test execution',
+    ipAddress: '127.0.0.1',
+    userAgent: 'jest',
+    status,
+    scopeType: 'ACCOUNTING',
+    eventClass: 'EXPENSE',
   };
 }
 
@@ -273,6 +356,7 @@ module.exports = {
   createAuthToken,
   cleanDatabase,
   mockStripeCustomer,
-  mockStripeSubscription,
   assertSequelizeReady,
+  createTestExpense,
+  createValidSystemContext,
 };

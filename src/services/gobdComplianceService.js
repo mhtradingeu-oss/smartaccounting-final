@@ -1,4 +1,3 @@
-
 const { Op } = require('sequelize');
 const { AuditLog } = require('../models');
 const crypto = require('crypto');
@@ -8,29 +7,33 @@ class GoBDComplianceService {
     this.immutableLogs = [];
   }
 
-  // GoBD-compliant immutable transaction logging
-  async createImmutableRecord(action, data, userId, documentType = 'transaction') {
-    const timestamp = new Date().toISOString();
-    const hash = this.generateHash(action, data, timestamp);
-    
-    const auditEntry = {
-      id: crypto.randomUUID(),
-      timestamp,
+  // GoBD-compliant immutable transaction logging (SystemContext enforced)
+  async createImmutableRecord(action, data, userId, documentType = 'transaction', context) {
+    // Require SystemContext param
+    if (!context) {
+      throw new Error('SystemContext is required');
+    }
+    require('../services/systemContext').assertSystemContext(context);
+    // Validate required accounting context
+    if (context.eventClass !== 'ACCOUNTING' || context.scopeType !== 'COMPANY') {
+      throw new Error(
+        'Immutable accounting records require eventClass=ACCOUNTING and scopeType=COMPANY',
+      );
+    }
+    if (!context.companyId) {
+      throw new Error('Immutable accounting records require companyId');
+    }
+    // Use auditLogService.appendEntry
+    return await require('./auditLogService').appendEntry({
       action,
-      documentType,
+      resourceType: documentType,
+      resourceId: data && data.id !== undefined && data.id !== null ? String(data.id) : '',
       userId,
-      data: JSON.stringify(data),
-      hash,
-      version: '1.0',
-      retention_period: this.calculateRetentionPeriod(documentType),
-      immutable: true,
-      reason: action,
-    };
-
-    // Store in database with immutable flag
-    await AuditLog.create(auditEntry);
-    
-    return auditEntry;
+      oldValues: null,
+      newValues: data,
+      reason: context.reason || action,
+      context,
+    });
   }
 
   generateHash(action, data, timestamp) {
@@ -40,12 +43,12 @@ class GoBDComplianceService {
 
   calculateRetentionPeriod(documentType) {
     const retentionRules = {
-      'transaction': 10, // 10 years for financial records
-      'invoice': 10,
-      'tax_report': 10,
-      'bank_statement': 10,
-      'receipt': 6, // 6 years for receipts under €150
-      'contract': 10,
+      transaction: 10, // 10 years for financial records
+      invoice: 10,
+      tax_report: 10,
+      bank_statement: 10,
+      receipt: 6, // 6 years for receipts under €150
+      contract: 10,
     };
     return retentionRules[documentType] || 10;
   }
@@ -74,8 +77,10 @@ class GoBDComplianceService {
              company="MH Trading EU"
              period_start="${records[0]?.timestamp}"
              period_end="${records[records.length - 1]?.timestamp}">`;
-    
-    const transactions = records.map(record => `
+
+    const transactions = records
+      .map(
+        (record) => `
   <Transaction>
     <ID>${record.id}</ID>
     <Timestamp>${record.timestamp}</Timestamp>
@@ -83,7 +88,9 @@ class GoBDComplianceService {
     <DocumentType>${record.documentType}</DocumentType>
     <Hash>${record.hash}</Hash>
     <Data>${record.data}</Data>
-  </Transaction>`).join('');
+  </Transaction>`,
+      )
+      .join('');
 
     return `${header}\n<Transactions>${transactions}\n</Transactions>\n</GoBD_Export>`;
   }
@@ -98,7 +105,7 @@ class GoBDComplianceService {
       phoneNumber: null,
       address: 'ANONYMIZED',
     };
-    
+
     await this.createImmutableRecord('gdpr_anonymization', { userId, anonymizedData }, 'system');
     return anonymizedData;
   }
@@ -108,7 +115,11 @@ class GoBDComplianceService {
     const invalidRecords = [];
 
     for (const record of records) {
-      const expectedHash = this.generateHash(record.action, JSON.parse(record.data), record.timestamp);
+      const expectedHash = this.generateHash(
+        record.action,
+        JSON.parse(record.data),
+        record.timestamp,
+      );
       if (expectedHash !== record.hash) {
         invalidRecords.push(record.id);
       }

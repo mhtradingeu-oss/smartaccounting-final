@@ -1,5 +1,7 @@
 const { AuditLog, sequelize, User } = require('../models');
 const crypto = require('crypto');
+const { assertSystemContext } = require('./systemContext');
+const stableStringify = require('json-stable-stringify');
 
 /**
  * GoBD-compliant Audit Logging Service
@@ -24,7 +26,17 @@ class AuditLogService {
     userAgent,
     reason,
     transaction: providedTransaction,
+    context,
   } = {}) {
+    // If context is provided, validate it and merge into metadata
+    let metadata = {};
+    if (context) {
+      assertSystemContext(context);
+      metadata = { ...context };
+    } else {
+      // TODO: Migrate all callers to provide SystemContext for full GoBD compliance
+      // Optionally log a warning here
+    }
     if (!userId) {
       const err = new Error('Audit log entry must include actor userId');
       err.status = 400;
@@ -54,17 +66,23 @@ class AuditLogService {
       }
       const lastLog = await AuditLog.findOne(findOptions);
       const previousHash = lastLog ? lastLog.hash : null;
-      const userRecord = await User.findByPk(userId, {
-        attributes: ['companyId'],
-        transaction,
-      });
-      const companyId = userRecord?.companyId;
-      if (!companyId) {
-        throw new Error(
-          'Audit log entry must include valid company context derived from the associated user',
-        );
+      // companyId logic: prefer context, fallback to user lookup for backward compatibility
+      let companyId = context?.companyId;
+      if (companyId === null || companyId === undefined) {
+        if (userId) {
+          const userRecord = await User.findByPk(userId, {
+            attributes: ['companyId'],
+            transaction,
+          });
+          companyId = userRecord?.companyId;
+        }
       }
-      const hashInput = JSON.stringify({
+      // ACCOUNTING events must have companyId
+      if (context?.eventClass === 'ACCOUNTING' && (companyId === null || companyId === undefined)) {
+        throw new Error('ACCOUNTING events must have companyId (SystemContext enforced)');
+      }
+      // Exclude createdAt/updatedAt from hash input, use stable serialization
+      const hashInput = stableStringify({
         action,
         resourceType,
         resourceId,
@@ -77,9 +95,9 @@ class AuditLogService {
         previousHash,
         reason,
         companyId,
+        metadata,
       });
-      const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
-      await AuditLog.create(
+      const createdLog = await AuditLog.create(
         {
           action,
           resourceType,
@@ -87,10 +105,11 @@ class AuditLogService {
           userId,
           oldValues,
           newValues,
+          metadata,
           ipAddress,
           userAgent,
           timestamp,
-          hash,
+          hash: crypto.createHash('sha256').update(hashInput).digest('hex'),
           previousHash,
           reason,
           immutable: true,
@@ -101,6 +120,7 @@ class AuditLogService {
       if (ownsTransaction) {
         await transaction.commit();
       }
+      return createdLog;
     } catch (err) {
       if (ownsTransaction) {
         await transaction.rollback();
@@ -198,7 +218,8 @@ class AuditLogService {
     for (const log of logs) {
       const timestampIso =
         log.timestamp && log.timestamp.toISOString ? log.timestamp.toISOString() : log.timestamp;
-      const hashInput = JSON.stringify({
+      // Exclude createdAt/updatedAt from hash input, use stable serialization
+      const hashInput = stableStringify({
         action: log.action,
         resourceType: log.resourceType,
         resourceId: log.resourceId,
@@ -210,6 +231,8 @@ class AuditLogService {
         timestamp: timestampIso,
         previousHash: log.previousHash,
         reason: log.reason,
+        companyId: log.companyId,
+        metadata: log.metadata,
       });
       const expectedHash = crypto.createHash('sha256').update(hashInput).digest('hex');
       if (log.hash !== expectedHash || log.previousHash !== prevHash) {

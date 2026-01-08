@@ -3,11 +3,14 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     // Create invoice_payments table
+    // Cross-dialect UUID support
+    const dialect = queryInterface.sequelize.getDialect();
     await queryInterface.createTable('invoice_payments', {
       id: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('gen_random_uuid()'),
+        type: dialect === 'postgres' ? Sequelize.UUID : Sequelize.STRING,
+        allowNull: false,
         primaryKey: true,
+        defaultValue: dialect === 'postgres' ? Sequelize.literal('gen_random_uuid()') : undefined,
       },
       invoiceId: {
         type: Sequelize.INTEGER,
@@ -48,7 +51,7 @@ module.exports = {
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+        defaultValue: dialect === 'postgres' ? Sequelize.literal('CURRENT_TIMESTAMP') : new Date(),
       },
     });
     // Add paidAmount and remainingAmount to invoices
@@ -65,8 +68,8 @@ module.exports = {
   },
 
   down: async (queryInterface) => {
-    await queryInterface.dropTable('invoice_payments');
     await queryInterface.removeColumn('invoices', 'paidAmount');
     await queryInterface.removeColumn('invoices', 'remainingAmount');
+    await queryInterface.dropTable('invoice_payments');
   },
 };

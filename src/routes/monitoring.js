@@ -1,6 +1,7 @@
 const express = require('express');
-const router = express.Router();
 const logger = require('../lib/logger');
+
+const router = express.Router();
 
 router.get('/logs', async (req, res) => {
   try {
@@ -9,7 +10,7 @@ router.get('/logs', async (req, res) => {
     const logs = {
       level,
       limit: parseInt(limit, 10),
-      entries: [], 
+      entries: [],
       message: 'Log querying not implemented - use external log aggregation service',
     };
 

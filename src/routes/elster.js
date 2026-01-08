@@ -1,15 +1,18 @@
 const express = require('express');
-const router = express.Router();
 const elsterService = require('../services/elsterService');
 const { authenticate } = require('../middleware/authMiddleware');
 const { body, validationResult } = require('express-validator');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 const { elsterLimiter } = require('../middleware/rateLimiter');
 
+const router = express.Router();
+
 router.use(elsterLimiter);
 router.use(disabledFeatureHandler('Elster exports'));
+router.use(authenticate);
 
-router.post('/submit', 
+router.post(
+  '/submit',
   authenticate,
   [
     body('reportType').isIn(['UStVA', 'EÜR']).withMessage('Invalid report type'),
@@ -35,7 +38,6 @@ router.post('/submit',
       if (month) {
         taxReportData = await elsterService.processMonthlyData(companyId, year, month);
       } else if (quarter) {
-        
         taxReportData = await elsterService.processQuarterlyData(companyId, year, quarter);
       } else {
         return res.status(400).json({
@@ -46,7 +48,7 @@ router.post('/submit',
 
       const { Company } = require('../models');
       const company = await Company.findByPk(companyId);
-      
+
       if (!company) {
         return res.status(404).json({
           success: false,
@@ -73,7 +75,6 @@ router.post('/submit',
           vatSummary: taxReportData.data,
         },
       });
-
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -87,9 +88,9 @@ router.post('/submit',
 router.get('/status/:transferTicket', authenticate, async (req, res) => {
   try {
     const { transferTicket } = req.params;
-    
+
     const status = await elsterService.getSubmissionStatus(transferTicket);
-    
+
     res.json({
       success: true,
       status,
@@ -106,12 +107,12 @@ router.get('/status/:transferTicket', authenticate, async (req, res) => {
 router.get('/history', authenticate, async (req, res) => {
   try {
     const companyId = req.user.companyId;
-    
+
     const history = elsterService.getSubmissionHistory(companyId);
-    
+
     res.json({
       success: true,
-      history: history.map(entry => ({
+      history: history.map((entry) => ({
         timestamp: entry.timestamp,
         transferTicket: entry.transferTicket,
         status: entry.status,
@@ -139,7 +140,7 @@ router.post('/generate-xml', authenticate, async (req, res) => {
     const elsterXML = await elsterService.generateElsterXML(taxReportData);
 
     const isValid = await elsterService.validateElsterXML(elsterXML);
-    
+
     res.json({
       success: true,
       xml: elsterXML,
@@ -160,7 +161,7 @@ router.get('/status/:ticket', authenticate, async (req, res) => {
     const { ticket } = req.params;
 
     const status = await elsterService.checkSubmissionStatus(ticket);
-    
+
     res.json({
       success: true,
       ticket,
@@ -183,7 +184,7 @@ router.get('/history', authenticate, async (req, res) => {
     const companyId = req.user.companyId;
 
     const history = await elsterService.getSubmissionHistory(companyId);
-    
+
     res.json({
       success: true,
       history,

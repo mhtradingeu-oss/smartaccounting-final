@@ -1799,4 +1799,8 @@ module.exports = {
   },
 };
 
-module.exports.buildInvoiceItems = buildInvoiceItems;
+module.exports = {
+  BANK_STATEMENT_TEMPLATE,
+  buildInvoiceItems,
+  // ... add other exports as needed
+};

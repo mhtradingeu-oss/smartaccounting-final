@@ -57,12 +57,7 @@ router.get('/health-detailed', authenticate, requireRole(['admin']), async (req,
 
 router.get('/stats', authenticate, requireRole(['admin']), async (req, res) => {
   try {
-    const [
-      totalUsers,
-      totalCompanies,
-      totalInvoices,
-      totalTaxReports,
-    ] = await Promise.all([
+    const [totalUsers, totalCompanies, totalInvoices, totalTaxReports] = await Promise.all([
       User.count(),
       Company.count(),
       Invoice.count(),

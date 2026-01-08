@@ -1,11 +1,12 @@
-
 const { Expense, FileAttachment, sequelize } = require('../models');
-const { enforceCurrencyIsEur, ensureVatTotalsMatch, assertProvidedMatches } = require('../utils/vatIntegrity');
+const {
+  enforceCurrencyIsEur,
+  ensureVatTotalsMatch,
+  assertProvidedMatches,
+} = require('../utils/vatIntegrity');
 const { buildCompanyFilter } = require('../utils/companyFilter');
 
-const expenseIncludes = [
-  { model: FileAttachment, as: 'attachments' },
-];
+const expenseIncludes = [{ model: FileAttachment, as: 'attachments' }];
 
 const listExpenses = async (companyId) => {
   const where = buildCompanyFilter(companyId);
@@ -24,9 +25,11 @@ const getExpenseById = async (expenseId, companyId) => {
   });
 };
 
-const createExpense = async (data, userId, companyId) => {
+const { withAuditLog } = require('./withAuditLog');
+
+async function createExpense(data, userId, companyId, context = {}) {
   const currency = enforceCurrencyIsEur(data.currency);
-  // Validate required fields
+  // Validate required fields (pre-service, no audit log on fail)
   if (!data.vendorName || !data.category || (!data.netAmount && !data.grossAmount)) {
     const err = new Error('vendorName, category, and netAmount or grossAmount are required');
     err.status = 400;
@@ -44,20 +47,21 @@ const createExpense = async (data, userId, companyId) => {
     vat = +(gross - net).toFixed(2);
   }
 
-  assertProvidedMatches(data.vatAmount, vat, 'vatAmount');
-  assertProvidedMatches(data.grossAmount, gross, 'grossAmount');
-  assertProvidedMatches(data.amount, gross, 'amount');
-
-  ensureVatTotalsMatch({
-    net,
-    vat,
-    gross,
-    vatRate,
-    currency,
-  });
+  try {
+    assertProvidedMatches(data.vatAmount, vat, 'vatAmount');
+    assertProvidedMatches(data.grossAmount, gross, 'grossAmount');
+    assertProvidedMatches(data.amount, gross, 'amount');
+    ensureVatTotalsMatch({ net, vat, gross, vatRate, currency });
+  } catch (validationErr) {
+    // Always throw as status 400 with clear message
+    validationErr.status = 400;
+    validationErr.statusCode = 400;
+    validationErr.code = validationErr.code || 'VAT_INTEGRITY_ERROR';
+    validationErr.message = validationErr.message || 'VAT/Gross validation error';
+    throw validationErr;
+  }
 
   const expenseDate = data.expenseDate || data.date || new Date();
-
   const expensePayload = {
     vendorName: data.vendorName,
     description: data.description,
@@ -78,32 +82,58 @@ const createExpense = async (data, userId, companyId) => {
     source: data.source || 'manual',
   };
 
-  const createdExpense = await sequelize.transaction(async (t) => {
-    const expense = await Expense.create(expensePayload, { transaction: t });
+  let createdExpense;
+  await sequelize.transaction(async (t) => {
+    createdExpense = await Expense.create(expensePayload, { transaction: t });
     // Attach files if provided
     if (Array.isArray(data.attachments) && data.attachments.length > 0) {
       for (const fileId of data.attachments) {
         await FileAttachment.update(
-          { expenseId: expense.id },
+          { expenseId: createdExpense.id },
           { where: { id: fileId, companyId }, transaction: t },
+        );
+        await withAuditLog(
+          {
+            action: 'EXPENSE_ATTACHMENT_ADD',
+            resourceType: 'FileAttachment',
+            resourceId: fileId,
+            companyId,
+            userId,
+            oldValues: null,
+            newValues: { expenseId: createdExpense.id },
+            ipAddress: context.ipAddress,
+            userAgent: context.userAgent,
+            reason: 'Attachment added to expense',
+            status: 'SUCCESS',
+          },
+          async () => Promise.resolve(),
         );
       }
     }
-    return expense;
   });
 
+  await withAuditLog(
+    {
+      action: 'EXPENSE_CREATE',
+      resourceType: 'Expense',
+      resourceId: createdExpense.id,
+      companyId,
+      userId,
+      oldValues: null,
+      newValues: expensePayload,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      reason: 'Expense created',
+      status: 'SUCCESS',
+    },
+    async () => Promise.resolve(),
+  );
+
   const finalizedExpense = await getExpenseById(createdExpense.id, companyId);
-  if (finalizedExpense) {
-    return finalizedExpense;
-  }
-  const fallback = await Expense.findByPk(createdExpense.id, { include: expenseIncludes });
-  if (!fallback) {
-    const err = new Error('Expense created but could not be retrieved');
-    err.status = 500;
-    throw err;
-  }
-  return fallback;
-};
+  return (
+    finalizedExpense || (await Expense.findByPk(createdExpense.id, { include: expenseIncludes }))
+  );
+}
 
 const VALID_STATUS = ['draft', 'booked', 'archived'];
 const STATUS_TRANSITIONS = {
@@ -112,18 +142,60 @@ const STATUS_TRANSITIONS = {
   archived: [],
 };
 
-const updateExpenseStatus = async (expenseId, newStatus, companyId) => {
+async function updateExpenseStatus(expenseId, newStatus, companyId, context = {}) {
   const where = { id: expenseId, ...buildCompanyFilter(companyId) };
   const expense = await Expense.findOne({ where });
-  if (!expense) {return null;}
+  if (!expense) {
+    // Only log denied if service is reached (not for 404)
+    const err = new Error('Expense not found');
+    err.status = 404;
+    err.code = 'EXPENSE_NOT_FOUND';
+    throw err;
+  }
   const current = expense.status;
   if (!VALID_STATUS.includes(newStatus) || !STATUS_TRANSITIONS[current]?.includes(newStatus)) {
-    return null;
+    await withAuditLog(
+      {
+        action: 'EXPENSE_STATUS_CHANGE_DENIED',
+        resourceType: 'Expense',
+        resourceId: expenseId,
+        companyId,
+        userId: context.userId,
+        oldValues: { status: current },
+        newValues: { status: newStatus },
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        reason: 'Illegal status transition',
+        status: 'DENIED',
+      },
+      async () => Promise.resolve(),
+    );
+    const err = new Error('Illegal status transition');
+    err.status = 400;
+    err.code = 'INVALID_STATUS_TRANSITION';
+    throw err;
   }
+  const oldStatus = expense.status;
   expense.status = newStatus;
   await expense.save();
+  await withAuditLog(
+    {
+      action: 'EXPENSE_STATUS_CHANGE',
+      resourceType: 'Expense',
+      resourceId: expenseId,
+      companyId,
+      userId: context.userId,
+      oldValues: { status: oldStatus },
+      newValues: { status: newStatus },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      reason: 'Status changed',
+      status: 'SUCCESS',
+    },
+    async () => Promise.resolve(),
+  );
   return await getExpenseById(expenseId, companyId);
-};
+}
 
 module.exports = {
   listExpenses,

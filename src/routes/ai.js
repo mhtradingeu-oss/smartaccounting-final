@@ -5,15 +5,15 @@ const aiRouteGuard = require('../middleware/aiRouteGuard');
 
 const router = express.Router();
 
+router.use(authenticate);
+router.use(requireCompany);
+
 const respondWithError = (req, res, status, error) => {
   return res.status(status).json({ error, requestId: req.requestId });
 };
 
 const respondMutationDisabled = (featureName) => (req, res) =>
   respondWithError(req, res, 501, `${featureName} is disabled`);
-
-router.use(authenticate);
-router.use(requireCompany);
 
 router.post(
   '/insights/:id/decisions',

@@ -113,7 +113,9 @@ if (OCR_PREVIEW_ENABLED) {
 }
 
 router.post('/process', upload.single('document'), validateDocument, async (req, res) => {
-  if (handleValidation(req, res)) {return;}
+  if (handleValidation(req, res)) {
+    return;
+  }
 
   if (!req.file) {
     return sendError(res, 'No document uploaded', 400);

@@ -8,13 +8,23 @@ const AuditLogService = require('../services/auditLogService');
 
 const router = express.Router();
 
+router.use(authenticate);
+router.use(requireCompany);
+
 const ALLOWED_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
 
 const createUserValidators = [
   body('email').isEmail().withMessage('Valid email required').normalizeEmail(),
-  body('firstName').isString().trim().isLength({ min: 2, max: 50 }).withMessage('Invalid first name'),
+  body('firstName')
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Invalid first name'),
   body('lastName').isString().trim().isLength({ min: 2, max: 50 }).withMessage('Invalid last name'),
-  body('password').isString().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password')
+    .isString()
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters'),
   body('role').optional().isIn(ALLOWED_ROLES).withMessage('Invalid role'),
 ];
 
@@ -26,15 +36,17 @@ const updateUserValidators = [
 
 const normalizeEmail = (email) => (email || '').toLowerCase().trim();
 
-router.get('/', authenticate, requireCompany, requireRole(['admin']), async (req, res, next) => {
+router.get('/', requireRole(['admin']), async (req, res, next) => {
   try {
     const users = await User.findAll({
       where: { companyId: req.user.companyId },
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['id', 'name'],
-      }],
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name'],
+        },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
@@ -46,8 +58,6 @@ router.get('/', authenticate, requireCompany, requireRole(['admin']), async (req
 
 router.post(
   '/',
-  authenticate,
-  requireCompany,
   requireRole(['admin']),
   validateRequest(createUserValidators),
   async (req, res, next) => {
@@ -88,8 +98,6 @@ router.post(
 
 router.put(
   '/:userId',
-  authenticate,
-  requireCompany,
   requireRole(['admin']),
   validateRequest(updateUserValidators),
   async (req, res, next) => {
@@ -135,7 +143,10 @@ router.put(
           reason: 'Admin updated user role',
         });
       }
-      if (Object.prototype.hasOwnProperty.call(updates, 'isActive') && before.isActive !== after.isActive) {
+      if (
+        Object.prototype.hasOwnProperty.call(updates, 'isActive') &&
+        before.isActive !== after.isActive
+      ) {
         await AuditLogService.appendEntry({
           action: 'USER_STATUS_CHANGED',
           resourceType: 'User',
@@ -159,7 +170,7 @@ router.put(
   },
 );
 
-router.delete('/:userId', authenticate, requireCompany, requireRole(['admin']), async (req, res, next) => {
+router.delete('/:userId', requireRole(['admin']), async (req, res, next) => {
   try {
     const { userId } = req.params;
     const reason = (req.body?.reason || req.query?.reason || 'GDPR privacy rules').trim();
@@ -192,7 +203,8 @@ router.delete('/:userId', authenticate, requireCompany, requireRole(['admin']), 
     });
 
     res.status(405).json({
-      error: 'User deletion is prohibited for GDPR compliance; anonymize via POST /api/gdpr/anonymize-user with a documented reason instead.',
+      error:
+        'User deletion is prohibited for GDPR compliance; anonymize via POST /api/gdpr/anonymize-user with a documented reason instead.',
     });
   } catch (error) {
     next(error);

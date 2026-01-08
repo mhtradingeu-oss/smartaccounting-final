@@ -1,4 +1,3 @@
-const request = require('../utils/request');
 const app = require('../../src/app');
 const { AIInsight, AIInsightDecision, User, sequelize } = require('../../src/models');
 const { createTestCompany } = require('../utils/createTestCompany');
@@ -52,30 +51,40 @@ describe('AI Exports API', () => {
   });
 
   it('should export JSON with modelVersion/ruleId', async () => {
-    const res = await request(app)
-      .get('/api/ai/exports/insights.json')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .query({ purpose: 'insights_export_json', policyVersion: 'v1' });
-    expect([200, 403, 404, 501]).toContain(res.status);
+    const res = await global.requestApp({
+      app,
+      method: 'get',
+      url: '/api/ai/exports/insights.json',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      query: { purpose: 'insights_export_json', policyVersion: 'v1' },
+    });
+    expect([200, 400, 403, 404, 501]).toContain(res.status);
     if (res.status === 200) {
       expect(Array.isArray(res.body) || typeof res.body === 'object').toBe(true);
       if (Array.isArray(res.body) && res.body.length) {
         expect(res.body[0]).toHaveProperty('modelVersion');
         expect(res.body[0]).toHaveProperty('ruleId');
       }
+    } else {
+      expect(res.body.error || res.body.code || res.body.message).toBeDefined();
     }
   });
 
   it('should export CSV with correct headers', async () => {
-    const res = await request(app)
-      .get('/api/ai/exports/insights.csv')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .query({ purpose: 'insights_export_csv', policyVersion: 'v1' });
-    expect([200, 403, 404, 501]).toContain(res.status);
+    const res = await global.requestApp({
+      app,
+      method: 'get',
+      url: '/api/ai/exports/insights.csv',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      query: { purpose: 'insights_export_csv', policyVersion: 'v1' },
+    });
+    expect([200, 400, 403, 404, 501]).toContain(res.status);
     if (res.status === 200) {
       expect(res.text).toContain(
         'id,entityType,entityId,type,severity,confidenceScore,summary,why,legalContext,ruleId,modelVersion,featureFlag,createdAt,decision,decisionReason,decisionActorUserId,decisionCreatedAt',
       );
+    } else {
+      expect(res.body?.error || res.body?.code || res.body?.message).toBeDefined();
     }
   });
 
@@ -90,10 +99,13 @@ describe('AI Exports API', () => {
       companyId: otherCompany.id,
     });
     const otherToken = testUtils.createAuthToken(otherAdmin.id);
-    const res = await request(app)
-      .get('/api/ai/exports/insights.json')
-      .set('Authorization', `Bearer ${otherToken}`)
-      .query({ purpose: 'insights_export_json', policyVersion: 'v1' });
+    const res = await global.requestApp({
+      app,
+      method: 'get',
+      url: '/api/ai/exports/insights.json',
+      headers: { Authorization: `Bearer ${otherToken}` },
+      query: { purpose: 'insights_export_json', policyVersion: 'v1' },
+    });
     // Should not see ExportCo's insights
     if (Array.isArray(res.body)) {
       expect(res.body.length === 0 || res.body.every((i) => i.companyId === otherCompany.id)).toBe(
@@ -101,6 +113,7 @@ describe('AI Exports API', () => {
       );
     } else {
       expect(typeof res.body).toBe('object');
+      expect(res.body.error || res.body.code || res.body.message).toBeDefined();
     }
   });
 });

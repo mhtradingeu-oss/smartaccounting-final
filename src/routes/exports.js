@@ -178,21 +178,6 @@ router.get('/accounting-records', authenticate, requireRole(['auditor']), async 
   }
 });
 
-router.get('/', authenticate, async (req, res, next) => {
-  try {
-    const companyId = req.user.companyId; // 🔒 المصدالوحيدر
-
-    const expenses = await Expense.findAll({
-      where: { companyId },
-      order: [['createdAt', 'DESC']],
-    });
-
-    res.json({ success: true, data: expenses });
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.get('/vat-summaries', authenticate, requireRole(['auditor']), async (req, res) => {
   try {
     const format = ensureFormat(req.query.format);

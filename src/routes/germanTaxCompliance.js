@@ -1,11 +1,12 @@
 const express = require('express');
-const router = express.Router();
 const { authenticate } = require('../middleware/authMiddleware');
 const germanTaxEngine = require('../services/germanTaxEngine');
 const elsterService = require('../services/elsterService');
 const gobdService = require('../services/gobdComplianceService');
 const logger = require('../lib/logger');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
+
+const router = express.Router();
 
 router.use(disabledFeatureHandler('Elster/compliance'));
 
@@ -16,7 +17,7 @@ router.post('/ustva/generate', authenticate, async (req, res) => {
     const companyId = req.user.companyId;
 
     const ustvaReport = await germanTaxEngine.generateUStVA(companyId, year, quarter);
-    
+
     // Create audit log
     await gobdService.createImmutableRecord(
       'ustva_generated',
@@ -44,7 +45,7 @@ router.post('/ustva/submit', authenticate, async (req, res) => {
     const { reportData, sessionToken } = req.body;
 
     const submission = await elsterService.submitUStVA(reportData, sessionToken);
-    
+
     if (submission.success) {
       await gobdService.createImmutableRecord(
         'ustva_submitted',
@@ -71,7 +72,7 @@ router.post('/eur/generate', authenticate, async (req, res) => {
     const companyId = req.user.companyId;
 
     const eurReport = await germanTaxEngine.generateEUR(companyId, year);
-    
+
     await gobdService.createImmutableRecord(
       'eur_generated',
       { year, report: eurReport },
@@ -117,7 +118,7 @@ router.get('/compliance/check/:year', authenticate, async (req, res) => {
 router.get('/calendar/:year', authenticate, async (req, res) => {
   try {
     const { year } = req.params;
-    
+
     const calendar = germanTaxEngine.generateTaxCalendar(parseInt(year));
     const elsterDeadlines = await elsterService.getTaxDeadlines(parseInt(year));
 
@@ -156,7 +157,10 @@ router.post('/export/gobd', authenticate, async (req, res) => {
     );
 
     res.setHeader('Content-Type', format === 'XML' ? 'application/xml' : 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="gobd_export_${startDate}_${endDate}.${format.toLowerCase()}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="gobd_export_${startDate}_${endDate}.${format.toLowerCase()}"`,
+    );
     res.send(exportData);
   } catch (error) {
     logger.error('GoBD export error:', error);
@@ -189,7 +193,7 @@ router.post('/validate/integrity', authenticate, async (req, res) => {
 router.get('/elster/test', authenticate, async (req, res) => {
   try {
     const connectionTest = await elsterService.testConnection();
-    
+
     res.json({
       success: true,
       elster: connectionTest,

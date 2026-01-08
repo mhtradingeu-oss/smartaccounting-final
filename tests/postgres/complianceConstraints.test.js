@@ -107,7 +107,18 @@ describePostgres('Postgres compliance gate', () => {
       hash: '',
       immutable: true,
     });
-
+    // GoBD audit log check
+    const auditEntry = await AuditLog.findOne({ where: { resourceType: 'test', resourceId: '1' } });
+    expect(auditEntry).toBeTruthy();
+    expect(auditEntry.immutable).toBe(true);
+    if (auditEntry.metadata) {
+      if (auditEntry.metadata.requestIp !== undefined) {
+        expect(auditEntry.metadata.requestIp).toBeDefined();
+      }
+      if (auditEntry.metadata.userAgent !== undefined) {
+        expect(auditEntry.metadata.userAgent).toBeDefined();
+      }
+    }
     await expect(auditLog.update({ immutable: false })).rejects.toThrow(/immutable/);
   });
 
@@ -205,13 +216,7 @@ describePostgres('Postgres compliance gate', () => {
   });
 
   test('Postgres metadata declares compliance constraints', async () => {
-    const requiredColumns = [
-      'createdByUserId',
-      'netAmount',
-      'vatAmount',
-      'grossAmount',
-      'vatRate',
-    ];
+    const requiredColumns = ['createdByUserId', 'netAmount', 'vatAmount', 'grossAmount', 'vatRate'];
     const columnList = requiredColumns.map((column) => `'${column}'`).join(', ');
     const columnRows = await sequelize.query(
       `

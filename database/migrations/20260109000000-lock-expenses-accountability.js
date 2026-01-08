@@ -2,6 +2,11 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const dialect = queryInterface.sequelize.getDialect();
+    if (dialect === 'sqlite') {
+      // SQLite does not support altering columns to add constraints after creation; skip.
+      return;
+    }
     await queryInterface.changeColumn('expenses', 'createdByUserId', {
       type: Sequelize.INTEGER,
       allowNull: false,
@@ -32,6 +37,11 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    const dialect = queryInterface.sequelize.getDialect();
+    if (dialect === 'sqlite') {
+      // SQLite does not support altering columns to add constraints after creation; skip.
+      return;
+    }
     await queryInterface.changeColumn('expenses', 'createdByUserId', {
       type: Sequelize.INTEGER,
       allowNull: true,
