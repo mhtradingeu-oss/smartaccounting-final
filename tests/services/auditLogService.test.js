@@ -52,7 +52,16 @@ describe('GoBD AuditLogService', () => {
     const logs = await AuditLog.findAll({ order: [['timestamp', 'ASC']] });
     expect(logs.length).toBe(2);
     expect(logs[1].previousHash).toBe(logs[0].hash);
+    // GoBD: Chain must be valid if not tampered
     expect(await AuditLogService.validateChain()).toBe(true);
+    // Validate hash and optional metadata
+    logs.forEach((entry) => {
+      expect(entry).toBeDefined();
+      expect(entry.hash).toBeDefined();
+      if (entry.newValues?.metadata) {
+        expect(entry.newValues.metadata).toEqual(expect.objectContaining({}));
+      }
+    });
   });
 
   it('detects tampering in the hash chain', async () => {
@@ -71,6 +80,7 @@ describe('GoBD AuditLogService', () => {
     const log = await AuditLog.findOne();
     log.action = 'tampered';
     await log.save();
+    // GoBD: Chain must be invalid if tampered
     expect(await AuditLogService.validateChain()).toBe(false);
   });
 

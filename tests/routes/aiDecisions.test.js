@@ -1,8 +1,6 @@
 const app = require('../../src/app');
-const createRequest = require('../utils/request');
 const testUtils = require('../utils/testHelpers');
 const { AIInsight } = require('../../src/models');
-const request = createRequest(app);
 
 describe('POST /api/ai/insights/:id/decisions (read-only)', () => {
   let adminToken;
@@ -40,24 +38,33 @@ describe('POST /api/ai/insights/:id/decisions (read-only)', () => {
   });
 
   it('requires authentication', async () => {
-    const res = await request.post(`/api/ai/insights/${insight.id}/decisions`);
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: `/api/ai/insights/${insight.id}/decisions`,
+    });
     expect(res.status).toBe(401);
   });
 
   it('forbids insufficient roles before hitting the read-only guard', async () => {
-    const res = await request
-      .post(`/api/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${viewerToken}`)
-      .send({ decision: 'accepted', reason: 'not used' });
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: `/api/ai/insights/${insight.id}/decisions`,
+      headers: { Authorization: `Bearer ${viewerToken}` },
+      body: { decision: 'accepted', reason: 'not used' },
+    });
     expect(res.status).toBe(403);
   });
 
   it('returns the read-only response for permitted roles', async () => {
-    const res = await request
-      .post(`/api/ai/insights/${insight.id}/decisions`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ decision: 'accepted', reason: 'test' });
-
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: `/api/ai/insights/${insight.id}/decisions`,
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: { decision: 'accepted', reason: 'test' },
+    });
     expect(res.status).toBe(501);
     expect(res.body.error).toBe('AI decision capture is disabled');
     expect(typeof res.body.requestId).toBe('string');

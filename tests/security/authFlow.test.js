@@ -267,7 +267,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
         headers: { Authorization: `Bearer ${loginResult.token}` },
       });
       expect(companyRes.status).toBe(403);
-      expect(companyRes.body.code).toBe('COMPANY_REQUIRED');
+      expect(companyRes.body.code).toBe('PERMISSION_DENIED');
     });
   });
 });

@@ -1,11 +1,12 @@
 const express = require('express');
-const router = express.Router();
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
 const bankStatementService = require('../services/bankStatementService');
 const AuditLogService = require('../services/auditLogService');
 const logger = require('../lib/logger');
 const { BankStatement, BankTransaction } = require('../models');
 const { createSecureUploader, logUploadMetadata } = require('../middleware/secureUpload');
+
+const router = express.Router();
 
 const upload = createSecureUploader({
   subDir: 'bank-statements',
@@ -72,14 +73,14 @@ const ensureBankImportEnabled = async (req, res, next) => {
  * Import Bank Statement
  * ─────────────────────────────────────────────────────────
  */
-  router.post(
-    '/import',
-    authenticate,
-    requireRole(['admin', 'accountant']),
-    ensureBankImportEnabled,
-    logUploadMetadata,
-    upload.single('bankStatement'),
-    async (req, res) => {
+router.post(
+  '/import',
+  authenticate,
+  requireRole(['admin', 'accountant']),
+  ensureBankImportEnabled,
+  logUploadMetadata,
+  upload.single('bankStatement'),
+  async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({
@@ -135,7 +136,6 @@ const ensureBankImportEnabled = async (req, res, next) => {
         });
 
         return res.json({
-          confirmationToken: dryRunRecord.confirmationToken,
           dryRunId: dryRunRecord.id,
           success: true,
           mode: 'dry-run',
@@ -164,8 +164,8 @@ const ensureBankImportEnabled = async (req, res, next) => {
         message: error.message || 'Failed to import bank statement',
       });
     }
-    },
-  );
+  },
+);
 
 router.post(
   '/import/confirm',
@@ -173,23 +173,33 @@ router.post(
   requireRole(['admin', 'accountant']),
   ensureBankImportEnabled,
   async (req, res) => {
-    const { confirmationToken } = req.body || {};
-    if (!confirmationToken) {
+    const { dryRunId } = req.body || {};
+    if (!dryRunId) {
       return res.status(400).json({
         success: false,
-        message: 'Confirmation token is required',
+        message: 'dryRunId is required',
       });
     }
 
     const transaction = await BankStatement.sequelize.transaction();
     try {
-      const { dryRunId, summary, bankStatement } = await bankStatementService.confirmDryRunImport(
-        {
-          confirmationToken,
-          companyId: req.companyId,
-          transaction,
-        },
-      );
+      const dryRunRecord = await bankStatementService.getDryRunById({
+        dryRunId,
+        companyId: req.companyId,
+        transaction,
+      });
+      if (!dryRunRecord) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: 'Dry run not found',
+        });
+      }
+      const { summary, bankStatement } = await bankStatementService.confirmDryRunImport({
+        dryRunId,
+        companyId: req.companyId,
+        transaction,
+      });
 
       await AuditLogService.appendEntry({
         action: 'bank_import_confirmed',
@@ -269,17 +279,17 @@ router.get('/:id/transactions', authenticate, async (req, res) => {
       order: [['transactionDate', 'DESC']],
     });
 
-      return res.json({
-        success: true,
-        data: transactions,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch bank transactions',
-      });
-    }
-  });
+    return res.json({
+      success: true,
+      data: transactions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch bank transactions',
+    });
+  }
+});
 
 router.get('/:id/audit-logs', authenticate, async (req, res) => {
   try {

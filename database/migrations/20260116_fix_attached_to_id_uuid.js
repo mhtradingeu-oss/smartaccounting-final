@@ -8,8 +8,12 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const dialect = queryInterface.sequelize.getDialect();
+    if (dialect === 'sqlite') {
+      // SQLite does not support altering column types or renaming columns in this way; skip.
+      return;
+    }
     const table = await queryInterface.describeTable('file_attachments');
-
     if (table.attached_to_id && table.attached_to_id.type === 'INTEGER') {
       await queryInterface.addColumn('file_attachments', 'attached_to_id_uuid', {
         type: Sequelize.UUID,
@@ -32,8 +36,12 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
+    const dialect = queryInterface.sequelize.getDialect();
+    if (dialect === 'sqlite') {
+      // SQLite does not support altering column types or renaming columns in this way; skip.
+      return;
+    }
     const table = await queryInterface.describeTable('file_attachments');
-
     if (table.attached_to_id && table.attached_to_id.type === 'UUID') {
       await queryInterface.removeColumn('file_attachments', 'attached_to_id');
 

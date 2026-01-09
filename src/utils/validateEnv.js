@@ -80,8 +80,11 @@ function validateEnvironment() {
         break;
       }
       case 'DATABASE_URL': {
-        if (!value.includes('://')) {
-          errors.push('DATABASE_URL must include a scheme (e.g. postgres:// or sqlite:)');
+        // Accept sqlite:./path or sqlite://... or postgres://...
+        if (!(value.startsWith('sqlite:') || value.includes('://'))) {
+          errors.push(
+            'DATABASE_URL must include a scheme (e.g. postgres:// or sqlite:). For SQLite, use sqlite:./path or sqlite://...',
+          );
         }
         break;
       }

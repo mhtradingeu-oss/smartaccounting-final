@@ -5,16 +5,24 @@ const aiRouteGuard = require('../middleware/aiRouteGuard');
 
 const router = express.Router();
 
+router.use(authenticate);
+router.use(requireCompany);
+router.use(aiRouteGuard());
+
 const respondWithError = (req, res, status, error) =>
   res.status(status).json({ error, requestId: req.requestId });
-
-router.use(authenticate, requireCompany, aiRouteGuard());
 
 router.get('/suggest', async (req, res) => {
   const { userId, companyId } = req;
   const { prompt, context } = req.query;
   try {
-    const suggestion = await getSuggestion({ userId, companyId, prompt, context, requestId: req.requestId });
+    const suggestion = await getSuggestion({
+      userId,
+      companyId,
+      prompt,
+      context,
+      requestId: req.requestId,
+    });
     res.json({ suggestion, requestId: req.requestId });
   } catch (err) {
     respondWithError(req, res, err.status || 400, err.message || 'Suggestion request failed');

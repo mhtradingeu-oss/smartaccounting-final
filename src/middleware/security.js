@@ -5,7 +5,7 @@ function validateContentType(allowedTypes) {
     if (!contentType) {
       return next();
     }
-    if (allowedTypes.some(type => contentType.includes(type))) {
+    if (allowedTypes.some((type) => contentType.includes(type))) {
       return next();
     }
     return res.status(415).json({
@@ -89,7 +89,8 @@ const createRateLimiter = (options = {}) => {
       error: 'Too many requests from this IP, please try again later.',
       retryAfter: '15 minutes',
     },
-    skip: (req) => shouldSkipRateLimit(req) || (typeof customSkip === 'function' ? customSkip(req) : false),
+    skip: (req) =>
+      shouldSkipRateLimit(req) || (typeof customSkip === 'function' ? customSkip(req) : false),
     ...restOptions,
   };
   return rateLimit(defaults);
@@ -125,13 +126,13 @@ const speedLimiter = slowDown({
   delayAfter: 50,
   delayMs: 500,
 });
-const scriptSrc = ['\'self\''];
+const scriptSrc = ["'self'"];
 if (!isProduction) {
   // Swagger UI and dev tooling sometimes require inline/eval scripts
-  scriptSrc.push('\'unsafe-inline\'', '\'unsafe-eval\'');
+  scriptSrc.push("'unsafe-inline'", "'unsafe-eval'");
 }
 
-const connectSrc = ['\'self\''];
+const connectSrc = ["'self'"];
 if (FRONTEND_URL) {
   connectSrc.push(FRONTEND_URL);
 }
@@ -142,22 +143,20 @@ if (!isProduction) {
 const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ['\'self\''],
+      defaultSrc: ["'self'"],
       scriptSrc,
-      styleSrc: ['\'self\'', '\'unsafe-inline\''],
-      imgSrc: ['\'self\'', 'data:', 'https:'],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc,
-      fontSrc: ['\'self\''],
-      objectSrc: ['\'none\''],
-      frameAncestors: ['\'none\''],
-      mediaSrc: ['\'self\''],
-      baseUri: ['\'self\''],
-      formAction: ['\'self\''],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      mediaSrc: ["'self'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
     },
   },
-  hsts: isProduction
-    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
-    : false,
+  hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   contentTypeOptions: true,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   crossOriginEmbedderPolicy: false,
@@ -178,7 +177,6 @@ const securityHeaders = helmet({
   },
 });
 
-
 const sanitizeObject = (obj) => {
   if (obj === null || typeof obj !== 'object') {
     return typeof obj === 'string' ? sanitizeString(obj) : obj;
@@ -193,7 +191,9 @@ const sanitizeObject = (obj) => {
 };
 
 const sanitizeString = (value) => {
-  if (typeof value !== 'string') {return value;}
+  if (typeof value !== 'string') {
+    return value;
+  }
 
   return value
     .replace(/<script[^>]*>.*?<\/script>/gi, '')
@@ -222,7 +222,7 @@ const requestLogger = (req, res, next) => {
 
   res.on('finish', () => {
     const [seconds, nanoseconds] = process.hrtime(startTime);
-    const durationMs = Number(((seconds * 1000) + (nanoseconds / 1e6)).toFixed(2));
+    const durationMs = Number((seconds * 1000 + nanoseconds / 1e6).toFixed(2));
     const statusCode = res.statusCode;
     const logMetadata = {
       method: req.method,
@@ -275,18 +275,20 @@ const validateRequest = (validations) => async (req, res, next) => {
 
 // reserved for Phase 10 (advanced security policies)
 // eslint-disable-next-line no-unused-vars
-const ipWhitelist = (allowedIPs = []) => (req, res, next) => {
-  const clientIP = req.ip || req.connection.remoteAddress;
-  if (allowedIPs.length && !allowedIPs.includes(clientIP)) {
-    logger.warn('Blocked request from unauthorized IP', { ip: clientIP });
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied from your IP address',
-    });
-  }
+const ipWhitelist =
+  (allowedIPs = []) =>
+  (req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress;
+    if (allowedIPs.length && !allowedIPs.includes(clientIP)) {
+      logger.warn('Blocked request from unauthorized IP', { ip: clientIP });
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied from your IP address',
+      });
+    }
 
-  next();
-};
+    next();
+  };
 
 // reserved for CSRF hardening phase
 // eslint-disable-next-line no-unused-vars
@@ -307,7 +309,6 @@ const csrfProtection = (req, res, next) => {
 
   next();
 };
-
 
 // Factory: returns ordered array of security middleware, preserving all logic and order
 function createSecurityMiddleware() {
@@ -339,11 +340,18 @@ function createSecurityMiddleware() {
     sanitizeRequest,
     validateContentType(['application/json', 'multipart/form-data']),
     requestSizeLimiter('10mb'),
+    // Explicit rate limiting for sensitive endpoints
     pathScopedMiddleware('/api/auth/login', authRateLimiter),
     pathScopedMiddleware('/api/auth/register', authRateLimiter),
     pathScopedMiddleware('/api/auth/forgot-password', authRateLimiter),
     pathScopedMiddleware('/api/invoices/upload', uploadRateLimiter),
     pathScopedMiddleware('/api/ocr/extract', uploadRateLimiter),
+    // AI endpoints
+    prefixScopedMiddleware('/api/ai', apiRateLimiter),
+    // GDPR endpoints
+    prefixScopedMiddleware('/api/gdpr', apiRateLimiter),
+    // Export endpoints
+    prefixScopedMiddleware('/api/exports', apiRateLimiter),
     prefixScopedMiddleware('/api', speedLimiter),
     prefixScopedMiddleware('/api', apiRateLimiter),
     // Security headers
@@ -367,7 +375,6 @@ function createSecurityMiddleware() {
     },
   ];
 }
-
 
 module.exports = {
   createSecurityMiddleware,

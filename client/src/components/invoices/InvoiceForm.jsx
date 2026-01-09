@@ -112,11 +112,11 @@ const InvoiceForm = ({
   const validateVAT = () => {
     const errors = [];
     let totalNet = 0,
-      totalVat = 0,
+      // totalVat = 0,
       totalGross = 0;
     formState.items.forEach((item, idx) => {
-      const qty = parseFloat(item.quantity) || 0;
-      const unit = parseFloat(item.unitPrice) || 0;
+      // const qty = parseFloat(item.quantity) || 0;
+      // const unit = parseFloat(item.unitPrice) || 0;
       const vatR = parseFloat(item.vatRate);
       const net = parseFloat(item.netAmount) || 0;
       const vat = parseFloat(item.vatAmount) || 0;

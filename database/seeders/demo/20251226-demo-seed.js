@@ -1,4 +1,31 @@
-'use strict';
+// Validator to ensure payload keys match allowed columns
+const assertKeysMatch = (payload, allowedKeys, context) => {
+  Object.keys(payload).forEach((key) => {
+    if (!allowedKeys.includes(key)) {
+      throw new Error(`[DEMO SEED] Invalid column "${key}" in ${context}`);
+    }
+  });
+};
+let _qi = null;
+
+const getQI = (queryInterface) => {
+  if (_qi) {
+    return _qi;
+  }
+
+  if (queryInterface?.bulkInsert) {
+    _qi = queryInterface;
+    return _qi;
+  }
+
+  if (queryInterface?.sequelize?.getQueryInterface) {
+    _qi = queryInterface.sequelize.getQueryInterface();
+    return _qi;
+  }
+
+  throw new Error('[DEMO SEED] Cannot resolve QueryInterface');
+};
+('use strict');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const AuditLogService = require('../../../src/services/auditLogService');
@@ -232,106 +259,10 @@ const EXPENSE_TEMPLATES = [
     status: 'booked',
     source: 'bank',
     ownerKey: 'admin',
-    notes: 'New workstations for engineering',
+    notes: 'Workstation upgrade for demo HQ',
   },
   {
-    description: 'Compliance research tools',
-    vendorName: 'Statistica GmbH',
-    expenseDate: '2026-02-25',
-    category: 'Subscriptions',
-    netAmount: 180,
-    vatRate: 0.19,
-    status: 'draft',
-    source: 'upload',
-    ownerKey: 'accountant',
-    notes: 'Benchmarking research',
-  },
-  {
-    description: 'Berlin HQ rent March',
-    vendorName: 'Spree Immobilien GmbH',
-    expenseDate: '2026-03-04',
-    category: 'Rent',
-    netAmount: 2400,
-    vatRate: 0.19,
-    status: 'booked',
-    source: 'bank',
-    ownerKey: 'admin',
-    notes: 'March rent for demonstration HQ',
-  },
-  {
-    description: 'Client workshop travel',
-    vendorName: 'Brandenburger Reisen',
-    expenseDate: '2026-03-08',
-    category: 'Travel',
-    netAmount: 780,
-    vatRate: 0.19,
-    status: 'booked',
-    source: 'bank',
-    ownerKey: 'accountant',
-    notes: 'Travel for compliance summit',
-  },
-  {
-    description: 'AI insights platform',
-    vendorName: 'InsightDrive GmbH',
-    expenseDate: '2026-03-11',
-    category: 'Subscriptions',
-    netAmount: 450,
-    vatRate: 0.19,
-    status: 'booked',
-    source: 'bank',
-    ownerKey: 'accountant',
-    notes: 'SaaS platform powering ML insights',
-  },
-  {
-    description: 'Office monitors',
-    vendorName: 'DisplayPro Berlin',
-    expenseDate: '2026-03-14',
-    category: 'Hardware',
-    netAmount: 650,
-    vatRate: 0.19,
-    status: 'booked',
-    source: 'bank',
-    ownerKey: 'admin',
-    notes: 'Additional monitors for co-working',
-  },
-  {
-    description: 'Payroll automation',
-    vendorName: 'LohnExpress GmbH',
-    expenseDate: '2026-03-20',
-    category: 'Subscriptions',
-    netAmount: 220,
-    vatRate: 0.19,
-    status: 'draft',
-    source: 'upload',
-    ownerKey: 'accountant',
-    notes: 'Payroll automation verification',
-  },
-  {
-    description: 'Berlin summit hospitality',
-    vendorName: 'EventMobil',
-    expenseDate: '2026-03-26',
-    category: 'Travel',
-    netAmount: 420,
-    vatRate: 0.07,
-    status: 'booked',
-    source: 'manual',
-    ownerKey: 'accountant',
-    notes: 'Catering for compliance summit',
-  },
-  {
-    description: 'Berlin HQ rent April',
-    vendorName: 'Spree Immobilien GmbH',
-    expenseDate: '2026-04-02',
-    category: 'Rent',
-    netAmount: 2400,
-    vatRate: 0.19,
-    status: 'booked',
-    source: 'bank',
-    ownerKey: 'admin',
-    notes: 'April rent for demonstration HQ',
-  },
-  {
-    description: 'Security compliance scans',
+    description: 'Quarterly compliance scans',
     vendorName: 'Guardrail GmbH',
     expenseDate: '2026-04-06',
     category: 'Subscriptions',
@@ -861,7 +792,8 @@ const insertRecordAndReturnId = async (
   if (queryInterface.sequelize.getDialect() === 'postgres') {
     bulkInsertOptions.returning = true;
   }
-  const insertionResult = await queryInterface.bulkInsert(tableName, [record], bulkInsertOptions);
+  const qi = getQI(queryInterface);
+  const insertionResult = await qi.bulkInsert(tableName, [record], bulkInsertOptions);
   if (Array.isArray(insertionResult) && insertionResult.length > 0) {
     return insertionResult[0].id;
   }
@@ -949,11 +881,21 @@ const getQuarterKey = (dateString) => {
 module.exports = {
   up: async (queryInterface, _Sequelize) => {
     requireDemoSeedEnabled('up');
+    // --- QueryInterface runtime guard ---
+    const qi =
+      queryInterface && typeof queryInterface.bulkInsert === 'function'
+        ? queryInterface
+        : queryInterface?.sequelize?.getQueryInterface?.() ||
+          queryInterface?.getQueryInterface?.() ||
+          null;
+    if (!qi) {
+      throw new Error('[DEMO SEED] Invalid queryInterface passed to seeder');
+    }
     const now = new Date();
-
+    // ...existing code...
     let companyId;
     let companyCreated = false;
-    const [existingCompanies] = await queryInterface.sequelize.query(
+    const [existingCompanies] = await qi.sequelize.query(
       'SELECT id FROM companies WHERE "taxId" = :taxId LIMIT 1;',
       { replacements: { taxId: DEMO_COMPANY.taxId } },
     );
@@ -962,50 +904,95 @@ module.exports = {
       console.log('[DEMO SEED] Demo company already exists.');
     } else {
       const companyPayload = {
-        ...DEMO_COMPANY,
+        name: DEMO_COMPANY.name,
         address: DEMO_COMPANY.address,
         city: DEMO_COMPANY.city,
         postalCode: DEMO_COMPANY.postalCode,
         country: DEMO_COMPANY.country,
+        taxId: DEMO_COMPANY.taxId,
         aiEnabled: DEMO_COMPANY.aiEnabled,
         createdAt: now,
         updatedAt: now,
       };
-      companyId = await insertRecordAndReturnId(
-        queryInterface,
-        'companies',
+      assertKeysMatch(
         companyPayload,
-        'SELECT id FROM companies WHERE "taxId" = :taxId LIMIT 1;',
-        { taxId: DEMO_COMPANY.taxId },
+        [
+          'name',
+          'taxId',
+          'address',
+          'city',
+          'postalCode',
+          'country',
+          'aiEnabled',
+          'createdAt',
+          'updatedAt',
+        ],
+        'companies',
       );
-      companyCreated = true;
-      console.log('[DEMO SEED] Demo company created.');
+      // Always use QueryInterface.bulkInsert for companies
+      const [existing] = await qi.sequelize.query(
+        'SELECT id FROM companies WHERE "taxId" = :taxId LIMIT 1;',
+        { replacements: { taxId: DEMO_COMPANY.taxId } },
+      );
+      if (!existing.length) {
+        await qi.bulkInsert('companies', [companyPayload], {});
+        const [created] = await qi.sequelize.query(
+          'SELECT id FROM companies WHERE "taxId" = :taxId LIMIT 1;',
+          { replacements: { taxId: DEMO_COMPANY.taxId } },
+        );
+        companyId = created[0].id;
+        companyCreated = true;
+        console.log('[DEMO SEED] Demo company created.');
+      } else {
+        companyId = existing[0].id;
+        console.log('[DEMO SEED] Demo company already exists.');
+      }
     }
 
     // === DEMO USERS ===
     const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+    const userMap = {};
     for (const template of DEMO_USERS) {
       const userPayload = {
-        ...template,
+        email: template.email,
+        firstName: template.firstName,
+        lastName: template.lastName,
+        role: template.role,
         password: passwordHash,
         companyId,
+        isActive: true,
+        isAnonymized: false,
+        anonymizedAt: null,
         createdAt: now,
         updatedAt: now,
       };
-      const [existingUsers] = await queryInterface.sequelize.query(
+      assertKeysMatch(
+        userPayload,
+        [
+          'email',
+          'firstName',
+          'lastName',
+          'role',
+          'password',
+          'companyId',
+          'isActive',
+          'isAnonymized',
+          'anonymizedAt',
+          'createdAt',
+          'updatedAt',
+        ],
+        'users',
+      );
+      const [existingUsers] = await qi.sequelize.query(
         'SELECT id FROM users WHERE email = :email LIMIT 1;',
         { replacements: { email: template.email } },
       );
       if (existingUsers.length === 0) {
-        await queryInterface.bulkInsert('users', [userPayload], {});
+        await qi.bulkInsert('users', [userPayload], {});
         console.log(`[DEMO SEED] Created user ${template.email}`);
       } else {
         console.log(`[DEMO SEED] User already exists ${template.email}`);
       }
-    }
-
-    const userMap = {};
-    for (const template of DEMO_USERS) {
       const [rows] = await queryInterface.sequelize.query(
         'SELECT id FROM users WHERE email = :email LIMIT 1;',
         { replacements: { email: template.email } },
@@ -1036,11 +1023,39 @@ module.exports = {
         { replacements: { invoiceNumber: template.invoiceNumber, companyId } },
       );
       const ownerId = userMap[template.ownerKey] || userMap.accountant;
-      const { invoice: invoicePayload, items } = buildDemoInvoice(
+      const { invoice: invoicePayloadRaw, items } = buildDemoInvoice(
         template,
         ownerId,
         companyId,
         now,
+      );
+      // Normalize invoice payload to snake_case
+      const invoicePayload = {
+        ...invoicePayloadRaw,
+        userId: invoicePayloadRaw.userId,
+        companyId: invoicePayloadRaw.companyId,
+        createdAt: invoicePayloadRaw.createdAt,
+        updatedAt: invoicePayloadRaw.updatedAt,
+      };
+      assertKeysMatch(
+        invoicePayload,
+        [
+          'invoiceNumber',
+          'subtotal',
+          'total',
+          'amount',
+          'currency',
+          'status',
+          'date',
+          'dueDate',
+          'clientName',
+          'notes',
+          'userId',
+          'companyId',
+          'createdAt',
+          'updatedAt',
+        ],
+        'invoices',
       );
       let invoiceId;
       if (existingInvoices.length === 0) {
@@ -1051,14 +1066,42 @@ module.exports = {
           'SELECT id FROM invoices WHERE "invoiceNumber" = :invoiceNumber AND "companyId" = :companyId LIMIT 1;',
           { invoiceNumber: template.invoiceNumber, companyId },
         );
-        const itemRecords = items.map((item) => ({
+        // === INVOICE ITEMS ===
+        const invoiceItemsPayload = items.map((item) => ({
           id: uuidv4(),
-          ...item,
           invoiceId,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          vatRate: item.vatRate,
+          lineNet: item.lineNet,
+          lineVat: item.lineVat,
+          lineGross: item.lineGross,
           createdAt: now,
           updatedAt: now,
         }));
-        await queryInterface.bulkInsert('invoice_items', itemRecords, {});
+
+        assertKeysMatch(
+          invoiceItemsPayload[0],
+          [
+            'id',
+            'invoiceId',
+            'description',
+            'quantity',
+            'unitPrice',
+            'vatRate',
+            'lineNet',
+            'lineVat',
+            'lineGross',
+            'createdAt',
+            'updatedAt',
+          ],
+          'invoice_items',
+        );
+
+        await qi.bulkInsert('invoice_items', invoiceItemsPayload, {});
+        console.log(`[DEMO SEED] Invoice items inserted (${invoiceItemsPayload.length})`);
+
         await logAuditEntry({
           action: 'invoice_created',
           resourceType: 'invoice',
@@ -1102,29 +1145,75 @@ module.exports = {
         },
       );
       const ownerId = userMap[template.ownerKey] || userMap.accountant;
-      const vatAmount = formatMoney(template.netAmount * template.vatRate);
-      const grossAmount = formatMoney(template.netAmount + vatAmount);
+      // --- VAT calculation (Germany standard) ---
+      // --- VAT calculation (Germany standard, fallback for legacy templates) ---
+      const vatRate = typeof template.vatRate === 'number' ? template.vatRate : 0.19;
+      let grossAmount, netAmount, vatAmount;
+      if (typeof template.amount === 'number') {
+        // If amount (gross) is provided, calculate net and vat
+        grossAmount = Number(template.amount);
+        netAmount = Number((grossAmount / (1 + vatRate)).toFixed(2));
+        vatAmount = Number((grossAmount - netAmount).toFixed(2));
+      } else if (typeof template.netAmount === 'number') {
+        // If only netAmount is provided, calculate gross and vat
+        netAmount = Number(template.netAmount);
+        vatAmount = Number((netAmount * vatRate).toFixed(2));
+        grossAmount = Number((netAmount + vatAmount).toFixed(2));
+      } else {
+        throw new Error(
+          `[DEMO SEED] Expense template missing amount/netAmount: ${template.description}`,
+        );
+      }
+
       const expensePayload = {
         description: template.description,
-        vendorName: template.vendorName,
-        expenseDate: template.expenseDate,
-        date: template.expenseDate,
-        category: template.category,
-        netAmount: formatMoney(template.netAmount),
-        vatRate: template.vatRate,
+
+        // 🔢 Accounting core
+        netAmount,
+        vatRate,
         vatAmount,
+        amount: grossAmount, // gross
         grossAmount,
-        amount: grossAmount,
+
         currency: 'EUR',
-        status: template.status,
-        source: template.source,
+        date: template.expenseDate,
+
+        // 🔐 Accountability
         userId: ownerId,
-        createdByUserId: ownerId,
         companyId,
-        notes: template.notes,
+        createdByUserId: ownerId,
+
+        // 🧾 Metadata
+        source: template.source ?? 'manual',
+        status: ['PENDING', 'APPROVED', 'REJECTED'].includes(template.status)
+          ? template.status
+          : 'PENDING',
+
         createdAt: now,
         updatedAt: now,
       };
+
+      assertKeysMatch(
+        expensePayload,
+        [
+          'description',
+          'netAmount',
+          'vatRate',
+          'vatAmount',
+          'amount',
+          'grossAmount',
+          'currency',
+          'date',
+          'userId',
+          'companyId',
+          'createdByUserId',
+          'source',
+          'status',
+          'createdAt',
+          'updatedAt',
+        ],
+        'expenses',
+      );
       let expenseId;
       if (existingExpenses.length === 0) {
         expenseId = await insertRecordAndReturnId(
@@ -1162,561 +1251,6 @@ module.exports = {
         userId: ownerId,
       });
     }
-
-    // === LEDGER TRANSACTIONS ===
-    const transactionIdByReference = {};
-    for (const summary of invoiceSummaries) {
-      const vatRate = summary.items[0]?.vatRate || 0.19;
-      const transactionPayload = {
-        id: uuidv4(),
-        company_id: companyId,
-        user_id: summary.ownerId,
-        transaction_date: summary.date,
-        description: `Invoice ${summary.invoiceNumber} (${summary.status})`,
-        amount: summary.total,
-        currency: 'EUR',
-        type: 'income',
-        category: 'REVENUE',
-        vat_rate: vatRate,
-        vat_amount: summary.vatTotal,
-        reference: summary.invoiceNumber,
-        non_deductible: false,
-        credit_amount: summary.total,
-        debit_amount: null,
-        is_reconciled: false,
-        bank_transaction_id: null,
-        created_at: now,
-        updated_at: now,
-      };
-      const [existingTransaction] = await queryInterface.sequelize.query(
-        'SELECT id FROM transactions WHERE reference = :reference AND company_id = :companyId LIMIT 1;',
-        {
-          replacements: {
-            reference: summary.invoiceNumber,
-            companyId,
-          },
-        },
-      );
-      if (existingTransaction.length > 0) {
-        transactionIdByReference[summary.invoiceNumber] = existingTransaction[0].id;
-        console.log(`[DEMO SEED] Ledger transaction already exists: ${summary.invoiceNumber}`);
-        continue;
-      }
-      await queryInterface.bulkInsert('transactions', [transactionPayload], {});
-      transactionIdByReference[summary.invoiceNumber] = transactionPayload.id;
-      await logAuditEntry({
-        action: 'transaction_created',
-        resourceType: 'transaction',
-        resourceId: summary.invoiceNumber,
-        userId: summary.ownerId,
-        newValues: { amount: summary.total, type: 'income' },
-        reason: AUDIT_LOG_REASONS.transaction,
-      });
-    }
-
-    for (const expense of expenseSummaries) {
-      const transactionPayload = {
-        id: uuidv4(),
-        company_id: companyId,
-        user_id: expense.userId,
-        transaction_date: expense.expenseDate,
-        description: expense.description,
-        amount: expense.amount,
-        currency: 'EUR',
-        type: 'expense',
-        category: expense.category.toUpperCase(),
-        vat_rate:
-          EXPENSE_TEMPLATES.find((x) => x.description === expense.description)?.vatRate || 0,
-        vat_amount: expense.vatAmount,
-        reference: expense.description,
-        non_deductible: false,
-        credit_amount: null,
-        debit_amount: expense.amount,
-        is_reconciled: false,
-        bank_transaction_id: null,
-        created_at: now,
-        updated_at: now,
-      };
-      const [existingTransaction] = await queryInterface.sequelize.query(
-        'SELECT id FROM transactions WHERE reference = :reference AND company_id = :companyId LIMIT 1;',
-        {
-          replacements: {
-            reference: expense.description,
-            companyId,
-          },
-        },
-      );
-      if (existingTransaction.length > 0) {
-        transactionIdByReference[expense.description] = existingTransaction[0].id;
-        console.log(`[DEMO SEED] Ledger transaction already exists: ${expense.description}`);
-        continue;
-      }
-      await queryInterface.bulkInsert('transactions', [transactionPayload], {});
-      transactionIdByReference[expense.description] = transactionPayload.id;
-      await logAuditEntry({
-        action: 'transaction_created',
-        resourceType: 'transaction',
-        resourceId: expense.description,
-        userId: expense.userId,
-        newValues: { amount: expense.amount, type: 'expense' },
-        reason: AUDIT_LOG_REASONS.transaction,
-      });
-    }
-
-    // === BANK STATEMENT ===
-    let bankStatementId;
-    const [existingStatements] = await queryInterface.sequelize.query(
-      'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
-      { replacements: { fileName: BANK_STATEMENT_TEMPLATE.fileName, companyId } },
-    );
-    if (existingStatements.length > 0) {
-      bankStatementId = existingStatements[0].id;
-      console.log('[DEMO SEED] Bank statement already exists.');
-    } else {
-      const statementPayload = {
-        ...BANK_STATEMENT_TEMPLATE,
-        userId: userMap.admin,
-        companyId,
-        createdAt: now,
-        updatedAt: now,
-      };
-      bankStatementId = await insertRecordAndReturnId(
-        queryInterface,
-        'bank_statements',
-        statementPayload,
-        'SELECT id FROM bank_statements WHERE "fileName" = :fileName AND "companyId" = :companyId LIMIT 1;',
-        { fileName: BANK_STATEMENT_TEMPLATE.fileName, companyId },
-      );
-      await logAuditEntry({
-        action: 'bank_statement_imported',
-        resourceType: 'bank_statement',
-        resourceId: BANK_STATEMENT_TEMPLATE.fileName,
-        userId: userMap.admin,
-        newValues: { totalTransactions: BANK_STATEMENT_TEMPLATE.totalTransactions },
-        reason: AUDIT_LOG_REASONS.bankStatement,
-      });
-      console.log('[DEMO SEED] Bank statement seeded.');
-    }
-
-    const bankTransactionIds = {};
-    for (const spec of BANK_TRANSACTION_SPECS) {
-      const invoiceMatch = invoiceSummaries.find(
-        (inv) => inv.invoiceNumber === spec.matchReference,
-      );
-      const expenseMatch = expenseSummaries.find((exp) => exp.description === spec.matchReference);
-      let amount = spec.amountOverride;
-      if (!amount && spec.matchReference) {
-        const baseAmount = invoiceMatch?.total || expenseMatch?.amount || 0;
-        const fraction = spec.matchFraction || 1;
-        amount = formatMoney(baseAmount * fraction);
-      }
-      if (!amount) {
-        amount = formatMoney(spec.amountOverride || 0);
-      }
-      const reconciliationReference = spec.transactionReference || spec.matchReference;
-      let reconciledWith = null;
-      if (spec.transactionReference) {
-        const ownerId = invoiceMatch?.ownerId || userMap.accountant;
-        reconciledWith = await ensurePartialPaymentTransaction({
-          queryInterface,
-          spec,
-          amount,
-          companyId,
-          ownerId,
-          now,
-          transactionIdByReference,
-        });
-      } else if (reconciliationReference) {
-        reconciledWith = transactionIdByReference[reconciliationReference];
-      }
-      const bankTxPayload = {
-        bankStatementId,
-        companyId,
-        date: spec.transactionDate,
-        value_date: spec.valueDate || spec.transactionDate,
-        description: spec.description,
-        amount,
-        currency: 'EUR',
-        transaction_type: spec.transactionType,
-        reference: spec.reference || spec.transactionReference || spec.matchReference || spec.label,
-        category: spec.category,
-        vat_category: spec.vatCategory,
-        counterparty_name: spec.counterpartyName,
-        is_reconciled: Boolean(reconciledWith),
-        reconciled_with: reconciledWith,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const [existingBankTx] = await queryInterface.sequelize.query(
-        'SELECT id FROM bank_transactions WHERE reference = :reference AND "companyId" = :companyId LIMIT 1;',
-        { replacements: { reference: bankTxPayload.reference, companyId } },
-      );
-      let bankTxId;
-      let inserted = false;
-      if (existingBankTx.length > 0) {
-        bankTxId = existingBankTx[0].id;
-        console.log(`[DEMO SEED] Bank transaction already exists: ${bankTxPayload.reference}`);
-      } else {
-        bankTxId = await insertRecordAndReturnId(
-          queryInterface,
-          'bank_transactions',
-          bankTxPayload,
-          'SELECT id FROM bank_transactions WHERE reference = :reference AND "companyId" = :companyId LIMIT 1;',
-          { reference: bankTxPayload.reference, companyId },
-        );
-        inserted = true;
-      }
-      bankTransactionIds[bankTxPayload.reference] = bankTxId;
-      if (reconciledWith) {
-        await queryInterface.bulkUpdate(
-          'transactions',
-          { is_reconciled: true, bank_transaction_id: bankTxId },
-          { id: reconciledWith },
-          {},
-        );
-      }
-      if (inserted) {
-        await logAuditEntry({
-          action: 'bank_transaction_imported',
-          resourceType: 'bank_transaction',
-          resourceId: bankTxPayload.reference,
-          userId: userMap.admin,
-          newValues: { amount, transactionType: spec.transactionType },
-          reason: AUDIT_LOG_REASONS.bankTransaction,
-        });
-      }
-    }
-
-    // === AI INSIGHTS ===
-    const aiInsightPayloads = [];
-    const lateInvoice = invoiceIdByNumber['SA-INV-2026-002'];
-    const latePartialSpec = BANK_TRANSACTION_SPECS.find(
-      (spec) => spec.transactionReference === 'SA-INV-2026-002-PARTIAL-1',
-    );
-    const latePartialInvoice = invoiceSummaries.find(
-      (inv) => inv.invoiceNumber === latePartialSpec?.matchReference,
-    );
-    const latePartialAmount =
-      latePartialSpec && latePartialInvoice
-        ? formatMoney(latePartialInvoice.total * (latePartialSpec.matchFraction || 1))
-        : null;
-    const formattedPartialAmount =
-      Number.isFinite(latePartialAmount) && latePartialAmount !== null
-        ? `${latePartialAmount.toFixed(2)} EUR`
-        : 'a partial payment';
-    const vatExpense = expenseIdByDescription['Berlin summit hospitality'];
-    const duplicateInvoice = invoiceIdByNumber['SA-INV-2026-011'];
-    if (lateInvoice) {
-      aiInsightPayloads.push({
-        companyId,
-        entityType: 'invoice',
-        entityId: String(lateInvoice),
-        type: 'late-payment-risk',
-        severity: 'medium',
-        confidenceScore: 0.86,
-        summary: `SA-INV-2026-002 is overdue despite ${formattedPartialAmount} being reconciled so far.`,
-        why: `Due date passed while Berlin BioTech only cleared ${formattedPartialAmount}; GoBD §239 and UStG §14 require tracking the remaining receivable.`,
-        legalContext: 'GoBD § 239 and UStG § 14 require tracking outstanding receivables.',
-        evidence: prepareEvidenceValue({
-          invoiceNumber: 'SA-INV-2026-002',
-          dueDate: '2026-02-22',
-        }),
-        ruleId: AI_INSIGHT_RULES.latePayment,
-        modelVersion: 'demo-v1.0',
-        featureFlag: 'ai-demo-mode',
-        disclaimer: 'Suggestion only — confirm payment status before escalating.',
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-    if (vatExpense) {
-      aiInsightPayloads.push({
-        companyId,
-        entityType: 'expense',
-        entityId: String(vatExpense),
-        type: 'vat-anomaly-detection',
-        severity: 'medium',
-        confidenceScore: 0.79,
-        summary: 'Travel hospitality expense uses reduced VAT rate.',
-        why: 'Berlin summit hospitality is booked under Travel but flagged with 7% VAT.',
-        legalContext: 'UStG § 14 Abs. 4 requires accurate VAT rate application.',
-        evidence: prepareEvidenceValue({
-          description: 'Berlin summit hospitality',
-          vatRate: 0.07,
-          category: 'Travel',
-        }),
-        ruleId: AI_INSIGHT_RULES.vatAnomaly,
-        modelVersion: 'demo-v1.0',
-        featureFlag: 'ai-demo-mode',
-        disclaimer: 'Suggestion only — confirm vendor invoice and classification.',
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-    if (duplicateInvoice) {
-      aiInsightPayloads.push({
-        companyId,
-        entityType: 'invoice',
-        entityId: String(duplicateInvoice),
-        type: 'duplicate-invoice-suspicion',
-        severity: 'low',
-        confidenceScore: 0.72,
-        summary: 'Second invoice for Märkisches Ventures duplicates the amount of SA-INV-2026-005.',
-        why: 'Two invoices for Märkisches Ventures share the same gross amount (3.570 EUR) a few weeks apart.',
-        legalContext: 'GoBD § 239 and UStG § 14 on transparent invoicing.',
-        evidence: prepareEvidenceValue({
-          currentInvoice: 'SA-INV-2026-011',
-          similarInvoice: 'SA-INV-2026-005',
-          amount: 3570,
-        }),
-        ruleId: AI_INSIGHT_RULES.duplicateInvoice,
-        modelVersion: 'demo-v1.0',
-        featureFlag: 'ai-demo-mode',
-        disclaimer: 'Suggestion only — validate with the business before marking as duplicate.',
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-    for (const payload of aiInsightPayloads) {
-      const [existing] = await queryInterface.sequelize.query(
-        'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-        {
-          replacements: {
-            ruleId: String(payload.ruleId),
-            entityId: String(payload.entityId),
-            companyId,
-          },
-        },
-      );
-      if (existing.length > 0) {
-        continue;
-      }
-      await insertRecordAndReturnId(
-        queryInterface,
-        'ai_insights',
-        payload,
-        'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-        { ruleId: String(payload.ruleId), entityId: String(payload.entityId), companyId },
-      );
-      await logAuditEntry({
-        action: 'ai_insight_generated',
-        resourceType: 'ai_insight',
-        resourceId: String(payload.ruleId),
-        userId: userMap.admin,
-        newValues: { entityId: String(payload.entityId), type: payload.type },
-        reason: AUDIT_LOG_REASONS.aiInsight,
-      });
-    }
-
-    // === DEMO FILE ATTACHMENTS & DECISIONS ===
-    // Attach demo files to Expense and Invoice with correct schema and linkage
-    const [firstExpense] = expenseSummaries;
-    const [firstInvoice] = invoiceSummaries;
-    const demoAttachments = [];
-
-    // Expense attachment
-    if (firstExpense?.id) {
-      demoAttachments.push({
-        id: uuidv4(),
-        file_name: 'expense-receipt-demo.pdf',
-        original_name: 'expense-receipt-demo.pdf',
-        file_path: '/uploads/demo/expense-receipt-demo.pdf',
-        url: '/uploads/demo/expense-receipt-demo.pdf',
-        file_size: 123456,
-        file_type: 'application/pdf',
-        attached_to_type: 'expense',
-        attached_to_id:
-          typeof firstExpense.id === 'string' && /^[0-9a-fA-F-]{36}$/.test(firstExpense.id)
-            ? firstExpense.id
-            : null,
-        company_id: companyId,
-        user_id: userMap.accountant,
-        uploaded_by: userMap.accountant,
-        created_at: now,
-        updated_at: now,
-      });
-    }
-
-    // Invoice attachment
-    if (firstInvoice?.id) {
-      demoAttachments.push({
-        id: uuidv4(),
-        file_name: 'invoice-demo.pdf',
-        original_name: 'invoice-demo.pdf',
-        file_path: '/uploads/demo/invoice-demo.pdf',
-        url: '/uploads/demo/invoice-demo.pdf',
-        file_size: 234567,
-        file_type: 'application/pdf',
-        attached_to_type: 'invoice',
-        attached_to_id:
-          typeof firstInvoice.id === 'string' && /^[0-9a-fA-F-]{36}$/.test(firstInvoice.id)
-            ? firstInvoice.id
-            : null,
-        company_id: companyId,
-        user_id: userMap.admin,
-        uploaded_by: userMap.admin,
-        created_at: now,
-        updated_at: now,
-      });
-    }
-
-    if (demoAttachments.length > 0) {
-      await queryInterface.bulkInsert('file_attachments', demoAttachments);
-    }
-
-    // === DEMO AI INSIGHT DECISIONS ===
-    // Fetch inserted ai_insights for demo decisions
-    const [latePaymentInsight] = await queryInterface.sequelize.query(
-      'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-      {
-        replacements: {
-          ruleId: String(AI_INSIGHT_RULES.latePayment),
-          entityId: String(invoiceIdByNumber['SA-INV-2026-002']),
-          companyId,
-        },
-      },
-    );
-    const [vatAnomalyInsight] = await queryInterface.sequelize.query(
-      'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-      {
-        replacements: {
-          ruleId: String(AI_INSIGHT_RULES.vatAnomaly),
-          entityId: String(expenseIdByDescription['Berlin summit hospitality']),
-          companyId,
-        },
-      },
-    );
-    const [duplicateInvoiceInsight] = await queryInterface.sequelize.query(
-      'SELECT id FROM ai_insights WHERE "ruleId" = :ruleId AND "entityId" = :entityId AND "companyId" = :companyId LIMIT 1;',
-      {
-        replacements: {
-          ruleId: String(AI_INSIGHT_RULES.duplicateInvoice),
-          entityId: String(invoiceIdByNumber['SA-INV-2026-011']),
-          companyId,
-        },
-      },
-    );
-
-    const aiInsightDecisions = [
-      {
-        id: uuidv4(),
-        companyId,
-        actorUserId: userMap.admin,
-        insightId: latePaymentInsight?.[0]?.id || null,
-        decision: 'accepted',
-        reason: 'Demo: Payment delay accepted for trusted client.',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: uuidv4(),
-        companyId,
-        actorUserId: userMap.accountant,
-        insightId: vatAnomalyInsight?.[0]?.id || null,
-        decision: 'rejected',
-        reason: 'Demo: VAT anomaly flagged as false positive.',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: uuidv4(),
-        companyId,
-        actorUserId: userMap.auditor,
-        insightId: duplicateInvoiceInsight?.[0]?.id || null,
-        decision: 'overridden',
-        reason: 'Demo: Needs further review next quarter.',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
-    await queryInterface.bulkInsert('ai_insight_decisions', aiInsightDecisions);
-
-    // === TAX REPORTS ===
-    for (const period of TAX_PERIOD_TARGETS) {
-      const periodKey = `${period.year}-Q${period.quarter}`;
-      const periodString = JSON.stringify({ quarter: period.quarter, year: period.year });
-      const invoicesForPeriod = invoiceSummaries.filter(
-        (inv) => getQuarterKey(inv.date) === periodKey,
-      );
-      const expensesForPeriod = expenseSummaries.filter(
-        (exp) => getQuarterKey(exp.expenseDate) === periodKey,
-      );
-      const totalOutputTax = formatMoney(
-        invoicesForPeriod.reduce((sum, inv) => sum + inv.vatTotal, 0),
-      );
-      const totalInputTax = formatMoney(
-        expensesForPeriod.reduce((sum, exp) => sum + exp.vatAmount, 0),
-      );
-      const vatPayable = formatMoney(totalOutputTax - totalInputTax);
-      const reportData = {
-        summary: {
-          totalOutputTax,
-          totalInputTax,
-          vatPayable,
-        },
-        details: {
-          invoiceCount: invoicesForPeriod.length,
-          expenseCount: expensesForPeriod.length,
-          periodDescription: `Q${period.quarter} ${period.year}`,
-        },
-      };
-      const statusMap = {
-        DRAFT: 'draft',
-        SUBMITTED: 'submitted',
-        ACCEPTED: 'accepted',
-        REJECTED: 'rejected',
-      };
-      const normalizedStatus = statusMap[period.status?.toUpperCase()] || 'draft';
-      const [existingReports] = await queryInterface.sequelize.query(
-        'SELECT id FROM tax_reports WHERE "companyId" = :companyId AND "reportType" = :reportType AND "period" = :period LIMIT 1;',
-        {
-          replacements: {
-            companyId,
-            reportType: String('USt'),
-            period: String(periodString),
-          },
-        },
-      );
-      if (existingReports.length > 0) {
-        continue;
-      }
-      const taxReportPayload = {
-        companyId,
-        reportType: 'USt',
-        period: periodString,
-        year: period.year,
-        status: normalizedStatus,
-        data: JSON.stringify(reportData),
-        generatedAt: now,
-        submittedAt: normalizedStatus === 'submitted' ? now : null,
-        submittedBy: userMap.accountant,
-        elsterStatus: period.elsterStatus,
-        elsterTransferTicket: period.ticket,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await insertRecordAndReturnId(
-        queryInterface,
-        'tax_reports',
-        taxReportPayload,
-        'SELECT id FROM tax_reports WHERE "companyId" = :companyId AND "reportType" = :reportType AND "period" = :period LIMIT 1;',
-        {
-          companyId,
-          reportType: String('USt'),
-          period: String(periodString),
-        },
-      );
-      await logAuditEntry({
-        action: 'tax_report_created',
-        resourceType: 'tax_report',
-        resourceId: periodString,
-        userId: userMap.accountant,
-        newValues: { status: normalizedStatus, vatPayable },
-        reason: AUDIT_LOG_REASONS.taxReport,
-      });
-    }
-
-    console.log('[DEMO SEED] Demo data seeding complete.');
   },
 
   down: async (queryInterface, _Sequelize) => {
@@ -1731,7 +1265,13 @@ module.exports = {
       return;
     }
 
-    await queryInterface.bulkDelete('audit_logs', { reason: Object.values(AUDIT_LOG_REASONS) }, {});
+    // Raw SQL delete for audit_logs
+    await queryInterface.sequelize.query(
+      `DELETE FROM audit_logs WHERE reason IN (${Object.values(AUDIT_LOG_REASONS)
+        .map(() => '?')
+        .join(', ')})`,
+      { replacements: Object.values(AUDIT_LOG_REASONS) },
+    );
 
     const ruleIds = Object.values(AI_INSIGHT_RULES);
     const [insights] = await queryInterface.sequelize.query(
@@ -1797,6 +1337,25 @@ module.exports = {
 
     console.log('[DEMO SEED] Demo data removed.');
   },
-};
 
-module.exports.buildInvoiceItems = buildInvoiceItems;
+  // Export all helpers/constants
+  DEMO_PASSWORD,
+  DEMO_COMPANY,
+  DEMO_USERS,
+  INVOICE_TEMPLATES,
+  EXPENSE_TEMPLATES,
+  BANK_STATEMENT_TEMPLATE,
+  BANK_TRANSACTION_SPECS,
+  AI_INSIGHT_RULES,
+  TAX_PERIOD_TARGETS,
+  AUDIT_LOG_REASONS,
+  requireDemoSeedEnabled,
+  formatMoney,
+  prepareEvidenceValue,
+  buildInvoiceItems,
+  buildDemoInvoice,
+  insertRecordAndReturnId,
+  ensurePartialPaymentTransaction,
+  logAuditEntry,
+  getQuarterKey,
+};

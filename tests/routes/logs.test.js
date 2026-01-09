@@ -1,4 +1,3 @@
-const request = require('../utils/request');
 const express = require('express');
 const logger = require('../../src/lib/logger');
 
@@ -28,13 +27,14 @@ describe('POST /api/logs', () => {
   });
 
   it('should reject unauthenticated requests', async () => {
-    const app = makeApp((req, res) =>
-      res.status(401).json({ error: 'Unauthorized' }),
-    );
+    const app = makeApp((req, res) => res.status(401).json({ error: 'Unauthorized' }));
 
-    const res = await request(app)
-      .post('/api/logs')
-      .send({ message: 'test' });
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: '/api/logs',
+      body: { message: 'test' },
+    });
 
     expect(res.status).toBe(401);
   });
@@ -47,15 +47,18 @@ describe('POST /api/logs', () => {
       next();
     });
 
-    const res = await request(app)
-      .post('/api/logs')
-      .send({
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: '/api/logs',
+      body: {
         message: 'test',
         level: 'info',
         timestamp: '2025-12-16T00:00:00Z',
         url: '/foo',
         context: { foo: 'bar' },
-      });
+      },
+    });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
@@ -69,9 +72,11 @@ describe('POST /api/logs', () => {
       next();
     });
 
-    await request(app)
-      .post('/api/logs')
-      .send({
+    await global.requestApp({
+      app,
+      method: 'post',
+      url: '/api/logs',
+      body: {
         message: 'test',
         level: 'info',
         token: 'should-not-log',
@@ -82,7 +87,8 @@ describe('POST /api/logs', () => {
           password: 'should-not-log',
           nested: { iban: 'should-not-log', keep: 'ok' },
         },
-      });
+      },
+    });
 
     const call =
       logger.info.mock.calls[0] ||

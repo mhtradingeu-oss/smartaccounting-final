@@ -186,3 +186,33 @@ sha
 !docs/**
 database/dev.sqlite
 database/dev.sqlite
+# local debug artifacts
+invoice-test-debug.json
+.reports/
+coverage/
+*.log
+
+# local sqlite files
+.data/*.sqlite
+.data/*.sqlite-*
+
+# local scratch tests (if not intended to ship)
+tests/user.create.smoke.js
+cat > .dockerignore <<'EOF'
+node_modules
+**/node_modules
+.git
+.gitignore
+Dockerfile*
+docker-compose*.yml
+*.log
+temp
+uploads
+.data
+coverage
+dist
+build
+.cache
+.vscode
+.idea
+EOF

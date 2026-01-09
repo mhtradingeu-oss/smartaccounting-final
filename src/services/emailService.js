@@ -1,10 +1,8 @@
-
 const nodemailer = require('nodemailer');
 const logger = require('../lib/logger');
 const fs = require('fs');
 const path = require('path');
 const { AuditLog } = require('../models');
-
 
 if (process.env.SAFE_MODE === 'true') {
   logger.warn('SAFE_MODE enabled: Email service disabled');
@@ -18,16 +16,25 @@ class EmailService {
     this.templates = new Map();
     this.queue = [];
     this.isProcessing = false;
+    // Disable email in test mode
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+      logger.warn('EmailService: Disabled in test mode (no transporter, no verify)');
+      return;
+    }
     this.initializeTransporter();
     this.loadTemplates();
   }
 
   initializeTransporter() {
+    // Skip transporter in test mode
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+      logger.warn('EmailService: Skipping transporter initialization in test mode');
+      return;
+    }
     if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER) {
       logger.warn('⚠️ Email configuration missing - email features disabled');
       return;
     }
-
     try {
       this.transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
@@ -41,7 +48,6 @@ class EmailService {
           rejectUnauthorized: false,
         },
       });
-
       // Verify connection
       this.transporter.verify((error, _success) => {
         if (error) {
@@ -50,7 +56,6 @@ class EmailService {
           logger.info('✅ Email service ready');
         }
       });
-
     } catch (error) {
       logger.error('❌ Failed to initialize email transporter:', error);
     }
@@ -69,7 +74,7 @@ class EmailService {
     try {
       const templateFiles = fs.readdirSync(templateDir);
 
-      templateFiles.forEach(file => {
+      templateFiles.forEach((file) => {
         if (file.endsWith('.html')) {
           const templateName = path.basename(file, '.html');
           const templateContent = fs.readFileSync(path.join(templateDir, file), 'utf-8');
@@ -85,7 +90,7 @@ class EmailService {
 
   createDefaultTemplates(templateDir) {
     const templates = {
-      'welcome': `
+      welcome: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -304,7 +309,6 @@ class EmailService {
 
       logger.info(`✅ Email sent to ${to}: ${subject}`);
       return result;
-
     } catch (error) {
       logger.error('❌ Failed to send email:', error);
 
@@ -437,7 +441,6 @@ class EmailService {
         message: 'Email configuration is working',
         testResult,
       };
-
     } catch (error) {
       throw new Error(`Email test failed: ${error.message}`);
     }

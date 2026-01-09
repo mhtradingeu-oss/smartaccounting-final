@@ -3,8 +3,12 @@ const { authenticate, requireAdmin, requireCompany } = require('../middleware/au
 const { Invoice, Expense, BankStatement, BankTransaction, Company } = require('../models');
 const router = express.Router();
 
+router.use(authenticate);
+router.use(requireAdmin);
+router.use(requireCompany);
+
 // POST /api/admin/demo-data/load
-router.post('/demo-data/load', authenticate, requireAdmin, requireCompany, async (req, res) => {
+router.post('/demo-data/load', async (req, res) => {
   try {
     // Only allow for Default Company and admin
     const company = await Company.findByPk(req.user.companyId);

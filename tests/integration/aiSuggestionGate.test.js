@@ -16,17 +16,23 @@ app.post('/api/ai/suggest', async (req, res) => {
 
 describe('API Gate: /api/ai/suggest', () => {
   it('should reject mutation requests', async () => {
-    const res = await request(app)
-      .post('/api/ai/suggest')
-      .send({ userId: 1, companyId: 1, prompt: 'delete invoice', context: {} });
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: '/api/ai/suggest',
+      body: { userId: 1, companyId: 1, prompt: 'delete invoice', context: {} },
+    });
     expect([400, 404]).toContain(res.status);
     expect(res.body.error).toMatch(/Mutation intent detected/);
   });
 
   it('should allow advisory suggestions only', async () => {
-    const res = await request(app)
-      .post('/api/ai/suggest')
-      .send({ userId: 1, companyId: 1, prompt: 'review overdue invoices', context: {} });
+    const res = await global.requestApp({
+      app,
+      method: 'post',
+      url: '/api/ai/suggest',
+      body: { userId: 1, companyId: 1, prompt: 'review overdue invoices', context: {} },
+    });
     expect(res.status).toBe(200);
     expect(res.body.advisory).toBe(true);
   });

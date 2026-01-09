@@ -1,12 +1,14 @@
-const logger = require('../lib/logger');
 const express = require('express');
-const router = express.Router();
+const logger = require('../lib/logger');
 const { authenticate } = require('../middleware/authMiddleware');
 const germanTaxCompliance = require('../services/germanTaxCompliance');
 const elsterService = require('../services/elsterService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
+const router = express.Router();
+
 router.use(disabledFeatureHandler('VAT/tax reporting'));
+router.use(authenticate);
 
 router.get('/eur/:year', authenticate, async (req, res) => {
   try {
@@ -36,10 +38,11 @@ router.post('/vat-return', authenticate, async (req, res) => {
       });
     }
 
-    const vatReturn = await germanTaxCompliance.generateVATReturn(
-      req.user.companyId,
-      { year, quarter, month },
-    );
+    const vatReturn = await germanTaxCompliance.generateVATReturn(req.user.companyId, {
+      year,
+      quarter,
+      month,
+    });
 
     res.json({
       message: 'VAT return generated successfully',
@@ -177,13 +180,15 @@ router.post('/submit', authenticate, async (req, res) => {
       message: 'Tax report processed successfully',
       submissionId,
       elsterXML,
-      elsterSubmission: elsterSubmission ? {
-        transferTicket: elsterSubmission.transferTicket,
-        status: elsterSubmission.status,
-        submissionId: elsterSubmission.submissionId,
-        environment: elsterSubmission.environment,
-        message: elsterSubmission.message,
-      } : null,
+      elsterSubmission: elsterSubmission
+        ? {
+            transferTicket: elsterSubmission.transferTicket,
+            status: elsterSubmission.status,
+            submissionId: elsterSubmission.submissionId,
+            environment: elsterSubmission.environment,
+            message: elsterSubmission.message,
+          }
+        : null,
       reportData: {
         reportType,
         period,

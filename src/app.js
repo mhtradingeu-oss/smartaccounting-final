@@ -1,5 +1,35 @@
 // Configured Express application; index.js bootstraps runtime and attaches the server.
+
 require('dotenv').config();
+// Environment variable validation (fail closed)
+const { cleanEnv, str, num } = require('envalid');
+const envSpec = {
+  NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
+  API_BASE_URL: str({ default: '/api' }),
+  PORT: num({ default: 3000 }),
+  DB_HOST: str({ default: 'localhost' }),
+  DB_USER: str({ default: 'testuser' }),
+  DB_PASS: str({ default: 'testpass' }),
+  DB_NAME: str({ default: 'testdb' }),
+  JWT_SECRET: str({ default: 'testsecret' }),
+  // Add other required env vars here as needed
+};
+if (process.env.NODE_ENV === 'production') {
+  cleanEnv(process.env, envSpec);
+} else {
+  try {
+    cleanEnv(process.env, envSpec, {
+      reporter: ({ errors }) => {
+        if (Object.keys(errors).length > 0) {
+          // eslint-disable-next-line no-console
+          console.warn('[envalid] Missing/invalid env vars (non-prod):', Object.keys(errors));
+        }
+      },
+    });
+  } catch (e) {
+    // Do not exit in test/dev
+  }
+}
 
 const express = require('express');
 const { serve, setup } = require('swagger-ui-express');

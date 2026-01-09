@@ -1,9 +1,18 @@
 const app = require('../../src/app');
+const supertest = require('supertest');
 const { Company } = require('../../src/models');
 
 describe('Auth smoke test', () => {
   const loginPath = '/api/auth/login';
   const companiesPath = '/api/companies';
+
+  beforeAll(async () => {
+    // Ensure test user exists for smoke test
+    global.testUser = await global.testUtils.createTestUser({
+      email: 'test@example.com',
+      password: 'testpass123',
+    });
+  });
 
   it('logs in and accesses a protected route with the returned token', async () => {
     const credentials = {
@@ -11,12 +20,8 @@ describe('Auth smoke test', () => {
       password: 'testpass123',
     };
 
-    const loginResponse = await global.requestApp({
-      app,
-      method: 'POST',
-      url: loginPath,
-      body: credentials,
-    });
+    const supertestApp = supertest(app);
+    const loginResponse = await supertestApp.post(loginPath).send(credentials);
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.success).toBe(true);
     expect(loginResponse.body.user).toMatchObject({ email: credentials.email });
@@ -34,14 +39,9 @@ describe('Auth smoke test', () => {
     await global.testUser.update({ companyId: company.id });
     await global.testUser.reload();
 
-    const companiesResponse = await global.requestApp({
-      app,
-      method: 'GET',
-      url: companiesPath,
-      headers: {
-        Authorization: `Bearer ${loginResponse.body.token}`,
-      },
-    });
+    const companiesResponse = await supertestApp
+      .get(companiesPath)
+      .set('Authorization', `Bearer ${loginResponse.body.token}`);
     expect(companiesResponse.status).toBe(200);
 
     expect(Array.isArray(companiesResponse.body.companies)).toBe(true);

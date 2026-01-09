@@ -75,21 +75,27 @@ const {
   FileAttachment,
   sequelize,
   InvoicePayment,
-  User,
+  // User,
 } = require('../models');
 // Register a payment for an invoice
 const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId) => {
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
-  const invoice = await Invoice.findOne({ where });
+  let invoice;
+  try {
+    invoice = await Invoice.findOne({ where });
+  } catch (err) {
+    // DB or truly unexpected error
+    err.status = 500;
+    throw err;
+  }
   if (!invoice) {
     const err = new Error('Invoice not found');
     err.status = 404;
     throw err;
   }
-  if (
-    normalizeStatus(invoice.status) !== 'SENT' &&
-    normalizeStatus(invoice.status) !== 'PARTIALLY_PAID'
-  ) {
+  const statusNorm = normalizeStatus(invoice.status);
+  if (statusNorm !== 'SENT' && statusNorm !== 'PARTIALLY_PAID') {
+    // State conflict: not eligible for payment
     const err = new Error('Payments can only be registered for SENT or PARTIALLY_PAID invoices.');
     err.status = 409;
     throw err;
@@ -104,8 +110,9 @@ const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId)
   // Calculate new paid/remaining amounts
   const newPaidAmount = parseFloat(invoice.paidAmount) + paymentAmount;
   if (newPaidAmount > parseFloat(invoice.total)) {
+    // Overpayment is a business rule violation: 409
     const err = new Error('Payment exceeds invoice total.');
-    err.status = 400;
+    err.status = 409;
     throw err;
   }
   const newRemainingAmount = parseFloat(invoice.total) - newPaidAmount;
@@ -114,32 +121,38 @@ const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId)
   if (newPaidAmount === parseFloat(invoice.total)) {
     newStatus = 'PAID';
   }
-  // Transaction: create payment, update invoice
-  return await sequelize.transaction(async (t) => {
-    const payment = await InvoicePayment.create(
-      {
-        invoiceId: invoice.id,
-        amount: paymentAmount,
-        date: paymentData.date,
-        method: paymentData.method,
-        reference: paymentData.reference,
-        userId,
-        createdAt: new Date(),
-      },
-      { transaction: t },
-    );
-    await invoice.update(
-      {
-        paidAmount: newPaidAmount,
-        remainingAmount: newRemainingAmount,
-        status: newStatus,
-      },
-      { transaction: t },
-    );
-    // TODO: Audit-log payment registration
-    const updatedInvoice = await getInvoiceById(invoice.id, companyId);
-    return { payment, invoice: updatedInvoice };
-  });
+  try {
+    // Transaction: create payment, update invoice
+    return await sequelize.transaction(async (t) => {
+      const payment = await InvoicePayment.create(
+        {
+          invoiceId: invoice.id,
+          amount: paymentAmount,
+          date: paymentData.date,
+          method: paymentData.method,
+          reference: paymentData.reference,
+          userId,
+          createdAt: new Date(),
+        },
+        { transaction: t },
+      );
+      await invoice.update(
+        {
+          paidAmount: newPaidAmount,
+          remainingAmount: newRemainingAmount,
+          status: newStatus,
+        },
+        { transaction: t },
+      );
+      // TODO: Audit-log payment registration
+      const updatedInvoice = await getInvoiceById(invoice.id, companyId);
+      return { payment, invoice: updatedInvoice };
+    });
+  } catch (err) {
+    // Only allow truly unexpected errors to bubble as 500
+    err.status = 500;
+    throw err;
+  }
 };
 const {
   enforceCurrencyIsEur,

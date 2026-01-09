@@ -40,8 +40,8 @@ const buildInvalidQuery = ({ table, column, values }) => {
 
 module.exports = {
   async up(queryInterface) {
+    const dialect = queryInterface.sequelize.getDialect();
     const transaction = await queryInterface.sequelize.transaction();
-
     try {
       for (const constraint of CONSTRAINTS) {
         const [result] = await queryInterface.sequelize.query(buildInvalidQuery(constraint), {
@@ -53,18 +53,21 @@ module.exports = {
             `Cannot add ${constraint.name} because ${result.invalid_count} records in ${constraint.table}.${constraint.column} reference unsupported values.`,
           );
         }
-
-        const columnRef = `"${constraint.column}"`;
-        await queryInterface.sequelize.query(
-          `
-          ALTER TABLE "${constraint.table}"
-          ADD CONSTRAINT "${constraint.name}"
-          CHECK (${columnRef} IN (${constraint.values.map((value) => `'${value}'`).join(', ')}));
-        `,
-          { transaction },
-        );
+        if (dialect === 'postgres') {
+          const columnRef = `"${constraint.column}"`;
+          await queryInterface.sequelize.query(
+            `
+            ALTER TABLE "${constraint.table}"
+            ADD CONSTRAINT "${constraint.name}"
+            CHECK (${columnRef} IN (${constraint.values.map((value) => `'${value}'`).join(', ')}));
+          `,
+            { transaction },
+          );
+        } else if (dialect === 'sqlite') {
+          // SQLite does not support adding/dropping constraints after table creation.
+          // Data is validated, but constraint is not enforced at DB level.
+        }
       }
-
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
@@ -73,12 +76,18 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    const dialect = queryInterface.sequelize.getDialect();
     await queryInterface.sequelize.transaction(async (transaction) => {
       for (const constraint of CONSTRAINTS) {
-        await queryInterface.sequelize.query(
-          `ALTER TABLE "${constraint.table}" DROP CONSTRAINT IF EXISTS "${constraint.name}";`,
-          { transaction },
-        );
+        if (dialect === 'postgres') {
+          await queryInterface.sequelize.query(
+            `ALTER TABLE "${constraint.table}" DROP CONSTRAINT IF EXISTS "${constraint.name}";`,
+            { transaction },
+          );
+        } else if (dialect === 'sqlite') {
+          // SQLite does not support dropping constraints after table creation.
+          // No-op for SQLite.
+        }
       }
     });
   },

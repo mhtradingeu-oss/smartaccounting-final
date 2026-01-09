@@ -25,7 +25,12 @@ describe('Expense model immutability', () => {
   }
 
   test('rejects field updates once expense is approved', async () => {
-    const expense = await Expense.create(buildExpensePayload());
+    const expense = await Expense.create({
+      ...buildExpensePayload(),
+      userId: user.id,
+      date: '2026-01-01',
+      amount: 100,
+    });
     expense.status = 'booked';
     await expense.save();
 
@@ -34,7 +39,12 @@ describe('Expense model immutability', () => {
   });
 
   test('allows status-only transition after approval', async () => {
-    const expense = await Expense.create(buildExpensePayload());
+    const expense = await Expense.create({
+      ...buildExpensePayload(),
+      userId: user.id,
+      date: '2026-01-01',
+      amount: 100,
+    });
     expense.status = 'booked';
     await expense.save();
 

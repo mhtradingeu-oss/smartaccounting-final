@@ -9,6 +9,8 @@ const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 const router = express.Router();
 
 router.use(disabledFeatureHandler('Stripe billing'));
+router.use(authenticate);
+router.use(requireCompany);
 
 const ensureStripeConfigured = (req, res, next) => {
   if (!process.env.STRIPE_SECRET_KEY) {

@@ -10,32 +10,26 @@ module.exports = {
       await queryInterface.sequelize.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
     }
 
-    await queryInterface.addColumn('audit_logs', 'companyId', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'companies',
-        key: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE',
-    });
-
-    await queryInterface.addColumn('audit_logs', 'requestId', {
-      type: dialect === 'sqlite' ? Sequelize.STRING : Sequelize.UUID,
-      allowNull: true,
-      defaultValue:
-        dialect === 'sqlite'
-          ? Sequelize.literal('LOWER(HEX(RANDOMBLOB(16)))')
-          : Sequelize.literal('gen_random_uuid()'),
-    });
-
-    await queryInterface.addColumn('audit_logs', 'metadata', {
-      type: Sequelize.JSON,
-      allowNull: true,
-    });
-
     if (dialect === 'postgres') {
+      await queryInterface.addColumn('audit_logs', 'companyId', {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'companies',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      });
+      await queryInterface.addColumn('audit_logs', 'requestId', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        defaultValue: Sequelize.literal('gen_random_uuid()'),
+      });
+      await queryInterface.addColumn('audit_logs', 'metadata', {
+        type: Sequelize.JSON,
+        allowNull: true,
+      });
       await queryInterface.sequelize.transaction(async (transaction) => {
         await queryInterface.sequelize.query(
           `
@@ -46,7 +40,6 @@ module.exports = {
         `,
           { transaction },
         );
-
         await queryInterface.sequelize.query(
           `
           UPDATE "audit_logs"
@@ -55,7 +48,6 @@ module.exports = {
         `,
           { transaction },
         );
-
         const [missing] = await queryInterface.sequelize.query(
           `
           SELECT COUNT(*) AS missing
@@ -64,13 +56,11 @@ module.exports = {
         `,
           { type: QueryTypes.SELECT, transaction },
         );
-
         if (Number(missing?.missing ?? missing?.count ?? 0) > 0) {
           throw new Error(
             'audit_logs contains records without companyId. Backfill before re-running this migration.',
           );
         }
-
         await queryInterface.changeColumn(
           'audit_logs',
           'companyId',
@@ -86,7 +76,6 @@ module.exports = {
           },
           { transaction },
         );
-
         await queryInterface.changeColumn(
           'audit_logs',
           'requestId',
@@ -99,6 +88,19 @@ module.exports = {
         );
       });
     } else if (dialect === 'sqlite') {
+      // SQLite: add columns as nullable, no default for requestId, no constraints
+      await queryInterface.addColumn('audit_logs', 'companyId', {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      });
+      await queryInterface.addColumn('audit_logs', 'requestId', {
+        type: Sequelize.STRING,
+        allowNull: true,
+      });
+      await queryInterface.addColumn('audit_logs', 'metadata', {
+        type: Sequelize.JSON,
+        allowNull: true,
+      });
       await queryInterface.sequelize.query(
         `
         UPDATE "audit_logs"
@@ -106,6 +108,7 @@ module.exports = {
         WHERE "requestId" IS NULL;
       `,
       );
+      // Do not attempt to make columns non-nullable or add constraints in SQLite
     }
   },
 

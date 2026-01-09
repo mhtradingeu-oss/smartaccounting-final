@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useAuth } from '../context/AuthContext';
 import { formatApiError } from '../services/api';
-import { api } from '../services/api';
+import api from '../services/api';
 
 const ProfileSettings = () => {
   const { user, logout } = useAuth();

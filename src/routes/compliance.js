@@ -1,8 +1,9 @@
 const express = require('express');
-const router = express.Router();
 const vatComplianceService = require('../services/vatComplianceService');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
 const AuditLogService = require('../services/auditLogService');
+
+const router = express.Router();
 
 // VAT/UStG compliance validation endpoint
 router.post('/validate-transaction', authenticate, async (req, res) => {
@@ -95,10 +96,7 @@ router.get('/reports/:type', (req, res) => {
     });
   }
 
-  if (
-    typeof req.companyId !== 'undefined' &&
-    req.companyId !== authenticatedCompanyId
-  ) {
+  if (typeof req.companyId !== 'undefined' && req.companyId !== authenticatedCompanyId) {
     return res.status(403).json({
       success: false,
       message: 'Forbidden: company context mismatch',

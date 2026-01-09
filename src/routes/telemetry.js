@@ -12,24 +12,33 @@ const telemetryLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+router.use(telemetryLimiter);
+
 // Utility: Remove likely PII fields from error payload
 function sanitizeErrorPayload(payload) {
   // eslint-disable-next-line no-unused-vars -- stripped for PII safety
   const { error, stack, ...rest } = payload || {};
   // Drop any keys that look like email, name, address, token, password, etc.
-  const piiKeys = /email|name|address|token|password|ssn|iban|bic|phone|user|company|session|auth|jwt/i;
-  return Object.fromEntries(
-    Object.entries(rest).filter(([k]) => !piiKeys.test(k)),
-  );
+  const piiKeys =
+    /email|name|address|token|password|ssn|iban|bic|phone|user|company|session|auth|jwt/i;
+  return Object.fromEntries(Object.entries(rest).filter(([k]) => !piiKeys.test(k)));
 }
 
 // POST /api/telemetry/client-error
 router.post('/client-error', telemetryLimiter, (req, res) => {
   try {
     // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
-    const { message, route, buildVersion, featureFlags, errorType, stack, ...rest } = req.body || {};
+    const { message, route, buildVersion, featureFlags, errorType, stack, ...rest } =
+      req.body || {};
     // Only log minimal, non-PII info
-    const sanitized = sanitizeErrorPayload({ ...rest, message, route, buildVersion, featureFlags, errorType });
+    const sanitized = sanitizeErrorPayload({
+      ...rest,
+      message,
+      route,
+      buildVersion,
+      featureFlags,
+      errorType,
+    });
     logger.warn('Client error event', {
       ...sanitized,
       channel: 'telemetry',

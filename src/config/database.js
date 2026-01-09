@@ -74,14 +74,14 @@ function createDatabaseConfig(targetEnv) {
   const normalizedEnv = String(envName).trim().toLowerCase();
   const isTestEnv = normalizedEnv === 'test';
   const forceSqlite =
-    process.env.USE_SQLITE !== undefined
-      ? process.env.USE_SQLITE === 'true'
-      : isTestEnv;
+    process.env.USE_SQLITE !== undefined ? process.env.USE_SQLITE === 'true' : isTestEnv;
   const databaseUrl = process.env.DATABASE_URL;
   const storage =
     process.env.SQLITE_STORAGE ||
     (isTestEnv ? ':memory:' : undefined) ||
-    (databaseUrl && databaseUrl.startsWith('sqlite:') ? databaseUrl.replace('sqlite:', '') : undefined);
+    (databaseUrl && databaseUrl.startsWith('sqlite:')
+      ? databaseUrl.replace('sqlite:', '')
+      : undefined);
   const poolConfig = {
     max: parseNumberEnv(process.env.DB_POOL_MAX),
     min: parseNumberEnv(process.env.DB_POOL_MIN),
@@ -101,7 +101,7 @@ function createDatabaseConfig(targetEnv) {
 
   const loggingOptions = buildSequelizeLoggingOptions(isTestEnv);
 
-  return {
+  const config = {
     env: normalizedEnv,
     isTest: isTestEnv,
     isSqlite: forceSqlite || (databaseUrl && databaseUrl.startsWith('sqlite:')),
@@ -112,6 +112,12 @@ function createDatabaseConfig(targetEnv) {
     pool: hasPool ? poolConfig : undefined,
     dialectOptions,
   };
+  // Debug print for storage path
+  if (config.isSqlite) {
+    // eslint-disable-next-line no-console
+    console.log('[DB]', normalizedEnv, 'sqlite storage =', config.storage);
+  }
+  return config;
 }
 
 function getSequelize(targetEnv) {

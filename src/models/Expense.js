@@ -108,18 +108,21 @@ module.exports = (sequelize, DataTypes) => {
     },
   );
 
-  const FINAL_EXPENSE_STATUSES = new Set(['booked', 'archived']);
-  const ALLOWED_FINAL_EXPENSE_FIELDS = new Set(['status', 'updatedAt']);
+  // Immutability: Once status is 'booked', only status can change
   Expense.addHook('beforeUpdate', (expense) => {
     const prevStatus = (expense._previousDataValues?.status || '').toLowerCase();
-    if (!FINAL_EXPENSE_STATUSES.has(prevStatus)) {
+    // Only enforce immutability if previously booked
+    if (prevStatus !== 'booked') {
       return;
     }
+    // Allow only status field to change
     const changedFields = (expense.changed() || []).filter(
-      (field) => !ALLOWED_FINAL_EXPENSE_FIELDS.has(field),
+      (field) => field !== 'status' && field !== 'updatedAt',
     );
     if (changedFields.length > 0) {
-      const err = new Error('Approved expenses cannot be modified; create a correction entry instead.');
+      const err = new Error(
+        'Once an expense is booked, only status changes are allowed. To modify other fields, create a correction entry.',
+      );
       err.status = 400;
       throw err;
     }

@@ -8,18 +8,46 @@ const { validateRequest } = require('../middleware/security');
 
 const router = express.Router();
 
+router.use(authenticate);
+router.use(requireCompany);
+
 const companyUpdateValidators = [
   param('companyId').isInt().withMessage('Invalid company id'),
-  body('name').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 chars'),
-  body('address').optional().isString().trim().isLength({ min: 5, max: 255 }).withMessage('Address must be 5-255 chars'),
-  body('city').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('City must be 2-100 chars'),
-  body('postalCode').optional().isString().trim().isLength({ min: 2, max: 20 }).withMessage('Postal code must be 2-20 chars'),
-  body('country').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('Country must be 2-100 chars'),
+  body('name')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be 2-100 chars'),
+  body('address')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 5, max: 255 })
+    .withMessage('Address must be 5-255 chars'),
+  body('city')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('City must be 2-100 chars'),
+  body('postalCode')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 20 })
+    .withMessage('Postal code must be 2-20 chars'),
+  body('country')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Country must be 2-100 chars'),
 ];
 
 const sanitizeStringValue = (value) => (typeof value === 'string' ? value.trim() : value);
 
-router.get('/', authenticate, requireCompany, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const filters = [];
     if (req.user.companyId) {
@@ -48,8 +76,6 @@ router.get('/', authenticate, requireCompany, async (req, res, next) => {
 
 router.put(
   '/:companyId',
-  authenticate,
-  requireCompany,
   requireRole(['admin']),
   validateRequest(companyUpdateValidators),
   async (req, res, next) => {

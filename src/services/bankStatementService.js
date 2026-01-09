@@ -24,6 +24,12 @@ const DRY_RUN_STATUS = {
 };
 
 class BankStatementService {
+  async getDryRunById({ dryRunId, companyId, transaction }) {
+    return BankStatementImportDryRun.findOne({
+      where: { id: dryRunId, companyId },
+      transaction,
+    });
+  }
   constructor() {
     this.supportedFormats = ['CSV', 'MT940', 'CAMT053'];
   }
@@ -147,14 +153,14 @@ class BankStatementService {
     });
   }
 
-  async confirmDryRunImport({ confirmationToken, companyId, transaction }) {
+  async confirmDryRunImport({ dryRunId, companyId, transaction }) {
     if (!transaction) {
       throw new Error('Confirming an import requires an active transaction');
     }
 
     const findOptions = {
       where: {
-        confirmationToken,
+        id: dryRunId,
         companyId,
       },
       transaction,
@@ -165,13 +171,13 @@ class BankStatementService {
 
     const dryRun = await BankStatementImportDryRun.findOne(findOptions);
     if (!dryRun) {
-      const error = new Error('Confirmation token is invalid');
+      const error = new Error('Dry run not found');
       error.status = 404;
       throw error;
     }
 
     if (dryRun.status !== DRY_RUN_STATUS.PENDING) {
-      const error = new Error('Confirmation token already consumed');
+      const error = new Error('Dry run already consumed');
       error.status = 409;
       throw error;
     }
@@ -221,12 +227,14 @@ class BankStatementService {
   async parseCSVFile(filePath) {
     return new Promise((resolve, reject) => {
       const transactions = [];
-      
+
       fs.createReadStream(filePath)
-        .pipe(csv({
-          separator: ';', 
-          mapHeaders: ({ header }) => header.trim().toLowerCase(),
-        }))
+        .pipe(
+          csv({
+            separator: ';',
+            mapHeaders: ({ header }) => header.trim().toLowerCase(),
+          }),
+        )
         .on('data', (row) => {
           try {
             const transaction = this.parseCSVRow(row);
@@ -247,11 +255,9 @@ class BankStatementService {
   }
 
   parseCSVRow(row) {
-    
     const dateFormats = ['DD.MM.YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'];
 
     const mappings = [
-      
       {
         date: row['buchungstag'] || row['wertstellung'] || row['date'],
         amount: row['betrag'] || row['amount'],
@@ -259,7 +265,7 @@ class BankStatementService {
         counterparty: row['empfänger/zahlungspflichtiger'] || row['counterparty'],
         reference: row['referenz'] || row['reference'] || '',
       },
-      
+
       {
         date: row['booking date'] || row['value date'],
         amount: row['amount'],
@@ -267,7 +273,7 @@ class BankStatementService {
         counterparty: row['counterparty'],
         reference: row['transaction reference'],
       },
-      
+
       {
         date: row['date'] || row['datum'],
         amount: row['amount'] || row['betrag'],
@@ -288,7 +294,7 @@ class BankStatementService {
           description: mapping.description || '',
           counterpartyName: mapping.counterparty || '',
           reference: mapping.reference || '',
-          transactionType: null, 
+          transactionType: null,
           currency: 'EUR',
         };
         break;
@@ -315,8 +321,8 @@ class BankStatementService {
     const content = fs.readFileSync(filePath, 'utf-8');
     const transactions = [];
 
-    const blocks = content.split(':20:').filter(block => block.trim());
-    
+    const blocks = content.split(':20:').filter((block) => block.trim());
+
     for (const block of blocks) {
       try {
         const transaction = this.parseMT940Block(block);
@@ -327,12 +333,15 @@ class BankStatementService {
         // TODO: implement
       }
     }
-    
+
     return transactions;
   }
 
   parseMT940Block(block) {
-    const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+    const lines = block
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line);
     const transaction = {
       currency: 'EUR',
       transactionType: 'DEBIT',
@@ -340,7 +349,6 @@ class BankStatementService {
 
     for (const line of lines) {
       if (line.startsWith(':61:')) {
-        
         const match = line.match(/:61:(\d{6})(\d{4})?([CD])(\d+,\d+)/);
         if (match) {
           transaction.valueDate = this.parseMT940Date(match[1]);
@@ -349,7 +357,6 @@ class BankStatementService {
           transaction.amount = parseFloat(match[4].replace(',', '.'));
         }
       } else if (line.startsWith(':86:')) {
-        
         transaction.description = line.substring(4);
         transaction.reference = transaction.description.substring(0, 50);
       }
@@ -364,7 +371,6 @@ class BankStatementService {
   }
 
   async parseCAMT053File(_filePath) {
-    
     const transactions = [];
 
     return transactions;
@@ -394,11 +400,14 @@ class BankStatementService {
           continue;
         }
 
-        const bankTransaction = await BankTransaction.create({
-          companyId,
-          bankStatementId,
-          ...transactionData,
-        }, transaction ? { transaction } : {});
+        const bankTransaction = await BankTransaction.create(
+          {
+            companyId,
+            bankStatementId,
+            ...transactionData,
+          },
+          transaction ? { transaction } : {},
+        );
 
         processedTransactions.push(bankTransaction);
       } catch (error) {
@@ -463,9 +472,7 @@ class BankStatementService {
         from: validTransactions.length
           ? this.getEarliestDate(validTransactions).toISOString()
           : null,
-        to: validTransactions.length
-          ? this.getLatestDate(validTransactions).toISOString()
-          : null,
+        to: validTransactions.length ? this.getLatestDate(validTransactions).toISOString() : null,
       },
     };
 
@@ -565,9 +572,7 @@ class BankStatementService {
     let bestScore = -Infinity;
 
     for (const candidate of candidates) {
-      const candidateDate = candidate.transactionDate
-        ? new Date(candidate.transactionDate)
-        : null;
+      const candidateDate = candidate.transactionDate ? new Date(candidate.transactionDate) : null;
       const dateDistance = candidateDate
         ? Math.abs(moment(candidateDate).diff(transaction.transactionDate, 'days'))
         : 0;
@@ -586,9 +591,7 @@ class BankStatementService {
       return null;
     }
 
-    const ledgerTransaction = bestMatch.get
-      ? bestMatch.get({ plain: true })
-      : { ...bestMatch };
+    const ledgerTransaction = bestMatch.get ? bestMatch.get({ plain: true }) : { ...bestMatch };
     const explanation = this.buildMatchExplanation(transaction, ledgerTransaction);
 
     return {
@@ -627,47 +630,61 @@ class BankStatementService {
     const description = transaction.description?.toLowerCase() || '';
     const counterparty = transaction.counterpartyName?.toLowerCase() || '';
 
-    if (description.includes('gutschrift') || 
-        description.includes('überweisung') && transaction.transactionType === 'CREDIT') {
+    if (
+      description.includes('gutschrift') ||
+      (description.includes('überweisung') && transaction.transactionType === 'CREDIT')
+    ) {
       return 'REVENUE';
     }
 
     if (description.includes('miete') || description.includes('rent')) {
       return 'RENT';
     }
-    
-    if (description.includes('gehalt') || description.includes('lohn') || description.includes('salary')) {
+
+    if (
+      description.includes('gehalt') ||
+      description.includes('lohn') ||
+      description.includes('salary')
+    ) {
       return 'SALARY';
     }
-    
-    if (description.includes('strom') || description.includes('gas') || description.includes('wasser')) {
+
+    if (
+      description.includes('strom') ||
+      description.includes('gas') ||
+      description.includes('wasser')
+    ) {
       return 'UTILITIES';
     }
-    
+
     if (description.includes('büro') || description.includes('office')) {
       return 'OFFICE_SUPPLIES';
     }
-    
+
     if (description.includes('marketing') || description.includes('werbung')) {
       return 'MARKETING';
     }
-    
+
     if (description.includes('beratung') || description.includes('consulting')) {
       return 'CONSULTING';
     }
-    
+
     if (description.includes('versicherung') || description.includes('insurance')) {
       return 'INSURANCE';
     }
-    
-    if (description.includes('steuer') || description.includes('tax') || counterparty.includes('finanzamt')) {
+
+    if (
+      description.includes('steuer') ||
+      description.includes('tax') ||
+      counterparty.includes('finanzamt')
+    ) {
       return 'TAX_PAYMENT';
     }
-    
+
     if (description.includes('zinsen') || description.includes('interest')) {
       return 'INTEREST';
     }
-    
+
     if (description.includes('gebühr') || description.includes('fee')) {
       return 'BANK_CHARGES';
     }
@@ -677,7 +694,7 @@ class BankStatementService {
 
   async reconcileTransactions(companyId) {
     const { Transaction } = require('../models');
-    
+
     const unreconciled = await BankTransaction.findAll({
       where: {
         companyId,
@@ -688,7 +705,6 @@ class BankStatementService {
     const reconciled = [];
 
     for (const bankTx of unreconciled) {
-      
       const potentialMatches = await Transaction.findAll({
         where: {
           companyId,
@@ -703,22 +719,19 @@ class BankStatementService {
       });
 
       for (const tx of potentialMatches) {
-        const similarity = this.calculateDescriptionSimilarity(
-          bankTx.description, 
-          tx.description,
-        );
-        
-        if (similarity > 0.7) { 
+        const similarity = this.calculateDescriptionSimilarity(bankTx.description, tx.description);
+
+        if (similarity > 0.7) {
           await bankTx.update({
             isReconciled: true,
             reconciledWith: tx.id,
           });
-          
+
           await tx.update({
             isReconciled: true,
             bankTransactionId: bankTx.id,
           });
-          
+
           reconciled.push({ bankTransaction: bankTx, transaction: tx });
           break;
         }
@@ -744,15 +757,14 @@ class BankStatementService {
     }
 
     const cleaned = amountString
-      .replace(/\./g, '') 
-      .replace(',', '.') 
-      .replace(/[^\d.-]/g, ''); 
-    
+      .replace(/\./g, '')
+      .replace(',', '.')
+      .replace(/[^\d.-]/g, '');
+
     return parseFloat(cleaned) || 0;
   }
 
   parseMT940Date(dateString) {
-    
     const year = parseInt('20' + dateString.substring(0, 2));
     const month = parseInt(dateString.substring(2, 4)) - 1;
     const day = parseInt(dateString.substring(4, 6));
@@ -760,19 +772,22 @@ class BankStatementService {
   }
 
   getEarliestDate(transactions) {
-    return transactions.reduce((earliest, tx) => {
-      return !earliest || tx.transactionDate < earliest ? tx.transactionDate : earliest;
-    }, null) || new Date();
+    return (
+      transactions.reduce((earliest, tx) => {
+        return !earliest || tx.transactionDate < earliest ? tx.transactionDate : earliest;
+      }, null) || new Date()
+    );
   }
 
   getLatestDate(transactions) {
-    return transactions.reduce((latest, tx) => {
-      return !latest || tx.transactionDate > latest ? tx.transactionDate : latest;
-    }, null) || new Date();
+    return (
+      transactions.reduce((latest, tx) => {
+        return !latest || tx.transactionDate > latest ? tx.transactionDate : latest;
+      }, null) || new Date()
+    );
   }
 
   calculateDescriptionSimilarity(str1, str2) {
-    
     const matrix = [];
     const len1 = str1.length;
     const len2 = str2.length;

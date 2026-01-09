@@ -8,7 +8,6 @@ const {
   logRejected,
   logSessionEvent,
 } = require('../services/ai/aiAuditLogger');
-
 const aiRouteGuard = require('../middleware/aiRouteGuard');
 const rateLimit = require('../middleware/aiRateLimit');
 const { detectMutationIntent } = require('../services/ai/mutationIntent');
@@ -17,6 +16,11 @@ const { getPromptMeta } = require('../services/ai/promptRegistry');
 const { redactPII } = require('../services/ai/governance');
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(requireCompany);
+router.use(aiRouteGuard());
+router.use(rateLimit);
 
 const normalizeFlag = (value) => String(value ?? '').toLowerCase() === 'true';
 const isAssistantFeatureEnabled = normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
@@ -31,9 +35,6 @@ const extractPromptFromQuery = (req) =>
   typeof req.query.prompt === 'string' ? req.query.prompt : '';
 
 const safePromptFromRequest = (prompt) => redactPII(prompt || '');
-
-// Enforce GET-only, authentication, company scoping, and rate limiting
-router.use(authenticate, requireCompany, aiRouteGuard(), rateLimit);
 
 async function rejectIfMutationIntent({
   userId,
@@ -340,10 +341,8 @@ router.get('/assistant', async (req, res, next) => {
   }
   try {
     const { intent, targetInsightId } = req.query;
-    const rawPrompt =
-      typeof req.query.prompt === 'string' ? req.query.prompt : '';
-    const fallbackPrompt =
-      rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
+    const rawPrompt = typeof req.query.prompt === 'string' ? req.query.prompt : '';
+    const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
     const prompt = fallbackPrompt;
     const safePrompt = safePromptFromRequest(prompt);
     const sessionId = req.query.sessionId;

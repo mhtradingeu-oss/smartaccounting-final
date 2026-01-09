@@ -1,5 +1,5 @@
 // AI Audit Logger: logs AI requests and responses (no PII)
-const { AuditLog } = require('../../models');
+const AuditLogService = require('../auditLogService');
 
 const crypto = require('crypto');
 const { redactPII } = require('./governance');
@@ -37,16 +37,14 @@ async function logRequested({
   sessionId,
   meta,
 }) {
-  const safeRequestId = requestId || 'unknown';
-  await AuditLog.create({
+  await AuditLogService.appendEntry({
     action: 'AI_QUERY_REQUESTED',
     resourceType: 'AI',
     resourceId: null,
     userId,
-    companyId,
-    requestId: safeRequestId,
-    metadata: {
-      requestId: safeRequestId,
+    oldValues: null,
+    newValues: {
+      requestId: requestId || 'unknown',
       route,
       queryType,
       promptHash: hashPrompt(prompt),
@@ -54,9 +52,11 @@ async function logRequested({
       responseMeta,
       meta: sanitizeMeta(meta),
     },
-    createdAt: new Date().toISOString(),
-    immutable: true,
+    companyId,
+    ipAddress: null,
+    userAgent: null,
     reason: 'AI query requested',
+    status: 'SUCCESS',
   });
 }
 
@@ -72,14 +72,13 @@ async function logResponded({
   meta,
 }) {
   const safeRequestId = requestId || 'unknown';
-  await AuditLog.create({
+  await AuditLogService.appendEntry({
     action: 'AI_QUERY_RESPONDED',
     resourceType: 'AI',
     resourceId: null,
     userId,
-    companyId,
-    requestId: safeRequestId,
-    metadata: {
+    oldValues: null,
+    newValues: {
       requestId: safeRequestId,
       route,
       queryType,
@@ -88,9 +87,11 @@ async function logResponded({
       responseMeta,
       meta: sanitizeMeta(meta),
     },
-    createdAt: new Date().toISOString(),
-    immutable: true,
+    companyId,
+    ipAddress: null,
+    userAgent: null,
     reason: 'AI query responded',
+    status: 'SUCCESS',
   });
 }
 
@@ -99,35 +100,31 @@ async function logResponded({
 async function logSessionEvent({
   userId,
   companyId,
-  requestId,
+  _requestId,
   sessionId,
   event = 'started',
   route,
   prompt,
 }) {
   const safePrompt = sanitizePrompt(prompt);
-  const safeRequestId = requestId || 'unknown';
-  await AuditLog.create({
+  await AuditLogService.appendEntry({
     action: 'AI_ASSISTANT_SESSION',
     resourceType: 'AI',
     resourceId: sessionId,
     userId,
-    companyId,
-    requestId: safeRequestId,
+    oldValues: null,
     newValues: {
       event,
       sessionId,
       route,
       prompt: safePrompt,
-    },
-    metadata: {
-      requestId: safeRequestId,
-      route,
       promptHash: hashPrompt(prompt),
     },
-    createdAt: new Date().toISOString(),
-    immutable: true,
+    companyId,
+    ipAddress: null,
+    userAgent: null,
     reason: event,
+    status: 'SUCCESS',
   });
 }
 
@@ -144,7 +141,6 @@ async function logSuggestionEvent(params) {
     prompt,
     suggestion,
     reason,
-    createdAt,
     detector,
     severity,
     relatedEntityId,
@@ -152,14 +148,13 @@ async function logSuggestionEvent(params) {
     summary,
   } = params;
   const safeRequestId = requestId || 'unknown';
-  await AuditLog.create({
+  await AuditLogService.appendEntry({
     action: eventType,
     resourceType: 'AI_SUGGESTION',
     resourceId: relatedEntityId || null,
     userId,
-    companyId,
-    requestId: safeRequestId,
-    metadata: {
+    oldValues: null,
+    newValues: {
       requestId: safeRequestId,
       route: '/api/ai/suggest',
       promptHash: prompt ? hashPrompt(prompt) : undefined,
@@ -170,58 +165,56 @@ async function logSuggestionEvent(params) {
       queryType,
       summary,
     },
-    createdAt: createdAt || new Date(),
+    companyId,
+    ipAddress: null,
+    userAgent: null,
     reason: reason || eventType,
+    status: eventType === 'AI_SUGGESTION_REJECTED' ? 'DENIED' : 'SUCCESS',
   });
 }
 
 async function logRejected({ userId, companyId, requestId, queryType, route, prompt, reason }) {
   const safeRequestId = requestId || 'unknown';
-  await AuditLog.create({
+  await AuditLogService.appendEntry({
     action: 'AI_QUERY_REJECTED',
     resourceType: 'AI',
     resourceId: null,
     userId,
-    companyId,
-    requestId: safeRequestId,
-    metadata: {
+    oldValues: null,
+    newValues: {
       requestId: safeRequestId,
       route,
       queryType,
       promptHash: hashPrompt(prompt),
       reason,
     },
-    createdAt: new Date().toISOString(),
-    immutable: true,
+    companyId,
+    ipAddress: null,
+    userAgent: null,
     reason: reason || 'AI query rejected',
+    status: 'DENIED',
   });
 }
 
-async function logRateLimited({
-  userId,
-  companyId,
-  requestId,
-  route,
-  queryType,
-  prompt,
-}) {
+async function logRateLimited({ userId, companyId, requestId, route, queryType, prompt }) {
   const safeRequestId = requestId || 'unknown';
-  await AuditLog.create({
+  await AuditLogService.appendEntry({
     action: 'AI_RATE_LIMITED',
     resourceType: 'AI',
     resourceId: null,
     userId,
-    companyId,
-    requestId: safeRequestId,
-    metadata: {
+    oldValues: null,
+    newValues: {
       requestId: safeRequestId,
       route,
       queryType,
       promptHash: hashPrompt(prompt),
     },
-    createdAt: new Date().toISOString(),
-    immutable: true,
+    companyId,
+    ipAddress: null,
+    userAgent: null,
     reason: 'AI rate limited',
+    status: 'DENIED',
   });
 }
 

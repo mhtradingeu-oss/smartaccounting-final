@@ -1,8 +1,6 @@
-
 const { User, Company, Invoice, Expense, FileAttachment, AuditLog } = require('../models');
 const AuditLogService = require('./auditLogService');
 const { Op } = require('sequelize');
-
 
 // RBAC utility: isAdmin, isSelf, sameCompany
 function isAdmin(user) {
@@ -28,8 +26,15 @@ async function exportUserData(requestingUser, targetUserId) {
     error.status = 404;
     throw error;
   }
+  // Strict company boundary: no admin bypass
+  if (targetUser.companyId !== requestingUser.companyId) {
+    // Hide existence or return forbidden
+    const error = new Error('Forbidden');
+    error.status = 403;
+    throw error;
+  }
   // RBAC: self or admin in same company
-  if (!isSelf(requestingUser, targetUser) && !(isAdmin(requestingUser) && sameCompany(requestingUser, targetUser))) {
+  if (!isSelf(requestingUser, targetUser) && !isAdmin(requestingUser)) {
     const error = new Error('Forbidden');
     error.status = 403;
     throw error;
@@ -38,9 +43,16 @@ async function exportUserData(requestingUser, targetUserId) {
   // User PII: only if self or admin
   const userExport = {
     id: targetUser.id,
-    email: isSelf(requestingUser, targetUser) || isAdmin(requestingUser) ? targetUser.email : undefined,
-    firstName: isSelf(requestingUser, targetUser) || isAdmin(requestingUser) ? targetUser.firstName : undefined,
-    lastName: isSelf(requestingUser, targetUser) || isAdmin(requestingUser) ? targetUser.lastName : undefined,
+    email:
+      isSelf(requestingUser, targetUser) || isAdmin(requestingUser) ? targetUser.email : undefined,
+    firstName:
+      isSelf(requestingUser, targetUser) || isAdmin(requestingUser)
+        ? targetUser.firstName
+        : undefined,
+    lastName:
+      isSelf(requestingUser, targetUser) || isAdmin(requestingUser)
+        ? targetUser.lastName
+        : undefined,
     role: targetUser.role,
     isAnonymized: targetUser.isAnonymized,
     anonymizedAt: targetUser.anonymizedAt,
@@ -57,8 +69,8 @@ async function exportUserData(requestingUser, targetUserId) {
   const expenses = await Expense.findAll({ where: { createdByUserId: targetUser.id } });
 
   // File attachments linked to those records
-  const invoiceIds = invoices.map(inv => inv.id);
-  const expenseIds = expenses.map(exp => exp.id);
+  const invoiceIds = invoices.map((inv) => inv.id);
+  const expenseIds = expenses.map((exp) => exp.id);
   const attachments = await FileAttachment.findAll({
     where: {
       [Op.or]: [
@@ -133,7 +145,10 @@ async function anonymizeUser(requestingUser, targetUserId, reason) {
     throw error;
   }
   // RBAC: self or admin in same company
-  if (!isSelf(requestingUser, targetUser) && !(isAdmin(requestingUser) && sameCompany(requestingUser, targetUser))) {
+  if (
+    !isSelf(requestingUser, targetUser) &&
+    !(isAdmin(requestingUser) && sameCompany(requestingUser, targetUser))
+  ) {
     const error = new Error('Forbidden');
     error.status = 403;
     throw error;
@@ -144,7 +159,10 @@ async function anonymizeUser(requestingUser, targetUserId, reason) {
     throw error;
   }
   // Save old values for audit (no PII)
-  const oldValues = { isAnonymized: targetUser.isAnonymized, anonymizedAt: targetUser.anonymizedAt };
+  const oldValues = {
+    isAnonymized: targetUser.isAnonymized,
+    anonymizedAt: targetUser.anonymizedAt,
+  };
   // Deterministic anonymized email
   const anonymizedEmail = `anonymized+${targetUser.id}@example.invalid`;
   const now = new Date();
@@ -156,15 +174,15 @@ async function anonymizeUser(requestingUser, targetUserId, reason) {
   targetUser.anonymizedAt = now;
   await targetUser.save();
   // Write audit log (operation fails if audit log fails)
-    await AuditLogService.appendEntry({
-      action: 'GDPR_ANONYMIZE_USER',
-      resourceType: 'User',
-      resourceId: String(targetUser.id),
-      userId: requestingUser.id,
-      oldValues,
-      newValues: { isAnonymized: true, anonymizedAt: now },
-      reason: 'GDPR user anonymization',
-    });
+  await AuditLogService.appendEntry({
+    action: 'GDPR_ANONYMIZE_USER',
+    resourceType: 'User',
+    resourceId: String(targetUser.id),
+    userId: requestingUser.id,
+    oldValues,
+    newValues: { isAnonymized: true, anonymizedAt: now },
+    reason: 'GDPR user anonymization',
+  });
   return targetUser;
 }
 

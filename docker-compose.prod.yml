@@ -35,7 +35,6 @@ services:
 
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting
 
     depends_on:
       db:
