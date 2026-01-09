@@ -37,7 +37,6 @@ async function logRequested({
   sessionId,
   meta,
 }) {
-  const safeRequestId = requestId || 'unknown';
   await AuditLogService.appendEntry({
     action: 'AI_QUERY_REQUESTED',
     resourceType: 'AI',
@@ -45,7 +44,7 @@ async function logRequested({
     userId,
     oldValues: null,
     newValues: {
-      requestId: safeRequestId,
+      requestId: requestId || 'unknown',
       route,
       queryType,
       promptHash: hashPrompt(prompt),
@@ -101,14 +100,13 @@ async function logResponded({
 async function logSessionEvent({
   userId,
   companyId,
-  requestId,
+  _requestId,
   sessionId,
   event = 'started',
   route,
   prompt,
 }) {
   const safePrompt = sanitizePrompt(prompt);
-  const safeRequestId = requestId || 'unknown';
   await AuditLogService.appendEntry({
     action: 'AI_ASSISTANT_SESSION',
     resourceType: 'AI',
@@ -143,7 +141,6 @@ async function logSuggestionEvent(params) {
     prompt,
     suggestion,
     reason,
-    createdAt,
     detector,
     severity,
     relatedEntityId,

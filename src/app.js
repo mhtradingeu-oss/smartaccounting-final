@@ -1,20 +1,20 @@
 // Configured Express application; index.js bootstraps runtime and attaches the server.
 
-require("dotenv").config();
+require('dotenv').config();
 // Environment variable validation (fail closed)
-const { cleanEnv, str, num } = require("envalid");
+const { cleanEnv, str, num } = require('envalid');
 const envSpec = {
-  NODE_ENV: str({ choices: ["development", "test", "production"] }),
-  API_BASE_URL: str({ default: "/api" }),
+  NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
+  API_BASE_URL: str({ default: '/api' }),
   PORT: num({ default: 3000 }),
-  DB_HOST: str({ default: "localhost" }),
-  DB_USER: str({ default: "testuser" }),
-  DB_PASS: str({ default: "testpass" }),
-  DB_NAME: str({ default: "testdb" }),
-  JWT_SECRET: str({ default: "testsecret" }),
+  DB_HOST: str({ default: 'localhost' }),
+  DB_USER: str({ default: 'testuser' }),
+  DB_PASS: str({ default: 'testpass' }),
+  DB_NAME: str({ default: 'testdb' }),
+  JWT_SECRET: str({ default: 'testsecret' }),
   // Add other required env vars here as needed
 };
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === 'production') {
   cleanEnv(process.env, envSpec);
 } else {
   try {
@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === "production") {
       reporter: ({ errors }) => {
         if (Object.keys(errors).length > 0) {
           // eslint-disable-next-line no-console
-          console.warn("[envalid] Missing/invalid env vars (non-prod):", Object.keys(errors));
+          console.warn('[envalid] Missing/invalid env vars (non-prod):', Object.keys(errors));
         }
       },
     });
@@ -31,15 +31,15 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-const express = require("express");
-const { serve, setup } = require("swagger-ui-express");
-const { cache } = require("./lib/cache");
-const { sequelize } = require("./models");
+const express = require('express');
+const { serve, setup } = require('swagger-ui-express');
+const { cache } = require('./lib/cache');
+const { sequelize } = require('./models');
 
 const app = express();
-const API_PREFIX = process.env.API_BASE_URL || "/api";
-app.set("apiPrefix", API_PREFIX);
-const normalizedApiPrefix = API_PREFIX.replace(/\/$/, "");
+const API_PREFIX = process.env.API_BASE_URL || '/api';
+app.set('apiPrefix', API_PREFIX);
+const normalizedApiPrefix = API_PREFIX.replace(/\/$/, '');
 
 const registerPublicMonitorEndpoint = (path, handler) => {
   app.get(path, handler);
@@ -51,71 +51,71 @@ const registerPublicMonitorEndpoint = (path, handler) => {
 // --------------------------------------------------
 // Core imports
 // --------------------------------------------------
-const authMiddleware = require("./middleware/authMiddleware");
-const permissionGuard = require("./security/permissionGuard");
-const errorHandler = require("./middleware/errorHandler");
-const { createSecurityMiddleware } = require("./middleware/security");
-const { createPerformanceMiddleware, performanceMonitor } = require("./middleware/performance");
-const { createApiTimeoutMiddleware } = require("./middleware/apiTimeout");
-const { specs, swaggerOptions } = require("./config/swagger");
-const appVersion = require("./config/appVersion");
+const authMiddleware = require('./middleware/authMiddleware');
+const permissionGuard = require('./security/permissionGuard');
+const errorHandler = require('./middleware/errorHandler');
+const { createSecurityMiddleware } = require('./middleware/security');
+const { createPerformanceMiddleware, performanceMonitor } = require('./middleware/performance');
+const { createApiTimeoutMiddleware } = require('./middleware/apiTimeout');
+const { specs, swaggerOptions } = require('./config/swagger');
+const appVersion = require('./config/appVersion');
 
 const getCacheStatus = () => {
-  if (!cache || typeof cache.getStats !== "function") {
-    return { redis: "not_configured" };
+  if (!cache || typeof cache.getStats !== 'function') {
+    return { redis: 'not_configured' };
   }
 
   try {
     const stats = cache.getStats();
     return {
-      redis: stats.redisStatus || "unknown",
+      redis: stats.redisStatus || 'unknown',
       hits: stats.hits ?? 0,
       misses: stats.misses ?? 0,
-      hitRate: stats.hitRate || "0%",
+      hitRate: stats.hitRate || '0%',
     };
   } catch (error) {
-    return { redis: "error", error: error.message };
+    return { redis: 'error', error: error.message };
   }
 };
 
 const getQueueStatus = () => ({
-  name: "background",
-  status: "not_configured",
-  detail: "No asynchronous queue client has been configured in this deployment.",
+  name: 'background',
+  status: 'not_configured',
+  detail: 'No asynchronous queue client has been configured in this deployment.',
 });
 
 // --------------------------------------------------
 // Routes
 // --------------------------------------------------
-const authRoutes = require("./routes/auth");
-const dashboardRoutes = require("./routes/dashboard");
-const invoiceRoutes = require("./routes/invoices");
-const bankStatementRoutes = require("./routes/bankStatements");
-const germanTaxRoutes = require("./routes/germanTax");
-const companyRoutes = require("./routes/companies");
-const userRoutes = require("./routes/users");
-const stripeRoutes = require("./routes/stripe");
-const taxReportRoutes = require("./routes/taxReports");
-const systemRoutes = require("./routes/system");
-const monitoringRoutes = require("./routes/monitoring");
-const complianceRoutes = require("./routes/compliance");
-const elsterRoutes = require("./routes/elster");
-const ocrRoutes = require("./routes/ocr");
-const logRoutes = require("./routes/logs");
-const exportRoutes = require("./routes/exports");
-const emailTestRoutes = require("./routes/emailTest");
-const germanTaxComplianceRoutes = require("./routes/germanTaxCompliance");
-const expenseRoutes = require("./routes/expenses");
-const telemetryRoutes = require("./routes/telemetry");
-const aiRoutes = require("./routes/ai");
-const adminRoutes = require("./routes/admin");
-const gdprRoutes = require("./routes/gdpr");
+const authRoutes = require('./routes/auth');
+const dashboardRoutes = require('./routes/dashboard');
+const invoiceRoutes = require('./routes/invoices');
+const bankStatementRoutes = require('./routes/bankStatements');
+const germanTaxRoutes = require('./routes/germanTax');
+const companyRoutes = require('./routes/companies');
+const userRoutes = require('./routes/users');
+const stripeRoutes = require('./routes/stripe');
+const taxReportRoutes = require('./routes/taxReports');
+const systemRoutes = require('./routes/system');
+const monitoringRoutes = require('./routes/monitoring');
+const complianceRoutes = require('./routes/compliance');
+const elsterRoutes = require('./routes/elster');
+const ocrRoutes = require('./routes/ocr');
+const logRoutes = require('./routes/logs');
+const exportRoutes = require('./routes/exports');
+const emailTestRoutes = require('./routes/emailTest');
+const germanTaxComplianceRoutes = require('./routes/germanTaxCompliance');
+const expenseRoutes = require('./routes/expenses');
+const telemetryRoutes = require('./routes/telemetry');
+const aiRoutes = require('./routes/ai');
+const adminRoutes = require('./routes/admin');
+const gdprRoutes = require('./routes/gdpr');
 
 // --------------------------------------------------
 // Proxy / Trust
 // --------------------------------------------------
-if (process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
+if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
 }
 
 // --------------------------------------------------
@@ -123,11 +123,11 @@ if (process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production")
 // --------------------------------------------------
 
 // 1. Request ID
-const requestIdMiddleware = require("./middleware/requestId");
+const requestIdMiddleware = require('./middleware/requestId');
 app.use(requestIdMiddleware);
 
 // 2. CORS
-const corsMiddleware = require("./middleware/cors");
+const corsMiddleware = require('./middleware/cors');
 app.use(corsMiddleware);
 
 // 3. Security headers, rate limits, etc.
@@ -137,8 +137,8 @@ createSecurityMiddleware().forEach((mw) => app.use(mw));
 createPerformanceMiddleware().forEach((mw) => app.use(mw));
 
 // 5. Body parsers
-app.use(express.json({ limit: process.env.JSON_LIMIT || "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || "10mb" }));
+app.use(express.json({ limit: process.env.JSON_LIMIT || '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || '10mb' }));
 
 // --------------------------------------------------
 // Public / Unprotected endpoints
@@ -152,20 +152,20 @@ const healthHandler = async (req, res) => {
   const timestamp = new Date().toISOString();
   const cacheStatus = getCacheStatus();
   const queueStatus = getQueueStatus();
-  let dbStatus = "unknown";
+  let dbStatus = 'unknown';
   let dbError;
 
   try {
     await sequelize.authenticate();
-    dbStatus = "connected";
+    dbStatus = 'connected';
   } catch (err) {
-    dbStatus = "disconnected";
+    dbStatus = 'disconnected';
     dbError = err.message;
   }
 
   const payload = {
-    status: dbStatus === "connected" ? "ok" : "degraded",
-    environment: process.env.NODE_ENV || "development",
+    status: dbStatus === 'connected' ? 'ok' : 'degraded',
+    environment: process.env.NODE_ENV || 'development',
     timestamp,
     version: appVersion.version,
     db: { status: dbStatus },
@@ -177,7 +177,7 @@ const healthHandler = async (req, res) => {
     payload.db.error = dbError;
   }
 
-  res.status(dbStatus === "connected" ? 200 : 503).json(payload);
+  res.status(dbStatus === 'connected' ? 200 : 503).json(payload);
 };
 
 const readyHandler = async (req, res) => {
@@ -188,21 +188,21 @@ const readyHandler = async (req, res) => {
   try {
     await sequelize.authenticate();
     res.status(200).json({
-      status: "ready",
-      environment: process.env.NODE_ENV || "development",
+      status: 'ready',
+      environment: process.env.NODE_ENV || 'development',
       timestamp,
       version: appVersion.version,
-      db: "connected",
+      db: 'connected',
       cache: cacheStatus,
       queue: queueStatus,
     });
   } catch (err) {
     res.status(503).json({
-      status: "not-ready",
-      environment: process.env.NODE_ENV || "development",
+      status: 'not-ready',
+      environment: process.env.NODE_ENV || 'development',
       timestamp,
       version: appVersion.version,
-      db: "disconnected",
+      db: 'disconnected',
       cache: cacheStatus,
       queue: queueStatus,
       error: err.message,
@@ -215,12 +215,12 @@ const metricsHandler = (req, res) => {
   const memory = metrics.memory || {};
   const cpu = metrics.cpu || {};
   const [load1 = 0, load5 = 0, load15 = 0] = metrics.load || [];
-  const uptimeSeconds = typeof metrics.uptime === "number" ? metrics.uptime : 0;
+  const uptimeSeconds = typeof metrics.uptime === 'number' ? metrics.uptime : 0;
 
   const lines = [
-    "# HELP smartaccounting_up 1 if up",
-    "# TYPE smartaccounting_up gauge",
-    "smartaccounting_up 1",
+    '# HELP smartaccounting_up 1 if up',
+    '# TYPE smartaccounting_up gauge',
+    'smartaccounting_up 1',
 
     `smartaccounting_requests_total ${metrics.requests}`,
 
@@ -249,13 +249,13 @@ const metricsHandler = (req, res) => {
     `smartaccounting_load_avg_15m ${load15}`,
   ];
 
-  res.set("Content-Type", "text/plain");
-  res.send(lines.join("\n"));
+  res.set('Content-Type', 'text/plain');
+  res.send(lines.join('\n'));
 };
 
-registerPublicMonitorEndpoint("/health", healthHandler);
-registerPublicMonitorEndpoint("/ready", readyHandler);
-registerPublicMonitorEndpoint("/metrics", metricsHandler);
+registerPublicMonitorEndpoint('/health', healthHandler);
+registerPublicMonitorEndpoint('/ready', readyHandler);
+registerPublicMonitorEndpoint('/metrics', metricsHandler);
 
 // --------------------------------------------------
 // API-wide middlewares (protected)
@@ -300,10 +300,10 @@ app.use(`${API_PREFIX}/expenses`, expenseRoutes);
 // --------------------------------------------------
 // Fallback & Error handling
 // --------------------------------------------------
-app.use("*", (req, res) => {
+app.use('*', (req, res) => {
   res.status(404).json({
-    status: "error",
-    message: "Route not found",
+    status: 'error',
+    message: 'Route not found',
     path: req.originalUrl,
   });
 });

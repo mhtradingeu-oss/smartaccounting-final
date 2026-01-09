@@ -1,7 +1,6 @@
 const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const expenseService = require('../services/expenseService');
-const { withAuditLog } = require('../services/withAuditLog');
 const { expenseSchema } = require('../validators/expenseValidator');
 
 const router = express.Router();
@@ -77,7 +76,7 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
 router.patch('/:expenseId/status', requireRole(['admin', 'accountant']), async (req, res, next) => {
   try {
     const { status, systemContext, reason } = req.body;
-    const oldExpense = await expenseService.getExpenseById(req.params.expenseId, req.companyId);
+    // const oldExpense = await expenseService.getExpenseById(req.params.expenseId, req.companyId);
     const expense = await expenseService.updateExpenseStatus(
       req.params.expenseId,
       status,
