@@ -1,25 +1,25 @@
-const AuditLogService = require('./auditLogService');
+const AuditLogService = require("./auditLogService");
 // Fetch audit log for a specific invoice
 const getInvoiceAuditLog = async (invoiceId, companyId) => {
   // Only logs for this invoice and company
   return await AuditLogService.exportLogs({
-    format: 'json',
+    format: "json",
     companyId,
     resourceId: invoiceId,
-    resourceType: 'Invoice',
+    resourceType: "Invoice",
   });
 };
 // Create a credit note for an invoice (Korrekturrechnung)
 const createCreditNoteForInvoice = async (invoiceId, data, userId, companyId) => {
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
-  const original = await Invoice.findOne({ where, include: [{ model: InvoiceItem, as: 'items' }] });
+  const original = await Invoice.findOne({ where, include: [{ model: InvoiceItem, as: "items" }] });
   if (!original) {
-    const err = new Error('Original invoice not found');
+    const err = new Error("Original invoice not found");
     err.status = 404;
     throw err;
   }
-  if (normalizeStatus(original.status) !== 'SENT' && normalizeStatus(original.status) !== 'PAID') {
-    const err = new Error('Credit notes can only be issued for immutable invoices (SENT/PAID).');
+  if (normalizeStatus(original.status) !== "SENT" && normalizeStatus(original.status) !== "PAID") {
+    const err = new Error("Credit notes can only be issued for immutable invoices (SENT/PAID).");
     err.status = 409;
     throw err;
   }
@@ -47,13 +47,13 @@ const createCreditNoteForInvoice = async (invoiceId, data, userId, companyId) =>
         total,
         amount: total,
         currency: original.currency,
-        status: 'SENT',
+        status: "SENT",
         date: new Date(),
         dueDate: new Date(),
         clientName: original.clientName,
         userId,
         companyId,
-        notes: `[CREDIT NOTE] ${data.notes || ''}`,
+        notes: `[CREDIT NOTE] ${data.notes || ""}`,
         referenceInvoiceId: original.id,
       },
       { transaction: t },
@@ -62,7 +62,7 @@ const createCreditNoteForInvoice = async (invoiceId, data, userId, companyId) =>
       await InvoiceItem.create({ ...item, invoiceId: creditNote.id }, { transaction: t });
     }
     // Lock original invoice (set status to CANCELLED_CREDITED or similar)
-    await original.update({ status: 'CANCELLED' }, { transaction: t });
+    await original.update({ status: "CANCELLED" }, { transaction: t });
     // TODO: Audit-log credit note creation
     const updatedOriginal = await getInvoiceById(original.id, companyId);
     const finalizedCreditNote = await getInvoiceById(creditNote.id, companyId);
@@ -75,8 +75,8 @@ const {
   FileAttachment,
   sequelize,
   InvoicePayment,
-  User,
-} = require('../models');
+  // User,
+} = require("../models");
 // Register a payment for an invoice
 const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId) => {
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
@@ -89,21 +89,21 @@ const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId)
     throw err;
   }
   if (!invoice) {
-    const err = new Error('Invoice not found');
+    const err = new Error("Invoice not found");
     err.status = 404;
     throw err;
   }
   const statusNorm = normalizeStatus(invoice.status);
-  if (statusNorm !== 'SENT' && statusNorm !== 'PARTIALLY_PAID') {
+  if (statusNorm !== "SENT" && statusNorm !== "PARTIALLY_PAID") {
     // State conflict: not eligible for payment
-    const err = new Error('Payments can only be registered for SENT or PARTIALLY_PAID invoices.');
+    const err = new Error("Payments can only be registered for SENT or PARTIALLY_PAID invoices.");
     err.status = 409;
     throw err;
   }
   // Validate payment amount
   const paymentAmount = parseFloat(paymentData.amount);
   if (!paymentAmount || paymentAmount <= 0) {
-    const err = new Error('Payment amount must be positive.');
+    const err = new Error("Payment amount must be positive.");
     err.status = 400;
     throw err;
   }
@@ -111,15 +111,15 @@ const registerInvoicePayment = async (invoiceId, paymentData, userId, companyId)
   const newPaidAmount = parseFloat(invoice.paidAmount) + paymentAmount;
   if (newPaidAmount > parseFloat(invoice.total)) {
     // Overpayment is a business rule violation: 409
-    const err = new Error('Payment exceeds invoice total.');
+    const err = new Error("Payment exceeds invoice total.");
     err.status = 409;
     throw err;
   }
   const newRemainingAmount = parseFloat(invoice.total) - newPaidAmount;
   // Determine new status
-  let newStatus = 'PARTIALLY_PAID';
+  let newStatus = "PARTIALLY_PAID";
   if (newPaidAmount === parseFloat(invoice.total)) {
-    newStatus = 'PAID';
+    newStatus = "PAID";
   }
   try {
     // Transaction: create payment, update invoice
@@ -158,34 +158,34 @@ const {
   enforceCurrencyIsEur,
   ensureVatTotalsMatch,
   assertProvidedMatches,
-} = require('../utils/vatIntegrity');
-const { buildCompanyFilter } = require('../utils/companyFilter');
+} = require("../utils/vatIntegrity");
+const { buildCompanyFilter } = require("../utils/companyFilter");
 
-const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
+const VALID_STATUS = ["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED", "PARTIALLY_PAID"];
 const STATUS_TRANSITIONS = {
-  DRAFT: ['SENT'],
-  SENT: ['PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'],
-  PARTIALLY_PAID: ['PAID', 'OVERDUE', 'CANCELLED'],
-  OVERDUE: ['PAID', 'CANCELLED'],
+  DRAFT: ["SENT"],
+  SENT: ["PAID", "OVERDUE", "CANCELLED", "PARTIALLY_PAID"],
+  PARTIALLY_PAID: ["PAID", "OVERDUE", "CANCELLED"],
+  OVERDUE: ["PAID", "CANCELLED"],
   PAID: [],
   CANCELLED: [],
 };
 
 const invoiceIncludes = [
-  { model: InvoiceItem, as: 'items' },
-  { model: FileAttachment, as: 'attachments' },
+  { model: InvoiceItem, as: "items" },
+  { model: FileAttachment, as: "attachments" },
 ];
 
-const normalizeStatus = (value, fallback = '') => {
-  if (!value || typeof value !== 'string') {
+const normalizeStatus = (value, fallback = "") => {
+  if (!value || typeof value !== "string") {
     return fallback;
   }
   const normalized = value.trim().toUpperCase();
   if (!normalized) {
     return fallback;
   }
-  if (normalized === 'PENDING') {
-    return 'DRAFT';
+  if (normalized === "PENDING") {
+    return "DRAFT";
   }
   return VALID_STATUS.includes(normalized) ? normalized : fallback;
 };
@@ -194,7 +194,7 @@ const listInvoices = async (companyId) => {
   const where = buildCompanyFilter(companyId);
   return Invoice.findAll({
     where,
-    order: [['createdAt', 'DESC']],
+    order: [["createdAt", "DESC"]],
     include: invoiceIncludes,
   });
 };
@@ -235,13 +235,13 @@ const getInvoiceById = async (invoiceId, companyId) => {
 };
 
 // Transactional creation of invoice, items, and attachments
-const PROHIBITED_DERIVED_FIELDS = new Set(['subtotal', 'total', 'amount']);
+const PROHIBITED_DERIVED_FIELDS = new Set(["subtotal", "total", "amount"]);
 
 const createInvoice = async (data, userId, companyId) => {
   const currency = enforceCurrencyIsEur(data.currency);
   // Validate at least one item
   if (!Array.isArray(data.items) || data.items.length === 0) {
-    const err = new Error('At least one invoice item is required');
+    const err = new Error("At least one invoice item is required");
     err.status = 400;
     throw err;
   }
@@ -277,10 +277,10 @@ const createInvoice = async (data, userId, companyId) => {
     };
   });
 
-  const status = normalizeStatus(data.status, 'DRAFT');
-  assertProvidedMatches(data.subtotal, invoiceSubtotal, 'subtotal');
-  assertProvidedMatches(data.total, invoiceGross, 'total');
-  assertProvidedMatches(data.amount, invoiceGross, 'amount');
+  const status = normalizeStatus(data.status, "DRAFT");
+  assertProvidedMatches(data.subtotal, invoiceSubtotal, "subtotal");
+  assertProvidedMatches(data.total, invoiceGross, "total");
+  assertProvidedMatches(data.amount, invoiceGross, "amount");
   const invoicePayload = {
     invoiceNumber: data.invoiceNumber,
     subtotal: invoiceSubtotal,
@@ -320,7 +320,7 @@ const createInvoice = async (data, userId, companyId) => {
   }
   const fallback = await Invoice.findByPk(createdInvoice.id, { include: invoiceIncludes });
   if (!fallback) {
-    const err = new Error('Invoice created but could not be retrieved');
+    const err = new Error("Invoice created but could not be retrieved");
     err.status = 500;
     throw err;
   }
@@ -332,11 +332,11 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
     PROHIBITED_DERIVED_FIELDS.has(field),
   );
   if (forbiddenFields.length > 0) {
-    const err = new Error('Derived invoice totals cannot be changed directly.');
+    const err = new Error("Derived invoice totals cannot be changed directly.");
     err.status = 400;
     throw err;
   }
-  if (Object.prototype.hasOwnProperty.call(changes, 'currency')) {
+  if (Object.prototype.hasOwnProperty.call(changes, "currency")) {
     changes.currency = enforceCurrencyIsEur(changes.currency);
   }
   const where = { id: invoiceId, ...buildCompanyFilter(companyId) };
@@ -345,10 +345,10 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
     return null;
   }
   // Immutability guard: block edits after SENT (except status/credit note)
-  const immutableStatuses = ['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
+  const immutableStatuses = ["SENT", "PAID", "OVERDUE", "CANCELLED", "PARTIALLY_PAID"];
   if (immutableStatuses.includes(normalizeStatus(invoice.status))) {
     const err = new Error(
-      'Invoice is immutable after SENT. Only status transitions or credit notes are allowed.',
+      "Invoice is immutable after SENT. Only status transitions or credit notes are allowed.",
     );
     err.status = 409;
     // TODO: Audit-log blocked attempt here

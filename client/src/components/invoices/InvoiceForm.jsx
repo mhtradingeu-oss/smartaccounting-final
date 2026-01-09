@@ -1,49 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
-import Button from '../Button';
-import FormField from '../ui/FormField';
-import Label from '../ui/Label';
+import { useEffect, useMemo, useState } from "react";
+import Button from "../Button";
+import FormField from "../ui/FormField";
+import Label from "../ui/Label";
 
 const INITIAL_FORM_STATE = {
-  invoiceNumber: '',
-  clientName: '',
-  date: '',
-  dueDate: '',
-  currency: 'EUR',
-  subtotal: '',
-  total: '',
-  notes: '',
+  invoiceNumber: "",
+  clientName: "",
+  date: "",
+  dueDate: "",
+  currency: "EUR",
+  subtotal: "",
+  total: "",
+  notes: "",
   items: [
     {
-      description: '',
+      description: "",
       quantity: 1,
-      unitPrice: '',
-      vatRate: '',
-      netAmount: '',
-      vatAmount: '',
-      grossAmount: '',
+      unitPrice: "",
+      vatRate: "",
+      netAmount: "",
+      vatAmount: "",
+      grossAmount: "",
     },
   ],
 };
 
 const normalizeNumericField = (value) =>
-  value === undefined || value === null ? '' : String(value);
+  value === undefined || value === null ? "" : String(value);
 
 const InvoiceForm = ({
   initialValues = {},
   disabled = false,
   loading = false,
-  submitLabel = 'Save invoice',
+  submitLabel = "Save invoice",
   onSubmit = () => {},
 }) => {
   // Immutability: lock form if status is immutable
-  const immutableStatuses = ['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
-  const isImmutable = immutableStatuses.includes((initialValues.status || '').toUpperCase());
+  const immutableStatuses = ["SENT", "PAID", "OVERDUE", "CANCELLED", "PARTIALLY_PAID"];
+  const isImmutable = immutableStatuses.includes((initialValues.status || "").toUpperCase());
   const effectiveDisabled = disabled || isImmutable;
   const normalizedInitial = useMemo(
     () => ({
       ...INITIAL_FORM_STATE,
       ...initialValues,
-      currency: (initialValues.currency || 'EUR').toUpperCase(),
+      currency: (initialValues.currency || "EUR").toUpperCase(),
       subtotal: normalizeNumericField(initialValues.subtotal),
       total: normalizeNumericField(initialValues.total),
     }),
@@ -88,13 +88,13 @@ const InvoiceForm = ({
       items: [
         ...prev.items,
         {
-          description: '',
+          description: "",
           quantity: 1,
-          unitPrice: '',
-          vatRate: '',
-          netAmount: '',
-          vatAmount: '',
-          grossAmount: '',
+          unitPrice: "",
+          vatRate: "",
+          netAmount: "",
+          vatAmount: "",
+          grossAmount: "",
         },
       ],
     }));
@@ -112,11 +112,11 @@ const InvoiceForm = ({
   const validateVAT = () => {
     const errors = [];
     let totalNet = 0,
-      totalVat = 0,
+      // totalVat = 0,
       totalGross = 0;
     formState.items.forEach((item, idx) => {
-      const qty = parseFloat(item.quantity) || 0;
-      const unit = parseFloat(item.unitPrice) || 0;
+      // const qty = parseFloat(item.quantity) || 0;
+      // const unit = parseFloat(item.unitPrice) || 0;
       const vatR = parseFloat(item.vatRate);
       const net = parseFloat(item.netAmount) || 0;
       const vat = parseFloat(item.vatAmount) || 0;
@@ -124,10 +124,10 @@ const InvoiceForm = ({
       totalNet += net;
       totalVat += vat;
       totalGross += gross;
-      if (item.vatRate === '' || isNaN(vatR)) {
+      if (item.vatRate === "" || isNaN(vatR)) {
         errors.push(`Line ${idx + 1}: VAT rate is required.`);
       }
-      if (item.vatAmount === '' || isNaN(vat)) {
+      if (item.vatAmount === "" || isNaN(vat)) {
         errors.push(`Line ${idx + 1}: VAT amount is required.`);
       }
       if (Math.abs(net + vat - gross) > 0.01) {
@@ -143,10 +143,10 @@ const InvoiceForm = ({
     const subtotal = formState.items.reduce((sum, i) => sum + (parseFloat(i.netAmount) || 0), 0);
     const total = formState.items.reduce((sum, i) => sum + (parseFloat(i.grossAmount) || 0), 0);
     if (Math.abs(totalNet - subtotal) > 0.01) {
-      errors.push('Subtotal does not match sum of net values.');
+      errors.push("Subtotal does not match sum of net values.");
     }
     if (Math.abs(totalGross - total) > 0.01) {
-      errors.push('Total does not match sum of gross values.');
+      errors.push("Total does not match sum of gross values.");
     }
     setVatErrors(errors);
     return errors.length === 0;
@@ -174,7 +174,7 @@ const InvoiceForm = ({
       clientName: formState.clientName.trim(),
       date: formState.date,
       dueDate: formState.dueDate,
-      currency: (formState.currency || 'EUR').toUpperCase(),
+      currency: (formState.currency || "EUR").toUpperCase(),
       subtotal,
       total,
       notes: formState.notes ? formState.notes.trim() : null,
@@ -184,12 +184,12 @@ const InvoiceForm = ({
   };
 
   const inputBaseClasses =
-    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500';
+    "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500";
 
   // Audit trail extraction (simulate fields: createdBy, createdAt, statusHistory)
   const audit = initialValues.audit || {};
-  const createdBy = audit.createdBy || initialValues.createdBy || 'Unknown';
-  const createdAt = audit.createdAt || initialValues.createdAt || '';
+  const createdBy = audit.createdBy || initialValues.createdBy || "Unknown";
+  const createdAt = audit.createdAt || initialValues.createdAt || "";
   const statusHistory = audit.statusHistory || initialValues.statusHistory || [];
 
   return (
@@ -211,8 +211,8 @@ const InvoiceForm = ({
             <span className="font-medium text-gray-600">Created by:</span> {createdBy}
           </div>
           <div>
-            <span className="font-medium text-gray-600">Created at:</span>{' '}
-            {createdAt ? new Date(createdAt).toLocaleString() : 'Unknown'}
+            <span className="font-medium text-gray-600">Created at:</span>{" "}
+            {createdAt ? new Date(createdAt).toLocaleString() : "Unknown"}
           </div>
         </div>
         <div className="mt-2">
@@ -221,8 +221,8 @@ const InvoiceForm = ({
             {Array.isArray(statusHistory) && statusHistory.length > 0 ? (
               statusHistory.map((entry, idx) => (
                 <li key={idx} className="mb-1">
-                  {entry.status} by {entry.user || 'Unknown'} at{' '}
-                  {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown'}
+                  {entry.status} by {entry.user || "Unknown"} at{" "}
+                  {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "Unknown"}
                 </li>
               ))
             ) : (
@@ -324,7 +324,7 @@ const InvoiceForm = ({
                   <input
                     className={inputBaseClasses}
                     value={item.description}
-                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                    onChange={(e) => handleItemChange(idx, "description", e.target.value)}
                     disabled={effectiveDisabled}
                     required
                   />
@@ -335,7 +335,7 @@ const InvoiceForm = ({
                     min="1"
                     className={inputBaseClasses}
                     value={item.quantity}
-                    onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                    onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
                     disabled={effectiveDisabled}
                     required
                   />
@@ -347,7 +347,7 @@ const InvoiceForm = ({
                     min="0"
                     className={inputBaseClasses}
                     value={item.unitPrice}
-                    onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
+                    onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value)}
                     disabled={effectiveDisabled}
                     required
                   />
@@ -359,7 +359,7 @@ const InvoiceForm = ({
                     min="0"
                     className={inputBaseClasses}
                     value={item.vatRate}
-                    onChange={(e) => handleItemChange(idx, 'vatRate', e.target.value)}
+                    onChange={(e) => handleItemChange(idx, "vatRate", e.target.value)}
                     disabled={effectiveDisabled}
                     required
                   />

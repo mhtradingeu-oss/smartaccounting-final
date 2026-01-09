@@ -2,7 +2,7 @@
 
 require("dotenv").config();
 // Environment variable validation (fail closed)
-const { cleanEnv, str, num, bool, url } = require("envalid");
+const { cleanEnv, str, num } = require("envalid");
 const envSpec = {
   NODE_ENV: str({ choices: ["development", "test", "production"] }),
   API_BASE_URL: str({ default: "/api" }),

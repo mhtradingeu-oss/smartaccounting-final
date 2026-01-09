@@ -1,7 +1,7 @@
 // Middleware to validate Content-Type header
 function validateContentType(allowedTypes) {
   return function (req, res, next) {
-    const contentType = req.headers["content-type"];
+    const contentType = req.headers['content-type'];
     if (!contentType) {
       return next();
     }
@@ -10,15 +10,15 @@ function validateContentType(allowedTypes) {
     }
     return res.status(415).json({
       success: false,
-      message: `Unsupported Content-Type. Allowed: ${allowedTypes.join(", ")}`,
+      message: `Unsupported Content-Type. Allowed: ${allowedTypes.join(', ')}`,
     });
   };
 }
 
 // Middleware to limit request body size
-function requestSizeLimiter(limit = "10mb") {
+function requestSizeLimiter(limit = '10mb') {
   // Use express.json and express.urlencoded with limit
-  const express = require("express");
+  const express = require('express');
   const jsonParser = express.json({ limit });
   const urlencodedParser = express.urlencoded({ extended: true, limit });
   return function (req, res, next) {
@@ -26,14 +26,14 @@ function requestSizeLimiter(limit = "10mb") {
       if (err) {
         return res.status(413).json({
           success: false,
-          message: "Request body too large",
+          message: 'Request body too large',
         });
       }
       urlencodedParser(req, res, (err2) => {
         if (err2) {
           return res.status(413).json({
             success: false,
-            message: "Request body too large",
+            message: 'Request body too large',
           });
         }
         next();
@@ -41,31 +41,31 @@ function requestSizeLimiter(limit = "10mb") {
     });
   };
 }
-const compression = require("compression");
-const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-const slowDown = require("express-slow-down");
-const mongoSanitize = require("express-mongo-sanitize");
-const xss = require("xss-clean");
-const hpp = require("hpp");
-const { validationResult } = require("express-validator");
-const logger = require("../lib/logger");
-const { METRICS_ENABLED, LOG_SLOW_REQUEST_MS, recordMetrics } = require("./metrics");
+const compression = require('compression');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const slowDown = require('express-slow-down');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+const { validationResult } = require('express-validator');
+const logger = require('../lib/logger');
+const { METRICS_ENABLED, LOG_SLOW_REQUEST_MS, recordMetrics } = require('./metrics');
 
-const NODE_ENV = process.env.NODE_ENV || "development";
+const NODE_ENV = process.env.NODE_ENV || 'development';
 const FRONTEND_URL = process.env.FRONTEND_URL;
-const isProduction = NODE_ENV === "production";
+const isProduction = NODE_ENV === 'production';
 
-const REQUEST_LOGGING_ENABLED = process.env.REQUEST_LOGGING !== "false";
+const REQUEST_LOGGING_ENABLED = process.env.REQUEST_LOGGING !== 'false';
 const RATE_LIMIT_SKIP_PATHS = [
-  "/health",
-  "/ready",
-  "/metrics",
-  "/api/health",
-  "/api/ready",
-  "/api/metrics",
+  '/health',
+  '/ready',
+  '/metrics',
+  '/api/health',
+  '/api/ready',
+  '/api/metrics',
 ];
-const DEV_RATE_LIMIT_WHITELIST = ["/api/companies"];
+const DEV_RATE_LIMIT_WHITELIST = ['/api/companies'];
 
 const shouldSkipRateLimit = (req) => {
   const path = req.path;
@@ -86,11 +86,11 @@ const createRateLimiter = (options = {}) => {
     standardHeaders: true,
     legacyHeaders: false,
     message: {
-      error: "Too many requests from this IP, please try again later.",
-      retryAfter: "15 minutes",
+      error: 'Too many requests from this IP, please try again later.',
+      retryAfter: '15 minutes',
     },
     skip: (req) =>
-      shouldSkipRateLimit(req) || (typeof customSkip === "function" ? customSkip(req) : false),
+      shouldSkipRateLimit(req) || (typeof customSkip === 'function' ? customSkip(req) : false),
     ...restOptions,
   };
   return rateLimit(defaults);
@@ -99,16 +99,16 @@ const authRateLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
   max: 5,
   message: {
-    error: "Too many authentication attempts, please try again later.",
-    retryAfter: "5 minutes",
+    error: 'Too many authentication attempts, please try again later.',
+    retryAfter: '5 minutes',
   },
 });
 
 const apiRateLimiter = createRateLimiter({
   max: 100,
   message: {
-    error: "Too many API requests, please try again later.",
-    retryAfter: "15 minutes",
+    error: 'Too many API requests, please try again later.',
+    retryAfter: '15 minutes',
   },
 });
 
@@ -116,8 +116,8 @@ const uploadRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: {
-    error: "Too many file uploads, please try again later.",
-    retryAfter: "1 hour",
+    error: 'Too many file uploads, please try again later.',
+    retryAfter: '1 hour',
   },
 });
 
@@ -137,7 +137,7 @@ if (FRONTEND_URL) {
   connectSrc.push(FRONTEND_URL);
 }
 if (!isProduction) {
-  connectSrc.push("ws:", "wss:");
+  connectSrc.push('ws:', 'wss:');
 }
 
 const securityHeaders = helmet({
@@ -146,7 +146,7 @@ const securityHeaders = helmet({
       defaultSrc: ["'self'"],
       scriptSrc,
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc,
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -158,7 +158,7 @@ const securityHeaders = helmet({
   },
   hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   contentTypeOptions: true,
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   crossOriginEmbedderPolicy: false,
   permissionsPolicy: {
     features: {
@@ -178,8 +178,8 @@ const securityHeaders = helmet({
 });
 
 const sanitizeObject = (obj) => {
-  if (obj === null || typeof obj !== "object") {
-    return typeof obj === "string" ? sanitizeString(obj) : obj;
+  if (obj === null || typeof obj !== 'object') {
+    return typeof obj === 'string' ? sanitizeString(obj) : obj;
   }
   if (Array.isArray(obj)) {
     return obj.map((value) => sanitizeObject(value));
@@ -191,15 +191,15 @@ const sanitizeObject = (obj) => {
 };
 
 const sanitizeString = (value) => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return value;
   }
 
   return value
-    .replace(/<script[^>]*>.*?<\/script>/gi, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/javascript:/gi, "")
-    .replace(/on\w+\s*=/gi, "")
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
     .trim();
 };
 
@@ -220,7 +220,7 @@ const requestLogger = (req, res, next) => {
 
   const startTime = process.hrtime();
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const [seconds, nanoseconds] = process.hrtime(startTime);
     const durationMs = Number((seconds * 1000 + nanoseconds / 1e6).toFixed(2));
     const statusCode = res.statusCode;
@@ -228,7 +228,7 @@ const requestLogger = (req, res, next) => {
       method: req.method,
       path: req.originalUrl,
       ip: req.ip,
-      userAgent: req.get("User-Agent") || "",
+      userAgent: req.get('User-Agent') || '',
       statusCode,
       durationMs,
       requestId: req.requestId,
@@ -242,15 +242,15 @@ const requestLogger = (req, res, next) => {
 
     const shouldLogSlow = durationMs > LOG_SLOW_REQUEST_MS;
     if (shouldLogSlow && (REQUEST_LOGGING_ENABLED || METRICS_ENABLED)) {
-      logger.warn("Slow request detected", logMetadata);
+      logger.warn('Slow request detected', logMetadata);
     }
 
     if (!REQUEST_LOGGING_ENABLED) {
       return;
     }
 
-    const level = statusCode >= 500 ? "error" : statusCode >= 400 ? "warn" : "info";
-    logger[level]("HTTP request", logMetadata);
+    const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
+    logger[level]('HTTP request', logMetadata);
   });
 
   next();
@@ -265,7 +265,7 @@ const validateRequest = (validations) => async (req, res, next) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
-      message: "Validation failed",
+      message: 'Validation failed',
       errors: errors.array(),
     });
   }
@@ -280,10 +280,10 @@ const ipWhitelist =
   (req, res, next) => {
     const clientIP = req.ip || req.connection.remoteAddress;
     if (allowedIPs.length && !allowedIPs.includes(clientIP)) {
-      logger.warn("Blocked request from unauthorized IP", { ip: clientIP });
+      logger.warn('Blocked request from unauthorized IP', { ip: clientIP });
       return res.status(403).json({
         success: false,
-        message: "Access denied from your IP address",
+        message: 'Access denied from your IP address',
       });
     }
 
@@ -293,17 +293,17 @@ const ipWhitelist =
 // reserved for CSRF hardening phase
 // eslint-disable-next-line no-unused-vars
 const csrfProtection = (req, res, next) => {
-  if (req.method === "GET" || req.headers.authorization?.startsWith("Bearer ")) {
+  if (req.method === 'GET' || req.headers.authorization?.startsWith('Bearer ')) {
     return next();
   }
 
-  const csrfToken = req.headers["x-csrf-token"] || req.body?._csrf;
+  const csrfToken = req.headers['x-csrf-token'] || req.body?._csrf;
   const sessionToken = req.session?.csrfToken;
 
   if (!csrfToken || !sessionToken || csrfToken !== sessionToken) {
     return res.status(403).json({
       success: false,
-      message: "CSRF token validation failed",
+      message: 'CSRF token validation failed',
     });
   }
 
@@ -334,39 +334,39 @@ function createSecurityMiddleware() {
     securityHeaders,
     mongoSanitize(),
     xss(),
-    hpp({ whitelist: ["sort", "fields", "page", "limit", "category", "status"] }),
+    hpp({ whitelist: ['sort', 'fields', 'page', 'limit', 'category', 'status'] }),
     requestLogger,
     compression(),
     sanitizeRequest,
-    validateContentType(["application/json", "multipart/form-data"]),
-    requestSizeLimiter("10mb"),
+    validateContentType(['application/json', 'multipart/form-data']),
+    requestSizeLimiter('10mb'),
     // Explicit rate limiting for sensitive endpoints
-    pathScopedMiddleware("/api/auth/login", authRateLimiter),
-    pathScopedMiddleware("/api/auth/register", authRateLimiter),
-    pathScopedMiddleware("/api/auth/forgot-password", authRateLimiter),
-    pathScopedMiddleware("/api/invoices/upload", uploadRateLimiter),
-    pathScopedMiddleware("/api/ocr/extract", uploadRateLimiter),
+    pathScopedMiddleware('/api/auth/login', authRateLimiter),
+    pathScopedMiddleware('/api/auth/register', authRateLimiter),
+    pathScopedMiddleware('/api/auth/forgot-password', authRateLimiter),
+    pathScopedMiddleware('/api/invoices/upload', uploadRateLimiter),
+    pathScopedMiddleware('/api/ocr/extract', uploadRateLimiter),
     // AI endpoints
-    prefixScopedMiddleware("/api/ai", apiRateLimiter),
+    prefixScopedMiddleware('/api/ai', apiRateLimiter),
     // GDPR endpoints
-    prefixScopedMiddleware("/api/gdpr", apiRateLimiter),
+    prefixScopedMiddleware('/api/gdpr', apiRateLimiter),
     // Export endpoints
-    prefixScopedMiddleware("/api/exports", apiRateLimiter),
-    prefixScopedMiddleware("/api", speedLimiter),
-    prefixScopedMiddleware("/api", apiRateLimiter),
+    prefixScopedMiddleware('/api/exports', apiRateLimiter),
+    prefixScopedMiddleware('/api', speedLimiter),
+    prefixScopedMiddleware('/api', apiRateLimiter),
     // Security headers
     (req, res, next) => {
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      res.setHeader("X-Frame-Options", "DENY");
-      res.setHeader("X-XSS-Protection", "1; mode=block");
-      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-      res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
-      res.removeHeader("X-Powered-By");
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-XSS-Protection', '1; mode=block');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+      res.removeHeader('X-Powered-By');
       next();
     },
     // Timeout handler
     (req, res, next) => {
-      if (req.path.includes("/upload")) {
+      if (req.path.includes('/upload')) {
         req.setTimeout(300000);
       } else {
         req.setTimeout(30000);
