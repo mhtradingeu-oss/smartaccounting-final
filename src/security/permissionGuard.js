@@ -45,8 +45,12 @@ const permissionGuard = () => {
       return next();
     }
 
-    const method = req.method;
-    const path = normalizePath(req.baseUrl + req.path);
+    const method = String(req.method || '').toUpperCase();
+    const rawPath =
+      typeof req.originalUrl === 'string' && req.originalUrl.length
+        ? req.originalUrl.split('?')[0]
+        : `${req.baseUrl || ''}${req.path || ''}`;
+    const path = normalizePath(rawPath);
 
     const allowed = rolePerms.allow.some((rule) => matchRule(rule, method, path));
 

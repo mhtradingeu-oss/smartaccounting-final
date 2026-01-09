@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
+import { Modal } from '../components/ui/Modal';
 import FeatureGate from '../components/FeatureGate';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +13,7 @@ import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
-import { isAIAssistantEnabled } from '../lib/featureFlags';
+import { isAIAssistantEnabled, isAIVoiceEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
 import ChatMessageGroup from '../components/ChatMessageGroup';
 import ChatEmptyState from '../components/ChatEmptyState';
@@ -48,6 +49,8 @@ const severityPillClasses = {
   medium: 'bg-yellow-50 text-yellow-700 border-yellow-100',
   low: 'bg-green-50 text-green-700 border-green-100',
 };
+
+const VOICE_CONSENT_KEY = 'ai_voice_consent_v1';
 
 const initialMessageText = (context) => {
   if (!context) {
@@ -95,9 +98,18 @@ const AIAssistant = () => {
   // askError state removed; errors are now shown in chat messages
   const [isAsking, setIsAsking] = useState(false);
   const [userTyping, setUserTyping] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceTranscriptDraft, setVoiceTranscriptDraft] = useState('');
+  const [voiceIntent, setVoiceIntent] = useState('review');
+  const [voiceError, setVoiceError] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceConsentAccepted, setVoiceConsentAccepted] = useState(false);
+  const [showVoiceConsent, setShowVoiceConsent] = useState(false);
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
+  const recognitionRef = useRef(null);
   const aiAssistantEnabled = isAIAssistantEnabled();
+  const aiVoiceEnabled = isAIVoiceEnabled();
   const userRole = user?.role || 'viewer';
   const isReadOnly = isReadOnlyRole(userRole);
   const aiFeatureGateProps = {
@@ -107,6 +119,13 @@ const AIAssistant = () => {
     ctaLabel: 'Back to dashboard',
     ctaPath: '/dashboard',
   };
+
+  const speechSupported = useMemo(() => {
+    if (!aiVoiceEnabled || typeof window === 'undefined') {
+      return false;
+    }
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }, [aiVoiceEnabled]);
 
   const latestAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -125,6 +144,10 @@ const AIAssistant = () => {
 
     setContextError(null);
     setIsAsking(false);
+    setVoiceTranscript('');
+    setVoiceTranscriptDraft('');
+    setVoiceError(null);
+    setIsListening(false);
   };
 
   useEffect(() => {
@@ -177,6 +200,23 @@ const AIAssistant = () => {
       cancelled = true;
     };
   }, [aiAssistantEnabled, activeCompanyId, isReadOnly]);
+
+  useEffect(() => {
+    if (!aiVoiceEnabled || typeof window === 'undefined') {
+      setVoiceConsentAccepted(false);
+      return;
+    }
+    const stored = localStorage.getItem(VOICE_CONSENT_KEY);
+    setVoiceConsentAccepted(stored === 'true');
+  }, [aiVoiceEnabled]);
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current && typeof recognitionRef.current.abort === 'function') {
+        recognitionRef.current.abort();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!context || initialMessageSent.current) {
@@ -239,6 +279,14 @@ const AIAssistant = () => {
     );
   }
 
+  const voiceConsentBanner = aiVoiceEnabled ? (
+    <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+      Voice input is optional. Spoken queries are transcribed before sending, and no raw audio is
+      stored by default. Each request is tied to your company and logged with a request ID for audit
+      review.
+    </div>
+  ) : null;
+
   // Group consecutive messages by speaker for better UX
   function groupMessages(msgs) {
     if (!msgs.length) {
@@ -264,6 +312,55 @@ const AIAssistant = () => {
   // Handle user input for typing indicator
   const handleUserInput = (e) => {
     setUserTyping(!!e.target.value);
+  };
+
+  const ensureVoiceConsent = () => {
+    if (voiceConsentAccepted) {
+      return true;
+    }
+    setShowVoiceConsent(true);
+    return false;
+  };
+
+  const stopVoiceCapture = () => {
+    if (recognitionRef.current && typeof recognitionRef.current.stop === 'function') {
+      recognitionRef.current.stop();
+    }
+  };
+
+  const startVoiceCapture = () => {
+    if (!ensureVoiceConsent()) {
+      return;
+    }
+    if (!speechSupported || typeof window === 'undefined') {
+      setVoiceError('Speech-to-text is not available in this browser.');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError('Speech-to-text is not available in this browser.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = navigator.language || 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || '';
+      setVoiceTranscript(transcript);
+      setVoiceTranscriptDraft(transcript);
+      setVoiceError(null);
+    };
+    recognition.onerror = (event) => {
+      setVoiceError(event?.error ? `Speech-to-text error: ${event.error}` : 'Speech-to-text failed.');
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    setVoiceError(null);
+    setIsListening(true);
+    recognition.start();
   };
 
   const handleIntent = async (intentId, options = {}) => {
@@ -343,6 +440,77 @@ const AIAssistant = () => {
     }
   };
 
+  const handleVoiceSend = async () => {
+    if (!ensureVoiceConsent()) {
+      return;
+    }
+    if (!sessionId) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          speaker: 'assistant',
+          text: '',
+          error: 'Session is initializing. Please wait a moment.',
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+      return;
+    }
+    const transcript = voiceTranscriptDraft.trim();
+    if (!transcript) {
+      setVoiceError('Transcript is empty. Try recording again.');
+      return;
+    }
+    setIsAsking(true);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        speaker: 'user',
+        text: transcript,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
+    setUserTyping(false);
+    setVoiceError(null);
+    try {
+      const response = await aiAssistantAPI.askVoice({
+        intent: voiceIntent,
+        transcript,
+        sessionId,
+        responseMode: 'text',
+      });
+      const answer = response?.answer ?? {};
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          speaker: 'assistant',
+          text: answer.message || 'The assistant has no data yet.',
+          highlights: answer.highlights,
+          references: answer.references,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+      setVoiceTranscript('');
+      setVoiceTranscriptDraft('');
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          speaker: 'assistant',
+          text: '',
+          error: formatApiError(err, 'Unable to reach the assistant.').message,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
   if (loading && !context && !isReadOnly) {
     return (
       <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading AI assistant">
@@ -356,6 +524,7 @@ const AIAssistant = () => {
   if (contextError) {
     return (
       <>
+        {voiceConsentBanner}
         <EmptyState
           title="Unable to load the AI assistant"
           description={contextError || 'Please try again later.'}
@@ -414,6 +583,7 @@ const AIAssistant = () => {
   return (
     <FeatureGate {...aiFeatureGateProps}>
       <div className="space-y-6">
+        {voiceConsentBanner}
         {/* Role-based limitations banner for all users */}
         <div className="mb-4">
           <div className="rounded bg-blue-50 border border-blue-200 p-3">
@@ -779,7 +949,80 @@ const AIAssistant = () => {
               >
                 Send
               </Button>
+              {aiVoiceEnabled && speechSupported && (
+                <Button
+                  variant={isListening ? 'secondary' : 'outline'}
+                  size="sm"
+                  disabled={isAsking}
+                  onClick={() => (isListening ? stopVoiceCapture() : startVoiceCapture())}
+                  className="transition-all duration-200 hover:scale-105"
+                  aria-label={isListening ? 'Stop recording' : 'Start voice input'}
+                >
+                  {isListening ? 'Stop' : 'Mic'}
+                </Button>
+              )}
             </div>
+            {aiVoiceEnabled && !speechSupported && (
+              <div className="text-xs text-gray-500">
+                Voice input is unavailable in this browser. Use text input instead.
+              </div>
+            )}
+            {aiVoiceEnabled && voiceTranscriptDraft && (
+              <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+                <div className="font-semibold text-blue-800">Transcript preview</div>
+                <textarea
+                  className="mt-2 w-full rounded border border-blue-200 bg-white p-2 text-sm text-gray-800"
+                  rows={3}
+                  value={voiceTranscriptDraft}
+                  onChange={(event) => setVoiceTranscriptDraft(event.target.value)}
+                  aria-label="Voice transcript preview"
+                  disabled={isAsking}
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <label className="text-xs text-blue-800">
+                    Intent
+                    <select
+                      className="ml-2 rounded border border-blue-200 bg-white px-2 py-1 text-xs"
+                      value={voiceIntent}
+                      onChange={(event) => setVoiceIntent(event.target.value)}
+                      disabled={isAsking}
+                    >
+                      {INTENT_OPTIONS.map((intent) => (
+                        <option key={intent.id} value={intent.id}>
+                          {intent.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={isAsking || !voiceTranscriptDraft.trim()}
+                    onClick={handleVoiceSend}
+                  >
+                    Send transcript
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isAsking}
+                    onClick={() => {
+                      setVoiceTranscript('');
+                      setVoiceTranscriptDraft('');
+                      setVoiceError(null);
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                {voiceError && <div className="mt-2 text-xs text-red-600">{voiceError}</div>}
+                {!voiceError && voiceTranscript && (
+                  <div className="mt-2 text-[11px] text-blue-700">
+                    Review the transcript before sending. Only text is transmitted.
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           <Card className="space-y-3">
@@ -802,6 +1045,39 @@ const AIAssistant = () => {
           </Card>
         </div>
       </div>
+      <Modal
+        open={showVoiceConsent}
+        onClose={() => setShowVoiceConsent(false)}
+        title="Voice Assistant Consent"
+        ariaLabel="Voice assistant consent dialog"
+      >
+        <div className="space-y-4 text-sm text-gray-700">
+          <p>
+            Voice input is optional and transcript-only. Your browser converts speech to text
+            locally before sending; raw audio is not stored by default.
+          </p>
+          <p>
+            AI responses are advisory only and do not change your data. All requests are logged for
+            audit review.
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowVoiceConsent(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                localStorage.setItem(VOICE_CONSENT_KEY, 'true');
+                setVoiceConsentAccepted(true);
+                setShowVoiceConsent(false);
+              }}
+            >
+              I agree
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </FeatureGate>
   );
 };

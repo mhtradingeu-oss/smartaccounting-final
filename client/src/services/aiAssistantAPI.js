@@ -43,6 +43,16 @@ export const aiAssistantAPI = {
     });
     return response.data;
   },
+  async askVoice({ intent, transcript, sessionId, responseMode = 'text' }) {
+    const payload = {
+      intent,
+      transcript,
+      sessionId,
+      responseMode,
+    };
+    const response = await api.post('/ai/voice/assistant', payload, { headers: AI_HEADERS });
+    return response.data;
+  },
   async startSession() {
     if (this.sessionCache) {
       return this.sessionCache;

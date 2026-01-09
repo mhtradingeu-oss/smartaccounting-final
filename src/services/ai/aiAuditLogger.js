@@ -36,6 +36,7 @@ async function logRequested({
   responseMeta,
   sessionId,
   meta,
+  responseMode,
 }) {
   await AuditLogService.appendEntry({
     action: 'AI_QUERY_REQUESTED',
@@ -50,6 +51,7 @@ async function logRequested({
       promptHash: hashPrompt(prompt),
       sessionId,
       responseMeta,
+      responseMode,
       meta: sanitizeMeta(meta),
     },
     companyId,
@@ -70,6 +72,7 @@ async function logResponded({
   responseMeta,
   sessionId,
   meta,
+  responseMode,
 }) {
   const safeRequestId = requestId || 'unknown';
   await AuditLogService.appendEntry({
@@ -85,6 +88,7 @@ async function logResponded({
       promptHash: hashPrompt(prompt),
       sessionId,
       responseMeta,
+      responseMode,
       meta: sanitizeMeta(meta),
     },
     companyId,
@@ -173,7 +177,16 @@ async function logSuggestionEvent(params) {
   });
 }
 
-async function logRejected({ userId, companyId, requestId, queryType, route, prompt, reason }) {
+async function logRejected({
+  userId,
+  companyId,
+  requestId,
+  queryType,
+  route,
+  prompt,
+  reason,
+  responseMode,
+}) {
   const safeRequestId = requestId || 'unknown';
   await AuditLogService.appendEntry({
     action: 'AI_QUERY_REJECTED',
@@ -187,6 +200,7 @@ async function logRejected({ userId, companyId, requestId, queryType, route, pro
       queryType,
       promptHash: hashPrompt(prompt),
       reason,
+      responseMode,
     },
     companyId,
     ipAddress: null,
@@ -196,7 +210,15 @@ async function logRejected({ userId, companyId, requestId, queryType, route, pro
   });
 }
 
-async function logRateLimited({ userId, companyId, requestId, route, queryType, prompt }) {
+async function logRateLimited({
+  userId,
+  companyId,
+  requestId,
+  route,
+  queryType,
+  prompt,
+  responseMode,
+}) {
   const safeRequestId = requestId || 'unknown';
   await AuditLogService.appendEntry({
     action: 'AI_RATE_LIMITED',
@@ -209,6 +231,7 @@ async function logRateLimited({ userId, companyId, requestId, route, queryType, 
       route,
       queryType,
       promptHash: hashPrompt(prompt),
+      responseMode,
     },
     companyId,
     ipAddress: null,

@@ -21,7 +21,8 @@ module.exports = async function aiRateLimit(req, res, next) {
       route: req.originalUrl,
       queryType: req.query.queryType,
       requestId: req.requestId,
-      prompt: req.query.prompt,
+      prompt: req.query.prompt || req.body?.prompt || req.body?.transcript,
+      responseMode: req.body?.responseMode || req.query.responseMode,
     });
     return res.status(429).json({
       code: 'AI_RATE_LIMIT_EXCEEDED',

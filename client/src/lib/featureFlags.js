@@ -43,3 +43,16 @@ export const setAIAssistantEnabled = (value) => {
 export const resetAIAssistantEnabled = () => {
   aiAssistantEnabled = DEFAULT_AI_ASSISTANT_ENABLED;
 };
+
+const DEFAULT_AI_VOICE_ENABLED = normalizeFlag(import.meta.env.VITE_AI_VOICE_ENABLED ?? 'false');
+let aiVoiceEnabled = DEFAULT_AI_VOICE_ENABLED;
+
+export const isAIVoiceEnabled = () => aiVoiceEnabled;
+
+export const setAIVoiceEnabled = (value) => {
+  aiVoiceEnabled = normalizeFlag(value);
+};
+
+export const resetAIVoiceEnabled = () => {
+  aiVoiceEnabled = DEFAULT_AI_VOICE_ENABLED;
+};

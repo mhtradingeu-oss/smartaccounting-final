@@ -124,4 +124,98 @@ describe('GoBD AuditLogService', () => {
       }),
     ).rejects.toThrow(/reason is required/);
   });
+
+  it('fails when ACCOUNTING SystemContext lacks companyId', async () => {
+    await expect(
+      AuditLogService.appendEntry({
+        action: 'missing_company',
+        resourceType: 'Test',
+        resourceId: 'missing-company',
+        userId: testUser.id,
+        oldValues: null,
+        newValues: {},
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+        reason: 'accounting event',
+        context: {
+          actorType: 'USER',
+          actorId: testUser.id,
+          companyId: null,
+        eventClass: 'ACCOUNTING',
+        scopeType: 'COMPANY',
+        status: 'SUCCESS',
+        reason: 'accounting event in test',
+        requestId: 'req-accounting-1',
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+        },
+      }),
+    ).rejects.toThrow(/companyId/);
+  });
+
+  it('fails when ACCOUNTING SystemContext misses actorType', async () => {
+    await expect(
+      AuditLogService.appendEntry({
+        action: 'missing_actorType',
+        resourceType: 'Test',
+        resourceId: 'missing-actor',
+        userId: testUser.id,
+        oldValues: null,
+        newValues: {},
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+        reason: 'accounting event',
+        context: {
+          actorType: null,
+          actorId: testUser.id,
+          companyId: company.id,
+        eventClass: 'ACCOUNTING',
+        scopeType: 'COMPANY',
+        status: 'SUCCESS',
+        reason: 'accounting event in test',
+        requestId: 'req-accounting-2',
+          ipAddress: '127.0.0.1',
+          userAgent: 'jest',
+        },
+      }),
+    ).rejects.toThrow(/actorType/);
+  });
+
+  it('detects tampering when timestamps reorder the chain', async () => {
+    await AuditLogService.appendEntry({
+      action: 'timestamp-order-1',
+      resourceType: 'Test',
+      resourceId: 'ts-order',
+      userId: testUser.id,
+      companyId: company.id,
+      oldValues: null,
+      newValues: {},
+      ipAddress: '127.0.0.1',
+      userAgent: 'jest',
+      reason: 'first entry',
+    });
+
+    await AuditLogService.appendEntry({
+      action: 'timestamp-order-2',
+      resourceType: 'Test',
+      resourceId: 'ts-order',
+      userId: testUser.id,
+      companyId: company.id,
+      oldValues: {},
+      newValues: {},
+      ipAddress: '127.0.0.1',
+      userAgent: 'jest',
+      reason: 'second entry',
+    });
+
+    const entries = await AuditLog.findAll({ order: [['timestamp', 'ASC']] });
+    const secondEntry = entries[1];
+    // Force timestamp to be earlier than the first entry but keep the hash
+    await AuditLog.update(
+      { timestamp: new Date(Date.now() - 60 * 60 * 1000) },
+      { where: { id: secondEntry.id } },
+    );
+
+    expect(await AuditLogService.validateChain()).toBe(false);
+  });
 });

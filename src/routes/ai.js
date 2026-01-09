@@ -2,11 +2,19 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const aiReadGateway = require('../services/ai/aiReadGateway');
 const aiRouteGuard = require('../middleware/aiRouteGuard');
+const aiReadOnlyRouter = require('./aiReadOnly');
+const voiceRouter = require('./ai/voice');
+const governanceRouter = require('./ai/governance');
 
 const router = express.Router();
 
 router.use(authenticate);
 router.use(requireCompany);
+
+// Mount read-only, governance, and voice endpoints before general AI read routes.
+router.use('/read', aiReadOnlyRouter);
+router.use('/governance', governanceRouter);
+router.use('/voice', voiceRouter);
 
 const respondWithError = (req, res, status, error) => {
   return res.status(status).json({ error, requestId: req.requestId });
