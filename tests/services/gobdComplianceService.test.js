@@ -4,7 +4,7 @@ const { User, Company, AuditLog } = require('../../src/models');
 describe('GoBDComplianceService SystemContext compliance', () => {
   let company, user, validContext;
   const buildSystemContext = require('../utils/buildSystemContext');
-  beforeAll(async () => {
+  beforeEach(async () => {
     company = await Company.create({
       name: 'LegalTestCo',
       taxId: 'DE999999999',
@@ -12,6 +12,7 @@ describe('GoBDComplianceService SystemContext compliance', () => {
       city: 'Frankfurt',
       postalCode: '60311',
       country: 'DE',
+      aiEnabled: true,
     });
     user = await User.create({
       email: 'legaltest@example.com',
@@ -21,7 +22,15 @@ describe('GoBDComplianceService SystemContext compliance', () => {
       role: 'admin',
       companyId: company.id,
     });
-    validContext = buildSystemContext();
+    validContext = buildSystemContext({
+      user: { companyId: company.id, id: user.id },
+      source: 'TEST',
+    });
+  });
+  afterEach(async () => {
+    await AuditLog.destroy({ where: {} });
+    await User.destroy({ where: {} });
+    await Company.destroy({ where: {} });
   });
 
   it('throws if companyId is missing, but reason, status, actorType, eventClass, and scopeType are valid', async () => {
@@ -80,7 +89,7 @@ describe('GoBDComplianceService SystemContext compliance', () => {
 describe('GoBDComplianceService SystemContext enforcement', () => {
   let company, user, validContext;
   const buildSystemContext = require('../utils/buildSystemContext');
-  beforeAll(async () => {
+  beforeEach(async () => {
     company = await Company.create({
       name: 'TestCo',
       country: 'DE',
@@ -88,6 +97,7 @@ describe('GoBDComplianceService SystemContext enforcement', () => {
       address: 'Teststr. 1',
       city: 'Berlin',
       postalCode: '10115',
+      aiEnabled: true,
     });
     user = await User.create({
       email: 'test@co.com',
@@ -108,6 +118,8 @@ describe('GoBDComplianceService SystemContext enforcement', () => {
   });
   afterEach(async () => {
     await AuditLog.destroy({ where: {} });
+    await User.destroy({ where: {} });
+    await Company.destroy({ where: {} });
   });
 
   it('throws if companyId is missing in SystemContext and reason, status, actorType are valid', async () => {

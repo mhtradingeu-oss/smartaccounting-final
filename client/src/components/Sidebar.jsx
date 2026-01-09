@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useRole } from '../context/RoleContext';
 
+import { AIBadge } from './AIBadge';
 import {
   HomeIcon,
   Cog6ToothIcon,
@@ -12,6 +13,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   UserCircleIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import {
   MAIN_NAVIGATION_ITEMS,
@@ -73,8 +75,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       const isAIFeature = item.badge === 'AI';
       let badgeNode = null;
       if (isAIFeature && !isCollapsed) {
-        // Lazy import to avoid circular deps
-        const AIBadge = require('./AIBadge').AIBadge;
         badgeNode = <AIBadge className="ml-auto" />;
       }
       return (

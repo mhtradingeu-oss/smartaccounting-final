@@ -1,4 +1,4 @@
-const app = require('../../src/app');
+const { app } = require('../../src/server');
 const { Company, Invoice } = require('../../src/models');
 
 const canBindSockets = require('../utils/canBindSockets')();
@@ -45,11 +45,13 @@ describeIfSockets('Production smoke suite', () => {
     await global.testUser.update({ companyId: company.id });
     await global.testUser.reload();
 
-    const companiesRes = await supertestApp
-      .get('/api/companies')
-      .set('Authorization', `Bearer ${authToken}`);
+    const companiesRes = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/companies',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     expect(companiesRes.status).toBe(200);
-
     expect(Array.isArray(companiesRes.body.companies)).toBe(true);
     expect(companiesRes.body.companies.some((entry) => entry.id === company.id)).toBe(true);
 
@@ -68,18 +70,24 @@ describeIfSockets('Production smoke suite', () => {
       ],
     });
 
-    const invoiceRes = await supertestApp
-      .post('/api/invoices')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send(invoicePayload);
+    const invoiceRes = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/invoices',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: invoicePayload,
+    });
     expect(invoiceRes.status).toBe(201);
     expect(invoiceRes.body.success).toBe(true);
     expect(invoiceRes.body.invoice).toBeDefined();
     createdInvoiceId = invoiceRes.body.invoice.id;
 
-    const invoicesRes = await supertestApp
-      .get('/api/invoices')
-      .set('Authorization', `Bearer ${authToken}`);
+    const invoicesRes = await global.requestApp({
+      app,
+      method: 'GET',
+      url: '/api/invoices',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     expect(invoicesRes.status).toBe(200);
     expect(Array.isArray(invoicesRes.body.invoices)).toBe(true);
     expect(invoicesRes.body.invoices.some((inv) => inv.id === createdInvoiceId)).toBe(true);

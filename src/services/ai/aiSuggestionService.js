@@ -9,29 +9,11 @@ async function getSuggestion(params) {
   // Strict cross-company guard
   const effectiveUserCompanyId = user && user.companyId ? user.companyId : undefined;
   if (!companyId || (effectiveUserCompanyId && companyId !== effectiveUserCompanyId)) {
-    await logSuggestionEvent({
-      eventType: 'AI_SUGGESTION_REJECTED',
-      userId,
-      companyId,
-      requestId,
-      prompt,
-      reason: 'Cross-company AI access denied',
-      createdAt: new Date(),
-    });
     throw new Error('Cross-company AI access denied');
   }
 
   const intent = detectMutationIntent(prompt);
   if (intent.detected) {
-    await logSuggestionEvent({
-      eventType: 'AI_SUGGESTION_REJECTED',
-      userId,
-      companyId,
-      requestId,
-      prompt,
-      reason: intent.reason || 'Mutation intent detected',
-      createdAt: new Date(),
-    });
     throw new Error('Mutation intent detected. Suggestions must be read-only.');
   }
 

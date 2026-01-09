@@ -2,15 +2,16 @@ const AuditLogService = require('../../src/services/auditLogService');
 const { AuditLog, User, Company, sequelize } = require('../../src/models');
 
 describe('GoBD AuditLogService', () => {
-  let testUser;
-  beforeAll(async () => {
-    const company = await Company.create({
-      name: 'TestCo',
+  let testUser, company;
+  beforeEach(async () => {
+    company = await Company.create({
+      name: 'Audit GmbH',
       taxId: 'DE123456789',
       address: 'Teststr. 1',
       city: 'Berlin',
       postalCode: '10115',
       country: 'DE',
+      aiEnabled: true,
     });
     testUser = await User.create({
       email: 'auditlogtest@example.com',
@@ -21,9 +22,10 @@ describe('GoBD AuditLogService', () => {
       companyId: company.id,
     });
   });
-
   afterEach(async () => {
     await AuditLog.destroy({ where: {} });
+    await User.destroy({ where: {} });
+    await Company.destroy({ where: {} });
   });
 
   it('appends entries and forms a hash chain', async () => {
@@ -32,6 +34,7 @@ describe('GoBD AuditLogService', () => {
       resourceType: 'Test',
       resourceId: '1',
       userId: testUser.id,
+      companyId: company.id,
       oldValues: null,
       newValues: { foo: 'bar' },
       ipAddress: '127.0.0.1',
@@ -43,6 +46,7 @@ describe('GoBD AuditLogService', () => {
       resourceType: 'Test',
       resourceId: '1',
       userId: testUser.id,
+      companyId: company.id,
       oldValues: { foo: 'bar' },
       newValues: { foo: 'baz' },
       ipAddress: '127.0.0.1',
@@ -70,6 +74,7 @@ describe('GoBD AuditLogService', () => {
       resourceType: 'Test',
       resourceId: '1',
       userId: testUser.id,
+      companyId: company.id,
       oldValues: null,
       newValues: { foo: 'bar' },
       ipAddress: '127.0.0.1',
@@ -90,6 +95,7 @@ describe('GoBD AuditLogService', () => {
       resourceType: 'Test',
       resourceId: '1',
       userId: testUser.id,
+      companyId: company.id,
       oldValues: null,
       newValues: { foo: 'bar' },
       ipAddress: '127.0.0.1',
@@ -110,6 +116,7 @@ describe('GoBD AuditLogService', () => {
         resourceType: 'Test',
         resourceId: '99',
         userId: testUser.id,
+        companyId: company.id,
         oldValues: null,
         newValues: null,
         ipAddress: '127.0.0.1',

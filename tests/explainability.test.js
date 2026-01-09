@@ -4,11 +4,16 @@
 const { runAutomation } = require('../src/services/ai/automation/automationEngine');
 
 describe('Explainability', () => {
+  const buildSystemContext = require('./utils/buildSystemContext');
+
   it('should require explanation and confidence', async () => {
     const suggestions = await runAutomation({
       userId: 1,
       companyId: 1,
-      context: { prompt: 'find duplicates' },
+      context: {
+        ...buildSystemContext({ user: { companyId: 1, id: 1 }, source: 'TEST' }),
+        prompt: 'find duplicates',
+      },
       method: 'GET',
       requestId: 'explainability-test',
     });

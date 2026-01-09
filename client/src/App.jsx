@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react';
+import { FEATURE_FLAGS } from './lib/constants';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from './components/Layout';
@@ -221,6 +222,14 @@ export const ROUTE_DEFINITIONS = [
   },
   {
     path: '/dashboard',
+    element: renderProtectedRoute(<Dashboard />),
+    componentFile: 'client/src/pages/Dashboard.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/app',
     element: renderProtectedRoute(<Dashboard />),
     componentFile: 'client/src/pages/Dashboard.jsx',
     authRequired: true,

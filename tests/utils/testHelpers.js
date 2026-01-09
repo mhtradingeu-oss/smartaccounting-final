@@ -3,55 +3,19 @@
  * @param {Object} overrides - Fields to override in the expense.
  * @returns {Promise<Expense>}
  */
+const bcrypt = require('bcryptjs');
+const { User, Invoice, Company, Expense, sequelize } = require('../../src/models');
+const { buildExpensePayload } = require('./buildPayload');
+/**
+ * Create a test expense with all required fields.
+ * @param {Object} overrides - Fields to override in the expense.
+ * @returns {Promise<Expense>}
+ */
 async function createTestExpense(overrides = {}) {
   await assertSequelizeReady();
-  const { Expense, User, Company } = require('../../src/models');
-  let user = null,
-    company = null;
-  // Prefer explicit user/company objects if provided
-  if (overrides.user) {
-    user = overrides.user;
-  } else if (overrides.createdByUserId) {
-    user = await User.findByPk(overrides.createdByUserId);
-  }
-  if (!user) {
-    user = await createTestUser();
-  }
-  if (overrides.company) {
-    company = overrides.company;
-  } else if (overrides.companyId) {
-    company = await Company.findByPk(overrides.companyId);
-  }
-  if (!company) {
-    company = (await Company.findByPk(user.companyId)) || (await createTestCompany());
-  }
-  const now = new Date();
-  const grossAmount = overrides.grossAmount !== undefined ? overrides.grossAmount : 119;
-  const netAmount = overrides.netAmount !== undefined ? overrides.netAmount : 100;
-  const expenseDate = overrides.expenseDate || now;
-  const { user: _u, company: _c, ...restOverrides } = overrides;
-  const defaultExpense = {
-    vendorName: 'Test Vendor',
-    description: 'Test expense',
-    category: 'Travel',
-    netAmount,
-    vatAmount: 19,
-    grossAmount,
-    vatRate: 0.19,
-    expenseDate,
-    date: expenseDate,
-    companyId: company.id,
-    createdByUserId: user.id,
-    userId: user.id,
-    amount: grossAmount,
-    currency: 'EUR',
-    status: 'draft',
-    source: 'manual',
-  };
-  return Expense.create({ ...defaultExpense, ...restOverrides });
+  const payload = buildExpensePayload(overrides);
+  return Expense.create(payload);
 }
-const { User, Invoice, Company, sequelize } = require('../../src/models');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 /* =========================

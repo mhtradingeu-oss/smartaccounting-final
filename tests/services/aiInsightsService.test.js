@@ -1,11 +1,11 @@
-const { sequelize, AIInsight, AIInsightDecision, User } = require('../../src/models');
+const { sequelize, AIInsight, AIInsightDecision, User, Company } = require('../../src/models');
 const { createTestCompany } = require('../utils/createTestCompany');
 const aiInsightsService = require('../../src/services/ai/aiInsightsService');
 
 describe('aiInsightsService', () => {
   let company, admin, accountant, viewer;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     company = await createTestCompany();
     // Create a system user with id 0 for AI/system actions
     await User.create({
@@ -43,8 +43,10 @@ describe('aiInsightsService', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.clearAllMocks();
+    await User.destroy({ where: {} });
+    await Company.destroy({ where: {} });
   });
 
   it('should block if aiEnabled=false', async () => {
@@ -55,6 +57,7 @@ describe('aiInsightsService', () => {
   });
 
   it('should persist insights matching contract', async () => {
+    await company.update({ aiEnabled: true });
     const context = {
       invoices: [
         { id: 'inv-1', number: 'X', amount: 100, date: '2025-01-01' },
@@ -72,6 +75,7 @@ describe('aiInsightsService', () => {
   });
 
   it('should not mutate invoices/expenses during insight generation', async () => {
+    await company.update({ aiEnabled: true });
     const orig = { id: 'inv-3', number: 'Y', amount: 200, date: '2025-01-01' };
     const context = { invoices: [Object.assign({}, orig)] };
     await aiInsightsService.generateInsightsForCompany(company.id, context);

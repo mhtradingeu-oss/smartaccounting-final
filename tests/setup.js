@@ -122,7 +122,7 @@ afterAll(async () => {
 // Helper to invoke Express app
 // (NO server.listen, NO ports)
 // ===============================
-global.requestApp = ({ app, method = 'GET', url = '/', headers = {}, body }) => {
+global.requestApp = ({ app, method = 'GET', url = '/', headers = {}, body, query }) => {
   return new Promise((resolve) => {
     const req = httpMocks.createRequest({
       method,
@@ -130,6 +130,10 @@ global.requestApp = ({ app, method = 'GET', url = '/', headers = {}, body }) => 
       headers,
       body,
     });
+
+    if (query) {
+      req.query = { ...(req.query || {}), ...query };
+    }
 
     req.socket = req.socket || { setTimeout: () => {} };
     req.setTimeout = () => {};

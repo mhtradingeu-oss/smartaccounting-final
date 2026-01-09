@@ -8,20 +8,29 @@ router.get('/export-user-data', authenticate, async (req, res) => {
   try {
     const targetUserId = req.query.userId ? Number(req.query.userId) : req.user.id;
     const { User } = require('../models');
+    // 1️⃣ جلب المستخدم المطلوب
     const targetUser = await User.findByPk(targetUserId);
+    // 2️⃣ إخفاء الوجود (أفضل GDPR)
     if (!targetUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Not found' });
     }
-    // Strict company boundary: no admin bypass, no silent success, no export then check
+    // 3️⃣ 🔐 أهم سطر في النظام كله
+    // Debug: log both company IDs for deep test diagnosis
+    // eslint-disable-next-line no-console
+    console.log(
+      '[GDPR route] req.user.companyId =',
+      req.user.companyId,
+      'targetUser.companyId =',
+      targetUser.companyId,
+    );
     if (targetUser.companyId !== req.user.companyId) {
+      // ❗ لا export، لا log، لا touch
       return res.status(403).json({ error: 'Forbidden' });
     }
+    // 4️⃣ فقط الآن يسمح بالتصدير
     const data = await exportUserData(req.user, targetUserId);
-    res.json({ success: true, data });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
-    if (err.status === 403 || err.status === 404) {
-      return res.status(err.status).json({ error: err.message });
-    }
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });

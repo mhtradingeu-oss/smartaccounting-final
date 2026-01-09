@@ -5,13 +5,15 @@ jest.setTimeout(30000);
 const { getSuggestion } = require('../../src/services/ai/aiSuggestionService');
 
 describe('AI Suggestion Gate Tests', () => {
+  const buildSystemContext = require('../utils/buildSystemContext');
+
   it('rejects mutation intent', async () => {
     await expect(
       getSuggestion({
         userId: 1,
         companyId: 1,
         prompt: 'Apply this change to invoice',
-        context: 'invoices',
+        context: buildSystemContext({ user: { companyId: 1, id: 1 }, source: 'TEST' }),
       }),
     ).rejects.toThrow(/Mutation intent detected/);
   });
@@ -22,7 +24,7 @@ describe('AI Suggestion Gate Tests', () => {
         userId: 1,
         companyId: 1,
         prompt: 'Delete invoice',
-        context: 'invoices',
+        context: buildSystemContext({ user: { companyId: 1, id: 1 }, source: 'TEST' }),
       }),
     ).rejects.toThrow(/Mutation intent detected/);
   });
@@ -40,7 +42,7 @@ describe('AI Suggestion Gate Tests', () => {
         userId: 1,
         companyId: null,
         prompt: 'Show invoice risks',
-        context: 'invoices',
+        context: buildSystemContext({ user: { companyId: null, id: 1 }, source: 'TEST' }),
       }),
     ).rejects.toThrow();
   });

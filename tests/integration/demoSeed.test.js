@@ -63,24 +63,43 @@ describe('demo invoice item helper', () => {
     const queryInterface = sequelize.getQueryInterface();
     const now = new Date();
     const builtItems = demoSeed.buildInvoiceItems(SAMPLE_ITEMS);
-    const itemRecords = builtItems.map((item) => ({
-      id: uuidv4(),
-      ...item,
-      invoiceId: invoice.id,
-      createdAt: now,
-      updatedAt: now,
-    }));
+    await sequelize.transaction(async (t) => {
+      // Build a fresh invoice object using valid companyId and userId
+      const invoiceRecord = await sequelize.models.Invoice.create(
+        {
+          invoiceNumber: `SEED-INV-TXN-${Date.now()}`,
+          subtotal: 1000,
+          total: 1180,
+          amount: 1180,
+          currency: 'EUR',
+          status: 'DRAFT',
+          date: '2025-01-01',
+          dueDate: '2025-01-14',
+          clientName: 'Seed Client',
+          notes: 'Validating invoice item uuids',
+          userId: global.testUser?.id || null,
+          companyId: company.id,
+        },
+        { transaction: t },
+      );
+      const itemRecords = builtItems.map((item) => ({
+        id: uuidv4(),
+        ...item,
+        invoiceId: invoiceRecord.id,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      await queryInterface.bulkInsert('invoice_items', itemRecords, { transaction: t });
+      const [rows] = await sequelize.query(
+        'SELECT id FROM "invoice_items" WHERE "invoiceId" = :invoiceId;',
+        { replacements: { invoiceId: invoiceRecord.id }, transaction: t },
+      );
 
-    await queryInterface.bulkInsert('invoice_items', itemRecords, {});
-    const [rows] = await sequelize.query(
-      'SELECT id FROM "invoice_items" WHERE "invoiceId" = :invoiceId;',
-      { replacements: { invoiceId: invoice.id } },
-    );
-
-    expect(rows.length).toBe(itemRecords.length);
-    rows.forEach(({ id }) => {
-      expect(id).toBeTruthy();
-      expect(id).toMatch(UUID_REGEX);
+      expect(rows.length).toBe(itemRecords.length);
+      rows.forEach(({ id }) => {
+        expect(id).toBeTruthy();
+        expect(UUID_REGEX.test(id)).toBe(true);
+      });
     });
   });
 });
