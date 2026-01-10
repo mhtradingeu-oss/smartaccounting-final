@@ -14,13 +14,15 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { APP_VERSION } from '../lib/constants';
+import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import api, { formatApiError } from '../services/api';
+import { isReadOnlyRole } from '../lib/permissions';
 
 const GermanTaxReports = () => {
   // Show audit mode banner for read-only roles
-  const { user } = useAuth?.() || {};
-  const isReadOnly = isReadOnlyRole?.(user?.role);
+  const { user } = useAuth();
+  const isReadOnly = isReadOnlyRole(user?.role);
   // All hooks must be called before any conditional return
   const { t } = useTranslation();
   const { activeCompany } = useCompany();
@@ -219,6 +221,9 @@ const GermanTaxReports = () => {
             Generate and review German tax reports for your company. No data is sent or stored until
             the service is enabled.
           </p>
+          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs text-blue-900">
+            No DATEV / ELSTER / Finanzamt certification or submission is implied.
+          </div>
         </div>
 
         {/* Locked Period Banner */}

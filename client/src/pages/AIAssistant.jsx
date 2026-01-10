@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -7,7 +7,6 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Modal';
 import FeatureGate from '../components/FeatureGate';
-import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import AITrustBanner from '../components/AITrustBanner';
 import { AIBadge } from '../components/AIBadge';
 import AISeverityPill from '../components/AISeverityPill';
@@ -140,6 +139,97 @@ const AIAssistant = () => {
     return items;
   }, [aiVoiceEnabled]);
 
+  const contextSources = useMemo(() => {
+    if (!context) {
+      return 'Not available';
+    }
+    const sources = [];
+    if (context.invoices?.length) {
+      sources.push('Invoices');
+    }
+    if (context.expenses?.length) {
+      sources.push('Expenses');
+    }
+    if (context.bankTransactions?.length) {
+      sources.push('Bank transactions');
+    }
+    if (context.insights?.length) {
+      sources.push('AI insights');
+    }
+    return sources.length ? sources.join(', ') : 'Accounting data';
+  }, [context]);
+
+  const latestContextTimestamp = useMemo(() => {
+    if (!context) {
+      return null;
+    }
+    const candidates = [];
+    context.insights?.forEach((insight) => {
+      if (insight.lastEvaluated || insight.updatedAt || insight.createdAt) {
+        candidates.push(insight.lastEvaluated || insight.updatedAt || insight.createdAt);
+      }
+    });
+    context.invoices?.forEach((invoice) => {
+      if (invoice.date || invoice.dueDate) {
+        candidates.push(invoice.date || invoice.dueDate);
+      }
+    });
+    context.expenses?.forEach((expense) => {
+      if (expense.expenseDate) {
+        candidates.push(expense.expenseDate);
+      }
+    });
+    context.bankTransactions?.forEach((transaction) => {
+      if (transaction.transactionDate) {
+        candidates.push(transaction.transactionDate);
+      }
+    });
+    const parsed = candidates
+      .map((value) => new Date(value))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .sort((a, b) => b - a);
+    return parsed[0] || null;
+  }, [context]);
+
+  const trustSummary = useMemo(() => {
+    const base = 'AI outputs are advisory only and do not change your data.';
+    if (!isReadOnly) {
+      return base;
+    }
+    const roleMessage =
+      ROLE_LIMITATIONS[userRole]?.message ||
+      'You have read-only access. The AI assistant provides explanations and summaries only.';
+    return `${roleMessage} ${base}`;
+  }, [isReadOnly, userRole]);
+
+  const buildAssistantMeta = useCallback(
+    ({ targetInsightId } = {}) => {
+      const insight =
+        targetInsightId && context?.insights
+          ? context.insights.find((item) => String(item.id) === String(targetInsightId))
+          : context?.insights?.[0];
+      const source = insight?.dataSource || contextSources;
+      const rawConfidence = insight?.confidenceScore;
+      const confidence = Number.isFinite(Number(rawConfidence))
+        ? Number(rawConfidence) > 1
+          ? `${Math.round(Number(rawConfidence))}%`
+          : formatPercent(Number(rawConfidence), 0)
+        : 'Not available';
+      const rawDate =
+        insight?.lastEvaluated || insight?.updatedAt || insight?.createdAt || latestContextTimestamp;
+      const lastUpdated =
+        rawDate && !Number.isNaN(new Date(rawDate).getTime())
+          ? formatDate(rawDate)
+          : 'Not available';
+      return {
+        source,
+        confidence,
+        lastUpdated,
+      };
+    },
+    [context, contextSources, latestContextTimestamp],
+  );
+
   const latestAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       if (messages[i].speaker === 'assistant') {
@@ -238,9 +328,16 @@ const AIAssistant = () => {
       return;
     }
     const intro = initialMessageText(context);
-    setMessages([{ id: 'assistant-intro', speaker: 'assistant', text: intro }]);
+    setMessages([
+      {
+        id: 'assistant-intro',
+        speaker: 'assistant',
+        text: intro,
+        meta: buildAssistantMeta(),
+      },
+    ]);
     initialMessageSent.current = true;
-  }, [context]);
+  }, [context, buildAssistantMeta]);
 
   const invoiceStatusBreakdown = useMemo(() => {
     if (!context?.invoices) {
@@ -388,6 +485,7 @@ const AIAssistant = () => {
           error:
             'This assistant is read-only. I can explain and summarize, but I cannot modify records.',
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
       ]);
       return;
@@ -402,6 +500,7 @@ const AIAssistant = () => {
           text: '',
           error: 'Your role does not permit interacting with the AI assistant.',
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
       ]);
       return;
@@ -415,6 +514,7 @@ const AIAssistant = () => {
           text: '',
           error: 'Session is initializing. Please wait a moment.',
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
       ]);
       return;
@@ -451,6 +551,7 @@ const AIAssistant = () => {
           highlights: answer.highlights,
           references: answer.references,
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
       ]);
     } catch (err) {
@@ -462,6 +563,7 @@ const AIAssistant = () => {
           text: '',
           error: formatApiError(err, 'Unable to reach the assistant.').message,
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
       ]);
     } finally {
@@ -482,6 +584,7 @@ const AIAssistant = () => {
           text: '',
           error: 'Session is initializing. Please wait a moment.',
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: null }),
         },
       ]);
       return;
@@ -525,6 +628,7 @@ const AIAssistant = () => {
           highlights: answer.highlights,
           references: answer.references,
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: null }),
         },
       ]);
       setVoiceTranscript('');
@@ -538,6 +642,7 @@ const AIAssistant = () => {
           text: '',
           error: formatApiError(err, 'Unable to reach the assistant.').message,
           timestamp: new Date().toLocaleTimeString(),
+          meta: buildAssistantMeta({ targetInsightId: null }),
         },
       ]);
     } finally {
@@ -583,6 +688,9 @@ const AIAssistant = () => {
         <div className="space-y-6">
           <div className="flex items-start gap-3">
             <AIBadge label="AI" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Advisory only
+            </span>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
               <p className="text-sm text-gray-500">
@@ -590,16 +698,11 @@ const AIAssistant = () => {
               </p>
             </div>
           </div>
-          <ReadOnlyBanner
-            mode={ROLE_LIMITATIONS[userRole]?.label || 'Read-only'}
-            message={ROLE_LIMITATIONS[userRole]?.message}
-            details="You can view explanations and summaries, but cannot interact or ask questions."
-          />
-          <AITrustBanner items={trustItems} />
+          <AITrustBanner summary={trustSummary} items={trustItems} />
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             <div className="text-sm font-semibold text-gray-900 mb-2">Next steps</div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => navigate('/ai-insights')}>
+              <Button variant="secondary" size="sm" onClick={() => navigate('/ai-advisor')}>
                 View AI Insights
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate('/audit-logs')}>
@@ -621,6 +724,9 @@ const AIAssistant = () => {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <AIBadge label="AI" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Advisory only
+            </span>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
               <p className="text-sm text-gray-500">
@@ -639,7 +745,7 @@ const AIAssistant = () => {
             </span>
           </div>
         </div>
-        <AITrustBanner items={trustItems} />
+        <AITrustBanner summary={trustSummary} items={trustItems} />
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card>

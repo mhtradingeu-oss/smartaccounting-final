@@ -57,7 +57,14 @@ const Expenses = () => {
     setError(null);
     try {
       const data = await expensesAPI.list({ companyId });
-      setExpenses(Array.isArray(data) ? data : []);
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.expenses)
+          ? data.expenses
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+      setExpenses(items);
     } catch (fetchError) {
       setError(formatApiError(fetchError, 'Unable to load expenses.'));
     } finally {

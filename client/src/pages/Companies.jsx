@@ -148,7 +148,9 @@ export default function Companies() {
 
       setCompanies((prev) =>
         Array.isArray(prev)
-          ? prev.map((company) => (company.id === nextCompany.id ? nextCompany : company))
+          ? prev.map((company) =>
+              String(company.id) === String(nextCompany.id) ? nextCompany : company,
+            )
           : prev,
       );
       switchCompany(nextCompany, { reset: false });

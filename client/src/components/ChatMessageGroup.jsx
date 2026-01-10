@@ -35,6 +35,13 @@ export default function ChatMessageGroup({ group }) {
                 References: {msg.references.join(' · ')}
               </div>
             )}
+            {msg.meta && (
+              <div className="mt-1 text-[11px] text-gray-500">
+                Source: {msg.meta.source || 'Not available'} · Confidence:{' '}
+                {msg.meta.confidence || 'Not available'} · Last updated:{' '}
+                {msg.meta.lastUpdated || 'Not available'}
+              </div>
+            )}
             {msg.timestamp && (
               <div className="mt-1 text-[10px] text-gray-400 text-right">{msg.timestamp}</div>
             )}

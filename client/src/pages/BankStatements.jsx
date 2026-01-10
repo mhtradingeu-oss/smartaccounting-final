@@ -311,7 +311,7 @@ export default function BankStatements() {
       {aiEnabled && (
         <AITrustBanner
           title="AI Advisor notice"
-          summary="AI Advisor provides reconciliation suggestions based on imported statements."
+          summary="AI Advisor provides reconciliation suggestions based on imported statements. Advisory only."
         />
       )}
       {!aiEnabled && (

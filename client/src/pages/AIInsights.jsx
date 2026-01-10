@@ -152,6 +152,9 @@ const AIInsights = () => {
       )}
       <div className="mb-4 flex items-center gap-3">
         <AIBadge label="AI" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+          Advisory only
+        </span>
         <h1 className="text-2xl font-bold text-gray-900">AI Insights</h1>
       </div>
       <p className="text-sm text-gray-500">
