@@ -28,7 +28,9 @@ import { FEATURE_FLAGS } from '../lib/constants';
 import { isOCRPreviewEnabled } from '../lib/featureFlags';
 import { roles } from '../context/RoleContext';
 
-export const MAIN_NAVIGATION_ITEMS = [
+const isAdminRole = (role) => role === roles.ADMIN || role === roles.SUPER_ADMIN;
+
+export const CORE_NAVIGATION_ITEMS = [
   {
     nameKey: 'navigation.dashboard',
     href: '/dashboard',
@@ -38,17 +40,9 @@ export const MAIN_NAVIGATION_ITEMS = [
     description: 'Dashboard overview and analytics',
     enabled: true,
   },
-  {
-    nameKey: 'navigation.analytics',
-    href: '/analytics',
-    icon: DocumentChartBarIcon,
-    iconSolid: DocumentChartBarIconSolid,
-    badge: null,
-    description: 'Business analytics & KPIs',
-    enabled: true,
-  },
 ];
-export const OPERATIONS_NAVIGATION_ITEMS = [
+
+export const ACCOUNTING_NAVIGATION_ITEMS = [
   {
     nameKey: 'navigation.invoices',
     href: '/invoices',
@@ -87,6 +81,18 @@ export const OPERATIONS_NAVIGATION_ITEMS = [
     enabled: isOCRPreviewEnabled,
     disabledReason: 'OCR preview is toggled by the dedicated feature flag.',
   },
+];
+
+export const INTELLIGENCE_NAVIGATION_ITEMS = [
+  {
+    nameKey: 'navigation.analytics',
+    href: '/analytics',
+    icon: DocumentChartBarIcon,
+    iconSolid: DocumentChartBarIconSolid,
+    badge: null,
+    description: 'Business analytics & KPIs',
+    enabled: true,
+  },
   {
     nameKey: 'navigation.ai_assistant',
     href: '/ai-assistant',
@@ -98,7 +104,7 @@ export const OPERATIONS_NAVIGATION_ITEMS = [
   },
 ];
 
-export const MANAGEMENT_NAVIGATION_ITEMS = [
+export const ADMINISTRATION_NAVIGATION_ITEMS = [
   {
     nameKey: 'navigation.companies',
     href: '/companies',
@@ -115,25 +121,44 @@ export const MANAGEMENT_NAVIGATION_ITEMS = [
     iconSolid: UsersIconSolid,
     badge: null,
     description: 'User management',
-    enabled: ({ role }) => role === roles.ADMIN,
+    enabled: ({ role }) => isAdminRole(role),
     disabledReason: 'Only administrators can edit users.',
   },
   {
     nameKey: 'navigation.role_management',
-    href: '/role-management',
+    href: '/rbac',
     icon: DocumentMagnifyingGlassIcon,
     iconSolid: DocumentMagnifyingGlassIconSolid,
     badge: null,
     description: 'Role Management',
-    enabled: ({ role }) => role === roles.ADMIN,
+    enabled: ({ role }) => isAdminRole(role),
     disabledReason: 'Role management is restricted to admins.',
+  },
+  {
+    nameKey: 'navigation.billing',
+    href: '/billing',
+    icon: CreditCardIcon,
+    iconSolid: CreditCardIconSolid,
+    badge: null,
+    description: 'Billing',
+    enabled: () => FEATURE_FLAGS.STRIPE_BILLING.enabled,
+    disabledReason: 'Stripe billing flows open when the billing feature flag turns on.',
+  },
+  {
+    nameKey: 'navigation.profile',
+    href: '/profile-settings',
+    icon: UserCircleIcon,
+    iconSolid: UserCircleIconSolid,
+    badge: null,
+    description: 'Profile',
+    enabled: true,
   },
 ];
 
 export const COMPLIANCE_NAVIGATION_ITEMS = [
   {
     nameKey: 'navigation.tax_reports',
-    href: '/tax-reports',
+    href: '/german-tax-reports',
     icon: DocumentChartBarIcon,
     iconSolid: DocumentChartBarIconSolid,
     badge: 'NEW',
@@ -157,28 +182,9 @@ export const COMPLIANCE_NAVIGATION_ITEMS = [
     iconSolid: DocumentMagnifyingGlassIconSolid,
     badge: null,
     description: 'Audit Logs',
-    enabled: ({ role }) => role === roles.ADMIN,
+    enabled: ({ role }) => isAdminRole(role),
     disabledReason: 'Audit exports are restricted to admins.',
   },
 ];
 
-export const BILLING_NAVIGATION_ITEM = {
-  nameKey: 'navigation.billing',
-  href: '/billing',
-  icon: CreditCardIcon,
-  iconSolid: CreditCardIconSolid,
-  badge: null,
-  description: 'Billing',
-  enabled: () => FEATURE_FLAGS.STRIPE_BILLING.enabled,
-  disabledReason: 'Stripe billing flows open when the billing feature flag turns on.',
-};
-
-export const PROFILE_NAVIGATION_ITEM = {
-  nameKey: 'navigation.profile',
-  href: '/profile',
-  icon: UserCircleIcon,
-  iconSolid: UserCircleIconSolid,
-  badge: null,
-  description: 'Profile',
-  enabled: true,
-};
+export const ADMIN_NAVIGATION_ITEMS = COMPLIANCE_NAVIGATION_ITEMS;

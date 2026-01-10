@@ -97,6 +97,7 @@ const Layout = ({ children }) => {
           isDarkMode={isDarkMode}
           onToggleDarkMode={toggleDarkMode}
           isCollapsed={isSidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
         />
 
         {/* Page Content */}

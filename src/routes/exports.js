@@ -10,15 +10,29 @@ const {
 } = require('../models');
 const AuditLogService = require('../services/auditLogService');
 const { Op } = require('sequelize');
+const { buildDatevExport } = require('../services/datevExportService');
 
 const router = express.Router();
 
-const SUPPORTED_FORMATS = ['json', 'csv'];
+const { generateSimplePdf } = require('../utils/pdfGenerator');
+
+const SUPPORTED_FORMATS = ['json', 'csv', 'pdf'];
+const DATEV_FORMATS = ['json', 'csv'];
 
 const ensureFormat = (value) => {
   const fmt = (value || 'json').toLowerCase();
   if (!SUPPORTED_FORMATS.includes(fmt)) {
     const err = new Error(`Unsupported format: ${value}`);
+    err.status = 400;
+    throw err;
+  }
+  return fmt;
+};
+
+const ensureDatevFormat = (value) => {
+  const fmt = (value || 'csv').toLowerCase();
+  if (!DATEV_FORMATS.includes(fmt)) {
+    const err = new Error(`Unsupported DATEV export format: ${value}`);
     err.status = 400;
     throw err;
   }
@@ -68,6 +82,12 @@ const sendCsvResponse = (res, filename, headers, rows) => {
   res.send(serializeCsv(headers, rows));
 };
 
+const sendPdfResponse = (res, filename, lines) => {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(generateSimplePdf(lines));
+};
+
 router.get('/audit-logs', authenticate, requireRole(['auditor']), async (req, res) => {
   try {
     const format = ensureFormat(req.query.format);
@@ -83,6 +103,18 @@ router.get('/audit-logs', authenticate, requireRole(['auditor']), async (req, re
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename="audit-logs.csv"');
       return res.send(logs);
+    }
+    if (format === 'pdf') {
+      const lines = [
+        'Audit Log Export',
+        `Generated: ${new Date().toISOString()}`,
+        '',
+        ...logs.map(
+          (log) =>
+            `${log.timestamp || ''} | ${log.action} | ${log.resourceType} | ${log.resourceId || ''} | ${log.userId || ''} | ${log.reason || ''}`,
+        ),
+      ];
+      return sendPdfResponse(res, 'audit-logs.pdf', lines);
     }
     return res.json({ success: true, logs });
   } catch (error) {
@@ -166,6 +198,25 @@ router.get('/accounting-records', authenticate, requireRole(['auditor']), async 
       ];
       return sendCsvResponse(res, 'accounting-records.csv', headers, rows);
     }
+    if (format === 'pdf') {
+      const lines = [
+        'Accounting Records Export',
+        `Generated: ${new Date().toISOString()}`,
+        '',
+        'Invoices',
+        ...payload.invoices.map(
+          (invoice) =>
+            `#${invoice.id} ${invoice.invoiceNumber || ''} | ${invoice.date || ''} | ${invoice.status || ''} | ${invoice.total || ''} ${invoice.currency || ''}`,
+        ),
+        '',
+        'Expenses',
+        ...payload.expenses.map(
+          (expense) =>
+            `#${expense.id} ${expense.vendorName || ''} | ${expense.expenseDate || ''} | ${expense.status || ''} | ${expense.grossAmount || ''} ${expense.currency || ''}`,
+        ),
+      ];
+      return sendPdfResponse(res, 'accounting-records.pdf', lines);
+    }
     return res.json({
       success: true,
       records: payload,
@@ -214,6 +265,18 @@ router.get('/vat-summaries', authenticate, requireRole(['auditor']), async (req,
       }));
       return sendCsvResponse(res, 'vat-summaries.csv', headers, rows);
     }
+    if (format === 'pdf') {
+      const lines = [
+        'VAT Summaries Export',
+        `Generated: ${new Date().toISOString()}`,
+        '',
+        ...reports.map(
+          (report) =>
+            `${report.id} | ${report.reportType} | ${report.period || ''} | ${report.status} | ${report.year || ''}`,
+        ),
+      ];
+      return sendPdfResponse(res, 'vat-summaries.pdf', lines);
+    }
     return res.json({
       success: true,
       reports: reports.map((report) => report.get({ plain: true })),
@@ -222,6 +285,58 @@ router.get('/vat-summaries', authenticate, requireRole(['auditor']), async (req,
     res.status(error.status || 500).json({
       success: false,
       message: 'Failed to export VAT summaries',
+    });
+  }
+});
+
+router.get('/datev', authenticate, requireRole(['admin', 'accountant', 'auditor']), async (req, res) => {
+  try {
+    const format = ensureDatevFormat(req.query.format);
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
+    const kontenrahmen = (req.query.kontenrahmen || 'skr03').toLowerCase();
+    if (!['skr03', 'skr04'].includes(kontenrahmen)) {
+      const err = new Error('Unsupported kontenrahmen; use skr03 or skr04.');
+      err.status = 400;
+      throw err;
+    }
+
+    const { rows, meta } = await buildDatevExport({
+      companyId: req.companyId,
+      from,
+      to,
+      kontenrahmen,
+    });
+
+    res.setHeader('X-Export-Disclaimer', meta.disclaimer);
+
+    if (format === 'csv') {
+      const headers = [
+        'recordType',
+        'recordId',
+        'bookingDate',
+        'account',
+        'counterAccount',
+        'amount',
+        'vatAmount',
+        'currency',
+        'taxKey',
+        'bookingText',
+        'attachmentPaths',
+      ];
+      return sendCsvResponse(res, 'datev-export.csv', headers, rows);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Prepared for tax advisor / DATEV-compatible export.',
+      meta,
+      rows,
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'Failed to export DATEV preparation data',
     });
   }
 });

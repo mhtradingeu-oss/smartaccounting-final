@@ -1,4 +1,4 @@
-const { Invoice, User, Transaction, TaxReport } = require('../models');
+const { Invoice, User, Transaction, TaxReport, Expense, BankTransaction } = require('../models');
 const logger = require('../lib/logger');
 
 // Import Op for Sequelize operations
@@ -30,6 +30,21 @@ class DashboardService {
         };
       }
 
+      const missingExpenseFields = this.missingFields(Expense, ['grossAmount', 'companyId']);
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      const currentQuarter = Math.floor(now.getMonth() / 3);
+      const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+      const startOfPrevQuarter = new Date(
+        now.getFullYear(),
+        currentQuarter * 3 - 3,
+        1,
+      );
+      const endOfPrevQuarter = new Date(now.getFullYear(), currentQuarter * 3, 0);
+
       const [
         totalInvoices,
         paidInvoices,
@@ -37,48 +52,114 @@ class DashboardService {
         overdueInvoices,
         totalRevenue,
         monthlyRevenue,
+        previousMonthRevenue,
+        quarterlyRevenue,
+        previousQuarterRevenue,
         totalUsers,
         activeUsers,
+        totalExpenses,
+        bankTransactions,
       ] = await Promise.all([
         Invoice.count({ where: { companyId } }),
-        Invoice.count({ where: { companyId, status: 'paid' } }),
-        Invoice.count({ where: { companyId, status: 'pending' } }),
-        Invoice.count({ 
+        Invoice.count({ where: { companyId, status: 'PAID' } }),
+        Invoice.count({
+          where: { companyId, status: { [Op.in]: ['SENT', 'PARTIALLY_PAID'] } },
+        }),
+        Invoice.count({
           where: { 
             companyId, 
-            status: 'pending',
+            status: 'OVERDUE',
             dueDate: { [Op.lt]: new Date() },
           }, 
         }),
         Invoice.sum('total', { 
-          where: { companyId, status: 'paid' }, 
+          where: { companyId, status: 'PAID' }, 
         }) || 0,
         Invoice.sum('total', { 
           where: { 
             companyId, 
-            status: 'paid',
+            status: 'PAID',
             createdAt: {
-              [Op.gte]: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+              [Op.gte]: startOfMonth,
             },
           }, 
         }) || 0,
+        Invoice.sum('total', {
+          where: {
+            companyId,
+            status: 'PAID',
+            createdAt: {
+              [Op.between]: [startOfPrevMonth, endOfPrevMonth],
+            },
+          },
+        }) || 0,
+        Invoice.sum('total', {
+          where: {
+            companyId,
+            status: 'PAID',
+            createdAt: {
+              [Op.gte]: startOfQuarter,
+            },
+          },
+        }) || 0,
+        Invoice.sum('total', {
+          where: {
+            companyId,
+            status: 'PAID',
+            createdAt: {
+              [Op.between]: [startOfPrevQuarter, endOfPrevQuarter],
+            },
+          },
+        }) || 0,
         User.count({ where: { companyId } }),
         User.count({ where: { companyId, isActive: true } }),
+        missingExpenseFields.length
+          ? null
+          : Expense.sum('grossAmount', { where: { companyId } }) || 0,
+        BankTransaction
+          ? BankTransaction.count({ where: { companyId } })
+          : 0,
       ]);
 
+      const revenueTotal = parseFloat(totalRevenue || 0);
+      const expensesTotal =
+        totalExpenses === null ? null : parseFloat(totalExpenses || 0);
+      const netProfit =
+        expensesTotal === null ? null : parseFloat(revenueTotal - expensesTotal);
+      const profitMargin =
+        netProfit === null || revenueTotal === 0
+          ? null
+          : parseFloat(((netProfit / revenueTotal) * 100).toFixed(2));
+      const monthlyRevenueValue = parseFloat(monthlyRevenue || 0);
+      const previousMonthRevenueValue = parseFloat(previousMonthRevenue || 0);
+      const quarterlyRevenueValue = parseFloat(quarterlyRevenue || 0);
+      const previousQuarterRevenueValue = parseFloat(previousQuarterRevenue || 0);
+      const monthlyGrowth =
+        previousMonthRevenueValue > 0
+          ? ((monthlyRevenueValue - previousMonthRevenueValue) / previousMonthRevenueValue) * 100
+          : monthlyRevenueValue > 0
+            ? 100
+            : 0;
+      const quarterlyGrowth =
+        previousQuarterRevenueValue > 0
+          ? ((quarterlyRevenueValue - previousQuarterRevenueValue) / previousQuarterRevenueValue) * 100
+          : quarterlyRevenueValue > 0
+            ? 100
+            : 0;
+
       return {
-        totalRevenue: parseFloat(totalRevenue || 0),
-        totalExpenses: 0, // Add default for now
-        netProfit: parseFloat(totalRevenue || 0),
-        profitMargin: totalRevenue > 0 ? 25.0 : 0,
+        totalRevenue: revenueTotal,
+        totalExpenses: expensesTotal,
+        netProfit,
+        profitMargin,
         invoiceCount: totalInvoices,
         pendingInvoices,
         overdue: overdueInvoices,
-        bankTransactions: 0, // Add default for now
-        taxLiability: 0, // Add default for now
-        monthlyGrowth: 8.5,
-        quarterlyGrowth: 12.0,
-        averageInvoice: totalInvoices > 0 ? parseFloat((totalRevenue || 0) / totalInvoices) : 0,
+        bankTransactions,
+        monthlyGrowth: parseFloat(monthlyGrowth.toFixed(2)),
+        quarterlyGrowth: parseFloat(quarterlyGrowth.toFixed(2)),
+        averageInvoice:
+          paidInvoices > 0 ? parseFloat((revenueTotal / paidInvoices).toFixed(2)) : 0,
         invoices: {
           total: totalInvoices,
           paid: paidInvoices,
@@ -87,9 +168,8 @@ class DashboardService {
           paidPercentage: totalInvoices > 0 ? Math.round((paidInvoices / totalInvoices) * 100) : 0,
         },
         revenue: {
-          total: parseFloat(totalRevenue || 0),
-          monthly: parseFloat(monthlyRevenue || 0),
-          currency: 'EUR',
+          total: revenueTotal,
+          monthly: monthlyRevenueValue,
         },
         users: {
           total: totalUsers,
@@ -126,7 +206,7 @@ class DashboardService {
           Invoice.sum('total', {
             where: {
               companyId,
-              status: 'paid',
+              status: 'PAID',
               createdAt: {
                 [Op.between]: [startDate, endDate],
               },

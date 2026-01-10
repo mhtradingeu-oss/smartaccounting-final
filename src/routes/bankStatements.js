@@ -1,21 +1,49 @@
 const express = require('express');
+const fs = require('fs');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
 const bankStatementService = require('../services/bankStatementService');
 const AuditLogService = require('../services/auditLogService');
 const logger = require('../lib/logger');
 const { BankStatement, BankTransaction } = require('../models');
-const { createSecureUploader, logUploadMetadata } = require('../middleware/secureUpload');
+const { createSecureUploader, logUploadMetadata, validateUploadedFile } = require('../middleware/secureUpload');
 
 const router = express.Router();
 
 const upload = createSecureUploader({
   subDir: 'bank-statements',
   maxSize: 10 * 1024 * 1024, // 10 MB
-  allowedMimeTypes: ['text/csv', 'text/plain', 'application/xml'],
-  allowedExtensions: ['.csv', '.txt', '.xml'],
+  allowedMimeTypes: [
+    'text/csv',
+    'text/plain',
+    'application/xml',
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+  ],
+  allowedExtensions: ['.csv', '.txt', '.xml', '.mt940', '.camt053', '.pdf', '.png', '.jpg', '.jpeg'],
 });
 
-const SUPPORTED_FORMATS = ['CSV', 'MT940', 'CAMT053'];
+const SUPPORTED_FORMATS = ['CSV', 'MT940', 'CAMT053', 'OCR'];
+
+const inferFormat = (fileName = '', detectedType = '') => {
+  const ext = fileName.toLowerCase().split('.').pop();
+  if (ext === 'csv' || ext === 'txt') {
+    return 'CSV';
+  }
+  if (ext === 'mt940') {
+    return 'MT940';
+  }
+  if (ext === 'xml' || ext === 'camt053') {
+    return 'CAMT053';
+  }
+  if (ext === 'pdf' || ext === 'png' || ext === 'jpg' || ext === 'jpeg') {
+    return 'OCR';
+  }
+  if (['pdf', 'png', 'jpg', 'tiff'].includes(detectedType)) {
+    return 'OCR';
+  }
+  return null;
+};
 
 const isDryRunRequest = (req) => {
   const dryRunFlag = (req?.query?.dryRun || '').toString().toLowerCase();
@@ -89,20 +117,59 @@ router.post(
         });
       }
 
-      const { format } = req.body;
-      if (!format || !SUPPORTED_FORMATS.includes(format.toUpperCase())) {
+      const signatureCheck = validateUploadedFile(req.file.path, ['text', 'xml', 'pdf', 'png', 'jpg']);
+      if (!signatureCheck.valid) {
+        if (req.file && req.file.path) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch {
+            // Ignore cleanup failures.
+          }
+        }
+        return res.status(400).json({
+          success: false,
+          message: `Unsupported file content. ${signatureCheck.reason}`,
+        });
+      }
+
+      const ext = req.file.originalname.toLowerCase().split('.').pop();
+      const extensionMap = {
+        pdf: ['pdf'],
+        png: ['png'],
+        jpg: ['jpg', 'jpeg'],
+        xml: ['xml', 'camt053'],
+        text: ['csv', 'txt', 'mt940'],
+      };
+      const expectedExts = extensionMap[signatureCheck.detected] || [];
+      if (expectedExts.length && !expectedExts.includes(ext)) {
+        if (req.file && req.file.path) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch {
+            // Ignore cleanup failures.
+          }
+        }
+        return res.status(400).json({
+          success: false,
+          message: `File extension does not match detected content (${signatureCheck.detected}).`,
+        });
+      }
+
+      const rawFormat = req.body?.format;
+      const detectedFormat = inferFormat(req.file.originalname, signatureCheck.detected);
+      const format = (rawFormat || detectedFormat || '').toUpperCase();
+      if (!format || !SUPPORTED_FORMATS.includes(format)) {
         return res.status(400).json({
           success: false,
           message: 'Invalid or missing format',
         });
       }
 
-      const formatCode = format.toUpperCase();
       if (isDryRunRequest(req)) {
         const result = await bankStatementService.dryRunImportBankStatement(
           req.companyId,
           req.file.path,
-          formatCode,
+          format,
         );
 
         const dryRunRecord = await bankStatementService.registerDryRun({
@@ -110,7 +177,7 @@ router.post(
           userId: req.user?.id,
           filePath: req.file.path,
           fileName: req.file.originalname,
-          format: formatCode,
+          format,
           summary: result.summary,
           matchesCount: result.matches.length,
           unmatchedCount: result.unmatched.length,
@@ -143,6 +210,7 @@ router.post(
           matches: result.matches,
           unmatched: result.unmatched,
           warnings: result.warnings,
+          explanations: result.explanations || [],
         });
       }
 
@@ -150,7 +218,8 @@ router.post(
         req.companyId,
         req.file.path,
         req.file.originalname,
-        formatCode,
+        format,
+        { userId: req.user?.id },
       );
 
       return res.json({

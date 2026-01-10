@@ -9,7 +9,8 @@ const { authenticate, requireCompany, requireRole } = require('../middleware/aut
 const logger = require('../lib/logger');
 const { sendSuccess, sendError } = require('../utils/responseHelpers');
 const { ocrLimiter } = require('../middleware/rateLimiter');
-const { createSecureUploader, logUploadMetadata } = require('../middleware/secureUpload');
+const { createSecureUploader, logUploadMetadata, validateUploadedFile } = require('../middleware/secureUpload');
+const { analyzeDocument, classifyDocumentType } = require('../services/documentAnalysisService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
@@ -28,7 +29,7 @@ router.use(logUploadMetadata);
 const validateDocument = [
   body('documentType')
     .optional()
-    .isIn(['invoice', 'receipt', 'bank_statement', 'tax_document'])
+    .isIn(['invoice', 'receipt', 'bank_statement', 'tax_document', 'auto'])
     .withMessage('Unsupported document type'),
 ];
 
@@ -52,7 +53,34 @@ const previewHandler = async (req, res) => {
     return sendError(res, 'No document uploaded', 400);
   }
 
-  const documentType = req.body.documentType || 'invoice';
+  const fileCheck = validateUploadedFile(req.file.path, ['pdf', 'png', 'jpg', 'tiff']);
+  if (!fileCheck.valid) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    return sendError(res, `Unsupported file content. ${fileCheck.reason}`, 400);
+  }
+  const ext = req.file.originalname.toLowerCase().split('.').pop();
+  const extensionMap = {
+    pdf: ['pdf'],
+    png: ['png'],
+    jpg: ['jpg', 'jpeg'],
+    tiff: ['tiff'],
+  };
+  const expectedExts = extensionMap[fileCheck.detected] || [];
+  if (expectedExts.length && !expectedExts.includes(ext)) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    return sendError(
+      res,
+      `File extension does not match detected content (${fileCheck.detected}).`,
+      400,
+    );
+  }
+
+  const requestedType = req.body.documentType || 'auto';
+  const documentType = requestedType === 'auto' ? 'invoice' : requestedType;
 
   try {
     const previewResult = await runOCRPreview(req.file.path, {
@@ -66,6 +94,15 @@ const previewHandler = async (req, res) => {
     }
 
     const previewFields = previewResult.fields || previewResult.extractedData;
+    const classifiedType =
+      requestedType === 'auto'
+        ? classifyDocumentType(previewResult.text || '') || documentType
+        : documentType;
+    const analysis = analyzeDocument({
+      text: previewResult.text,
+      extractedData: previewFields,
+      documentType: classifiedType,
+    });
 
     await AuditLogService.appendEntry({
       action: 'ocr_preview',
@@ -83,12 +120,13 @@ const previewHandler = async (req, res) => {
     });
 
     return sendSuccess(res, 'OCR preview generated', {
-      type: documentType,
+      type: classifiedType,
       confidence: previewResult.confidence,
       fields: previewFields,
       warnings: previewResult.warnings || [],
       explanations: previewResult.explanations || [],
       rawText: previewResult.text,
+      analysis,
     });
   } catch (error) {
     logger.error('OCR preview failed', { error: error.message });
@@ -112,7 +150,12 @@ if (OCR_PREVIEW_ENABLED) {
   router.post('/preview', disabledFeatureHandler('OCR preview'));
 }
 
-router.post('/process', upload.single('document'), validateDocument, async (req, res) => {
+router.post(
+  '/process',
+  requireRole(['accountant']),
+  upload.single('document'),
+  validateDocument,
+  async (req, res) => {
   if (handleValidation(req, res)) {
     return;
   }
@@ -122,38 +165,75 @@ router.post('/process', upload.single('document'), validateDocument, async (req,
   }
 
   try {
-    const documentType = req.body.documentType || 'invoice';
+    const fileCheck = validateUploadedFile(req.file.path, ['pdf', 'png', 'jpg', 'tiff']);
+    if (!fileCheck.valid) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return sendError(res, `Unsupported file content. ${fileCheck.reason}`, 400);
+    }
+    const ext = req.file.originalname.toLowerCase().split('.').pop();
+    const extensionMap = {
+      pdf: ['pdf'],
+      png: ['png'],
+      jpg: ['jpg', 'jpeg'],
+      tiff: ['tiff'],
+    };
+    const expectedExts = extensionMap[fileCheck.detected] || [];
+    if (expectedExts.length && !expectedExts.includes(ext)) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return sendError(
+        res,
+        `File extension does not match detected content (${fileCheck.detected}).`,
+        400,
+      );
+    }
+
+    const requestedType = req.body.documentType || 'auto';
+    const documentType = requestedType === 'auto' ? 'invoice' : requestedType;
 
     const ocrResult = await ocrService.processDocument(req.file.path, {
       documentType,
       userId: req.userId,
       companyId: req.companyId,
+      originalName: req.file.originalname,
+      uploadedBy: req.userId,
     });
 
     if (!ocrResult.success) {
       throw new Error(ocrResult.error || 'OCR processing failed');
     }
 
-    const documentRecord = await FileAttachment.create({
-      fileName: req.file.filename,
-      originalName: req.file.originalname,
-      filePath: req.file.path,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
-      userId: req.userId,
-      companyId: req.companyId,
-      uploadedBy: req.userId,
-      documentType,
-      fileHash: ocrResult.hash || null,
-      ocrText: ocrResult.text,
-      ocrConfidence: ocrResult.confidence,
-      processingStatus: 'processed',
-      extractedData: ocrResult.extractedData,
+    let extractedData = ocrResult.extractedData;
+    let effectiveType = documentType;
+    if (requestedType === 'auto') {
+      effectiveType = classifyDocumentType(ocrResult.text || '') || documentType;
+      extractedData = await ocrService.extractStructuredData(ocrResult.text, effectiveType);
+    }
+
+    const analysis = analyzeDocument({
+      text: ocrResult.text,
+      extractedData,
+      documentType: effectiveType,
     });
+
+    const documentRecord = await FileAttachment.findByPk(ocrResult.documentId);
+    if (documentRecord) {
+      await documentRecord.update({
+        processingStatus: analysis.compliance.status,
+        extractedData: {
+          ...extractedData,
+          analysis,
+        },
+      });
+    }
 
     return sendSuccess(res, 'Document processed', {
       document: documentRecord,
-      ocrResult,
+      ocrResult: { ...ocrResult, extractedData },
+      analysis,
     });
   } catch (error) {
     logger.error('OCR processing failed', { error: error.message });
@@ -162,7 +242,8 @@ router.post('/process', upload.single('document'), validateDocument, async (req,
     }
     return sendError(res, 'Unable to process document', 500);
   }
-});
+  },
+);
 
 router.get('/results/:fileId', async (req, res) => {
   try {

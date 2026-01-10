@@ -4,6 +4,8 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const moment = require('moment');
 const AuditLogService = require('../services/auditLogService');
+const ocrService = require('./ocrService');
+const { analyzeDocument } = require('./documentAnalysisService');
 const {
   AuditLog,
   BankStatement,
@@ -13,8 +15,10 @@ const {
   Invoice,
   Expense,
   User,
+  FileAttachment,
   sequelize,
 } = require('../models');
+const path = require('path');
 
 const DRY_RUN_STATUS = {
   PENDING: 'PENDING',
@@ -31,7 +35,86 @@ class BankStatementService {
     });
   }
   constructor() {
-    this.supportedFormats = ['CSV', 'MT940', 'CAMT053'];
+    this.supportedFormats = ['CSV', 'MT940', 'CAMT053', 'OCR'];
+  }
+
+  formatPeriod(startDate, endDate) {
+    if (!startDate || !endDate) {
+      return null;
+    }
+    const start = moment(startDate).format('DD.MM.YYYY');
+    const end = moment(endDate).format('DD.MM.YYYY');
+    return `${start} - ${end}`;
+  }
+
+  buildStatementExtractedData({ bankStatement, extractedData = {} }) {
+    const normalized = extractedData && typeof extractedData === 'object' ? { ...extractedData } : {};
+    const period =
+      normalized.period ||
+      this.formatPeriod(bankStatement.statementPeriodStart, bankStatement.statementPeriodEnd);
+
+    return {
+      ...normalized,
+      accountNumber: normalized.accountNumber || bankStatement.accountNumber || 'UNKNOWN',
+      period,
+      openingBalance:
+        normalized.openingBalance ?? bankStatement.openingBalance ?? null,
+      closingBalance:
+        normalized.closingBalance ?? bankStatement.closingBalance ?? null,
+    };
+  }
+
+  buildExtractedDataFromTransactions(transactions = []) {
+    if (!transactions.length) {
+      return {
+        accountNumber: 'UNKNOWN',
+        period: null,
+        openingBalance: null,
+        closingBalance: null,
+      };
+    }
+    const period = this.formatPeriod(this.getEarliestDate(transactions), this.getLatestDate(transactions));
+    const openingBalance = transactions[0]?.runningBalance ?? null;
+    const closingBalance = transactions[transactions.length - 1]?.runningBalance ?? null;
+    return {
+      accountNumber: 'UNKNOWN',
+      period,
+      openingBalance,
+      closingBalance,
+    };
+  }
+
+  async updateFileAttachmentAnalysis({
+    documentId,
+    filePath,
+    companyId,
+    analysis,
+    extractedData,
+  }) {
+    let fileRecord = null;
+    if (documentId) {
+      fileRecord = await FileAttachment.findByPk(documentId);
+    } else if (filePath && companyId) {
+      fileRecord = await FileAttachment.findOne({
+        where: { filePath, companyId, documentType: 'bank_statement' },
+      });
+    }
+    if (!fileRecord) {
+      return null;
+    }
+    const existingData =
+      typeof fileRecord.extractedData === 'string'
+        ? JSON.parse(fileRecord.extractedData || '{}')
+        : fileRecord.extractedData || {};
+    await fileRecord.update({
+      processingStatus: analysis?.compliance?.status || fileRecord.processingStatus,
+      extractedData: {
+        ...existingData,
+        ...extractedData,
+        analysis,
+      },
+    });
+    return fileRecord;
   }
 
   async loadTransactionsFromFile(filePath, format) {
@@ -43,65 +126,149 @@ class BankStatementService {
         return this.parseMT940File(filePath);
       case 'CAMT053':
         return this.parseCAMT053File(filePath);
+      case 'OCR':
+        return [];
       default:
         throw new Error(`Unsupported format: ${format}`);
     }
   }
 
-  async importBankStatement(companyId, filePath, fileName, format) {
+  async importBankStatement(companyId, filePath, fileName, format, context = {}) {
     try {
       return await this._runBankStatementImport({
         companyId,
         filePath,
         fileName,
         format,
+        context,
       });
     } catch (error) {
       throw new Error(`Failed to import bank statement: ${error.message}`);
     }
   }
 
-  async _runBankStatementImport({ companyId, filePath, fileName, format, transaction }) {
+  async _runBankStatementImport({ companyId, filePath, fileName, format, context, transaction }) {
     let bankStatement = null;
+    let fileAttachmentId = null;
+    let ocrDocumentId = null;
     try {
+      const normalizedFormat = (format || '').toString().toUpperCase();
+      const isOcrImport = normalizedFormat === 'OCR';
+      if (!isOcrImport) {
+        const mimeLookup = {
+          CSV: 'text/csv',
+          MT940: 'text/plain',
+          CAMT053: 'application/xml',
+        };
+        const fileAttachment = await FileAttachment.create(
+          {
+            fileName: path.basename(filePath),
+            originalName: fileName,
+            filePath,
+            fileSize: fs.statSync(filePath).size,
+            mimeType: mimeLookup[normalizedFormat] || 'application/octet-stream',
+            documentType: 'bank_statement',
+            userId: context?.userId || null,
+            companyId,
+            uploadedBy: context?.userId || null,
+            processingStatus: 'processed',
+          },
+          transaction ? { transaction } : {},
+        );
+        fileAttachmentId = fileAttachment?.id || null;
+      }
       bankStatement = await BankStatement.create(
         {
           companyId,
+          userId: context?.userId || null,
           fileName,
-          fileFormat: format,
+          fileFormat: normalizedFormat,
+          filePath,
           accountNumber: 'TEMP',
           statementPeriodStart: new Date(),
           statementPeriodEnd: new Date(),
           statementDate: new Date(),
           openingBalance: 0,
           closingBalance: 0,
-          status: 'PROCESSING',
+          status: isOcrImport ? 'NEEDS_REVIEW' : 'PROCESSING',
         },
         { transaction },
       );
 
-      const transactions = await this.loadTransactionsFromFile(filePath, format);
-      const processedTransactions = await this.processTransactions(
-        companyId,
-        bankStatement.id,
-        transactions,
-        { transaction },
-      );
+      let transactions = [];
+      let processedTransactions = [];
+      let extractedData = null;
+      let ocrWarnings = [];
+      let ocrConfidence = null;
+      let ocrText = null;
 
+      if (isOcrImport) {
+        const ocrResult = await ocrService.processDocument(filePath, {
+          documentType: 'bank_statement',
+          userId: context?.userId,
+          companyId,
+        });
+        if (!ocrResult.success) {
+          throw new Error(ocrResult.error || 'OCR processing failed');
+        }
+        ocrDocumentId = ocrResult.documentId;
+        extractedData = ocrResult.extractedData || null;
+        ocrText = ocrResult.text || null;
+        ocrConfidence = ocrResult.confidence || null;
+        const preview = await ocrService.previewDocument(filePath, {
+          documentType: 'bank_statement',
+        });
+        ocrWarnings = preview?.warnings || [];
+      } else {
+        transactions = await this.loadTransactionsFromFile(filePath, normalizedFormat);
+        processedTransactions = await this.processTransactions(
+          companyId,
+          bankStatement.id,
+          transactions,
+          { transaction },
+        );
+      }
+
+      const hasTransactions = transactions.length > 0;
       await bankStatement.update(
         {
           totalTransactions: transactions.length,
           processedTransactions: processedTransactions.length,
-          status: 'COMPLETED',
-          accountNumber: transactions[0]?.accountNumber || 'UNKNOWN',
-          statementPeriodStart: this.getEarliestDate(transactions),
-          statementPeriodEnd: this.getLatestDate(transactions),
-          statementDate: this.getLatestDate(transactions),
-          openingBalance: transactions[0]?.runningBalance || 0,
-          closingBalance: transactions[transactions.length - 1]?.runningBalance || 0,
+          status: isOcrImport ? 'NEEDS_REVIEW' : 'COMPLETED',
+          accountNumber: transactions[0]?.accountNumber || extractedData?.accountNumber || 'UNKNOWN',
+          statementPeriodStart: hasTransactions
+            ? this.getEarliestDate(transactions)
+            : this.parsePeriodStart(extractedData?.period),
+          statementPeriodEnd: hasTransactions
+            ? this.getLatestDate(transactions)
+            : this.parsePeriodEnd(extractedData?.period),
+          statementDate: hasTransactions
+            ? this.getLatestDate(transactions)
+            : this.parsePeriodEnd(extractedData?.period) || new Date(),
+          openingBalance: transactions[0]?.runningBalance || extractedData?.openingBalance || 0,
+          closingBalance:
+            transactions[transactions.length - 1]?.runningBalance || extractedData?.closingBalance || 0,
         },
         { transaction },
       );
+
+      const statementExtractedData = this.buildStatementExtractedData({
+        bankStatement,
+        extractedData: extractedData || {},
+      });
+      const analysis = analyzeDocument({
+        text: ocrText || '',
+        extractedData: statementExtractedData,
+        documentType: 'bank_statement',
+      });
+
+      await this.updateFileAttachmentAnalysis({
+        documentId: ocrDocumentId || fileAttachmentId,
+        filePath,
+        companyId,
+        analysis,
+        extractedData: statementExtractedData,
+      });
 
       return {
         bankStatement,
@@ -110,6 +277,11 @@ class BankStatementService {
           totalImported: transactions.length,
           totalProcessed: processedTransactions.length,
           duplicatesSkipped: transactions.length - processedTransactions.length,
+          ocrConfidence,
+          ocrWarnings,
+          extractedData,
+          ocrText,
+          analysis,
         },
       };
     } catch (error) {
@@ -419,6 +591,38 @@ class BankStatementService {
   }
 
   async dryRunImportBankStatement(companyId, filePath, format) {
+    const normalizedFormat = (format || '').toString().toUpperCase();
+    if (normalizedFormat === 'OCR') {
+      const preview = await ocrService.previewDocument(filePath, { documentType: 'bank_statement' });
+      if (!preview.success) {
+        throw new Error(preview.error || 'OCR preview failed');
+      }
+      const analysis = analyzeDocument({
+        text: preview.text || '',
+        extractedData: preview.extractedData || {},
+        documentType: 'bank_statement',
+      });
+      const summary = {
+        transactionsDetected: 0,
+        validTransactions: 0,
+        invalidTransactions: 0,
+        currency: 'EUR',
+        dateRange: {
+          from: this.parsePeriodStart(preview.extractedData?.period)?.toISOString() || null,
+          to: this.parsePeriodEnd(preview.extractedData?.period)?.toISOString() || null,
+        },
+        ocrConfidence: preview.confidence,
+        extractedData: preview.extractedData,
+        analysis,
+      };
+      return {
+        summary,
+        matches: [],
+        unmatched: [],
+        warnings: preview.warnings || [],
+        explanations: preview.explanations || [],
+      };
+    }
     const parsedTransactions = await this.loadTransactionsFromFile(filePath, format);
     const warnings = [];
     const matches = [];
@@ -476,12 +680,40 @@ class BankStatementService {
       },
     };
 
+    const extractedData = this.buildExtractedDataFromTransactions(validTransactions);
+    const analysis = analyzeDocument({
+      text: '',
+      extractedData,
+      documentType: 'bank_statement',
+    });
+    summary.extractedData = extractedData;
+    summary.analysis = analysis;
+
     return {
       summary,
       matches,
       unmatched,
       warnings,
     };
+  }
+
+  parsePeriodStart(period) {
+    if (!period) {
+      return null;
+    }
+    const match = period.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
+    return match ? moment(match[1], 'DD.MM.YYYY').toDate() : null;
+  }
+
+  parsePeriodEnd(period) {
+    if (!period) {
+      return null;
+    }
+    const matches = period.match(/(\d{1,2}\.\d{1,2}\.\d{4})/g);
+    if (!matches || matches.length < 2) {
+      return null;
+    }
+    return moment(matches[1], 'DD.MM.YYYY').toDate();
   }
 
   normalizeTransaction(transaction = {}) {

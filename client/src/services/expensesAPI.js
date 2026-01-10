@@ -1,4 +1,5 @@
 import api from './api';
+import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 
 const isDev = process.env.NODE_ENV === 'development';
 const logDev = (...args) => {
@@ -39,7 +40,28 @@ export const expensesAPI = {
 
       try {
         const response = await api.get(`/expenses?companyId=${companyId}`);
-        this.cache[companyId] = response.data?.expenses ?? [];
+        const payload = response.data ?? response;
+        const normalized = Array.isArray(payload)
+          ? payload
+          : payload?.expenses ?? payload?.data?.expenses;
+        if (!Array.isArray(normalized)) {
+          throw new Error('Unexpected expenses response shape.');
+        }
+        if (isDemoMode() && normalized.length === 0) {
+          this.cache[companyId] = (DEMO_DATA.expenses ?? []).map((expense, index) => ({
+            id: expense.id ?? `demo-expense-${index + 1}`,
+            number: expense.number ?? `EXP-DEMO-${index + 1}`,
+            date: expense.date ?? new Date().toISOString().split('T')[0],
+            description: expense.description ?? 'Demo expense',
+            amount: expense.amount ?? 0,
+            currency: expense.currency ?? 'EUR',
+            vendor: expense.vendor ?? 'Demo Vendor',
+            category: expense.category ?? 'general',
+            status: expense.status ?? 'draft',
+          }));
+        } else {
+          this.cache[companyId] = normalized;
+        }
         return this.cache[companyId];
       } catch (err) {
         if (err?.response?.status === 429) {

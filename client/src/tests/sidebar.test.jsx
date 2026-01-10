@@ -52,4 +52,10 @@ describe('Sidebar role & feature flags', () => {
 
     expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
   });
+
+  it('shows administration links for super admin role', () => {
+    renderSidebar(roles.SUPER_ADMIN);
+
+    expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
+  });
 });

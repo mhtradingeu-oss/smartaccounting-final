@@ -18,33 +18,40 @@ describe('aiAssistantAPI', () => {
 
   it('caches context/session and reuses in-flight requests', async () => {
     api.get.mockResolvedValueOnce({ data: { context: { company: 'Acme' } } });
-    const firstContext = await aiAssistantAPI.getContext();
-    const secondContext = await aiAssistantAPI.getContext();
+    const firstContext = await aiAssistantAPI.getContext({ companyId: 10 });
+    const secondContext = await aiAssistantAPI.getContext({ companyId: 10 });
     expect(api.get).toHaveBeenCalledTimes(1);
     expect(secondContext).toBe(firstContext);
 
     api.get.mockResolvedValueOnce({ data: { sessionId: 'sess-123' } });
-    const firstSession = await aiAssistantAPI.startSession();
-    const secondSession = await aiAssistantAPI.startSession();
+    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(secondSession).toBe(firstSession);
+
+    api.get.mockResolvedValueOnce({ data: { context: { company: 'Beta' } } });
+    const otherContext = await aiAssistantAPI.getContext({ companyId: 22 });
+    expect(api.get).toHaveBeenCalledTimes(3);
+    expect(otherContext).not.toBe(firstContext);
   });
 
   it('sends ai meta headers for every request', async () => {
     api.get.mockResolvedValueOnce({ data: { context: {} } });
-    await aiAssistantAPI.getContext();
+    await aiAssistantAPI.getContext({ companyId: 42 });
     const [, contextConfig] = api.get.mock.calls[0];
     expect(contextConfig.headers).toMatchObject({
       'x-ai-purpose': AI_ASSISTANT_PURPOSE,
       'x-ai-policy-version': AI_POLICY_VERSION,
+      'X-Company-Id': 42,
     });
 
     api.get.mockResolvedValueOnce({ data: { sessionId: 'abc' } });
-    await aiAssistantAPI.startSession();
+    await aiAssistantAPI.startSession({ companyId: 42 });
     const [, sessionConfig] = api.get.mock.calls[1];
     expect(sessionConfig.headers).toMatchObject({
       'x-ai-purpose': AI_ASSISTANT_PURPOSE,
       'x-ai-policy-version': AI_POLICY_VERSION,
+      'X-Company-Id': 42,
     });
 
     api.get.mockResolvedValueOnce({ data: { answer: { message: 'ok' } } });
@@ -52,11 +59,13 @@ describe('aiAssistantAPI', () => {
       intent: 'review',
       prompt: 'Test',
       sessionId: 'abc',
+      companyId: 42,
     });
     const [, askConfig] = api.get.mock.calls[2];
     expect(askConfig.headers).toMatchObject({
       'x-ai-purpose': AI_ASSISTANT_PURPOSE,
       'x-ai-policy-version': AI_POLICY_VERSION,
+      'X-Company-Id': 42,
     });
     expect(askConfig.params).toMatchObject({
       intent: 'review',

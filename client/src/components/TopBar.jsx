@@ -26,6 +26,7 @@ import {
   BanknotesIcon,
   LockClosedIcon,
   CreditCardIcon,
+  Bars3Icon,
 } from '@heroicons/react/24/outline';
 import {
   BellIcon as BellIconSolid,
@@ -57,7 +58,12 @@ const MOCK_SEARCH_RESULTS = [
   },
 ];
 
-const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
+const TopBar = ({
+  isDarkMode,
+  onToggleDarkMode,
+  isCollapsed,
+  onToggleSidebar = () => {},
+}) => {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const isReadOnlySession = isReadOnlyRole(user?.role);
@@ -229,7 +235,19 @@ const TopBar = ({ isDarkMode, onToggleDarkMode, isCollapsed }) => {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Search */}
-          <div className="flex items-center gap-6 min-w-fit">
+          <div className="flex items-center gap-3 min-w-fit">
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="lg:hidden inline-flex items-center justify-center p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/70 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900"
+              aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+            >
+              {isCollapsed ? (
+                <Bars3Icon className="h-5 w-5" />
+              ) : (
+                <XMarkIcon className="h-5 w-5" />
+              )}
+            </button>
             <Link to="/dashboard" className="flex items-center">
               <img
                 src="/brand/logo.png"

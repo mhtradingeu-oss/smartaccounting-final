@@ -8,7 +8,11 @@ export const auditLogsAPI = {
         ...params,
       },
     });
-    return res.data?.logs ?? res.data ?? [];
+    const payload = res.data?.logs ?? res.data;
+    if (!Array.isArray(payload)) {
+      throw new Error('Unexpected audit logs response shape.');
+    }
+    return payload;
   },
 };
 

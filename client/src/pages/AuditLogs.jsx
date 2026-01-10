@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import LoadingState from '../components/LoadingState';
-import ErrorState from '../components/ErrorState';
-import EmptyState from '../components/EmptyState';
+import { PageLoadingState, PageErrorState, PageEmptyState } from '../components/ui/PageStates';
 
 import { auditLogsAPI } from '../services/auditLogsAPI';
 import { useAuth } from '../context/AuthContext';
@@ -43,11 +41,14 @@ export default function AuditLogs() {
       </p>
       <div className="bg-white rounded shadow p-6">
         {loading ? (
-          <LoadingState message="Loading audit trail export..." />
+          <PageLoadingState
+            title="Loading audit trail export..."
+            description="Gathering the latest activity records."
+          />
         ) : error ? (
-          <ErrorState message={error} onRetry={() => window.location.reload()} />
+          <PageErrorState message={error} onRetry={() => window.location.reload()} />
         ) : logs.length === 0 ? (
-          <EmptyState title="Export is empty" description="No audit entries were exported yet." />
+          <PageEmptyState title="Export is empty" description="No audit entries were exported yet." />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

@@ -2,17 +2,11 @@ const express = require('express');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const aiDataService = require('../services/ai/aiDataService');
 const aiAssistantService = require('../services/ai/aiAssistantService');
-const {
-  logRequested,
-  logResponded,
-  logRejected,
-  logSessionEvent,
-} = require('../services/ai/aiAuditLogger');
+const { logSessionEvent } = require('../services/ai/aiAuditLogger');
+const aiReadGateway = require('../services/ai/aiReadGateway');
 const aiRouteGuard = require('../middleware/aiRouteGuard');
 const rateLimit = require('../middleware/aiRateLimit');
-const { detectMutationIntent } = require('../services/ai/mutationIntent');
 const { randomUUID } = require('crypto');
-const { getPromptMeta } = require('../services/ai/promptRegistry');
 const { redactPII } = require('../services/ai/governance');
 
 const router = express.Router();
@@ -36,116 +30,61 @@ const extractPromptFromQuery = (req) =>
 
 const safePromptFromRequest = (prompt) => redactPII(prompt || '');
 
-async function rejectIfMutationIntent({
-  userId,
-  companyId,
-  queryType,
-  route,
-  prompt,
-  safePrompt,
-  requestId,
+const buildGatewayPayload = ({
   req,
-  res,
-}) {
-  const intent = detectMutationIntent(prompt);
-  if (!intent.detected) {
-    return false;
-  }
-  await logRejected({
-    userId,
-    companyId,
+  prompt,
+  queryType,
+  handler,
+  params,
+  responseMeta,
+  sessionId,
+  responseMode,
+}) => ({
+  user: req.user,
+  companyId: req.user?.companyId || req.companyId,
+  requestId: req.requestId,
+  purpose: req.aiContext?.purpose,
+  policyVersion: req.aiContext?.policyVersion,
+  prompt,
+  params,
+  handler,
+  audit: {
+    route: req.originalUrl,
     queryType,
-    route,
-    prompt: safePrompt,
-    requestId,
-    reason: intent.reason,
-  });
-  respondWithError(req, res, 400, 'Mutation intent detected. AI is advisory only.');
-  return true;
-}
+    responseMeta,
+    sessionId,
+    responseMode,
+  },
+});
 
 // GET /api/ai/read/invoice-summary?invoiceId=...  (companyId from req.user)
 router.get('/invoice-summary', async (req, res, next) => {
   try {
     const { invoiceId } = req.query;
     const prompt = extractPromptFromQuery(req);
-    const safePrompt = safePromptFromRequest(prompt);
     const companyId = req.user.companyId;
-    const userId = req.user.id;
-    const route = req.originalUrl;
     const queryType = 'invoice_summary';
-    const requestId = req.requestId;
     if (!companyId) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Missing companyId',
-      });
       return respondWithError(req, res, 403, 'companyId required');
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Query not allowed',
-      });
       return respondWithError(req, res, 400, 'Query not allowed');
     }
-    if (
-      await rejectIfMutationIntent({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt,
-        safePrompt,
-        requestId,
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
         req,
-        res,
-      })
-    ) {
-      return;
-    }
-    const meta = getPromptMeta(queryType);
-    let hasLoggedRequest = false;
-    const ensureLogRequested = async (extra = {}) => {
-      if (hasLoggedRequest) {
-        return;
-      }
-      hasLoggedRequest = true;
-      // logRequested is only called via ensureLogRequested
-      await logRequested({
-        userId,
-        companyId,
+        prompt,
         queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        ...extra,
-        meta,
-      });
-    };
-    await ensureLogRequested();
-    const summary = await aiDataService.getInvoiceSummary(companyId, invoiceId);
-    await logResponded({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt: safePrompt,
-      requestId,
-      meta,
-      responseMeta: { insightCount: summary ? 1 : 0 },
-    });
-    res.json({ summary, requestId: req.requestId });
+        params: { invoiceId, prompt },
+        handler: ({ companyId: scopedCompanyId }) =>
+          aiDataService.getInvoiceSummary(scopedCompanyId, invoiceId),
+        responseMeta: { invoiceId },
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+    }
+    res.json({ summary: body?.data || null, requestId: req.requestId });
   } catch (err) {
     next(err);
   }
@@ -156,82 +95,29 @@ router.get('/monthly-overview', async (req, res, next) => {
   try {
     const { month } = req.query;
     const prompt = extractPromptFromQuery(req);
-    const safePrompt = safePromptFromRequest(prompt);
     const companyId = req.user.companyId;
-    const userId = req.user.id;
-    const route = req.originalUrl;
     const queryType = 'monthly_overview';
-    const requestId = req.requestId;
     if (!companyId) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Missing companyId',
-      });
       return respondWithError(req, res, 403, 'companyId required');
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Query not allowed',
-      });
       return respondWithError(req, res, 400, 'Query not allowed');
     }
-    if (
-      await rejectIfMutationIntent({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt,
-        safePrompt,
-        requestId,
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
         req,
-        res,
-      })
-    ) {
-      return;
-    }
-    const meta = getPromptMeta(queryType);
-    let hasLoggedRequest = false;
-    const ensureLogRequested = async (extra = {}) => {
-      if (hasLoggedRequest) {
-        return;
-      }
-      hasLoggedRequest = true;
-      await logRequested({
-        userId,
-        companyId,
+        prompt,
         queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        ...extra,
-        meta,
-      });
-    };
-    await ensureLogRequested();
-    const overview = await aiDataService.getMonthlyOverview(companyId, month);
-    await logResponded({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt: safePrompt,
-      requestId,
-      meta,
-      responseMeta: { insightCount: overview ? 1 : 0 },
-    });
-    res.json({ overview, requestId: req.requestId });
+        params: { month, prompt },
+        handler: ({ companyId: scopedCompanyId }) =>
+          aiDataService.getMonthlyOverview(scopedCompanyId, month),
+        responseMeta: { month },
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+    }
+    res.json({ overview: body?.data || null, requestId: req.requestId });
   } catch (err) {
     next(err);
   }
@@ -242,82 +128,29 @@ router.get('/reconciliation-summary', async (req, res, next) => {
   try {
     const { range } = req.query;
     const prompt = extractPromptFromQuery(req);
-    const safePrompt = safePromptFromRequest(prompt);
     const companyId = req.user.companyId;
-    const userId = req.user.id;
-    const route = req.originalUrl;
     const queryType = 'reconciliation_summary';
-    const requestId = req.requestId;
     if (!companyId) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Missing companyId',
-      });
       return respondWithError(req, res, 403, 'companyId required');
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Query not allowed',
-      });
       return respondWithError(req, res, 400, 'Query not allowed');
     }
-    if (
-      await rejectIfMutationIntent({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt,
-        safePrompt,
-        requestId,
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
         req,
-        res,
-      })
-    ) {
-      return;
-    }
-    const meta = getPromptMeta(queryType);
-    let hasLoggedRequest = false;
-    const ensureLogRequested = async (extra = {}) => {
-      if (hasLoggedRequest) {
-        return;
-      }
-      hasLoggedRequest = true;
-      await logRequested({
-        userId,
-        companyId,
+        prompt,
         queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        ...extra,
-        meta,
-      });
-    };
-    await ensureLogRequested();
-    const summary = await aiDataService.getReconciliationSummary(companyId, range);
-    await logResponded({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt: safePrompt,
-      requestId,
-      meta,
-      responseMeta: { insightCount: summary ? 1 : 0 },
-    });
-    res.json({ summary, requestId: req.requestId });
+        params: { range, prompt },
+        handler: ({ companyId: scopedCompanyId }) =>
+          aiDataService.getReconciliationSummary(scopedCompanyId, range),
+        responseMeta: { range },
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+    }
+    res.json({ summary: body?.data || null, requestId: req.requestId });
   } catch (err) {
     next(err);
   }
@@ -328,8 +161,21 @@ router.get('/assistant/context', async (req, res, next) => {
     return respondAssistantDisabled(req, res);
   }
   try {
-    const context = await aiAssistantService.getContext(req.companyId);
-    res.json({ context, requestId: req.requestId });
+    const prompt = extractPromptFromQuery(req);
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
+        req,
+        prompt,
+        queryType: 'assistant_context',
+        params: { prompt },
+        handler: ({ companyId }) => aiAssistantService.getContext(companyId),
+        responseMeta: { contextLoaded: true },
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+    }
+    res.json({ context: body?.data || null, requestId: req.requestId });
   } catch (err) {
     next(err);
   }
@@ -344,55 +190,32 @@ router.get('/assistant', async (req, res, next) => {
     const rawPrompt = typeof req.query.prompt === 'string' ? req.query.prompt : '';
     const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
     const prompt = fallbackPrompt;
-    const safePrompt = safePromptFromRequest(prompt);
     const sessionId = req.query.sessionId;
-    const companyId = req.user.companyId;
-    const userId = req.user.id;
-    const route = req.originalUrl;
     const queryType = `assistant_${intent || 'unknown'}`;
-    const requestId = req.requestId;
     if (!intent) {
       return respondWithError(req, res, 400, 'intent is required');
     }
     if (!aiAssistantService.INTENT_LABELS[intent]) {
       return respondWithError(req, res, 400, 'Intent not supported');
     }
-    const context = await aiAssistantService.getContext(companyId);
-    const meta = getPromptMeta(queryType);
-    let hasLoggedRequest = false;
-    const ensureLogRequested = async (extra = {}) => {
-      if (hasLoggedRequest) {
-        return;
-      }
-      hasLoggedRequest = true;
-      await logRequested({
-        userId,
-        companyId,
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
+        req,
+        prompt,
         queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        ...extra,
-        meta,
-      });
-    };
-    await ensureLogRequested({
-      responseMeta: { sessionId, targetInsightId },
-      sessionId,
-    });
-    const answer = aiAssistantService.answerIntent({ intent, context, targetInsightId });
-    await logResponded({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt: safePrompt,
-      requestId,
-      meta,
-      responseMeta: { sessionId, targetInsightId },
-      sessionId,
-    });
-    res.json({ answer, requestId: req.requestId });
+        params: { intent, targetInsightId, prompt },
+        handler: async ({ companyId: scopedCompanyId }) => {
+          const context = await aiAssistantService.getContext(scopedCompanyId);
+          return aiAssistantService.answerIntent({ intent, context, targetInsightId });
+        },
+        responseMeta: { sessionId, targetInsightId },
+        sessionId,
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+    }
+    res.json({ answer: body?.data || null, requestId: req.requestId });
   } catch (err) {
     next(err);
   }
@@ -406,49 +229,31 @@ router.get('/session', async (req, res, next) => {
     const prompt = extractPromptFromQuery(req);
     const safePrompt = safePromptFromRequest(prompt);
     const companyId = req.user.companyId;
-    const userId = req.user.id;
-    const route = req.originalUrl;
     const queryType = 'assistant_session';
-    const requestId = req.requestId;
     const sessionId = randomUUID();
-    const meta = getPromptMeta(queryType);
-    let hasLoggedRequest = false;
-    const ensureLogRequested = async (extra = {}) => {
-      if (hasLoggedRequest) {
-        return;
-      }
-      hasLoggedRequest = true;
-      await logRequested({
-        userId,
-        companyId,
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
+        req,
+        prompt,
         queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        ...extra,
-        meta,
-      });
-    };
-    await ensureLogRequested({ responseMeta: { sessionId }, sessionId });
+        params: { prompt },
+        handler: async () => ({ sessionId }),
+        responseMeta: { sessionId },
+        sessionId,
+        responseMode: 'session',
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+    }
     await logSessionEvent({
-      userId,
+      userId: req.user?.id,
       companyId,
-      requestId,
+      _requestId: req.requestId,
       sessionId,
       event: 'started',
-      route,
+      route: req.originalUrl,
       prompt: safePrompt,
-    });
-    await logResponded({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt: safePrompt,
-      requestId,
-      meta,
-      responseMeta: { sessionId },
-      sessionId,
     });
     res.json({ sessionId, requestId: req.requestId });
   } catch (err) {

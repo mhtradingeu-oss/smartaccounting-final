@@ -16,6 +16,8 @@ const formatLatestInvoice = (invoice) => {
     invoiceNumber: invoice.invoiceNumber,
     status: invoice.status || 'unknown',
     amount: parseNumber(amount),
+    currency: invoice.currency || null,
+    createdAt: invoice.createdAt || null,
   };
 };
 
@@ -49,7 +51,7 @@ const getInvoiceStats = async (companyId) => {
   const latestInvoice = await Invoice.findOne({
     where: baseWhere,
     order: [['createdAt', 'DESC']],
-    attributes: ['id', 'invoiceNumber', 'status', 'total', 'amount'],
+    attributes: ['id', 'invoiceNumber', 'status', 'total', 'amount', 'currency', 'createdAt'],
     raw: true,
   });
 

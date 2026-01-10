@@ -7,6 +7,8 @@ import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import PermissionGuard from '../components/PermissionGuard';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import AITrustBanner from '../components/AITrustBanner';
+import { AIBadge } from '../components/AIBadge';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { formatApiError } from '../services/api';
 import { can, isReadOnlyRole } from '../lib/permissions';
@@ -16,6 +18,8 @@ import {
   PageErrorState,
   PageNoAccessState,
 } from '../components/ui/PageStates';
+
+const BANK_STATEMENT_REFRESH_EVENT = 'bankStatements:refresh';
 
 export default function BankStatements() {
   const { activeCompany, activeCompanyId } = useCompany();
@@ -89,7 +93,6 @@ export default function BankStatements() {
     if (typeof window === 'undefined') {
       return undefined;
     }
-    const BANK_STATEMENT_REFRESH_EVENT = 'BANK_STATEMENT_REFRESH_EVENT';
     const handleRefresh = () => {
       refreshStatements();
     };
@@ -150,37 +153,6 @@ export default function BankStatements() {
 
   if (!activeCompany) {
     return <PageNoAccessState />;
-  }
-
-  // Contextual AI entry point
-  if (!loading && !error) {
-    // Only show when data is loaded
-    return (
-      <>
-        <div className="flex justify-end mb-2">
-          <button
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100 text-sm font-medium shadow-sm"
-            title="Ask AI about bank statements"
-            onClick={() =>
-              window.dispatchEvent(
-                new CustomEvent('open-ai-assistant', { detail: { context: 'bank-statements' } }),
-              )
-            }
-          >
-            <span role="img" aria-label="AI">
-              🤖
-            </span>{' '}
-            Ask AI
-          </button>
-        </div>
-        <div className="mb-2 text-xs text-gray-500">
-          <span className="font-semibold">What does AI see?</span> The assistant will only see your
-          current company’s bank statements, transaction totals, and visible details on this page.
-          No generic questions—AI answers are always based on the statements you see here.
-        </div>
-        {/* ...existing code... */}
-      </>
-    );
   }
 
   if (loading) {
@@ -253,11 +225,10 @@ export default function BankStatements() {
 
   return (
     <div className="space-y-6">
-      {isReadOnlyUser && <ReadOnlyBanner message={t('states.read_only.bank_statements_notice')} />}
       {isReadOnlyUser && (
         <ReadOnlyBanner
           message={t('states.read_only.bank_statements_notice')}
-          details="AI features are strictly read-only for safety and compliance. No actions, changes, or transactions can be executed by AI. All responses are for informational purposes only, and every interaction is logged for audit. AI is helpful, never authoritative or dangerous."
+          details="You can review statements, previews, and reconciliation status."
         />
       )}
 
@@ -268,24 +239,17 @@ export default function BankStatements() {
             <Button
               variant="ai"
               size="small"
-              onClick={() => navigate('/bank-statements/ai-advisor')}
+              onClick={() => navigate('/ai-assistant')}
               title="Get AI-powered insights and reconciliation suggestions"
             >
-              {(() => {
-                const { AIBadge } = require('../components/AIBadge');
-                return <AIBadge label="AI" className="mr-1" />;
-              })()}
+              <AIBadge label="AI" className="mr-1" />
               AI Advisor
             </Button>
-            <span className="text-xs text-blue-600 font-medium">AI-generated, advisory only</span>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <Button variant="ai" size="small" disabled title={aiDisabledReason}>
-              {(() => {
-                const { AIBadge } = require('../components/AIBadge');
-                return <AIBadge label="AI" className="mr-1" />;
-              })()}
+              <AIBadge label="AI" className="mr-1" />
               AI Advisor
             </Button>
             <span className="text-xs text-gray-400">{aiDisabledReason}</span>
@@ -345,29 +309,10 @@ export default function BankStatements() {
 
       {/* AI explanation and trust indicators */}
       {aiEnabled && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 mb-2">
-          <h3 className="text-sm font-semibold text-blue-700 mb-1">About AI Advisor</h3>
-          <ul className="text-xs text-blue-700 list-disc pl-4 space-y-1">
-            <li>
-              AI provides reconciliation suggestions and insights based on your imported statements.
-            </li>
-            <li>
-              AI-generated advice is advisory only and should be reviewed by a qualified accountant.
-            </li>
-            <li>
-              AI does <strong>not</strong> make changes to your data or import statements
-              automatically.
-            </li>
-            <li>Some features may be disabled due to company policy, role, or feature flags.</li>
-            <li>
-              Trust indicators: Look for{' '}
-              <span role="img" aria-label="AI">
-                🤖
-              </span>{' '}
-              to identify AI-generated content.
-            </li>
-          </ul>
-        </div>
+        <AITrustBanner
+          title="AI Advisor notice"
+          summary="AI Advisor provides reconciliation suggestions based on imported statements."
+        />
       )}
       {!aiEnabled && (
         <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 mb-2">

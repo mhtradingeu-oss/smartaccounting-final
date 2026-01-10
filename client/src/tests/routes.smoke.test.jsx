@@ -165,14 +165,14 @@ const routeTestCases = [
   { path: '/bank-statements/import', expectedText: 'Import will save data to the server.' },
   { path: '/bank-statements/123', expectedText: 'Bank statement detail page' },
   { path: '/ocr-preview', expectedText: 'OCR preview page' },
-  { path: '/billing', expectedText: 'Billing page' },
+  { path: '/billing', expectedText: 'Billing unavailable' },
   { path: '/german-tax-reports/status', expectedText: 'German tax reports page' },
   { path: '/companies', expectedText: 'Companies page' },
   { path: '/users', expectedText: 'Users page' },
-  { path: '/compliance', expectedText: 'Compliance Overview' },
+  { path: '/compliance', expectedText: 'Compliance unavailable' },
   { path: '/audit-logs', expectedText: 'Audit logs page' },
   { path: '/gdpr-actions', expectedText: 'GDPR actions page' },
-  { path: '/compliance-dashboard', expectedText: 'Compliance Overview' },
+  { path: '/compliance-dashboard', expectedText: 'Compliance unavailable' },
 ];
 
 describe('Route smoke test', () => {

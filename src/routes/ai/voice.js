@@ -1,12 +1,9 @@
 const express = require('express');
 const { authenticate, requireCompany } = require('../../middleware/authMiddleware');
 const aiAssistantService = require('../../services/ai/aiAssistantService');
-const { logRequested, logResponded, logRejected } = require('../../services/ai/aiAuditLogger');
+const aiReadGateway = require('../../services/ai/aiReadGateway');
 const aiRouteGuard = require('../../middleware/aiRouteGuard');
 const rateLimit = require('../../middleware/aiRateLimit');
-const { detectMutationIntent } = require('../../services/ai/mutationIntent');
-const { getPromptMeta } = require('../../services/ai/promptRegistry');
-const { redactPII } = require('../../services/ai/governance');
 const { Company } = require('../../models');
 
 const router = express.Router();
@@ -37,6 +34,33 @@ async function resolveCompany(companyId, user) {
   return Company.findByPk(companyId, { attributes: ['id', 'ttsEnabled'] });
 }
 
+const buildGatewayPayload = ({
+  req,
+  prompt,
+  queryType,
+  handler,
+  params,
+  responseMeta,
+  sessionId,
+  responseMode,
+}) => ({
+  user: req.user,
+  companyId: req.user?.companyId || req.companyId,
+  requestId: req.requestId,
+  purpose: req.aiContext?.purpose,
+  policyVersion: req.aiContext?.policyVersion,
+  prompt,
+  params,
+  handler,
+  audit: {
+    route: req.originalUrl,
+    queryType,
+    responseMeta,
+    sessionId,
+    responseMode,
+  },
+});
+
 router.use(authenticate);
 router.use(requireCompany);
 router.use((req, _res, next) => {
@@ -64,27 +88,13 @@ router.post('/assistant', async (req, res, next) => {
           : '';
     const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
     const prompt = fallbackPrompt;
-    const safePrompt = redactPII(prompt || '');
     const requestedResponseMode = normalizeResponseMode(req.body?.responseMode);
     const companyId = req.user.companyId;
-    const userId = req.user.id;
-    const route = req.originalUrl;
     const queryType = `assistant_voice_${intent || 'unknown'}`;
-    const requestId = req.requestId;
     let responseMode = requestedResponseMode;
     let voiceFallback = false;
 
     if (!isAssistantFeatureEnabled() || !isVoiceFeatureEnabled()) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'AI voice disabled',
-        responseMode: requestedResponseMode,
-      });
       return respondWithError(req, res, 403, 'AI Voice is disabled');
     }
     if (!intent) {
@@ -94,16 +104,6 @@ router.post('/assistant', async (req, res, next) => {
       return respondWithError(req, res, 400, 'Intent not supported');
     }
     if (!ALLOWED_ROLES.has(req.user.role)) {
-      await logRejected({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: 'Role not permitted for voice assistant',
-        responseMode: requestedResponseMode,
-      });
       return respondWithError(req, res, 403, 'Insufficient role for voice assistant');
     }
     if (requestedResponseMode === 'voice') {
@@ -116,60 +116,28 @@ router.post('/assistant', async (req, res, next) => {
         voiceFallback = true;
       }
     }
-    const mutationIntent = detectMutationIntent(prompt);
-    if (mutationIntent.detected) {
-      await logRejected({
-        userId,
-        companyId,
+    const { status, body } = await aiReadGateway(
+      buildGatewayPayload({
+        req,
+        prompt,
         queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        reason: mutationIntent.reason,
+        params: { intent, targetInsightId, sessionId, responseMode, prompt },
+        handler: async ({ companyId: scopedCompanyId }) => {
+          if (voiceFallback) {
+            return buildSafeVoiceSummary();
+          }
+          const context = await aiAssistantService.getContext(scopedCompanyId);
+          return aiAssistantService.answerIntent({ intent, context, targetInsightId });
+        },
+        responseMeta: { sessionId, targetInsightId, voiceFallback },
+        sessionId,
         responseMode,
-      });
-      return respondWithError(req, res, 400, 'Mutation intent detected. AI is advisory only.');
+      }),
+    );
+    if (status !== 200) {
+      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
     }
-    const context = await aiAssistantService.getContext(companyId);
-    const meta = getPromptMeta(queryType);
-    let hasLoggedRequest = false;
-    const ensureLogRequested = async (extra = {}) => {
-      if (hasLoggedRequest) {
-        return;
-      }
-      hasLoggedRequest = true;
-      await logRequested({
-        userId,
-        companyId,
-        queryType,
-        route,
-        prompt: safePrompt,
-        requestId,
-        ...extra,
-        meta,
-        responseMode,
-      });
-    };
-    await ensureLogRequested({
-      responseMeta: { sessionId, targetInsightId, voiceFallback },
-      sessionId,
-    });
-    const answer = voiceFallback
-      ? buildSafeVoiceSummary()
-      : aiAssistantService.answerIntent({ intent, context, targetInsightId });
-    await logResponded({
-      userId,
-      companyId,
-      queryType,
-      route,
-      prompt: safePrompt,
-      requestId,
-      meta,
-      responseMeta: { sessionId, targetInsightId, voiceFallback },
-      sessionId,
-      responseMode,
-    });
-    res.json({ answer, requestId: req.requestId, responseMode });
+    res.json({ answer: body?.data || null, requestId: req.requestId, responseMode });
   } catch (err) {
     next(err);
   }

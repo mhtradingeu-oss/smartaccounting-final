@@ -4,7 +4,22 @@ import { useCompany } from '../context/CompanyContext';
 
 const CompanySelector = () => {
   const { t } = useTranslation();
-  const { companies, activeCompany, switchCompany } = useCompany();
+  const { companies, activeCompany, switchCompany, companiesError, reloadCompanies } = useCompany();
+
+  if (companies === null) {
+    return <div className="text-gray-500">Loading companies...</div>;
+  }
+
+  if (companiesError) {
+    return (
+      <div className="text-sm text-red-600">
+        Unable to load companies.{' '}
+        <button type="button" className="underline" onClick={reloadCompanies}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (!companies || companies.length === 0) {
     return <div className="text-gray-500">No companies available.</div>;
@@ -13,10 +28,12 @@ const CompanySelector = () => {
   return (
     <select
       className="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-800"
-      value={activeCompany ? activeCompany.id : ''}
+      value={activeCompany ? String(activeCompany.id) : ''}
       onChange={(e) => {
-        const selected = companies.find((c) => c.id === e.target.value);
-        switchCompany(selected);
+        const selected = companies.find((c) => String(c.id) === e.target.value);
+        if (selected) {
+          switchCompany(selected);
+        }
       }}
       aria-label={t('company_selector.label')}
       title={t('company_selector.label')}

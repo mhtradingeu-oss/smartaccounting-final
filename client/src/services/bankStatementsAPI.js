@@ -12,6 +12,9 @@ export const inferFormat = (filename = '') => {
   if (ext === 'xml' || ext === 'camt053') {
     return 'CAMT053';
   }
+  if (ext === 'pdf' || ext === 'png' || ext === 'jpg' || ext === 'jpeg') {
+    return 'OCR';
+  }
   // No format matched; return undefined for JS convention
   return undefined;
 };
@@ -40,7 +43,7 @@ export const bankStatementsAPI = {
   upload: async (file) => {
     const format = inferFormat(file?.name);
     if (!file || !format) {
-      throw new Error('Unsupported bank statement format for v0.1');
+      throw new Error('Unsupported bank statement format.');
     }
 
     const formData = new FormData();
@@ -55,7 +58,7 @@ export const bankStatementsAPI = {
   previewDryRun: async (file) => {
     const format = inferFormat(file?.name);
     if (!file || !format) {
-      throw new Error('Unsupported bank statement format for v0.1');
+      throw new Error('Unsupported bank statement format.');
     }
 
     const formData = new FormData();

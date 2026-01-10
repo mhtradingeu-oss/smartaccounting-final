@@ -76,6 +76,12 @@
     "analytics_desc": "Detaillierte Analyse anzeigen"
   },
   "navigation": {
+    "sidebar": "Primäre Navigation",
+    "core": "Kernbereich",
+    "accounting": "Buchhaltung",
+    "intelligence": "Intelligenz",
+    "compliance_audit": "Compliance & Audit",
+    "administration": "Administration",
     "main": "Hauptbereich",
     "management": "Verwaltung",
     "operations": "Operationen",
@@ -98,7 +104,6 @@
     "profile_settings": "Profil & Einstellungen",
     "investor_dashboard": "Investor-Dashboard",
     "rbac": "RBAC-Konsole",
-    "administration": "Administration",
     "ai_assistant": "AI Assistant"
   },
   "auth": {

@@ -2,9 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { usersAPI } from '../services/usersAPI';
 import { formatApiError } from '../services/api';
-import LoadingState from '../components/LoadingState';
-import EmptyState from '../components/EmptyState';
-import ErrorState from '../components/ErrorState';
+import { PageLoadingState, PageEmptyState, PageErrorState } from '../components/ui/PageStates';
 import { useAuth } from '../context/AuthContext';
 
 const ROLE_LABELS = {
@@ -94,11 +92,11 @@ export default function RBACManagement() {
           </button>
         </div>
         {loading ? (
-          <LoadingState message="Loading users..." />
+          <PageLoadingState title="Loading users..." description="Fetching role assignments." />
         ) : error ? (
-          <ErrorState message={error?.message} onRetry={fetchUsers} />
+          <PageErrorState message={error?.message} onRetry={fetchUsers} />
         ) : users.length === 0 ? (
-          <EmptyState
+          <PageEmptyState
             title="No users yet"
             description="No users are registered for this organization. Only admins can add users."
             help="Once users are added, you can assign and update their roles here."

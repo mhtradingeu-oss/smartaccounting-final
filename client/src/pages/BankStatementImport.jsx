@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import BankStatementStatusBadge from '../components/BankStatementStatusBadge';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
-import EmptyState from '../components/EmptyState';
+import { PageEmptyState } from '../components/ui/PageStates';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
-import { bankStatementsAPI } from '../services/bankStatementsAPI';
+import { bankStatementsAPI, inferFormat } from '../services/bankStatementsAPI';
 import { formatApiError } from '../services/api';
 import { can } from '../lib/permissions';
 
-const ALLOWED_EXTENSIONS = ['csv', 'txt', 'xml', 'mt940', 'camt053'];
+const ALLOWED_EXTENSIONS = ['csv', 'txt', 'xml', 'mt940', 'camt053', 'pdf', 'png', 'jpg', 'jpeg'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const BANK_STATEMENT_REFRESH_EVENT = 'bankStatements:refresh';
 
@@ -54,10 +54,11 @@ const BankStatementImport = () => {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const canImport = useMemo(() => can('bank:write', user?.role), [user?.role]);
+  const selectedFormat = useMemo(() => inferFormat(selectedFile?.name || ''), [selectedFile]);
 
   if (!activeCompany) {
     return (
-      <EmptyState
+      <PageEmptyState
         title="Select a company to import statements"
         description="Bank statements are scoped per company. Choose one before uploading."
         action={
@@ -154,14 +155,19 @@ const BankStatementImport = () => {
           </label>
           <input
             type="file"
-            accept=".csv,.txt,.xml,.mt940,.camt053"
+            accept=".csv,.txt,.xml,.mt940,.camt053,.pdf,.png,.jpg,.jpeg"
             onChange={handleFileChange}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-200"
             disabled={!canImport || status === 'uploading'}
           />
           <p className="text-xs text-gray-500">
-            Allowed formats: CSV, MT940, CAMT053 (TXT files are treated as CSV). Max size: 10 MB.
+            Allowed formats: CSV, MT940, CAMT053, PDF, PNG, JPG. Max size: 10 MB.
           </p>
+          {selectedFormat === 'OCR' && (
+            <p className="text-xs text-amber-600">
+              OCR imports capture statement metadata but require manual review before posting.
+            </p>
+          )}
         </div>
 
         <div className="flex items-start gap-2">
@@ -174,7 +180,7 @@ const BankStatementImport = () => {
             className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <label htmlFor="confirm-import" className="text-sm text-gray-700">
-            I understand this will import transactions into my company data.
+            I understand this will import statement data into my company records.
           </label>
         </div>
 

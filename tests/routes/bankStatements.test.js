@@ -26,8 +26,44 @@ jest.mock('../../src/middleware/secureUpload', () => {
   return {
     createSecureUploader,
     logUploadMetadata,
+    validateUploadedFile: (filePath) => {
+      const lower = (filePath || '').toLowerCase();
+      if (lower.endsWith('.pdf')) {
+        return { valid: true, detected: 'pdf' };
+      }
+      if (lower.endsWith('.xml')) {
+        return { valid: true, detected: 'xml' };
+      }
+      return { valid: true, detected: 'text' };
+    },
   };
 });
+
+jest.mock('../../src/services/ocrService', () => ({
+  processDocument: jest.fn().mockResolvedValue({
+    success: true,
+    extractedData: {
+      accountNumber: 'DE123',
+      period: '01.01.2025 - 31.01.2025',
+      openingBalance: 100,
+      closingBalance: 200,
+    },
+    text: 'Mock OCR bank statement',
+    confidence: 91.2,
+  }),
+  previewDocument: jest.fn().mockResolvedValue({
+    success: true,
+    extractedData: {
+      accountNumber: 'DE123',
+      period: '01.01.2025 - 31.01.2025',
+      openingBalance: 100,
+      closingBalance: 200,
+    },
+    warnings: [],
+    explanations: [],
+    confidence: 91.2,
+  }),
+}));
 
 const app = require('../../src/app');
 const request = require('../utils/request')(app);
@@ -141,6 +177,7 @@ describe('Bank statement import gate', () => {
 
 describe('Bank statement import dry run', () => {
   const fixtureFile = path.join(__dirname, '..', 'fixtures', 'bank-statement-dry-run.csv');
+  const pdfFixtureFile = path.join(__dirname, '..', 'fixtures', 'bank-statement.pdf');
   const uploadDir = path.resolve(
     process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'secure'),
     'bank-statements',
@@ -203,6 +240,27 @@ describe('Bank statement import dry run', () => {
     // Do NOT assert confirmationToken or any other fields
   });
 
+  it('includes OCR analysis in dry-run summary when format OCR', async () => {
+    const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
+    testUser = result.user;
+    authToken = result.token;
+
+    const response = await request
+      .post('/api/bank-statements/import')
+      .query({ dryRun: 'true' })
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('X-Mock-Bank-Statement-Path', pdfFixtureFile)
+      .send({ format: 'OCR' });
+
+    expect([200, 403]).toContain(response.status);
+    if (response.status === 200) {
+      const summary = response.body?.summary || {};
+      expect(summary).toHaveProperty('analysis');
+      expect(summary.analysis).toHaveProperty('documentType', 'bank_statement');
+      expect(summary.analysis?.compliance?.status).toBeDefined();
+    }
+  });
+
   it('still blocks the import when dryRun flag is false', async () => {
     const result = await global.testUtils.createTestUserAndLogin({ role: 'accountant' });
     testUser = result.user;
@@ -221,6 +279,26 @@ describe('Bank statement import dry run', () => {
         message: 'Bank statement import is currently disabled.',
       });
     }
+  });
+
+  it('supports OCR dry-run imports for PDF statements', async () => {
+    const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
+    testUser = result.user;
+    authToken = result.token;
+
+    const response = await request
+      .post('/api/bank-statements/import?dryRun=true')
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('X-Mock-Bank-Statement-Path', pdfFixtureFile)
+      .send({ format: 'OCR' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.summary).toBeTruthy();
+    expect(response.body.summary.extractedData).toMatchObject({
+      accountNumber: 'DE123',
+    });
+    expect(response.body.summary.transactionsDetected).toBe(0);
   });
 });
 

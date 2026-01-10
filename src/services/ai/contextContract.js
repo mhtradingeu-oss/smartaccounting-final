@@ -6,7 +6,7 @@
  * Any change here is a breaking, audited change.
  */
 
-const CONTEXT_VERSION = '1.0.0';
+const CONTEXT_VERSION = '1.1.0';
 
 const MAX_ITEMS = 5;
 
@@ -27,6 +27,8 @@ function sanitizeContext(raw) {
           id: raw.company.id,
           name: raw.company.name,
           country: raw.company.country,
+          city: raw.company.city,
+          aiEnabled: raw.company.aiEnabled,
         }
       : undefined,
 
@@ -47,17 +49,26 @@ function sanitizeContext(raw) {
 
     bankTransactions: enforceArrayLimit(raw.bankTransactions).map((t) => ({
       id: t.id,
+      description: t.description,
       amount: t.amount,
       currency: t.currency,
       isReconciled: t.isReconciled,
+      transactionDate: t.transactionDate,
     })),
 
     insights: enforceArrayLimit(raw.insights).map((i) => ({
       id: i.id,
+      entityType: i.entityType,
+      entityId: i.entityId,
       type: i.type,
       severity: i.severity,
       summary: i.summary,
       ruleId: i.ruleId,
+      why: i.why,
+      confidenceScore: i.confidenceScore,
+      dataSource: i.dataSource,
+      lastEvaluated: i.lastEvaluated,
+      legalContext: i.legalContext,
     })),
   };
 }

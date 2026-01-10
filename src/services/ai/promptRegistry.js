@@ -28,6 +28,11 @@ const PROMPTS = Object.freeze({
     ruleId: 'RECONCILIATION_SUMMARY',
     description: 'Bank reconciliation summary (read-only)',
   },
+  insights_read: {
+    promptVersion: '1.0.0',
+    ruleId: 'INSIGHTS_READ',
+    description: 'Read-only AI insights list and exports',
+  },
 });
 
 function getPromptMeta(queryType) {

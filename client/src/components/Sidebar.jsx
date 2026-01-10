@@ -14,18 +14,18 @@ import {
   ChevronRightIcon,
   UserCircleIcon,
   DocumentTextIcon,
+  DocumentChartBarIcon,
 } from '@heroicons/react/24/outline';
 import {
-  MAIN_NAVIGATION_ITEMS,
-  OPERATIONS_NAVIGATION_ITEMS,
+  CORE_NAVIGATION_ITEMS,
+  ACCOUNTING_NAVIGATION_ITEMS,
+  INTELLIGENCE_NAVIGATION_ITEMS,
   COMPLIANCE_NAVIGATION_ITEMS,
-  MANAGEMENT_NAVIGATION_ITEMS,
-  BILLING_NAVIGATION_ITEM,
-  PROFILE_NAVIGATION_ITEM,
+  ADMINISTRATION_NAVIGATION_ITEMS,
 } from '../navigation/sidebarNavigation';
 
 const NAV_LINK_BASE_CLASSES =
-  'relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
+  'relative group flex items-center px-3 py-2.5 text-sm font-medium min-h-[44px] rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { t } = useTranslation();
@@ -33,6 +33,21 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { role } = useRole();
   const location = useLocation();
   const [, setHoveredItem] = React.useState(null);
+  const [isCompact, setIsCompact] = React.useState(false);
+  const navRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+    const mediaQuery = window.matchMedia('(max-width: 1024px)');
+    const handleChange = (event) => setIsCompact(event.matches);
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  const isCondensed = isCollapsed || isCompact;
 
   const evaluateEnabled = (item) => {
     if (typeof item.enabled === 'function') {
@@ -51,12 +66,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       enabled: evaluateEnabled(item),
     }));
 
-  const mainNavigation = enrichNavigation(MAIN_NAVIGATION_ITEMS);
-  const operationsNavigation = enrichNavigation(OPERATIONS_NAVIGATION_ITEMS);
+  const coreNavigation = enrichNavigation(CORE_NAVIGATION_ITEMS);
+  const accountingNavigation = enrichNavigation(ACCOUNTING_NAVIGATION_ITEMS);
+  const intelligenceNavigation = enrichNavigation(INTELLIGENCE_NAVIGATION_ITEMS);
   const complianceNavigation = enrichNavigation(COMPLIANCE_NAVIGATION_ITEMS);
-  const managementNavigation = enrichNavigation(MANAGEMENT_NAVIGATION_ITEMS);
-  const billingNavigation = enrichNavigation([BILLING_NAVIGATION_ITEM]);
-  const profileNavigation = enrichNavigation([PROFILE_NAVIGATION_ITEM]);
+  const administrationNavigation = enrichNavigation(ADMINISTRATION_NAVIGATION_ITEMS);
 
   const shouldRenderSection = (items) => Array.isArray(items) && items.length > 0;
 
@@ -64,6 +78,35 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     return (
       location.pathname === href || (href !== '/dashboard' && location.pathname.startsWith(href))
     );
+  };
+
+  const handleNavKeyDown = (event) => {
+    if (!navRef.current) {
+      return;
+    }
+    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+    if (!keys.includes(event.key)) {
+      return;
+    }
+    const items = Array.from(navRef.current.querySelectorAll('[data-sidebar-item="true"]'));
+    if (!items.length) {
+      return;
+    }
+    const currentIndex = items.indexOf(document.activeElement);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowDown') {
+      nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+    } else if (event.key === 'ArrowUp') {
+      nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = items.length - 1;
+    }
+
+    event.preventDefault();
+    items[nextIndex]?.focus();
   };
 
   const renderNavItem = (item, index, sectionKey = '') => {
@@ -74,7 +117,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       // Use AIBadge for AI navigation items
       const isAIFeature = item.badge === 'AI';
       let badgeNode = null;
-      if (isAIFeature && !isCollapsed) {
+      if (isAIFeature && !isCondensed) {
         badgeNode = <AIBadge className="ml-auto" />;
       }
       return (
@@ -84,12 +127,15 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           className={clsx(
             NAV_LINK_BASE_CLASSES,
             isActive
-              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25'
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold shadow-lg shadow-primary-500/25 before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-white/80 before:content-[\'\']'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800',
           )}
           aria-current={isActive ? 'page' : undefined}
+          aria-label={isCondensed ? item.name : undefined}
+          title={isCondensed ? item.name : undefined}
           onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.href}-${index}`)}
           onMouseLeave={() => setHoveredItem(null)}
+          data-sidebar-item="true"
         >
           <div className="flex items-center w-full">
             <div
@@ -97,14 +143,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             >
               <IconComponent className="h-5 w-5" />
             </div>
-            {!isCollapsed && (
+            {!isCondensed && (
               <>
                 <span className="ml-3 flex-1 text-left truncate">{item.name}</span>
                 {badgeNode}
                 {/* fallback for other badges */}
                 {!isAIFeature && item.badge && (
                   <span
-                    className={`ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    className={`ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
                       isActive
                         ? 'bg-white/20 text-white'
                         : item.badge === 'NEW'
@@ -117,7 +163,18 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                 )}
               </>
             )}
+            {isCondensed && (
+              <span className="sr-only">{item.name}</span>
+            )}
           </div>
+          {isCondensed && (
+            <div
+              role="tooltip"
+              className="absolute left-full top-1/2 z-20 hidden -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block group-focus-within:block"
+            >
+              {item.name}
+            </div>
+          )}
         </NavLink>
       );
     }
@@ -127,12 +184,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     return (
       <div
         key={`${sectionKey}-${item.name}`}
-        className="relative group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl opacity-60 cursor-not-allowed text-gray-500 dark:text-gray-400"
+        className="relative group flex items-center px-3 py-2.5 text-sm font-medium min-h-[44px] rounded-xl opacity-60 cursor-not-allowed text-gray-500 dark:text-gray-400"
         aria-disabled="true"
+        aria-label={isCondensed ? item.name : undefined}
+        title={isCondensed ? tooltipPrimary : undefined}
       >
         <div
           role="tooltip"
-          className="absolute left-full top-1/2 -translate-y-1/2 hidden max-w-xs rounded bg-gray-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block"
+          className="absolute left-full top-1/2 z-20 hidden max-w-xs -translate-y-1/2 rounded bg-gray-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block group-focus-within:block"
         >
           <p className="font-semibold">{tooltipPrimary}</p>
           <p className="text-gray-200">{tooltipSecondary}</p>
@@ -141,7 +200,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           <div className="flex-shrink-0">
             <IconComponent className="h-5 w-5" aria-hidden="true" />
           </div>
-          {!isCollapsed && <span className="flex-1 text-left truncate">{item.name}</span>}
+          {!isCondensed && <span className="flex-1 text-left truncate">{item.name}</span>}
+          {isCondensed && <span className="sr-only">{item.name}</span>}
         </div>
       </div>
     );
@@ -154,12 +214,12 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
     const SectionIcon = icon;
     return (
-      <div className="space-y-1">
-        {!isCollapsed && (
-          <div className="px-3 pt-4 pb-2">
+      <div className="space-y-2">
+        {!isCondensed && (
+          <div className="px-3 pt-3 pb-1">
             <div className="flex items-center space-x-2">
               {SectionIcon && <SectionIcon className="h-4 w-4 text-gray-300 dark:text-gray-600" />}
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+              <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest dark:text-gray-400">
                 {title}
               </h3>
             </div>
@@ -201,13 +261,15 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-30 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-700 ${
-        isCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'
-      }`}
+      className={clsx(
+        'fixed inset-y-0 left-0 z-30 flex max-h-screen flex-col bg-white border-r border-gray-200 transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-700',
+        isCondensed ? 'sidebar-collapsed' : 'sidebar-expanded',
+        isCollapsed ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
+      )}
     >
       {/* Enhanced Header */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-800">
-        {!isCollapsed && (
+        {!isCondensed && (
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-sm">SA</span>
@@ -237,14 +299,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
       {/* Enhanced User Profile */}
       <div
-        className={`p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 ${isCollapsed ? 'px-3' : ''}`}
+        className={`p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 ${isCondensed ? 'px-3' : ''}`}
       >
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0 relative">
             <UserCircleIcon className="h-10 w-10 text-gray-500 dark:text-gray-400" />
             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800"></div>
           </div>
-          {!isCollapsed && (
+          {!isCondensed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate dark:text-white">
                 {user?.firstName} {user?.lastName}
@@ -264,37 +326,42 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       </div>
 
       {/* Enhanced Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
-        {shouldRenderSection(mainNavigation) &&
-          renderSection(t('navigation.main'), mainNavigation, 'main', HomeIcon)}
-        {shouldRenderSection(operationsNavigation) &&
+      <nav
+        ref={navRef}
+        className="flex-1 min-h-0 px-2 py-4 space-y-4 overflow-y-auto scrollbar-thin"
+        aria-label={t('navigation.sidebar')}
+        onKeyDown={handleNavKeyDown}
+      >
+        {shouldRenderSection(coreNavigation) &&
+          renderSection(t('navigation.core'), coreNavigation, 'core', HomeIcon)}
+        {shouldRenderSection(accountingNavigation) &&
           renderSection(
-            t('navigation.operations'),
-            operationsNavigation,
-            'operations',
+            t('navigation.accounting'),
+            accountingNavigation,
+            'accounting',
             DocumentTextIcon,
           )}
-        {shouldRenderSection(managementNavigation) &&
+        {shouldRenderSection(intelligenceNavigation) &&
           renderSection(
-            t('navigation.management'),
-            managementNavigation,
-            'management',
-            Cog6ToothIcon,
+            t('navigation.intelligence'),
+            intelligenceNavigation,
+            'intelligence',
+            DocumentChartBarIcon,
           )}
         {shouldRenderSection(complianceNavigation) &&
           renderSection(
-            t('navigation.compliance'),
+            t('navigation.compliance_audit'),
             complianceNavigation,
             'compliance',
             ShieldCheckIcon,
           )}
-        {/* Secondary actions at the bottom */}
-        <div className="mt-8 space-y-1 border-t border-gray-200 dark:border-gray-700 pt-4">
-          {shouldRenderSection(billingNavigation) &&
-            renderSection('', billingNavigation, 'billing', CreditCardIcon)}
-          {shouldRenderSection(profileNavigation) &&
-            renderSection('', profileNavigation, 'profile', UserCircleIcon)}
-        </div>
+        {shouldRenderSection(administrationNavigation) &&
+          renderSection(
+            t('navigation.administration'),
+            administrationNavigation,
+            'administration',
+            Cog6ToothIcon,
+          )}
       </nav>
     </div>
   );

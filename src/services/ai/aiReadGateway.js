@@ -7,6 +7,7 @@ async function aiReadGateway(input) {
       companyId: normalized.companyId ?? null,
       prompt: String(safePrompt),
       policyVersion: (meta && meta.policyVersion) || normalized.policyVersion || '10.0.0',
+      meta,
       ...(reason ? { reason } : {}),
       ...overrides,
     };
@@ -45,6 +46,14 @@ async function aiReadGateway(input) {
   const { detectMutationIntent } = require('./mutationIntent');
   const promptRegistry = require('./promptRegistry');
   const { Company } = require('../../models');
+  const auditContext = normalized.audit || {};
+  const auditOverrides = {
+    route: auditContext.route,
+    queryType: auditContext.queryType,
+    responseMeta: auditContext.responseMeta,
+    sessionId: auditContext.sessionId,
+    responseMode: auditContext.responseMode,
+  };
 
   // Contract: Fail closed if required fields are missing
   let meta;
@@ -68,6 +77,7 @@ async function aiReadGateway(input) {
         safePrompt,
         meta,
         reason: `${missingField}`,
+        overrides: auditOverrides,
       }),
     );
     return {
@@ -94,6 +104,7 @@ async function aiReadGateway(input) {
           safePrompt,
           meta,
           reason: 'Forbidden: invalid company context',
+          overrides: auditOverrides,
         }),
       );
       return {
@@ -112,13 +123,14 @@ async function aiReadGateway(input) {
       }
       if (company && company.aiEnabled === false) {
         await auditLogger.logRejected(
-          buildAuditPayload({
-            normalized,
-            safePrompt,
-            meta,
-            reason: 'AI is disabled for this company',
-          }),
-        );
+        buildAuditPayload({
+          normalized,
+          safePrompt,
+          meta,
+          reason: 'AI is disabled for this company',
+          overrides: auditOverrides,
+        }),
+      );
         // Not a status: 200, so do not logRequested here
         return {
           status: 501,
@@ -143,6 +155,7 @@ async function aiReadGateway(input) {
           safePrompt,
           meta,
           reason: `Mutation intent detected: ${mutation.reason}`,
+          overrides: auditOverrides,
         }),
       );
       return {
@@ -173,7 +186,13 @@ async function aiReadGateway(input) {
   }
   if (!meta || meta.policyVersion !== normalized.policyVersion) {
     await auditLogger.logRejected(
-      buildAuditPayload({ normalized, safePrompt, meta, reason: 'INVALID_POLICY_OR_PURPOSE' }),
+      buildAuditPayload({
+        normalized,
+        safePrompt,
+        meta,
+        reason: 'INVALID_POLICY_OR_PURPOSE',
+        overrides: auditOverrides,
+      }),
     );
     return {
       status: 403,
@@ -195,11 +214,13 @@ async function aiReadGateway(input) {
   // 8️⃣ Perform READ-ONLY AI action (no DB writes)
   let data;
   try {
-    if (meta && typeof meta.handler === 'function') {
-      data = await meta.handler({
+    const handler = typeof normalized.handler === 'function' ? normalized.handler : meta?.handler;
+    if (typeof handler === 'function') {
+      data = await handler({
         prompt: safePrompt,
         user: normalized.user,
         companyId: normalized.companyId,
+        params: normalized.params,
       });
     } else {
       data = {};
@@ -217,10 +238,20 @@ async function aiReadGateway(input) {
   // Always return a contract-shaped response, even if data is undefined
   // Always include disclaimer in contract response
   // logRequested must be called ONCE, with required fields
-  const auditPayload = buildAuditPayload({ normalized, safePrompt, meta });
+  const auditPayload = buildAuditPayload({
+    normalized,
+    safePrompt,
+    meta,
+    overrides: auditOverrides,
+  });
   await auditLogger.logRequested(
     auditPayload && typeof auditPayload === 'object' ? auditPayload : { prompt: '' },
   );
+  if (typeof auditLogger.logResponded === 'function') {
+    await auditLogger.logResponded(
+      auditPayload && typeof auditPayload === 'object' ? auditPayload : { prompt: '' },
+    );
+  }
   return {
     status: 200,
     body: shapeAIReadOutput({

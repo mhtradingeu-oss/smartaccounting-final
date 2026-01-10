@@ -7,30 +7,40 @@ const AI_HEADERS = {
   'x-ai-policy-version': AI_POLICY_VERSION,
 };
 
+const resolveCacheKey = (companyId) => (companyId ? String(companyId) : 'default');
+const buildHeaders = (companyId) => ({
+  ...AI_HEADERS,
+  ...(companyId ? { 'X-Company-Id': companyId } : {}),
+});
+
 export const aiAssistantAPI = {
-  sessionCache: null,
-  contextCache: null,
-  sessionInFlight: null,
-  contextInFlight: null,
-  async getContext() {
-    if (this.contextCache) {
-      return this.contextCache;
+  sessionCache: {},
+  contextCache: {},
+  sessionInFlight: {},
+  contextInFlight: {},
+  async getContext({ companyId } = {}) {
+    const cacheKey = resolveCacheKey(companyId);
+    if (this.contextCache[cacheKey]) {
+      return this.contextCache[cacheKey];
     }
-    if (this.contextInFlight) {
-      return this.contextInFlight;
+    if (this.contextInFlight[cacheKey]) {
+      return this.contextInFlight[cacheKey];
     }
-    this.contextInFlight = api
-      .get(`${ENDPOINT}/assistant/context`, { headers: AI_HEADERS })
+    this.contextInFlight[cacheKey] = api
+      .get(`${ENDPOINT}/assistant/context`, { headers: buildHeaders(companyId) })
       .then((response) => {
-        this.contextCache = response.data?.context ?? null;
-        return this.contextCache;
+        const context = response.data?.context ?? null;
+        if (context && Object.keys(context).length > 0) {
+          this.contextCache[cacheKey] = context;
+        }
+        return context;
       })
       .finally(() => {
-        this.contextInFlight = null;
+        this.contextInFlight[cacheKey] = null;
       });
-    return this.contextInFlight;
+    return this.contextInFlight[cacheKey];
   },
-  async askIntent({ intent, prompt, targetInsightId, sessionId }) {
+  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
     const params = {
       intent,
       prompt,
@@ -39,43 +49,49 @@ export const aiAssistantAPI = {
     };
     const response = await api.get(`${ENDPOINT}/assistant`, {
       params,
-      headers: AI_HEADERS,
+      headers: buildHeaders(companyId),
     });
     return response.data;
   },
-  async askVoice({ intent, transcript, sessionId, responseMode = 'text' }) {
+  async askVoice({ intent, transcript, sessionId, responseMode = 'text', companyId }) {
     const payload = {
       intent,
       transcript,
       sessionId,
       responseMode,
     };
-    const response = await api.post('/ai/voice/assistant', payload, { headers: AI_HEADERS });
+    const response = await api.post('/ai/voice/assistant', payload, {
+      headers: buildHeaders(companyId),
+    });
     return response.data;
   },
-  async startSession() {
-    if (this.sessionCache) {
-      return this.sessionCache;
+  async startSession({ companyId } = {}) {
+    const cacheKey = resolveCacheKey(companyId);
+    if (this.sessionCache[cacheKey]) {
+      return this.sessionCache[cacheKey];
     }
-    if (this.sessionInFlight) {
-      return this.sessionInFlight;
+    if (this.sessionInFlight[cacheKey]) {
+      return this.sessionInFlight[cacheKey];
     }
-    this.sessionInFlight = api
-      .get(`${ENDPOINT}/session`, { headers: AI_HEADERS })
+    this.sessionInFlight[cacheKey] = api
+      .get(`${ENDPOINT}/session`, { headers: buildHeaders(companyId) })
       .then((response) => {
-        this.sessionCache = response.data;
-        return this.sessionCache;
+        const session = response.data;
+        if (session?.sessionId) {
+          this.sessionCache[cacheKey] = session;
+        }
+        return session;
       })
       .finally(() => {
-        this.sessionInFlight = null;
+        this.sessionInFlight[cacheKey] = null;
       });
-    return this.sessionInFlight;
+    return this.sessionInFlight[cacheKey];
   },
   reset() {
-    this.sessionCache = null;
-    this.contextCache = null;
-    this.sessionInFlight = null;
-    this.contextInFlight = null;
+    this.sessionCache = {};
+    this.contextCache = {};
+    this.sessionInFlight = {};
+    this.contextInFlight = {};
   },
 };
 

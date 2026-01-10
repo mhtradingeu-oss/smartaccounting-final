@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { isOCRPreviewEnabled } from '../lib/featureFlags';
-import { previewDocument } from '../services/ocrAPI';
+import { previewDocument, processDocument } from '../services/ocrAPI';
 import FeatureGate from '../components/FeatureGate';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -63,24 +63,44 @@ const OCRPreview = () => {
   const ocrPreviewEnabled = isOCRPreviewEnabled();
 
   const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0].value);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [selectedFileName, setSelectedFileName] = useState('');
   const [selectedFileSize, setSelectedFileSize] = useState(0);
   const [previewResponse, setPreviewResponse] = useState(null);
   const [fileError, setFileError] = useState('');
   const [reading, setReading] = useState(false);
+  const [processConfirmed, setProcessConfirmed] = useState(false);
+  const [processStatus, setProcessStatus] = useState('idle');
+  const [processError, setProcessError] = useState('');
+  const [processResult, setProcessResult] = useState(null);
 
   const previewTypeLabel = useMemo(() => {
     const responseType = previewResponse?.type;
     return DOCUMENT_TYPE_LABELS[responseType] || DOCUMENT_TYPE_LABELS[documentType];
   }, [previewResponse, documentType]);
+  const compliance = previewResponse?.analysis?.compliance;
+  const complianceStatus = compliance?.status || 'unknown';
+  const complianceLabel = complianceStatus.replace(/_/g, ' ');
+  const complianceMeta = {
+    accepted: 'border-emerald-200 bg-emerald-50/70 text-emerald-900',
+    needs_review: 'border-amber-200 bg-amber-50/70 text-amber-900',
+    rejected: 'border-rose-200 bg-rose-50/70 text-rose-900',
+    draft: 'border-gray-200 bg-gray-50 text-gray-700',
+    unknown: 'border-gray-200 bg-gray-50 text-gray-700',
+  };
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     setFileError('');
     setPreviewResponse(null);
+    setSelectedFile(null);
     setSelectedFileName('');
     setSelectedFileSize(0);
+    setProcessConfirmed(false);
+    setProcessStatus('idle');
+    setProcessError('');
+    setProcessResult(null);
 
     if (!file) {
       return;
@@ -99,6 +119,7 @@ const OCRPreview = () => {
 
     setSelectedFileName(file.name);
     setSelectedFileSize(file.size);
+    setSelectedFile(file);
     setReading(true);
 
     try {
@@ -108,6 +129,22 @@ const OCRPreview = () => {
       setFileError('The preview could not be generated. Please try again later.');
     } finally {
       setReading(false);
+    }
+  };
+
+  const handleProcessDocument = async () => {
+    if (!selectedFile || !processConfirmed || reading || processStatus === 'processing') {
+      return;
+    }
+    setProcessStatus('processing');
+    setProcessError('');
+    try {
+      const response = await processDocument(selectedFile, documentType);
+      setProcessResult(response);
+      setProcessStatus('done');
+    } catch (error) {
+      setProcessError('Processing failed. Please review the file and try again.');
+      setProcessStatus('error');
     }
   };
 
@@ -303,6 +340,36 @@ const OCRPreview = () => {
                 </div>
               </div>
 
+              {compliance && (
+                <div
+                  className={`rounded-xl border p-4 text-sm ${complianceMeta[complianceStatus] || complianceMeta.unknown}`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs uppercase tracking-wide">Compliance</p>
+                    <span className="text-xs font-semibold uppercase">{complianceLabel}</span>
+                  </div>
+                  {compliance.errors?.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {compliance.errors.map((item, idx) => (
+                        <li key={`err-${idx}`}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {compliance.warnings?.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {compliance.warnings.map((item, idx) => (
+                        <li key={`warn-${idx}`}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {compliance.recommendations?.length > 0 && (
+                    <p className="mt-3 text-xs">
+                      {compliance.recommendations.join(' ')}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
                 <p className="text-xs uppercase tracking-wide text-gray-500">Raw OCR text</p>
                 <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
@@ -317,8 +384,57 @@ const OCRPreview = () => {
           )}
 
           <p className="text-xs text-gray-500">
-            This preview is read-only. There are no confirm, save, or import actions on this page.
+            Preview data is read-only until you confirm a saved analysis below.
           </p>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-gray-200 bg-white px-6 py-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Step 2 · Save and analyze
+              </p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Persist OCR results for review
+              </h2>
+              <p className="text-sm text-gray-500">
+                Uploads are stored as draft records. Nothing is posted without explicit confirmation.
+              </p>
+            </div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+              Manual approval required
+            </span>
+          </div>
+
+          <label className="flex items-start gap-3 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={processConfirmed}
+              onChange={(event) => setProcessConfirmed(event.target.checked)}
+              disabled={isReadOnlySession || reading}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            I understand this will store the document and mark it for review.
+          </label>
+
+          {processError && (
+            <p className="text-sm font-medium text-rose-600">{processError}</p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleProcessDocument}
+            disabled={!previewResponse || !processConfirmed || isReadOnlySession || reading}
+            className="btn-primary"
+          >
+            {processStatus === 'processing' ? 'Processing…' : 'Save OCR results'}
+          </button>
+
+          {processResult?.analysis?.compliance && (
+            <p className="text-sm text-gray-500">
+              Status: {processResult.analysis.compliance.status.replace(/_/g, ' ')}
+            </p>
+          )}
         </section>
       </div>
     </FeatureGate>

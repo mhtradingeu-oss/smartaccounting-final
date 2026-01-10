@@ -64,6 +64,7 @@ jest.mock('../../src/middleware/secureUpload', () => ({
     },
   }),
   logUploadMetadata: (_req, _res, next) => next(),
+  validateUploadedFile: () => ({ valid: true, detected: 'pdf' }),
 }));
 
 jest.mock('../../src/services/ocrService', () => ({
@@ -147,6 +148,23 @@ describe('OCR preview endpoint', () => {
         }),
       }),
     );
+  });
+
+  it('returns 500 when OCR preview fails', async () => {
+    runOCRPreview.mockResolvedValue({ success: false, error: 'OCR failed' });
+
+    const response = await global.requestApp({
+      app,
+      method: 'POST',
+      url: '/api/ocr/preview',
+      body: {
+        documentType: 'invoice',
+      },
+      user: mockCurrentUser,
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toMatch(/Unable to generate OCR preview/i);
   });
 
   it('returns 400 when no file is provided', async () => {

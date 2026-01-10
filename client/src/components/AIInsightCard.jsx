@@ -1,4 +1,8 @@
 import React from 'react';
+import { AIBadge } from './AIBadge';
+import AISeverityPill from './AISeverityPill';
+import AIMetadataLine from './AIMetadataLine';
+import { truncateText } from '../lib/utils/formatting';
 
 const confidenceColors = {
   high: 'bg-green-100 text-green-800',
@@ -6,8 +10,26 @@ const confidenceColors = {
   low: 'bg-red-100 text-red-800',
 };
 
-function AIInsightCard({ type, summary, confidence, why, ExplainWhy }) {
-  const { AIBadge } = require('./AIBadge');
+function AIInsightCard({
+  type,
+  summary,
+  confidence,
+  confidenceScore,
+  why,
+  ExplainWhy,
+  severity,
+  dataSource,
+  lastEvaluated,
+  whyMatters,
+}) {
+  const resolvedWhyMatters = truncateText(whyMatters || summary || 'Review this insight.', 120);
+  const resolvedConfidence =
+    typeof confidenceScore === 'number'
+      ? confidenceScore
+      : typeof confidence === 'number'
+        ? confidence
+        : confidence;
+  const hasConfidence = resolvedConfidence !== null && resolvedConfidence !== undefined;
   return (
     <section
       className="border rounded-lg shadow-sm p-5 bg-white transition-all duration-300"
@@ -25,13 +47,19 @@ function AIInsightCard({ type, summary, confidence, why, ExplainWhy }) {
             AI Insight
           </span>
         </div>
-        <span
-          className={`px-2 py-1 rounded text-xs font-medium ${confidenceColors[confidence] || 'bg-gray-100 text-gray-700'}`}
-          aria-label={`Confidence: ${confidence}`}
-        >
-          Confidence: {confidence.charAt(0).toUpperCase() + confidence.slice(1)}
-        </span>
+        <AISeverityPill severity={severity} />
       </div>
+      {hasConfidence ? (
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${confidenceColors[resolvedConfidence] || 'bg-gray-100 text-gray-700'}`}
+          aria-label={`Confidence: ${resolvedConfidence}`}
+        >
+          Confidence:{' '}
+          {typeof resolvedConfidence === 'string'
+            ? `${resolvedConfidence.charAt(0).toUpperCase()}${resolvedConfidence.slice(1)}`
+            : `${Math.round(resolvedConfidence * 100)}%`}
+        </span>
+      ) : null}
       <div className="mb-2">
         <span className="font-bold" aria-label="Insight type">
           {type}
@@ -40,13 +68,14 @@ function AIInsightCard({ type, summary, confidence, why, ExplainWhy }) {
           {summary}
         </p>
       </div>
+      <AIMetadataLine
+        whyMatters={resolvedWhyMatters}
+        dataSource={dataSource}
+        lastEvaluated={lastEvaluated}
+        className="mb-2"
+      />
       <div aria-label="AI insight context">
         <ExplainWhy why={why} />
-      </div>
-      <div className="italic text-gray-600 text-xs mt-3" aria-label="Advisory disclaimer">
-        <strong>For advisory purposes only.</strong> This insight is provided to support
-        professional decision-making and does not trigger any actions or changes. Please review the
-        context and consult with your team as needed.
       </div>
     </section>
   );

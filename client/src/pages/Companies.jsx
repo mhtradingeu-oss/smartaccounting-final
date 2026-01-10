@@ -1,4 +1,5 @@
-// import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -7,27 +8,159 @@ import Button from '../components/Button';
 import PermissionGuard from '../components/PermissionGuard';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
+import { useCompany } from '../context/CompanyContext';
+import { useAuth } from '../context/AuthContext';
+import { companiesAPI } from '../services/companiesAPI';
+import { formatApiError } from '../services/api';
 
 export default function Companies() {
-  // Place hooks, state, and handlers here
-  // (actual logic should be above the first return)
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { activeCompany, companies, setCompanies, switchCompany } = useCompany();
+  const [loadError, setLoadError] = useState(null);
+  const [formState, setFormState] = useState({
+    name: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const hasLoadedRef = useRef(false);
+  const retryTimeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-  // Block UI if no active company (tenant isolation)
-  if (!activeCompany) {
-    return (
-      <EmptyState
-        title="No active company"
-        description="Select or create a company to manage details."
-        action={
-          <Button variant="primary" onClick={() => navigate('/companies')}>
-            Select company
-          </Button>
+  const normalizeCompanies = (data) =>
+    Array.isArray(data) ? data : data?.companies ? data.companies : [];
+
+  const applyCompanies = useCallback(
+    (list) => {
+      setCompanies(list);
+    },
+    [setCompanies],
+  );
+
+  const loadCompanies = useCallback(
+    async ({ force = false } = {}) => {
+      const maxRetries = 2;
+      let attempt = 0;
+
+      setCompanies(null);
+      setLoadError(null);
+
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
+      const run = async () => {
+        try {
+          const data = await companiesAPI.list({ force: force || attempt > 0 });
+          if (!isMountedRef.current) {
+            return;
+          }
+          const list = normalizeCompanies(data);
+          applyCompanies(list);
+        } catch (err) {
+          if (!isMountedRef.current) {
+            return;
+          }
+          const status = err?.response?.status || err?.status;
+          if (status === 429 && attempt < maxRetries) {
+            const delayMs = 500 * Math.pow(2, attempt);
+            attempt += 1;
+            retryTimeoutRef.current = setTimeout(run, delayMs);
+            return;
+          }
+          setLoadError(formatApiError(err, 'Unable to load companies.'));
         }
-      />
-    );
-  }
+      };
 
-  if (loading) {
+      run();
+    },
+    [applyCompanies, setCompanies],
+  );
+
+  const refreshCompanies = useCallback(() => {
+    loadCompanies({ force: true });
+  }, [loadCompanies]);
+
+  useEffect(() => {
+    if (hasLoadedRef.current) {
+      return;
+    }
+    hasLoadedRef.current = true;
+    loadCompanies();
+  }, [loadCompanies]);
+
+  useEffect(() => {
+    if (!activeCompany) {
+      return;
+    }
+    setFormState({
+      name: activeCompany.name || '',
+      address: activeCompany.address || '',
+      city: activeCompany.city || '',
+      postalCode: activeCompany.postalCode || '',
+      country: activeCompany.country || '',
+    });
+  }, [activeCompany]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormState((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    if (!activeCompany?.id) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSuccessMessage('');
+
+    try {
+      const payload = {
+        name: formState.name?.trim() || '',
+        address: formState.address?.trim() || '',
+        city: formState.city?.trim() || '',
+        postalCode: formState.postalCode?.trim() || '',
+        country: formState.country?.trim() || '',
+      };
+      const updated = await companiesAPI.update(activeCompany.id, payload);
+      const nextCompany = updated || { ...activeCompany, ...payload };
+
+      setCompanies((prev) =>
+        Array.isArray(prev)
+          ? prev.map((company) => (company.id === nextCompany.id ? nextCompany : company))
+          : prev,
+      );
+      switchCompany(nextCompany, { reset: false });
+      setSuccessMessage('Company details updated.');
+    } catch (err) {
+      setSaveError(formatApiError(err, 'Unable to save company details.'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (companies === null) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <LoadingSpinner size="large" />
@@ -63,6 +196,21 @@ export default function Companies() {
           </Button>
         }
         help="Once a company is added, you can manage its details and users here."
+      />
+    );
+  }
+
+  // Block UI if no active company (tenant isolation)
+  if (!activeCompany) {
+    return (
+      <EmptyState
+        title="No active company"
+        description="Select or create a company to manage details."
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }

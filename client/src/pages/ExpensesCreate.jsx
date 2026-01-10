@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { EmptyState } from '../components/ui/EmptyState';
 import { expensesAPI } from '../services/expensesAPI';
 import { useCompany } from '../context/CompanyContext';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { DEMO_DATA } from '../lib/demoMode';
+import { can } from '../lib/permissions';
 
 const INITIAL_FORM = {
   date: '',
@@ -18,10 +21,12 @@ const INITIAL_FORM = {
 
 const ExpensesCreate = () => {
   const { activeCompany } = useCompany();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const canCreateExpense = can('expense.create', user?.role);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,6 +73,34 @@ const ExpensesCreate = () => {
       setLoading(false);
     }
   };
+
+  if (!activeCompany) {
+    return (
+      <EmptyState
+        title="Select a company"
+        description="Expenses are scoped per entity. Choose an active company before creating a new expense."
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (!canCreateExpense) {
+    return (
+      <EmptyState
+        title="Insufficient permissions"
+        description="Your role does not allow creating expenses. Contact an admin if you need access."
+        action={
+          <Button variant="secondary" onClick={() => navigate('/expenses')}>
+            Back to expenses
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <Card className="max-w-lg mx-auto mt-8 p-6">

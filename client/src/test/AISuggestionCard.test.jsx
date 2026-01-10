@@ -13,11 +13,10 @@ describe('AISuggestionCard', () => {
 
     render(<AISuggestionCard suggestion={suggestion} />);
 
-    expect(screen.getByText(/Suggestion \/ Recommendation only/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI Insight/i)).toBeInTheDocument();
     expect(screen.getByText(/Confidence:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Severity:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Related Entity:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Explanation:/i)).toBeInTheDocument();
-    expect(screen.getByText(/advisory suggestion/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Severity:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Related:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rationale:/i)).toBeInTheDocument();
   });
 });

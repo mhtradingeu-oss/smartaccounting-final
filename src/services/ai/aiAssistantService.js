@@ -9,6 +9,23 @@ const SEVERITY_ORDER = {
   low: 1,
 };
 
+const resolveDataSource = (entityType) => {
+  const normalized = String(entityType || '').toLowerCase();
+  if (normalized.includes('invoice')) {
+    return 'Invoices';
+  }
+  if (normalized.includes('expense')) {
+    return 'Expenses';
+  }
+  if (normalized.includes('bank') || normalized.includes('transaction')) {
+    return 'Bank transactions';
+  }
+  if (normalized.includes('audit')) {
+    return 'Audit logs';
+  }
+  return 'Accounting data';
+};
+
 const INTENT_LABELS = {
   review: 'What should I review?',
   risks: 'Are there risks?',
@@ -100,6 +117,7 @@ function mapTransactionRecord(transaction) {
 
 function mapInsightRecord(insight) {
   const plain = insight.get ? insight.get({ plain: true }) : insight;
+  const lastEvaluated = plain.updatedAt || plain.createdAt || null;
   return {
     id: plain.id,
     entityType: plain.entityType,
@@ -113,6 +131,10 @@ function mapInsightRecord(insight) {
     evidence: plain.evidence,
     ruleId: plain.ruleId,
     disclaimer: plain.disclaimer,
+    dataSource: resolveDataSource(plain.entityType),
+    lastEvaluated,
+    createdAt: plain.createdAt,
+    updatedAt: plain.updatedAt,
   };
 }
 

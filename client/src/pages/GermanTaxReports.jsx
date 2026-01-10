@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import Card from '../components/Card';
-import EmptyState from '../components/EmptyState';
+import { PageEmptyState } from '../components/ui/PageStates';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
@@ -176,7 +176,7 @@ const GermanTaxReports = () => {
     return (
       <Layout>
         <div className="py-24">
-          <EmptyState
+          <PageEmptyState
             title="Select a company"
             description="German tax reporting is scoped to an active company. Choose or create one before returning to this page."
             action={

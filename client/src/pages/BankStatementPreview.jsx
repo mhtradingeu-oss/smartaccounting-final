@@ -70,7 +70,7 @@ const BankStatementPreview = () => {
     isReadOnlySession;
   const dateRangeLabel = formatDateRangeLabel(summary?.dateRange);
   const currencyLabel = summary?.currency || 'EUR';
-  const supportedFormatsLabel = 'CSV, MT940, CAMT053 (XML)';
+  const supportedFormatsLabel = 'CSV, MT940, CAMT053 (XML), PDF, PNG, JPG';
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -94,7 +94,7 @@ const BankStatementPreview = () => {
 
     const format = inferFormat(file.name);
     if (!format) {
-      setFileError('Bitte wähle eine CSV-, MT940- oder CAMT053-Datei aus.');
+      setFileError('Bitte wähle eine CSV-, MT940-, CAMT053-, PDF- oder Bilddatei aus.');
       return;
     }
 
@@ -227,7 +227,7 @@ const BankStatementPreview = () => {
             <input
               id="bank-statement-preview-input"
               type="file"
-              accept=".csv,.txt,.mt940,.xml"
+              accept=".csv,.txt,.mt940,.xml,.pdf,.png,.jpg,.jpeg"
               className="sr-only"
               onChange={handleFileChange}
               disabled={reading}
@@ -328,6 +328,45 @@ const BankStatementPreview = () => {
               <p className="text-sm font-semibold text-gray-900 dark:text-white">{dateRangeLabel}</p>
             </div>
           </section>
+
+          {summary?.extractedData && (
+            <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50/60 px-6 py-6 shadow-sm dark:border-amber-700 dark:bg-amber-900/20">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                  OCR summary
+                </p>
+                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                  Extracted statement metadata
+                </h2>
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  OCR uploads do not import transactions automatically. Review the extracted fields before posting.
+                </p>
+              </div>
+              <dl className="grid gap-3 text-sm text-amber-900 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-amber-700">Account number</dt>
+                  <dd>{summary.extractedData.accountNumber || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-amber-700">Statement period</dt>
+                  <dd>{summary.extractedData.period || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-amber-700">Opening balance</dt>
+                  <dd>{formatAmount(summary.extractedData.openingBalance, currencyLabel)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-amber-700">Closing balance</dt>
+                  <dd>{formatAmount(summary.extractedData.closingBalance, currencyLabel)}</dd>
+                </div>
+              </dl>
+              {summary.ocrConfidence !== undefined && summary.ocrConfidence !== null && (
+                <p className="text-xs text-amber-700">
+                  OCR confidence: {summary.ocrConfidence.toFixed(1)}%
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="space-y-4 rounded-2xl border border-gray-200 bg-white px-6 py-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
             <div className="flex items-center justify-between gap-2">

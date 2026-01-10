@@ -29,6 +29,22 @@ export const companiesAPI = {
       return this.inFlight;
     }
 
+    const normalizeCompanies = (payload) => {
+      if (!payload) {
+        return { list: [], recognized: false };
+      }
+      if (Array.isArray(payload)) {
+        return { list: payload, recognized: true };
+      }
+      if (Array.isArray(payload.companies)) {
+        return { list: payload.companies, recognized: true };
+      }
+      if (Array.isArray(payload.data?.companies)) {
+        return { list: payload.data.companies, recognized: true };
+      }
+      return { list: [], recognized: false };
+    };
+
     const fetchPromise = (async () => {
       if (isDev) {
         this._fetchCount += 1;
@@ -39,10 +55,14 @@ export const companiesAPI = {
       try {
         const res = await api.get('/companies');
         const payload = res.data;
-        if (isDemoMode() && (!payload || (Array.isArray(payload) && payload.length === 0))) {
+        const normalized = normalizeCompanies(payload);
+        if (!normalized.recognized) {
+          throw new Error('Unexpected companies response shape.');
+        }
+        if (isDemoMode() && normalized.list.length === 0) {
           this.cache = DEMO_DATA.companies;
         } else {
-          this.cache = payload;
+          this.cache = normalized.list;
         }
         return this.cache;
       } catch (err) {

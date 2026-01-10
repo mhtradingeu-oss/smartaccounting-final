@@ -76,6 +76,12 @@
     "analytics_desc": "View detailed analytics"
   },
   "navigation": {
+    "sidebar": "التنقل الرئيسي",
+    "core": "الأساسيات",
+    "accounting": "المحاسبة",
+    "intelligence": "الذكاء والتحليلات",
+    "compliance_audit": "الامتثال والتدقيق",
+    "administration": "الإدارة",
     "main": "الرئيسية",
     "management": "الإدارة",
     "operations": "العمليات",
@@ -118,7 +124,6 @@
     "ai_insights": "رؤى الذكاء الاصطناعي",
     "investor_dashboard": "لوحة المستثمر",
     "rbac": "وحدة التحكم في الصلاحيات",
-    "administration": "الإدارة",
     "ai_assistant": "مساعد الذكاء الاصطناعي"
   },
   "auth": {

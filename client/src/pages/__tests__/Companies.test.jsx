@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 const mockNavigate = vi.fn();
 
@@ -40,9 +41,11 @@ describe('Companies page – API stability', () => {
     companiesAPI.list.mockResolvedValueOnce([{ id: 1, name: 'TestCo' }]);
 
     render(
-      <CompanyProvider>
-        <Companies />
-      </CompanyProvider>,
+      <MemoryRouter>
+        <CompanyProvider>
+          <Companies />
+        </CompanyProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => expect(screen.getByText('TestCo')).toBeInTheDocument());
@@ -59,9 +62,11 @@ describe('Companies page – API stability', () => {
         .mockResolvedValueOnce([{ id: 2, name: 'BackoffCo' }]);
 
       render(
-        <CompanyProvider>
-          <Companies />
-        </CompanyProvider>,
+        <MemoryRouter>
+          <CompanyProvider>
+            <Companies />
+          </CompanyProvider>
+        </MemoryRouter>,
       );
 
       await act(async () => {

@@ -19,15 +19,38 @@ const extractPayload = (response) => {
     return response.invoice;
   }
 
+  if (response.data?.invoices) {
+    return response.data.invoices;
+  }
+
   return response;
 };
+
+const normalizeDemoInvoices = (items = []) =>
+  items.map((invoice, index) => {
+    const rawStatus = invoice.status ?? (index === 0 ? 'draft' : 'issued');
+    const status = rawStatus === 'unpaid' ? 'issued' : rawStatus;
+    return {
+      id: invoice.id ?? `demo-invoice-${index + 1}`,
+      invoiceNumber: invoice.invoiceNumber ?? invoice.number ?? `INV-DEMO-${index + 1}`,
+      clientName: invoice.clientName ?? invoice.client ?? 'Demo Client',
+      date: invoice.date ?? invoice.issueDate ?? new Date().toISOString().split('T')[0],
+      dueDate: invoice.dueDate ?? invoice.date ?? new Date().toISOString().split('T')[0],
+      total: invoice.total ?? invoice.amount ?? 0,
+      currency: invoice.currency ?? 'EUR',
+      status,
+    };
+  });
 
 export const invoicesAPI = {
   list: async (params = {}) => {
     const response = await api.get('/invoices', { params });
     const data = extractPayload(response.data);
-    if (isDemoMode() && (!data || (Array.isArray(data) && data.length === 0))) {
-      return DEMO_DATA.invoices;
+    if (!Array.isArray(data)) {
+      throw new Error('Unexpected invoices response shape.');
+    }
+    if (isDemoMode() && data.length === 0) {
+      return normalizeDemoInvoices(DEMO_DATA.invoices);
     }
     return data;
   },

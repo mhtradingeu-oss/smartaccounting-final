@@ -77,6 +77,12 @@
     "analytics_desc": "View detailed analytics"
   },
   "navigation": {
+    "sidebar": "Primary navigation",
+    "core": "Core",
+    "accounting": "Accounting",
+    "intelligence": "Intelligence",
+    "compliance_audit": "Compliance & Audit",
+    "administration": "Administration",
     "main": "Main",
     "management": "Management",
     "operations": "Operations",

@@ -51,7 +51,12 @@ describe('TopBar notifications', () => {
 
     render(
       <MemoryRouter>
-        <TopBar isDarkMode={false} onToggleDarkMode={() => {}} isCollapsed={false} />
+        <TopBar
+          isDarkMode={false}
+          onToggleDarkMode={() => {}}
+          isCollapsed={false}
+          onToggleSidebar={() => {}}
+        />
       </MemoryRouter>,
     );
 

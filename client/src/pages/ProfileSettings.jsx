@@ -1,6 +1,4 @@
-import React from 'react';
-
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useAuth } from '../context/AuthContext';
@@ -15,10 +13,6 @@ const ProfileSettings = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  <p className="text-xs text-gray-500 mb-2">
-    Your name is visible to your organization.{' '}
-    <span title="Email cannot be changed for security reasons.">Email is not editable.</span>
-  </p>;
   const [password, setPassword] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState(null);
@@ -45,7 +39,6 @@ const ProfileSettings = () => {
     setForm({ name: user?.name || '', email: user?.email || '' });
     setError(null);
     setSuccess(null);
-    <span className="text-xs text-gray-400">Email cannot be changed.</span>;
   };
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleSave = async () => {
@@ -70,10 +63,6 @@ const ProfileSettings = () => {
       setPassword('');
       setSuccess('Password changed.');
     } catch (err) {
-      <p className="text-xs text-gray-500 mb-2">
-        Password must be at least 8 characters. Use a mix of letters, numbers, and symbols for best
-        security. Your password is securely stored and never shared.
-      </p>;
       setPasswordError(formatApiError(err).message);
     } finally {
       setPasswordSaving(false);
@@ -98,6 +87,9 @@ const ProfileSettings = () => {
         >
           <div>
             <label className="block text-sm font-medium">Name</label>
+            <p className="text-xs text-gray-500 mb-2">
+              Your name is visible to your organization.
+            </p>
             <input
               name="name"
               value={form.name}
@@ -109,10 +101,7 @@ const ProfileSettings = () => {
           <div>
             <label className="block text-sm font-medium">Email</label>
             <p className="text-xs text-gray-500 mb-2">
-              Sessions stay active until you log out or close your browser.{' '}
-              <span title="Revoke will immediately log out this device.">
-                Revoke ends a session instantly.
-              </span>
+              Email cannot be changed for security reasons.
             </p>
             <input
               name="email"
@@ -139,9 +128,6 @@ const ProfileSettings = () => {
                 Edit
               </Button>
             )}
-            <p className="text-xs text-gray-500 mb-2">
-              Logging out will end your current session on this device.
-            </p>
           </div>
         </form>
       </Card>
@@ -160,6 +146,9 @@ const ProfileSettings = () => {
         >
           <div>
             <label className="block text-sm font-medium">New Password</label>
+            <p className="text-xs text-gray-500 mb-2">
+              Use at least 8 characters with a mix of letters, numbers, and symbols.
+            </p>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}

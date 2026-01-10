@@ -14,7 +14,7 @@ const overviewCards = [
   {
     title: 'Audit readiness',
     description:
-      'Data exports run on schedule and hold immutable fingerprints so regulators can verify activity without back-and-forth.',
+      'Data exports are available on demand and hold immutable fingerprints so regulators can verify activity without back-and-forth.',
     meta: '5 years retention',
   },
   {

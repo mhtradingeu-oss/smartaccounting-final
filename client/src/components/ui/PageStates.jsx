@@ -6,21 +6,23 @@ import ErrorState from '../ErrorState';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 
-export const PageLoadingState = () => {
+export const PageLoadingState = ({ title, description }) => {
   const { t } = useTranslation();
+  const resolvedTitle = title || t('states.loading.title');
+  const resolvedDescription = description || t('states.loading.description');
   return (
     <div
       className="flex flex-col items-center justify-center py-12 space-y-3 text-center max-w-sm mx-auto px-4"
       role="status"
       aria-live="polite"
-      aria-label={t('states.loading.title')}
+      aria-label={resolvedTitle}
     >
-      <LoadingSpinner size="large" label={t('states.loading.title')} />
+      <LoadingSpinner size="large" label={resolvedTitle} />
       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-        {t('states.loading.title')}
+        {resolvedTitle}
       </p>
       <p className="text-sm text-gray-500 dark:text-gray-300 max-w-xs">
-        {t('states.loading.description')}
+        {resolvedDescription}
       </p>
     </div>
   );
@@ -39,12 +41,14 @@ export const PageEmptyState = ({ action, title, description, help }) => {
   );
 };
 
-export const PageErrorState = ({ onRetry }) => {
+export const PageErrorState = ({ onRetry, message, help }) => {
   const { t } = useTranslation();
+  const resolvedMessage = message || t('states.error.description');
+  const resolvedHelp = help || t('states.error.help');
   return (
     <div className="space-y-3 text-center max-w-sm mx-auto" role="status" aria-live="polite">
-      <ErrorState message={t('states.error.description')} onRetry={onRetry} />
-      <p className="text-xs text-gray-500 dark:text-gray-400">{t('states.error.help')}</p>
+      <ErrorState message={resolvedMessage} onRetry={onRetry} />
+      <p className="text-xs text-gray-500 dark:text-gray-400">{resolvedHelp}</p>
     </div>
   );
 };

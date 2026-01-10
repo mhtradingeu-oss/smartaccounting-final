@@ -33,6 +33,59 @@ async function ensureAiSchema() {
 
 const ALLOWED_DECISIONS = ['accepted', 'rejected', 'overridden'];
 
+const resolveDataSource = (entityType) => {
+  const normalized = String(entityType || '').toLowerCase();
+  if (normalized.includes('invoice')) {
+    return 'Invoices';
+  }
+  if (normalized.includes('expense')) {
+    return 'Expenses';
+  }
+  if (normalized.includes('bank') || normalized.includes('transaction')) {
+    return 'Bank transactions';
+  }
+  if (normalized.includes('audit')) {
+    return 'Audit logs';
+  }
+  return 'Accounting data';
+};
+
+const formatInsightForClient = (insight) => {
+  const plain = insight?.get ? insight.get({ plain: true }) : insight;
+  if (!plain) {
+    return null;
+  }
+  const confidenceScore =
+    typeof plain.confidenceScore === 'number' ? plain.confidenceScore : null;
+  const lastEvaluated = plain.updatedAt || plain.createdAt || null;
+  return {
+    id: plain.id,
+    type: plain.type,
+    severity: plain.severity || 'low',
+    confidence: confidenceScore,
+    confidenceScore,
+    summary: plain.summary || '',
+    rationale: plain.why || plain.summary || '',
+    why: plain.why || '',
+    dataSource: resolveDataSource(plain.entityType),
+    timeframe: lastEvaluated,
+    lastEvaluated,
+    relatedEntity: plain.entityType,
+    entityType: plain.entityType,
+    entityId: plain.entityId,
+    ruleId: plain.ruleId,
+    legalContext: plain.legalContext,
+    evidence: plain.evidence,
+    createdAt: plain.createdAt,
+    updatedAt: plain.updatedAt,
+    trace: {
+      entityType: plain.entityType,
+      entityId: plain.entityId,
+      ruleId: plain.ruleId,
+    },
+  };
+};
+
 async function generateInsightsForCompany(companyId, context = {}) {
   // Example: generate insights for all invoices/expenses (expand as needed)
   // context: { invoices, expenses, ... }
@@ -86,6 +139,11 @@ async function listInsights(companyId, filters = {}) {
     include: [{ model: AIInsightDecision, as: 'decisions' }],
     order: [['createdAt', 'DESC']],
   });
+}
+
+async function listInsightsForClient(companyId, filters = {}) {
+  const insights = await listInsights(companyId, filters);
+  return insights.map(formatInsightForClient).filter(Boolean);
 }
 
 async function decideInsight(companyId, insightId, actorUser, decision, reason) {
@@ -191,6 +249,7 @@ async function exportInsights(companyId, format = 'json') {
 module.exports = {
   generateInsightsForCompany,
   listInsights,
+  listInsightsForClient,
   decideInsight,
   exportInsights,
   getInsight,

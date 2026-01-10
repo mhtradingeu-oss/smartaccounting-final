@@ -1,7 +1,8 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { PageErrorState } from './ui/PageStates';
+import ErrorBoundaryFallback from './ui/ErrorBoundaryFallback';
 import { reportClientError } from '../lib/telemetryClient';
+import { useTranslation } from 'react-i18next';
 
 const appVersion = import.meta.env.VITE_APP_VERSION || 'unknown';
 
@@ -44,11 +45,7 @@ class RouteErrorBoundaryInner extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-16">
-          <PageErrorState onRetry={this.handleRetry} />
-        </div>
-      );
+      return <ErrorBoundaryFallback title={this.props.title} onRetry={this.handleRetry} />;
     }
 
     return this.props.children;
@@ -57,9 +54,13 @@ class RouteErrorBoundaryInner extends React.Component {
 
 export default function RouteErrorBoundary({ children }) {
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
-    <RouteErrorBoundaryInner key={location.key || location.pathname}>
+    <RouteErrorBoundaryInner
+      key={location.key || location.pathname}
+      title={t('states.error.title')}
+    >
       {children}
     </RouteErrorBoundaryInner>
   );

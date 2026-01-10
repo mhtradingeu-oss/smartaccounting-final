@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { resetClientState } from '../lib/resetClientState';
 
 // CompanyContext will provide the current company and a setter
@@ -6,10 +6,13 @@ const CompanyContext = createContext();
 
 export const CompanyProvider = ({ children }) => {
   const [activeCompany, setActiveCompany] = useState(null); // { id, name, ... }
-  const [companies, setCompanies] = useState([]); // List of companies user can access
+  const [companies, setCompanies] = useState(null); // null = loading, [] = loaded but empty
+  const [companiesError, setCompaniesError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const activeCompanyId = activeCompany?.id ?? null;
 
   // Optionally, fetch companies from API here and setCompanies
-  // For now, leave as empty array; to be filled by consuming components/services
+  // Default to null so consumers can render a loading state before data arrives
 
   // Reset state on company switch
   const switchCompany = useCallback((company, options = { reset: true }) => {
@@ -20,15 +23,22 @@ export const CompanyProvider = ({ children }) => {
     // Optionally: clear other state here (e.g., user, dashboard, etc.)
   }, []);
 
-  const didInitRef = useRef(false);
+  const reloadCompanies = useCallback(() => {
+    setCompanies(null);
+    setCompaniesError(null);
+    setReloadToken((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
-    if (didInitRef.current) {
+    if (!Array.isArray(companies) || companies.length === 0) {
       return;
     }
 
-    if (!activeCompany && companies.length > 0) {
-      didInitRef.current = true;
+    const hasActiveCompany =
+      activeCompany &&
+      companies.some((company) => String(company.id) === String(activeCompany.id));
+
+    if (!activeCompany || !hasActiveCompany) {
       // Defer setState to avoid cascading renders in effect
       Promise.resolve().then(() => {
         switchCompany(companies[0], { reset: false });
@@ -37,7 +47,19 @@ export const CompanyProvider = ({ children }) => {
   }, [activeCompany, companies, switchCompany]);
 
   return (
-    <CompanyContext.Provider value={{ activeCompany, companies, setCompanies, switchCompany }}>
+    <CompanyContext.Provider
+      value={{
+        activeCompany,
+        activeCompanyId,
+        companies,
+        setCompanies,
+        switchCompany,
+        companiesError,
+        setCompaniesError,
+        reloadCompanies,
+        reloadToken,
+      }}
+    >
       {children}
     </CompanyContext.Provider>
   );

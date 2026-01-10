@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from './ui/Badge';
-import { ReactComponent as AiIcon } from '../assets/ai-premium.svg'; // You will need to add this SVG
+import aiIconUrl from '../assets/ai-premium.svg';
 
 /**
  * Professional AI badge for premium/enterprise AI features.
@@ -15,7 +15,13 @@ export function AIBadge({ label = 'AI', className = '', ...props }) {
       {...props}
     >
       <span className="inline-flex items-center">
-        <AiIcon style={{ width: 16, height: 16, marginRight: 4 }} aria-label="AI" />
+        <img
+          src={aiIconUrl}
+          width={16}
+          height={16}
+          alt="AI"
+          className="mr-1"
+        />
         {label}
       </span>
     </Badge>

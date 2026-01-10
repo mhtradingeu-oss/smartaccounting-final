@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const aiReadGateway = require('../services/ai/aiReadGateway');
 const aiRouteGuard = require('../middleware/aiRouteGuard');
+const aiInsightsService = require('../services/ai/aiInsightsService');
 const aiReadOnlyRouter = require('./aiReadOnly');
 const voiceRouter = require('./ai/voice');
 const governanceRouter = require('./ai/governance');
@@ -47,6 +48,23 @@ const mergeRequestId = (body, requestId) => {
 
 async function proxyAiGatewayCall(req, promptKey, params = {}) {
   const { user, companyId, requestId, aiContext } = req;
+  const viewerLimited = ['viewer', 'auditor'].includes(user?.role);
+  const handlers = {
+    insights_list: async ({ companyId: scopedCompanyId }) => {
+      const insights = await aiInsightsService.listInsightsForClient(scopedCompanyId, params);
+      const limitedInsights = viewerLimited ? insights.slice(0, 5) : insights;
+      return {
+        insights: limitedInsights,
+        viewerLimited,
+        totalCount: insights.length,
+      };
+    },
+    insights_export_json: async ({ companyId: scopedCompanyId }) =>
+      aiInsightsService.exportInsights(scopedCompanyId, 'json'),
+    insights_export_csv: async ({ companyId: scopedCompanyId }) =>
+      aiInsightsService.exportInsights(scopedCompanyId, 'csv'),
+  };
+  const handler = handlers[promptKey];
   const { status, body } = await aiReadGateway({
     user,
     companyId,
@@ -55,6 +73,11 @@ async function proxyAiGatewayCall(req, promptKey, params = {}) {
     policyVersion: aiContext?.policyVersion,
     promptKey,
     params,
+    handler,
+    audit: {
+      route: req.originalUrl,
+      queryType: promptKey,
+    },
   });
   return {
     status,
@@ -88,11 +111,12 @@ readRouter.get('/exports/insights.csv', async (req, res) => {
     const { status, body } = await proxyAiGatewayCall(req, 'insights_export_csv', params);
     if (status === 200) {
       res.setHeader('Content-Type', 'text/csv');
-      if (typeof body === 'string') {
-        return res.status(200).send(body);
-      }
-      if (body && typeof body === 'object' && body.csv) {
-        return res.status(200).send(body.csv);
+      const csvPayload =
+        typeof body === 'string'
+          ? body
+          : body?.csv || body?.data || body?.data?.csv;
+      if (typeof csvPayload === 'string') {
+        return res.status(200).send(csvPayload);
       }
     }
     return res.status(status).json(body);

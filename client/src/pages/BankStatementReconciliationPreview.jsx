@@ -24,6 +24,7 @@ const BankStatementReconciliationPreview = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeCompany } = useCompany();
+  const activeCompanyId = activeCompany?.id ?? null;
   const hasCompany = Boolean(activeCompany?.id);
 
   const initialTransactions = location.state?.transactions;
@@ -36,7 +37,7 @@ const BankStatementReconciliationPreview = () => {
   const hasInitialTransactions = initialTransactions?.length > 0;
 
   useEffect(() => {
-    if (!hasCompany || hasInitialTransactions || !statementId) {
+    if (!activeCompanyId || hasInitialTransactions || !statementId) {
       return undefined;
     }
 
@@ -64,7 +65,7 @@ const BankStatementReconciliationPreview = () => {
     return () => {
       controller.abort();
     };
-  }, [hasInitialTransactions, statementId, hasCompany]);
+  }, [hasInitialTransactions, statementId, activeCompanyId]);
 
   const simulation = useMemo(() => buildSimulationInsights(transactions), [transactions]);
   const hasTransactions = Boolean(transactions.length);

@@ -55,6 +55,7 @@ const Billing = lazy(() => import('./pages/Billing'));
 const Companies = lazy(() => import('./pages/Companies'));
 const Users = lazy(() => import('./pages/Users'));
 const GermanTaxReports = lazy(() => import('./pages/GermanTaxReports'));
+const GDPRActions = lazy(() => import('./pages/GDPRActions'));
 
 const AIInsights = lazy(() => import('./pages/AIInsights'));
 const AIAssistant = lazy(() => import('./pages/AIAssistant'));
@@ -181,9 +182,33 @@ export const ROUTE_DEFINITIONS = [
     featureFlags: [],
   },
   {
+    path: '/profile',
+    element: wrapRoute(
+      <ProtectedRoute>
+        <Navigate to="/profile-settings" replace />
+      </ProtectedRoute>,
+    ),
+    componentFile: 'client/src/App.jsx (profile redirect)',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
     path: '/rbac',
     element: renderProtectedRoute(<RBACManagement />, 'admin'),
     componentFile: 'client/src/pages/RBACManagement.jsx',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: [],
+  },
+  {
+    path: '/role-management',
+    element: wrapRoute(
+      <ProtectedRoute requiredRole="admin">
+        <Navigate to="/rbac" replace />
+      </ProtectedRoute>,
+    ),
+    componentFile: 'client/src/App.jsx (role management redirect)',
     authRequired: true,
     requiredRole: 'admin',
     featureFlags: [],
@@ -329,11 +354,13 @@ export const ROUTE_DEFINITIONS = [
     element: FEATURE_FLAGS.STRIPE_BILLING.enabled
       ? renderProtectedRoute(<Billing />)
       : wrapRoute(
-          <FeatureGate
-            enabled={false}
-            featureName="Billing"
-            description="Billing is not available in this environment."
-          />,
+          <ProtectedRoute>
+            <FeatureGate
+              enabled={false}
+              featureName="Billing"
+              description="Billing is not available in this environment."
+            />
+          </ProtectedRoute>,
         ),
     componentFile: 'client/src/pages/Billing.jsx',
     authRequired: true,
@@ -370,16 +397,26 @@ export const ROUTE_DEFINITIONS = [
     element: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled
       ? renderProtectedRoute(<ComplianceDashboard />, 'admin')
       : wrapRoute(
-          <FeatureGate
-            enabled={false}
-            featureName="Compliance"
-            description="Compliance dashboard is not available in this environment."
-          />,
+          <ProtectedRoute requiredRole="admin">
+            <FeatureGate
+              enabled={false}
+              featureName="Compliance"
+              description="Compliance dashboard is not available in this environment."
+            />
+          </ProtectedRoute>,
         ),
     componentFile: 'client/src/pages/ComplianceDashboard.jsx',
     authRequired: true,
     requiredRole: 'admin',
     featureFlags: ['ELSTER_COMPLIANCE'],
+  },
+  {
+    path: '/gdpr-actions',
+    element: renderProtectedRoute(<GDPRActions />),
+    componentFile: 'client/src/pages/GDPRActions.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
   },
   {
     path: '/audit-logs',
@@ -390,15 +427,29 @@ export const ROUTE_DEFINITIONS = [
     featureFlags: [],
   },
   {
+    path: '/tax-reports',
+    element: wrapRoute(
+      <ProtectedRoute>
+        <Navigate to="/german-tax-reports" replace />
+      </ProtectedRoute>,
+    ),
+    componentFile: 'client/src/App.jsx (tax reports redirect)',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: ['GERMAN_TAX'],
+  },
+  {
     path: '/german-tax-reports',
     element: FEATURE_FLAGS.GERMAN_TAX.enabled
       ? renderProtectedRoute(<GermanTaxReports />)
       : wrapRoute(
-          <FeatureGate
-            enabled={false}
-            featureName="German Tax Reports"
-            description="German tax reporting is not available in this environment."
-          />,
+          <ProtectedRoute>
+            <FeatureGate
+              enabled={false}
+              featureName="German Tax Reports"
+              description="German tax reporting is not available in this environment."
+            />
+          </ProtectedRoute>,
         ),
     componentFile: 'client/src/pages/GermanTaxReports.jsx',
     authRequired: true,
@@ -445,13 +496,13 @@ export const AppRoutes = () => {
 
 function AppInner() {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { t } = useTranslation();
 
   return (
     <AppErrorBoundary location={location} logout={logout} t={t}>
       <CompanyProvider>
-        <RoleProvider>
+        <RoleProvider user={user}>
           <AppRoutes />
         </RoleProvider>
       </CompanyProvider>

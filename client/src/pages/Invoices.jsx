@@ -334,7 +334,13 @@ const Invoices = () => {
                               </Link>
                             </PermissionGuard>
                           ) : (
-                            <div className="flex flex-col items-start">
+                            <div className="flex flex-col items-start gap-2">
+                              <Link
+                                to={`/invoices/${invoice.id}/edit`}
+                                className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                              >
+                                View
+                              </Link>
                               <span
                                 className="inline-block px-3 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium cursor-not-allowed"
                                 title="GoBD Immutability"

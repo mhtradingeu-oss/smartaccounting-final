@@ -67,6 +67,7 @@ module.exports = {
       'POST /api/auth/logout',
 
       'GET /api/telemetry/client-error',
+      'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
     ],
   },

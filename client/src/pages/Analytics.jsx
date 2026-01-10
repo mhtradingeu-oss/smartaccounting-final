@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ChartBarIcon,
@@ -65,6 +66,7 @@ const statusLabel = (status) => {
 };
 
 const Analytics = () => {
+  const { t } = useTranslation();
   const { activeCompany } = useCompany();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -84,7 +86,7 @@ const Analytics = () => {
     });
 
     try {
-      const result = await dashboardAPI.getStats();
+      const result = await dashboardAPI.getStats({ companyId });
 
       if (result.disabled) {
         setAnalyticsState({
@@ -275,13 +277,15 @@ const Analytics = () => {
           <div className="card-elevated p-6 space-y-3 border border-blue-200 bg-blue-50">
             <div className="flex items-center gap-2 mb-2">
               <span className="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-900 text-xs font-semibold">
-                Official Export
+                Export snapshot
               </span>
               <span className="inline-block px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">
                 Read-only
               </span>
             </div>
-            <div className="text-xs text-gray-700 mb-1">Purpose: For tax submission</div>
+            <div className="text-xs text-gray-700 mb-1">
+              Purpose: Prepared for advisor review (no submission)
+            </div>
             <div className="text-xs text-gray-700 mb-1">
               Exported at: {new Date().toLocaleString()}
             </div>

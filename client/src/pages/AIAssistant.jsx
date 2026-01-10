@@ -8,16 +8,21 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Modal';
 import FeatureGate from '../components/FeatureGate';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import AITrustBanner from '../components/AITrustBanner';
+import { AIBadge } from '../components/AIBadge';
+import AISeverityPill from '../components/AISeverityPill';
+import AIMetadataLine from '../components/AIMetadataLine';
 import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
-import { formatCurrency, formatDate, formatPercent } from '../lib/utils/formatting';
+import { formatCurrency, formatDate, formatPercent, truncateText } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
 import { isAIAssistantEnabled, isAIVoiceEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
 import ChatMessageGroup from '../components/ChatMessageGroup';
 import ChatEmptyState from '../components/ChatEmptyState';
 import ChatTypingIndicator from '../components/ChatTypingIndicator';
+import MutationIntentGuard, { detectMutationIntent } from '../components/MutationIntentGuard';
 
 const INTENT_OPTIONS = [
   {
@@ -43,12 +48,6 @@ const INTENT_OPTIONS = [
     description: 'See the rule, legal context, and confidence score behind a flagged item.',
   },
 ];
-
-const severityPillClasses = {
-  high: 'bg-red-50 text-red-700 border-red-100',
-  medium: 'bg-yellow-50 text-yellow-700 border-yellow-100',
-  low: 'bg-green-50 text-green-700 border-green-100',
-};
 
 const VOICE_CONSENT_KEY = 'ai_voice_consent_v1';
 
@@ -98,6 +97,8 @@ const AIAssistant = () => {
   // askError state removed; errors are now shown in chat messages
   const [isAsking, setIsAsking] = useState(false);
   const [userTyping, setUserTyping] = useState(false);
+  const [draftMessage, setDraftMessage] = useState('');
+  const [inputError, setInputError] = useState(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [voiceTranscriptDraft, setVoiceTranscriptDraft] = useState('');
   const [voiceIntent, setVoiceIntent] = useState('review');
@@ -127,6 +128,18 @@ const AIAssistant = () => {
     return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   }, [aiVoiceEnabled]);
 
+  const trustItems = useMemo(() => {
+    const items = [
+      'AI outputs are advisory only and never execute actions.',
+      'All interactions are logged to the audit trail.',
+      'Access and visibility depend on role and feature flags.',
+    ];
+    if (aiVoiceEnabled) {
+      items.push('Voice input is transcript-only; raw audio is not stored without consent.');
+    }
+    return items;
+  }, [aiVoiceEnabled]);
+
   const latestAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       if (messages[i].speaker === 'assistant') {
@@ -148,6 +161,8 @@ const AIAssistant = () => {
     setVoiceTranscriptDraft('');
     setVoiceError(null);
     setIsListening(false);
+    setDraftMessage('');
+    setInputError(null);
   };
 
   useEffect(() => {
@@ -177,8 +192,8 @@ const AIAssistant = () => {
       setLoading(true);
       try {
         const [sessionResp, contextResp] = await Promise.all([
-          aiAssistantAPI.startSession(),
-          aiAssistantAPI.getContext(),
+          aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+          aiAssistantAPI.getContext({ companyId: activeCompanyId }),
         ]);
         if (!cancelled) {
           setSessionId(sessionResp?.sessionId ?? null);
@@ -279,14 +294,6 @@ const AIAssistant = () => {
     );
   }
 
-  const voiceConsentBanner = aiVoiceEnabled ? (
-    <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-      Voice input is optional. Spoken queries are transcribed before sending, and no raw audio is
-      stored by default. Each request is tied to your company and logged with a request ID for audit
-      review.
-    </div>
-  ) : null;
-
   // Group consecutive messages by speaker for better UX
   function groupMessages(msgs) {
     if (!msgs.length) {
@@ -311,7 +318,12 @@ const AIAssistant = () => {
 
   // Handle user input for typing indicator
   const handleUserInput = (e) => {
-    setUserTyping(!!e.target.value);
+    const nextValue = e.target.value;
+    setDraftMessage(nextValue);
+    setUserTyping(!!nextValue);
+    if (inputError) {
+      setInputError(null);
+    }
   };
 
   const ensureVoiceConsent = () => {
@@ -364,6 +376,22 @@ const AIAssistant = () => {
   };
 
   const handleIntent = async (intentId, options = {}) => {
+    const promptText =
+      options.prompt || INTENT_OPTIONS.find((intent) => intent.id === intentId)?.label;
+    if (promptText && detectMutationIntent(promptText)) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          speaker: 'assistant',
+          text: '',
+          error:
+            'This assistant is read-only. I can explain and summarize, but I cannot modify records.',
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+      return;
+    }
     // Prevent AI API calls for read-only users
     if (isReadOnly) {
       setMessages((prev) => [
@@ -411,6 +439,7 @@ const AIAssistant = () => {
         prompt,
         targetInsightId: options.targetInsightId,
         sessionId,
+        companyId: activeCompanyId,
       });
       const answer = response?.answer ?? {};
       setMessages((prev) => [
@@ -462,6 +491,10 @@ const AIAssistant = () => {
       setVoiceError('Transcript is empty. Try recording again.');
       return;
     }
+    if (detectMutationIntent(transcript)) {
+      setVoiceError('Voice requests must be read-only. Please ask for explanations or summaries.');
+      return;
+    }
     setIsAsking(true);
     setMessages((prev) => [
       ...prev,
@@ -480,6 +513,7 @@ const AIAssistant = () => {
         transcript,
         sessionId,
         responseMode: 'text',
+        companyId: activeCompanyId,
       });
       const answer = response?.answer ?? {};
       setMessages((prev) => [
@@ -524,7 +558,6 @@ const AIAssistant = () => {
   if (contextError) {
     return (
       <>
-        {voiceConsentBanner}
         <EmptyState
           title="Unable to load the AI assistant"
           description={contextError || 'Please try again later.'}
@@ -548,31 +581,33 @@ const AIAssistant = () => {
     return (
       <FeatureGate {...aiFeatureGateProps}>
         <div className="space-y-6">
-          <div className="mb-6 flex items-center gap-3">
-            {(() => {
-              const { AIBadge } = require('../components/AIBadge');
-              return <AIBadge label="AI" />;
-            })()}
-            <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
+          <div className="flex items-start gap-3">
+            <AIBadge label="AI" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
+              <p className="text-sm text-gray-500">
+                A read-only advisor that highlights issues and links to explainable insights.
+              </p>
+            </div>
           </div>
           <ReadOnlyBanner
             mode={ROLE_LIMITATIONS[userRole]?.label || 'Read-only'}
             message={ROLE_LIMITATIONS[userRole]?.message}
-            details="You can view AI explanations and summaries, but cannot interact or ask questions."
+            details="You can view explanations and summaries, but cannot interact or ask questions."
           />
-          <div className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-2">
-            <div className="font-semibold text-blue-800">AI Trust & Transparency</div>
-            <div className="text-xs text-blue-700 mt-1">
-              <ul className="list-disc ml-4">
-                <li>AI answers are advisory-only and do not change your data.</li>
-                <li>All responses are generated by AI and logged for audit.</li>
-                <li>AI cannot make decisions or execute transactions.</li>
-                <li>
-                  Unavailable or disabled states are shown when your role or feature flags restrict
-                  access.
-                </li>
-                <li>RBAC and feature flags strictly control access to AI features.</li>
-              </ul>
+          <AITrustBanner items={trustItems} />
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <div className="text-sm font-semibold text-gray-900 mb-2">Next steps</div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => navigate('/ai-insights')}>
+                View AI Insights
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/audit-logs')}>
+                Open Audit Logs
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+                Review Related Invoices
+              </Button>
             </div>
           </div>
         </div>
@@ -583,120 +618,28 @@ const AIAssistant = () => {
   return (
     <FeatureGate {...aiFeatureGateProps}>
       <div className="space-y-6">
-        {voiceConsentBanner}
-        {/* Role-based limitations banner for all users */}
-        <div className="mb-4">
-          <div className="rounded bg-blue-50 border border-blue-200 p-3">
-            <div className="font-semibold text-blue-800">AI Assistant Limitations</div>
-            <div className="text-xs text-blue-700 mt-1">
-              {ROLE_LIMITATIONS[userRole]?.message ||
-                'The AI assistant is advisory-only and does not change your data.'}
-              <div className="text-xs text-yellow-800 mt-2">
-                <strong>Advisory Only:</strong> AI features are strictly read-only for safety and
-                compliance. No actions, changes, or transactions can be executed by AI. All
-                responses are for informational purposes only, and every interaction is logged for
-                audit. AI is helpful, never authoritative or dangerous.
-              </div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AIBadge label="AI" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
+              <p className="text-sm text-gray-500">
+                A conversational advisor that highlights issues and connects to explainable
+                insights.
+                <span className="block mt-1 text-xs text-gray-400">
+                  Role access: {ROLE_LIMITATIONS[userRole]?.label || 'User'}
+                </span>
+              </p>
             </div>
           </div>
-        </div>
-        <div className="mb-6 flex items-center gap-3">
-          {(() => {
-            const { AIBadge } = require('../components/AIBadge');
-            return (
-              <AIBadge label="AI-generated" tooltip="This feature uses AI-generated content." />
-            );
-          })()}
-          <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
-        </div>
-        {/* Trust & Clarity Banner */}
-        <div className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-2">
-          <div className="font-semibold text-blue-800">AI Trust, Safety & Legal Notice</div>
-          <div className="text-xs text-blue-700 mt-1">
-            <ul className="list-disc ml-4">
-              <li>
-                <span className="font-semibold">AI-generated content:</span> All responses are
-                generated by AI and are for informational and advisory purposes only.
-              </li>
-              <li>
-                <span className="font-semibold">No guarantees or decisions:</span> The AI assistant
-                does not make decisions, provide guarantees, or modify your data.
-              </li>
-              <li>
-                <span className="font-semibold">Professional review required:</span> Always consult
-                a qualified accountant or legal advisor before acting on AI suggestions.
-              </li>
-              <li>All interactions are logged for audit and compliance.</li>
-              <li>Access is governed by role-based controls and feature flags.</li>
-              <li className="mt-2">
-                <a
-                  href="https://www.iso.org/isoiec-23894-ai-risk-management.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-700 underline"
-                >
-                  Learn more about AI responsibility boundaries
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-        {isReadOnlyRole(user?.role) && (
-          <ReadOnlyBanner
-            mode="Viewer"
-            message="AI Assistant replies are advisory only."
-            details="No data is changed; every interaction is audit logged."
-          />
-        )}
-        {/* Advisory-only indicator for all users */}
-        <div className="mb-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">
-          <span className="font-semibold">Advisory Only:</span> This assistant provides AI-generated
-          suggestions and explanations. It does not make decisions, provide guarantees, or modify
-          records.{' '}
-          <a
-            href="https://www.iso.org/isoiec-23894-ai-risk-management.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-700 underline ml-1"
-          >
-            AI responsibility info
-          </a>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
-            <p className="text-sm text-gray-500">
-              A conversational, read-only advisor that highlights issues and refers to explainable
-              insights.
-              <span className="block mt-1 text-xs text-blue-700">
-                <span className="font-semibold">AI-generated:</span> All answers are generated by AI
-                and should be reviewed by a qualified accountant or legal advisor. No guarantee of
-                accuracy or completeness is provided.
-              </span>
-            </p>
-          </div>
           <div className="text-right text-xs text-gray-500">
-            Session ID{' '}
+            <div className="font-semibold text-gray-700">Session ID</div>
             <span className="font-mono text-gray-700">
               {sessionId ? sessionId.slice(0, 8) : 'pending...'}
             </span>
-            <div className="text-2xs text-gray-500 dark:text-gray-400 mt-1">
-              All interactions are logged to the immutable audit trail.
-            </div>
-            <div className="text-2xs text-blue-700 mt-1">
-              <span className="font-semibold">Trust indicator:</span> This session is advisory-only
-              and all responses are AI-generated.{' '}
-              <a
-                href="https://www.iso.org/isoiec-23894-ai-risk-management.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                What does this mean?
-              </a>
-            </div>
           </div>
         </div>
+        <AITrustBanner items={trustItems} />
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card>
@@ -800,23 +743,23 @@ const AIAssistant = () => {
                           text={`Why am I seeing this?\n\nThis insight was generated because: ${insight.why || 'AI detected a pattern or anomaly based on your accounting data.'}\n\nData source: ${insight.dataSource || 'Relevant invoices, transactions, or expenses.'}`}
                         />
                       </span>
-                      <span
-                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full border ${severityPillClasses[insight.severity] || 'border-gray-200 text-gray-600'}`}
-                      >
-                        {insight.severity ?? 'unknown'}
-                      </span>
+                      <AISeverityPill severity={insight.severity} />
                     </div>
                     <p className="mt-2 text-sm text-gray-700">{insight.summary}</p>
-                    <div className="flex flex-wrap gap-2 items-center mt-1">
-                      <span className="text-xs text-gray-500">
-                        Confidence: {formatPercent(insight.confidenceScore ?? 0, 0)}
-                      </span>
-                      <span className="text-xs text-gray-400 ml-2">
-                        {insight.timestamp ? `Detected: ${formatDate(insight.timestamp)}` : 'Fresh'}
-                      </span>
-                      <span className="text-xs text-blue-500 ml-2">
-                        {insight.dataSource ? `Source: ${insight.dataSource}` : ''}
-                      </span>
+                    <AIMetadataLine
+                      whyMatters={truncateText(
+                        insight.why || insight.summary || 'Review this insight for next steps.',
+                        120,
+                      )}
+                      dataSource={insight.dataSource || 'Invoices, expenses, and transactions'}
+                      lastEvaluated={insight.lastEvaluated || insight.updatedAt || insight.timestamp}
+                      className="mt-1"
+                    />
+                    <div className="text-xs text-gray-500 mt-2">
+                      Confidence:{' '}
+                      {Number.isFinite(Number(insight.confidenceScore))
+                        ? formatPercent(insight.confidenceScore ?? 0, 0)
+                        : 'Not available'}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
@@ -851,28 +794,16 @@ const AIAssistant = () => {
               </div>
             ) : (
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                No AI insights available. This can happen if:
+                No AI insights available yet. This can happen if:
                 <br />
-                – The AI model has not yet analyzed enough data.
+                - The AI model has not yet analyzed enough data.
                 <br />
-                – No patterns, risks, or anomalies were detected.
+                - No patterns, risks, or anomalies were detected.
                 <br />
-                – Data is missing or incomplete.
+                - Data is missing or incomplete.
                 <br />
                 <span className="block mt-2 text-blue-600">
                   Tip: Upload more invoices, expenses, or bank data to surface insights.
-                </span>
-                <span className="block mt-2 text-blue-700">
-                  <span className="font-semibold">Disclaimer:</span> All insights are AI-generated
-                  and for informational purposes only.{' '}
-                  <a
-                    href="https://www.iso.org/isoiec-23894-ai-risk-management.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    AI responsibility info
-                  </a>
                 </span>
               </p>
             )}
@@ -908,6 +839,15 @@ const AIAssistant = () => {
               {isAsking && <ChatTypingIndicator isAssistant />}
               {userTyping && !isAsking && <ChatTypingIndicator isAssistant={false} />}
             </div>
+            <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              <div className="font-semibold text-gray-700">System hints</div>
+              <div className="mt-1">
+                Allowed: explain insights, summarize risks, highlight overdue or unreconciled items.
+              </div>
+              <div className="mt-1">
+                Blocked: creating, editing, deleting, filing, or submitting records.
+              </div>
+            </div>
             <div className="grid gap-3 md:grid-cols-2 mt-2">
               {INTENT_OPTIONS.map((intent) => (
                 <Button
@@ -934,6 +874,7 @@ const AIAssistant = () => {
                 type="text"
                 className="flex-1 rounded border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 transition-shadow duration-200"
                 placeholder="Ask a question or describe your focus..."
+                value={draftMessage}
                 onChange={handleUserInput}
                 onFocus={handleUserInput}
                 onBlur={() => setUserTyping(false)}
@@ -944,7 +885,15 @@ const AIAssistant = () => {
                 variant="primary"
                 size="sm"
                 disabled={isAsking}
-                onClick={() => handleIntent('review')}
+                onClick={() => {
+                  const prompt = draftMessage.trim();
+                  if (!prompt) {
+                    setInputError('Enter a question to send.');
+                    return;
+                  }
+                  handleIntent('review', { prompt });
+                  setDraftMessage('');
+                }}
                 className="ml-2 transition-all duration-200 hover:scale-105"
               >
                 Send
@@ -967,6 +916,8 @@ const AIAssistant = () => {
                 Voice input is unavailable in this browser. Use text input instead.
               </div>
             )}
+            {inputError && <div className="text-xs text-red-600">{inputError}</div>}
+            {draftMessage && <MutationIntentGuard prompt={draftMessage} />}
             {aiVoiceEnabled && voiceTranscriptDraft && (
               <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
                 <div className="font-semibold text-blue-800">Transcript preview</div>
@@ -1026,13 +977,12 @@ const AIAssistant = () => {
           </Card>
 
           <Card className="space-y-3">
-            <h3 className="text-lg font-semibold text-gray-900">Session & audit</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Session tracking</h3>
             <p className="text-sm text-gray-600">
-              Every session is anchored in an immutable audit log entry. Questions and answers are
-              recorded with hashed prompts.
+              Use this session ID when reviewing audit logs or contacting support.
             </p>
             <p className="text-xs text-gray-500">
-              Session tracked as {sessionId ? sessionId : 'pending...'}
+              Session ID: {sessionId ? sessionId : 'pending...'}
             </p>
             <Button
               variant="outline"
@@ -1055,10 +1005,6 @@ const AIAssistant = () => {
           <p>
             Voice input is optional and transcript-only. Your browser converts speech to text
             locally before sending; raw audio is not stored by default.
-          </p>
-          <p>
-            AI responses are advisory only and do not change your data. All requests are logged for
-            audit review.
           </p>
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowVoiceConsent(false)}>

@@ -1,5 +1,5 @@
 const app = require('../../src/app');
-const supertest = require('supertest');
+const request = require('../utils/request');
 const { Company } = require('../../src/models');
 
 describe('Auth smoke test', () => {
@@ -20,7 +20,7 @@ describe('Auth smoke test', () => {
       password: 'testpass123',
     };
 
-    const supertestApp = supertest(app);
+    const supertestApp = request(app);
     const loginResponse = await supertestApp.post(loginPath).send(credentials);
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.success).toBe(true);

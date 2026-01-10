@@ -1,41 +1,66 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AISuggestionCard } from '../components/AISuggestionCard';
 import { aiInsightsAPI } from '../services/aiInsightsAPI';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import AITrustBanner from '../components/AITrustBanner';
+import { AIBadge } from '../components/AIBadge';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
+import { formatApiError } from '../services/api';
 
 const AIInsights = () => {
   const { user } = useAuth();
+  const { activeCompany } = useCompany();
+  const activeCompanyId = activeCompany?.id;
   const isReadOnly = user && isReadOnlyRole(user.role);
+  const navigate = useNavigate();
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewerLimited, setViewerLimited] = useState(false);
 
   const loadInsights = useCallback(async () => {
+    if (!activeCompanyId) {
+      setInsights([]);
+      setViewerLimited(false);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     setViewerLimited(false);
 
     try {
-      const { insights: result = [], viewerLimited: limited } = await aiInsightsAPI.list();
+      const { insights: result = [], viewerLimited: limited } = await aiInsightsAPI.list({
+        companyId: activeCompanyId,
+      });
       setInsights(result);
       setViewerLimited(Boolean(limited));
     } catch (err) {
       setInsights([]);
       setViewerLimited(false);
-      setError(err?.message || 'Unknown error');
+      setError(formatApiError(err, 'Unable to load AI insights.'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeCompanyId]);
 
   useEffect(() => {
     loadInsights();
+  }, [loadInsights]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadInsights();
+    };
+    window.addEventListener('ai-insights:refresh', handleRefresh);
+    return () => window.removeEventListener('ai-insights:refresh', handleRefresh);
   }, [loadInsights]);
 
   if (loading) {
@@ -51,13 +76,30 @@ const AIInsights = () => {
       <EmptyState
         icon={null}
         title="Unable to load AI insights"
-        description={error}
+        description={error.message}
         action={
           <Button variant="primary" onClick={loadInsights} disabled={loading}>
             Retry
           </Button>
         }
-        help="If this problem continues, please contact support."
+        help={
+          error.type === 'forbidden'
+            ? 'Your role does not permit this AI view. Contact an admin to request access.'
+            : 'If this problem continues, please contact support.'
+        }
+      />
+    );
+  }
+  if (!activeCompanyId) {
+    return (
+      <EmptyState
+        title="Select a company"
+        description="AI insights are scoped to the active company."
+        action={
+          <Button variant="primary" onClick={() => navigate('/companies')}>
+            Select company
+          </Button>
+        }
       />
     );
   }
@@ -65,13 +107,13 @@ const AIInsights = () => {
     return (
       <EmptyState
         title="No AI insights yet"
-        description="AI will generate tailored recommendations as your data grows."
+        description="AI has not surfaced any insights for this company yet."
         action={
           <Button variant="primary" onClick={loadInsights} disabled={loading}>
             Refresh
           </Button>
         }
-        help="AI insights are generated automatically and continuously based on your accounting data."
+        help="Next steps: upload invoices or expenses, sync bank data, or check the latest imports."
       />
     );
   }
@@ -89,22 +131,33 @@ const AIInsights = () => {
         </div>
       )}
       {isReadOnly && (
-        <ReadOnlyBanner
-          mode="Viewer"
-          message="You have view-only access. All outputs are advisory only."
-          details="No actions will be taken automatically. AI features are strictly read-only for safety and compliance. No actions, changes, or transactions can be executed by AI. All responses are for informational purposes only, and every interaction is logged for audit. AI is helpful, never authoritative or dangerous."
-        />
+        <div className="mb-6">
+          <ReadOnlyBanner
+            mode="Viewer"
+            message="You have view-only access. AI insights are visible, but actions are disabled."
+            details="Review supporting records and audit history for each insight."
+          />
+          <div className="flex flex-wrap gap-2 justify-center -mt-4">
+            <Button variant="secondary" size="sm" onClick={() => navigate('/ai-assistant')}>
+              View AI Assistant
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/audit-logs')}>
+              Open Audit Logs
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+              Review Related Invoices
+            </Button>
+          </div>
+        </div>
       )}
-      <div className="mb-6 flex items-center gap-3">
-        {(() => {
-          const { AIBadge } = require('../components/AIBadge');
-          return <AIBadge label="AI" />;
-        })()}
+      <div className="mb-4 flex items-center gap-3">
+        <AIBadge label="AI" />
         <h1 className="text-2xl font-bold text-gray-900">AI Insights</h1>
       </div>
       <p className="text-sm text-gray-500">
         Receive calm, clear, and actionable AI-generated recommendations for your accounting data.
       </p>
+      <AITrustBanner className="mt-4" />
       <div className="space-y-6 transition-all duration-300">
         {insights.map((suggestion) => (
           <AISuggestionCard key={suggestion.id} suggestion={suggestion} />
@@ -115,16 +168,6 @@ const AIInsights = () => {
           ? `${insights.length} AI insights loaded.`
           : 'No AI insights are currently available.'}
       </p>
-      <div className="mt-8 text-xs text-gray-500 text-center">
-        <span role="img" aria-label="info">
-          ℹ️
-        </span>{' '}
-        All insights are{' '}
-        <span className="font-semibold text-blue-700">AI-generated recommendations</span>. No
-        actions are taken automatically. Each suggestion is fully explainable and references real
-        data fields.
-        <span className="block mt-2 text-gray-400">(Audit-safe: No data is changed by AI)</span>
-      </div>
     </div>
   );
 };

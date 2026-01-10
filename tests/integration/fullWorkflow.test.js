@@ -104,7 +104,7 @@ describe('Full Workflow Integration Tests', () => {
       });
 
       expect(dashboardResponse.status).toBe(200);
-      expect(dashboardResponse.body).toHaveProperty('totalRevenue');
+      expect(dashboardResponse.body.stats).toHaveProperty('totalRevenue');
 
       // 5. Update invoice status: DRAFT → SENT
       const sentResponse = await global.requestApp({

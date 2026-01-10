@@ -51,12 +51,38 @@ class OCRService {
       return { success: false, error: 'OCR schema missing or incomplete' };
     }
     try {
-      const { language = 'deu+eng', documentType = 'receipt', userId, companyId } = options;
+      const {
+        language = 'deu+eng',
+        documentType = 'receipt',
+        userId,
+        companyId,
+        originalName,
+        uploadedBy,
+      } = options;
 
       // Validate file
       const validation = await this.validateDocument(filePath);
       if (!validation.valid) {
         throw new Error(`Invalid document: ${validation.error}`);
+      }
+
+      const fileHash = await this.calculateFileHash(filePath);
+      if (companyId) {
+        const existing = await FileAttachment.findOne({
+          where: { fileHash, companyId, documentType },
+        });
+        if (existing && existing.ocrText) {
+          return {
+            success: true,
+            documentId: existing.id,
+            text: existing.ocrText,
+            confidence: existing.ocrConfidence,
+            extractedData: existing.extractedData,
+            archiveLocation: existing.filePath,
+            hash: existing.fileHash,
+            idempotent: true,
+          };
+        }
       }
 
       // Preprocess image for better OCR accuracy
@@ -70,12 +96,14 @@ class OCRService {
 
       // Archive document with GoBD compliance
       const archiveResult = await this.archiveDocument(filePath, {
-        originalName: path.basename(filePath),
+        originalName: originalName || path.basename(filePath),
         documentType,
         userId,
         companyId,
         ocrText: ocrResult.text,
         extractedData: structuredData,
+        uploadedBy: uploadedBy || userId,
+        processingStatus: 'processed',
       });
 
       // Create audit log
@@ -89,6 +117,18 @@ class OCRService {
         },
         userId || 'system',
         'document',
+        {
+          reason: 'OCR document processed',
+          status: 'SUCCESS',
+          actorType: userId ? 'USER' : 'SYSTEM',
+          actorId: userId || null,
+          eventClass: 'ACCOUNTING',
+          scopeType: 'COMPANY',
+          companyId,
+          requestId: null,
+          ipAddress: null,
+          userAgent: null,
+        },
       );
 
       // Cleanup temp files
@@ -101,6 +141,7 @@ class OCRService {
         confidence: ocrResult.confidence,
         extractedData: structuredData,
         archiveLocation: archiveResult.archivePath,
+        hash: archiveResult.hash,
       };
     } catch (error) {
       logger.error('OCR processing error:', error);
@@ -349,6 +390,17 @@ class OCRService {
   }
 
   extractInvoiceData(text) {
+    const netAmount = this.extractAmount(text, /(?:Nettobetrag|Net)[\s:]*(\d+[,\.]\d{2})/i);
+    const vatAmount = this.extractAmount(text, /(?:MwSt|USt|VAT)[\s:]*(\d+[,\.]\d{2})/i);
+    const totalAmount = this.extractAmount(
+      text,
+      /(?:Gesamtbetrag|Total|Endbetrag)[\s:]*(\d+[,\.]\d{2})/i,
+    );
+    const vatRate =
+      Number(netAmount) > 0 && Number(vatAmount) >= 0
+        ? +(Number(vatAmount) / Number(netAmount)).toFixed(2)
+        : null;
+
     return {
       type: 'invoice',
       invoiceNumber: this.extractPattern(text, /(?:Rechnung|Invoice|RG)[\s#:]*([A-Z0-9-]+)/i),
@@ -357,12 +409,10 @@ class OCRService {
         text,
         /(?:Fällig|Due|Zahlbar bis)[\s:]*(\d{1,2}\.\d{1,2}\.\d{4})/i,
       ),
-      totalAmount: this.extractAmount(
-        text,
-        /(?:Gesamtbetrag|Total|Endbetrag)[\s:]*(\d+[,\.]\d{2})/i,
-      ),
-      netAmount: this.extractAmount(text, /(?:Nettobetrag|Net)[\s:]*(\d+[,\.]\d{2})/i),
-      vatAmount: this.extractAmount(text, /(?:MwSt|USt|VAT)[\s:]*(\d+[,\.]\d{2})/i),
+      totalAmount,
+      netAmount,
+      vatAmount,
+      vatRate,
     };
   }
 
@@ -431,10 +481,12 @@ class OCRService {
         documentType: metadata.documentType,
         userId: metadata.userId,
         companyId: metadata.companyId,
+        uploadedBy: metadata.uploadedBy || metadata.userId,
         ocrText: metadata.ocrText,
-        extractedData: JSON.stringify(metadata.extractedData),
+        extractedData: metadata.extractedData,
         archived: true,
         retentionPeriod: 10, // 10 years for GoBD compliance
+        processingStatus: metadata.processingStatus || 'processed',
       });
 
       return {
@@ -514,7 +566,10 @@ class OCRService {
       // Filter by extracted data if needed
       if (vendor || minAmount || maxAmount) {
         return documents.filter((doc) => {
-          const data = JSON.parse(doc.extractedData || '{}');
+          const data =
+            typeof doc.extractedData === 'string'
+              ? JSON.parse(doc.extractedData || '{}')
+              : doc.extractedData || {};
 
           if (vendor && !data.vendor?.toLowerCase().includes(vendor.toLowerCase())) {
             return false;
