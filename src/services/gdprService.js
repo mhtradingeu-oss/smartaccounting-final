@@ -1,6 +1,7 @@
 const { User, Company, Invoice, Expense, FileAttachment, AuditLog } = require('../models');
 const AuditLogService = require('./auditLogService');
 const { Op } = require('sequelize');
+const { resolveExpenseAttachmentSupport } = require('../utils/expenseAttachmentSupport');
 
 // RBAC utility: isAdmin, isSelf, sameCompany
 function isAdmin(user) {
@@ -71,13 +72,19 @@ async function exportUserData(requestingUser, targetUserId) {
   // File attachments linked to those records
   const invoiceIds = invoices.map((inv) => inv.id);
   const expenseIds = expenses.map((exp) => exp.id);
+  const supportsExpenseAttachments = await resolveExpenseAttachmentSupport();
+  const attachmentFilters = [
+    { uploadedBy: targetUser.id },
+  ];
+  if (invoiceIds.length) {
+    attachmentFilters.unshift({ invoiceId: { [Op.in]: invoiceIds } });
+  }
+  if (supportsExpenseAttachments && expenseIds.length) {
+    attachmentFilters.splice(1, 0, { expenseId: { [Op.in]: expenseIds } });
+  }
   const attachments = await FileAttachment.findAll({
     where: {
-      [Op.or]: [
-        { invoiceId: { [Op.in]: invoiceIds } },
-        { expenseId: { [Op.in]: expenseIds } },
-        { uploadedBy: targetUser.id },
-      ],
+      [Op.or]: attachmentFilters,
     },
   });
 

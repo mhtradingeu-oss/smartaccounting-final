@@ -5,24 +5,39 @@ const {
   assertProvidedMatches,
 } = require('../utils/vatIntegrity');
 const { buildCompanyFilter } = require('../utils/companyFilter');
+const {
+  resolveExpenseAttachmentSupport,
+  applyEmptyExpenseAttachments,
+  applyEmptyExpenseAttachment,
+} = require('../utils/expenseAttachmentSupport');
 
 const expenseIncludes = [{ model: FileAttachment, as: 'attachments' }];
 
 const listExpenses = async (companyId) => {
   const where = buildCompanyFilter(companyId);
-  return Expense.findAll({
+  const supportsAttachments = await resolveExpenseAttachmentSupport();
+  const expenses = await Expense.findAll({
     where,
     order: [['expenseDate', 'DESC']],
-    include: expenseIncludes,
+    ...(supportsAttachments ? { include: expenseIncludes } : {}),
   });
+  if (!supportsAttachments) {
+    applyEmptyExpenseAttachments(expenses);
+  }
+  return expenses;
 };
 
 const getExpenseById = async (expenseId, companyId) => {
   const where = { id: expenseId, ...buildCompanyFilter(companyId) };
-  return Expense.findOne({
+  const supportsAttachments = await resolveExpenseAttachmentSupport();
+  const expense = await Expense.findOne({
     where,
-    include: expenseIncludes,
+    ...(supportsAttachments ? { include: expenseIncludes } : {}),
   });
+  if (expense && !supportsAttachments) {
+    applyEmptyExpenseAttachment(expense);
+  }
+  return expense;
 };
 
 const { withAuditLog } = require('./withAuditLog');
@@ -83,10 +98,11 @@ async function createExpense(data, userId, companyId, context = {}) {
   };
 
   let createdExpense;
+  const supportsAttachments = await resolveExpenseAttachmentSupport();
   await sequelize.transaction(async (t) => {
     createdExpense = await Expense.create(expensePayload, { transaction: t });
     // Attach files if provided
-    if (Array.isArray(data.attachments) && data.attachments.length > 0) {
+    if (supportsAttachments && Array.isArray(data.attachments) && data.attachments.length > 0) {
       for (const fileId of data.attachments) {
         await FileAttachment.update(
           { expenseId: createdExpense.id },
@@ -130,9 +146,17 @@ async function createExpense(data, userId, companyId, context = {}) {
   );
 
   const finalizedExpense = await getExpenseById(createdExpense.id, companyId);
-  return (
-    finalizedExpense || (await Expense.findByPk(createdExpense.id, { include: expenseIncludes }))
+  if (finalizedExpense) {
+    return finalizedExpense;
+  }
+  const fallback = await Expense.findByPk(
+    createdExpense.id,
+    supportsAttachments ? { include: expenseIncludes } : {},
   );
+  if (fallback && !supportsAttachments) {
+    applyEmptyExpenseAttachment(fallback);
+  }
+  return fallback;
 }
 
 const VALID_STATUS = ['draft', 'booked', 'archived'];

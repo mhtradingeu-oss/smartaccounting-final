@@ -1,6 +1,10 @@
 const { Op } = require('sequelize');
 const { Invoice, InvoiceItem, Expense, FileAttachment } = require('../models');
 const taxAccountingEngine = require('./taxAccountingEngine');
+const {
+  resolveExpenseAttachmentSupport,
+  applyEmptyExpenseAttachments,
+} = require('../utils/expenseAttachmentSupport');
 
 const TAX_KEY_MAP = [
   { threshold: 0.19, key: 'U19' },
@@ -161,6 +165,8 @@ async function buildDatevExport({ companyId, from, to, kontenrahmen }) {
     ...buildDateWhere('expenseDate', from, to),
   };
 
+  const supportsExpenseAttachments = await resolveExpenseAttachmentSupport();
+
   const [invoices, expenses] = await Promise.all([
     Invoice.findAll({
       where: invoiceWhere,
@@ -172,10 +178,16 @@ async function buildDatevExport({ companyId, from, to, kontenrahmen }) {
     }),
     Expense.findAll({
       where: expenseWhere,
-      include: [{ model: FileAttachment, as: 'attachments' }],
+      ...(supportsExpenseAttachments
+        ? { include: [{ model: FileAttachment, as: 'attachments' }] }
+        : {}),
       order: [['expenseDate', 'ASC']],
     }),
   ]);
+
+  if (!supportsExpenseAttachments) {
+    applyEmptyExpenseAttachments(expenses);
+  }
 
   const rows = [];
 

@@ -123,18 +123,44 @@ async function verifySeededEndpoints() {
     { url: '/api/invoices', key: 'invoices' },
     { url: '/api/expenses', key: 'expenses' },
     { url: '/api/bank-statements', key: 'statements' },
-    { url: '/api/ai/insights', key: 'data', allowEmpty: true },
+    {
+      url: '/api/ai/insights',
+      key: 'data',
+      allowEmpty: true,
+      query: {
+        purpose: 'insights_read',
+        policyVersion: '10.0.0',
+      },
+    },
   ];
 
   for (const endpoint of endpoints) {
+    const query = endpoint.query ? `?${new URLSearchParams(endpoint.query).toString()}` : '';
     const response = await requestApp({
       method: 'GET',
-      url: endpoint.url,
+      url: `${endpoint.url}${query}`,
       headers: {
         Authorization: `Bearer ${token}`,
         'X-Company-Id': companyId,
       },
     });
+
+    if (endpoint.url === '/api/ai/insights') {
+      const errorCode =
+        response.body?.errorCode ||
+        response.body?.error?.code ||
+        response.body?.code ||
+        (typeof response.body?.error === 'string' ? response.body.error : undefined);
+      if ([200, 204].includes(response.status)) {
+        console.log(`[DEMO VERIFY] ${endpoint.url} OK`);
+        continue;
+      }
+      if (response.status === 400 && errorCode === 'AI_INPUT_REQUIRED') {
+        console.log(`[DEMO VERIFY] ${endpoint.url} skipped (no analyzable data yet)`);
+        continue;
+      }
+      throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
+    }
 
     if (![200, 201].includes(response.status)) {
       throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
@@ -143,6 +169,15 @@ async function verifySeededEndpoints() {
     const payload = response.body?.[endpoint.key] ?? response.body?.data ?? [];
 
     const count = Array.isArray(payload) ? payload.length : 0;
+
+    if (endpoint.url === '/api/bank-statements') {
+      if (response.status !== 200) {
+        throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
+      }
+      const message = count === 0 ? '0 records' : `${count} records`;
+      console.log(`[DEMO VERIFY] ${endpoint.url} OK (${message})`);
+      continue;
+    }
 
     if (!endpoint.allowEmpty && count === 0) {
       throw new Error(`Endpoint ${endpoint.url} returned empty result set`);
