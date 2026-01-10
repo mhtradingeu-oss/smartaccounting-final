@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -28,8 +29,36 @@ vi.mock('../../services/companiesAPI', () => ({
 }));
 
 import Companies from '../Companies';
-import { CompanyProvider } from '../../context/CompanyContext';
+import CompanyContext from '../../context/CompanyContext';
 import { companiesAPI } from '../../services/companiesAPI';
+
+const TestCompanyProvider = ({ children, initialCompany = null }) => {
+  const [activeCompany, setActiveCompany] = useState(initialCompany);
+  const [companies, setCompanies] = useState(null);
+  const [companiesError, setCompaniesError] = useState(null);
+
+  const switchCompany = (company) => {
+    setActiveCompany(company);
+  };
+
+  return (
+    <CompanyContext.Provider
+      value={{
+        activeCompany,
+        activeCompanyId: activeCompany?.id ?? null,
+        companies,
+        setCompanies,
+        switchCompany,
+        companiesError,
+        setCompaniesError,
+        reloadCompanies: () => {},
+        reloadToken: 0,
+      }}
+    >
+      {children}
+    </CompanyContext.Provider>
+  );
+};
 
 describe('Companies page – API stability', () => {
   beforeEach(() => {
@@ -42,9 +71,9 @@ describe('Companies page – API stability', () => {
 
     render(
       <MemoryRouter>
-        <CompanyProvider>
+        <TestCompanyProvider initialCompany={{ id: 1, name: 'TestCo' }}>
           <Companies />
-        </CompanyProvider>
+        </TestCompanyProvider>
       </MemoryRouter>,
     );
 
@@ -63,9 +92,9 @@ describe('Companies page – API stability', () => {
 
       render(
         <MemoryRouter>
-          <CompanyProvider>
+          <TestCompanyProvider initialCompany={{ id: 2, name: 'BackoffCo' }}>
             <Companies />
-          </CompanyProvider>
+          </TestCompanyProvider>
         </MemoryRouter>,
       );
 
@@ -80,5 +109,21 @@ describe('Companies page – API stability', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('shows empty state when no active company', async () => {
+    companiesAPI.list.mockResolvedValueOnce([{ id: 3, name: 'NoActiveCo' }]);
+
+    render(
+      <MemoryRouter>
+        <TestCompanyProvider>
+          <Companies />
+        </TestCompanyProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('No active company')).toBeInTheDocument(),
+    );
   });
 });
