@@ -116,6 +116,7 @@ describe('OCR preview endpoint', () => {
       app,
       method: 'POST',
       url: '/api/ocr/preview',
+      headers: { 'x-company-id': mockCurrentUser.companyId },
       body: {
         documentType: 'invoice',
       },
@@ -157,6 +158,7 @@ describe('OCR preview endpoint', () => {
       app,
       method: 'POST',
       url: '/api/ocr/preview',
+      headers: { 'x-company-id': mockCurrentUser.companyId },
       body: {
         documentType: 'invoice',
       },
@@ -173,6 +175,7 @@ describe('OCR preview endpoint', () => {
       app,
       method: 'POST',
       url: '/api/ocr/preview',
+      headers: { 'x-company-id': mockCurrentUser.companyId },
     });
     expect(response.status).toBe(400);
     expect(runOCRPreview).not.toHaveBeenCalled();

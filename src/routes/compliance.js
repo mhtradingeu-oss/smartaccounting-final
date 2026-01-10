@@ -1,12 +1,15 @@
 const express = require('express');
 const vatComplianceService = require('../services/vatComplianceService');
-const { authenticate, requireRole } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany, requireRole } = require('../middleware/authMiddleware');
 const AuditLogService = require('../services/auditLogService');
 
 const router = express.Router();
 
+router.use(authenticate);
+router.use(requireCompany);
+
 // VAT/UStG compliance validation endpoint
-router.post('/validate-transaction', authenticate, async (req, res) => {
+router.post('/validate-transaction', async (req, res) => {
   const { net, vat, gross, vatRate, currency } = req.body;
   const result = vatComplianceService.validateTransaction({ net, vat, gross, vatRate, currency });
   if (!result.valid) {
@@ -15,7 +18,7 @@ router.post('/validate-transaction', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 // GoBD audit log export endpoint
-router.get('/gobd/export', authenticate, requireRole(['auditor']), async (req, res) => {
+router.get('/gobd/export', requireRole(['auditor']), async (req, res) => {
   try {
     const { format = 'json', from, to } = req.query;
     const logs = await AuditLogService.exportLogs({
@@ -34,14 +37,14 @@ router.get('/gobd/export', authenticate, requireRole(['auditor']), async (req, r
   }
 });
 
-router.get('/test', authenticate, (req, res) => {
+router.get('/test', (req, res) => {
   res.json({
     message: 'Compliance route is working',
     timestamp: new Date().toISOString(),
   });
 });
 
-router.get('/overview', authenticate, async (req, res) => {
+router.get('/overview', async (req, res) => {
   try {
     const complianceData = {
       ustVoranmeldung: {
@@ -78,25 +81,9 @@ router.get('/overview', authenticate, async (req, res) => {
 
 // Tenant-safe: companyId is derived from the tenant token context
 router.get('/reports/:type', (req, res) => {
-  const authenticatedCompanyId = req.user?.companyId;
   const tokenCompanyId = req.tokenCompanyId;
 
-  if (!req.user || !authenticatedCompanyId) {
-    return res.status(403).json({
-      success: false,
-      message: 'Company context required',
-    });
-  }
-
-  // Enforce tenant safety: JWT companyId must match user's real companyId
-  if (tokenCompanyId && tokenCompanyId !== authenticatedCompanyId) {
-    return res.status(403).json({
-      success: false,
-      message: 'Forbidden: companyId mismatch',
-    });
-  }
-
-  if (typeof req.companyId !== 'undefined' && req.companyId !== authenticatedCompanyId) {
+  if (tokenCompanyId && String(tokenCompanyId) !== String(req.companyId)) {
     return res.status(403).json({
       success: false,
       message: 'Forbidden: company context mismatch',
@@ -117,13 +104,13 @@ router.get('/reports/:type', (req, res) => {
     success: true,
     data: {
       type,
-      companyId: req.user.companyId,
+      companyId: req.companyId,
       generatedAt: new Date().toISOString(),
     },
   });
 });
 
-router.get('/deadlines', authenticate, async (req, res) => {
+router.get('/deadlines', async (req, res) => {
   try {
     const deadlines = [
       {

@@ -7,8 +7,12 @@ function isAIDecisionEnabled() {
   return process.env.AI_DECISION_ENABLED !== 'false';
 }
 
-async function createDecision({ insightId, user, body, requestId }) {
-  const insight = await AIInsight.findOne({ where: { id: insightId, companyId: user.companyId } });
+async function createDecision({ insightId, user, companyId, body, requestId }) {
+  const effectiveCompanyId = companyId;
+  if (!effectiveCompanyId) {
+    throw Object.assign(new Error('Company context required'), { status: 400 });
+  }
+  const insight = await AIInsight.findOne({ where: { id: insightId, companyId: effectiveCompanyId } });
   if (!insight) {throw Object.assign(new Error('Insight not found'), { status: 404 });}
 
   // Enforce one decision per insight per user
@@ -17,7 +21,7 @@ async function createDecision({ insightId, user, body, requestId }) {
 
   const decision = await AIInsightDecision.create({
     insightId,
-    companyId: user.companyId,
+    companyId: effectiveCompanyId,
     actorUserId: user.id,
     decision: body.decision,
     reason: body.reason,

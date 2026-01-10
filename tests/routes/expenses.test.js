@@ -13,6 +13,7 @@ describe('Expenses API', () => {
       app,
       method: 'post',
       url: '/api/expenses',
+      headers: { 'x-company-id': global.testCompany?.id },
       body: {
         ...buildExpensePayload({ description: 'Office supplies' }),
         systemContext: buildSystemContext(),
@@ -45,6 +46,7 @@ describe('Expenses API', () => {
       app,
       method: 'get',
       url: '/api/expenses',
+      headers: { 'x-company-id': global.testCompany?.id },
       body: { systemContext: buildSystemContext() },
     });
     expect([200, 401]).toContain(res.status);
@@ -59,6 +61,7 @@ describe('Expenses API', () => {
       app,
       method: 'get',
       url: '/api/expenses/999999',
+      headers: { 'x-company-id': global.testCompany?.id },
       body: { systemContext: buildSystemContext() },
     });
     expect([401, 404]).toContain(res.status);
@@ -70,6 +73,7 @@ describe('Expenses API', () => {
       app,
       method: 'post',
       url: '/api/expenses',
+      headers: { 'x-company-id': global.testCompany?.id },
       body: {
         amount: 50,
         description: 'Travel',
@@ -81,6 +85,7 @@ describe('Expenses API', () => {
       app,
       method: 'put',
       url: `/api/expenses/${expenseId}`,
+      headers: { 'x-company-id': global.testCompany?.id },
       body: {
         amount: 75,
         description: 'Travel updated',

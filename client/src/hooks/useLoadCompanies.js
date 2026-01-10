@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useCompany } from '../context/CompanyContext';
 import { companiesAPI } from '../services/companiesAPI';
+import { useAuth } from '../context/AuthContext';
+import { isSystemAdmin } from '../lib/systemAdmin';
 
 let sessionFetchAttempts = 0;
 
 // Loads companies for the current user and sets them in context
 export function useLoadCompanies() {
-  const { setCompanies, companies, setCompaniesError, reloadToken } = useCompany();
+  const { user } = useAuth();
+  const { setCompanies, companies, setCompaniesError, reloadToken, switchCompany } = useCompany();
   const companiesRef = useRef(companies);
   const loadAttemptedRef = useRef(false);
   const resolvedRef = useRef(false);
@@ -27,6 +30,14 @@ export function useLoadCompanies() {
     }
 
     if (loadAttemptedRef.current) {
+      return undefined;
+    }
+
+    if (isSystemAdmin(user)) {
+      resolvedRef.current = true;
+      setCompanies([]);
+      setCompaniesError(null);
+      switchCompany(null, { reset: false });
       return undefined;
     }
 
@@ -67,5 +78,5 @@ export function useLoadCompanies() {
     return () => {
       cancelled = true;
     };
-  }, [setCompanies, setCompaniesError, reloadToken]);
+  }, [setCompanies, setCompaniesError, reloadToken, user, switchCompany]);
 }

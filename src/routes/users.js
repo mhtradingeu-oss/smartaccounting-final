@@ -39,7 +39,7 @@ const normalizeEmail = (email) => (email || '').toLowerCase().trim();
 router.get('/', requireRole(['admin']), async (req, res, next) => {
   try {
     const users = await User.findAll({
-      where: { companyId: req.user.companyId },
+      where: { companyId: req.companyId },
       include: [
         {
           model: Company,
@@ -79,7 +79,7 @@ router.post(
         email,
         password: hashedPassword,
         role: role || 'viewer',
-        companyId: req.user.companyId,
+        companyId: req.companyId,
         isActive: true,
       });
 
@@ -106,7 +106,7 @@ router.put(
       const user = await User.findOne({
         where: {
           id: userId,
-          companyId: req.user.companyId,
+          companyId: req.companyId,
         },
       });
 
@@ -130,7 +130,7 @@ router.put(
       await user.update(updates);
       const after = { role: user.role, isActive: user.isActive };
       const actorUserId = req.user.id;
-      const companyId = req.user.companyId;
+      const companyId = req.companyId;
       if (updates.role && before.role !== after.role) {
         await AuditLogService.appendEntry({
           action: 'ROLE_CHANGED',
@@ -178,7 +178,7 @@ router.delete('/:userId', requireRole(['admin']), async (req, res, next) => {
     const user = await User.findOne({
       where: {
         id: userId,
-        companyId: req.user.companyId,
+        companyId: req.companyId,
       },
     });
 

@@ -9,6 +9,7 @@ import RateLimitBanner from '../components/RateLimitBanner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Input } from '../components/ui/Input';
 import { getSafeErrorMeta } from '../lib/errorMeta';
+import { getDefaultRouteForUser } from '../lib/systemAdmin';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -49,8 +50,7 @@ const Login = () => {
     try {
       const result = await login(formData);
       if (result.success) {
-        // Always redirect to dashboard after login
-        navigate('/dashboard', { replace: true });
+        navigate(getDefaultRouteForUser(result.user), { replace: true });
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
       }
@@ -100,8 +100,8 @@ const Login = () => {
           <img
             src="/brand/logo.png"
             alt="SmartAccounting Logo"
-            className="max-h-16 w-auto mx-auto mb-2 object-contain"
-            style={{ maxHeight: 64 }}
+            className="max-h-125 w-auto mx-auto mb-2 object-contain"
+            style={{ maxHeight: 125 }}
           />
           <h1 className="text-3xl font-extrabold text-blue-700 dark:text-blue-300 mb-1 tracking-tight">
             SmartAccounting
@@ -116,7 +116,10 @@ const Login = () => {
             aria-describedby={error ? 'login-error' : undefined}
           >
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+              <label
+                htmlFor="email"
+                className="text-sm font-semibold text-gray-700 dark:text-gray-200"
+              >
                 Email
               </label>
               <Input
@@ -131,7 +134,10 @@ const Login = () => {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+              <label
+                htmlFor="password"
+                className="text-sm font-semibold text-gray-700 dark:text-gray-200"
+              >
                 Password
               </label>
               <div className="relative">

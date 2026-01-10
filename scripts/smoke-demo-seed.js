@@ -59,16 +59,19 @@ async function loginDemo() {
   assert.strictEqual(res.status, 200, 'Login failed');
 
   const token = res.data?.token || res.data?.accessToken;
+  const companyId = res.data?.user?.companyId;
   assert(token, 'Login response missing token');
+  assert(companyId, 'Login response missing companyId');
 
   console.log('[DEMO VERIFY] Login OK');
-  return token;
+  return { token, companyId };
 }
 
-async function verifyListEndpoint(path, token, allowEmpty = false) {
+async function verifyListEndpoint(path, session, allowEmpty = false) {
+  const { token, companyId } = session;
   console.log(`[DEMO VERIFY] Checking ${path} ...`);
   const res = await client.get(path, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, 'X-Company-Id': companyId },
   });
 
   assert.strictEqual(res.status, 200, `${path} returned ${res.status}`);
@@ -88,16 +91,16 @@ async function verifyListEndpoint(path, token, allowEmpty = false) {
  * Main verification
  * -------------------------------------------------- */
 
-async function runDemoChecks(token) {
-  await verifyListEndpoint('/companies', token);
-  await verifyListEndpoint('/dashboard/stats', token, true);
-  await verifyListEndpoint('/expenses', token, true);
+async function runDemoChecks(session) {
+  await verifyListEndpoint('/companies', session);
+  await verifyListEndpoint('/dashboard/stats', session, true);
+  await verifyListEndpoint('/expenses', session, true);
 
-  const statements = await verifyListEndpoint('/bank-statements', token);
+  const statements = await verifyListEndpoint('/bank-statements', session);
   assert(statements[0], 'No demo bank statement found');
 
-  await verifyListEndpoint('/ai/insights', token, true);
-  await verifyListEndpoint('/ai/decisions', token, true);
+  await verifyListEndpoint('/ai/insights', session, true);
+  await verifyListEndpoint('/ai/decisions', session, true);
 }
 
 /* --------------------------------------------------
@@ -106,8 +109,8 @@ async function runDemoChecks(token) {
 
 (async () => {
   try {
-    const token = await loginDemo();
-    await runDemoChecks(token);
+    const session = await loginDemo();
+    await runDemoChecks(session);
     console.log('✅ Demo seed verification PASSED');
     process.exit(0);
   } catch (err) {

@@ -157,12 +157,13 @@ describe('Bank statement import gate', () => {
     const response = await request
       .post('/api/bank-statements/import')
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', companyId)
       .send({ format: 'CSV' });
 
     expect([403, 503]).toContain(response.status);
     if (response.status === 503) {
       expect(response.body).toEqual({
-        error: 'IMPORT_DISABLED',
+        code: 'IMPORT_DISABLED',
         message: 'Bank statement import is currently disabled.',
       });
     }
@@ -228,6 +229,7 @@ describe('Bank statement import dry run', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'true' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', fixtureFile)
       .send({ format: 'CSV' });
 
@@ -249,6 +251,7 @@ describe('Bank statement import dry run', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'true' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', pdfFixtureFile)
       .send({ format: 'OCR' });
 
@@ -270,12 +273,13 @@ describe('Bank statement import dry run', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'false' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ format: 'CSV' });
 
     expect([403, 503]).toContain(response.status);
     if (response.status === 503) {
       expect(response.body).toEqual({
-        error: 'IMPORT_DISABLED',
+        code: 'IMPORT_DISABLED',
         message: 'Bank statement import is currently disabled.',
       });
     }
@@ -289,6 +293,7 @@ describe('Bank statement import dry run', () => {
     const response = await request
       .post('/api/bank-statements/import?dryRun=true')
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', pdfFixtureFile)
       .send({ format: 'OCR' });
 
@@ -348,6 +353,7 @@ describe('Bank statement import confirmation', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'true' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', fixtureFile)
       .send({ format: 'CSV' });
 
@@ -358,9 +364,39 @@ describe('Bank statement import confirmation', () => {
       const confirmRes = await request
         .post('/api/bank-statements/import/confirm')
         .set('Authorization', `Bearer ${authToken}`)
+        .set('x-company-id', testUser.companyId)
         .send({ dryRunId: dryRunResponse.body.dryRunId });
 
       expect([200, 202, 403]).toContain(confirmRes.status);
+    }
+  });
+
+  it('accepts confirmationToken but returns dryRunId', async () => {
+    const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
+    testUser = result.user;
+    authToken = result.token;
+
+    const dryRunResponse = await request
+      .post('/api/bank-statements/import')
+      .query({ dryRun: 'true' })
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
+      .set('X-Mock-Bank-Statement-Path', fixtureFile)
+      .send({ format: 'CSV' });
+
+    expect([200, 403]).toContain(dryRunResponse.status);
+    if (dryRunResponse.status === 200) {
+      const dryRunId = dryRunResponse.body.dryRunId;
+      const confirmRes = await request
+        .post('/api/bank-statements/import/confirm')
+        .set('Authorization', `Bearer ${authToken}`)
+        .set('x-company-id', testUser.companyId)
+        .send({ confirmationToken: dryRunId });
+
+      expect([200, 202, 403]).toContain(confirmRes.status);
+      if (confirmRes.status === 200) {
+        expect(confirmRes.body.data?.dryRunId).toBe(dryRunId);
+      }
     }
   });
 
@@ -373,6 +409,7 @@ describe('Bank statement import confirmation', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'true' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', fixtureFile)
       .send({ format: 'CSV' });
 
@@ -381,11 +418,13 @@ describe('Bank statement import confirmation', () => {
     await request
       .post('/api/bank-statements/import/confirm')
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ dryRunId });
 
     const duplicateResponse = await request
       .post('/api/bank-statements/import/confirm')
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ dryRunId });
 
     // Accept 409 (conflict) or 400 (bad request) for duplicate confirmation
@@ -411,6 +450,7 @@ describe('Bank statement import confirmation', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'true' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', fixtureFile)
       .send({ format: 'CSV' });
 
@@ -423,6 +463,7 @@ describe('Bank statement import confirmation', () => {
     const response = await request
       .post('/api/bank-statements/import/confirm')
       .set('Authorization', `Bearer ${viewerToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ dryRunId: dryRunResponse.body.dryRunId });
 
     expect(response.status).toBe(403);
@@ -437,6 +478,7 @@ describe('Bank statement import confirmation', () => {
       .post('/api/bank-statements/import')
       .query({ dryRun: 'true' })
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .set('X-Mock-Bank-Statement-Path', fixtureFile)
       .send({ format: 'CSV' });
 
@@ -446,13 +488,14 @@ describe('Bank statement import confirmation', () => {
     const disabledResponse = await request
       .post('/api/bank-statements/import/confirm')
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ dryRunId: dryRunResponse.body.dryRunId });
 
     process.env.BANK_IMPORT_ENABLED = previousFlag;
 
     expect(disabledResponse.status).toBe(503);
     expect(disabledResponse.body).toEqual({
-      error: 'IMPORT_DISABLED',
+      code: 'IMPORT_DISABLED',
       message: 'Bank statement import is currently disabled.',
     });
 
@@ -507,6 +550,7 @@ describe('Manual reconciliation endpoint', () => {
     const response = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ targetType: 'invoice', targetId: invoice.id, reason: 'Manual match reason' });
 
     expect(response.status).toBe(200);
@@ -560,6 +604,7 @@ describe('Manual reconciliation endpoint', () => {
     const firstResponse = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send(payload);
 
     expect([200, 403]).toContain(firstResponse.status);
@@ -567,6 +612,7 @@ describe('Manual reconciliation endpoint', () => {
     const secondResponse = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send(payload);
     expect([403, 409]).toContain(secondResponse.status);
     if (secondResponse.status === 409) {
@@ -590,6 +636,7 @@ describe('Manual reconciliation endpoint', () => {
     const response = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${viewerToken}`)
+      .set('x-company-id', viewerUser.companyId)
       .send({ targetType: 'invoice', targetId: invoice.id });
 
     expect(response.status).toBe(403);
@@ -618,6 +665,7 @@ describe('Manual reconciliation endpoint', () => {
     const response = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ targetType: 'invoice', targetId: externalInvoice.id });
 
     expect(response.status).toBe(404);
@@ -654,11 +702,13 @@ describe('Manual reconciliation undo and audit log', () => {
     await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ targetType: 'invoice', targetId: invoice.id });
 
     const undoResponse = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile/undo`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ reason: 'Mistaken match' });
 
     expect(undoResponse.status).toBe(200);
@@ -710,11 +760,13 @@ describe('Manual reconciliation undo and audit log', () => {
     await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ targetType: 'invoice', targetId: invoice.id });
 
     const response = await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile/undo`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ reason: '' });
 
     expect(response.status).toBe(400);
@@ -737,11 +789,13 @@ describe('Manual reconciliation undo and audit log', () => {
     await request
       .post(`/api/bank-statements/transactions/${bankTransaction.id}/reconcile`)
       .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
       .send({ targetType: 'invoice', targetId: invoice.id });
 
     const auditResponse = await request
       .get(`/api/bank-statements/${bankStatement.id}/audit-logs`)
-      .set('Authorization', `Bearer ${authToken}`);
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId);
 
     expect(auditResponse.status).toBe(200);
     expect(auditResponse.body.success).toBe(true);

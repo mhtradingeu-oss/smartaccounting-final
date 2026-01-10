@@ -82,12 +82,16 @@ LOGIN_JSON="$(curl -fsS -X POST "$BASE_URL/api/auth/login" \
   || fail "Login request failed"
 
 TOKEN="$(echo "$LOGIN_JSON" | jq -r '.token // empty')"
+COMPANY_ID="$(echo "$LOGIN_JSON" | jq -r '.user.companyId // empty')"
 
 [[ -n "$TOKEN" && "$TOKEN" != "null" ]] \
   && pass "Login successful (JWT issued)" \
   || fail "Login did not return token: $LOGIN_JSON"
+[[ -n "$COMPANY_ID" && "$COMPANY_ID" != "null" ]] \
+  && pass "Company context available ($COMPANY_ID)" \
+  || fail "Login did not return companyId: $LOGIN_JSON"
 
-AUTH=(-H "Authorization: Bearer $TOKEN")
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "X-Company-Id: $COMPANY_ID")
 
 # --------------------------------------------------
 log "4) Authenticated endpoints (RBAC-safe)"

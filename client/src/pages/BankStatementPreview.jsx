@@ -54,7 +54,7 @@ const BankStatementPreview = () => {
   const unmatched = previewResponse?.unmatched ?? [];
   const warnings = previewResponse?.warnings ?? [];
   const summary = previewResponse?.summary;
-  const confirmationToken = previewResponse?.confirmationToken;
+  const dryRunId = previewResponse?.dryRunId;
 
   const previewReady = Boolean(previewResponse);
   const statusLabel = reading
@@ -64,7 +64,7 @@ const BankStatementPreview = () => {
     : 'Waiting for upload';
   const confirmButtonDisabled =
     !previewReady ||
-    !confirmationToken ||
+    !dryRunId ||
     !confirmationChecked ||
     confirming ||
     isReadOnlySession;
@@ -121,9 +121,9 @@ const BankStatementPreview = () => {
       return;
     }
 
-    if (!confirmationToken) {
+    if (!dryRunId) {
       setConfirmError({
-        message: 'Bestätigungstoken fehlt. Bitte führe die Vorschau erneut aus.',
+        message: 'dryRunId fehlt. Bitte führe die Vorschau erneut aus.',
       });
       return;
     }
@@ -132,7 +132,7 @@ const BankStatementPreview = () => {
     setConfirming(true);
 
     try {
-      const payload = await bankStatementsAPI.confirmImport(confirmationToken);
+      const payload = await bankStatementsAPI.confirmImport(dryRunId);
       const result = payload?.data ?? payload;
       const bankStatementId = result?.bankStatementId;
 

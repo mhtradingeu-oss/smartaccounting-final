@@ -6,6 +6,7 @@ import { isReadOnlyRole } from '../lib/permissions';
 import { isOCRPreviewEnabled } from '../lib/featureFlags';
 import { previewDocument, processDocument } from '../services/ocrAPI';
 import FeatureGate from '../components/FeatureGate';
+import { PageNoAccessState } from '../components/ui/PageStates';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'tiff'];
@@ -59,6 +60,7 @@ const OCRPreview = () => {
   const { user } = useAuth();
   const { activeCompany } = useCompany();
   const companyName = activeCompany?.name || 'Company';
+  const activeCompanyId = activeCompany?.id ?? null;
   const isReadOnlySession = isReadOnlyRole(user?.role);
   const ocrPreviewEnabled = isOCRPreviewEnabled();
 
@@ -123,7 +125,7 @@ const OCRPreview = () => {
     setReading(true);
 
     try {
-      const response = await previewDocument(file, documentType);
+      const response = await previewDocument(file, documentType, activeCompanyId);
       setPreviewResponse(response);
     } catch (error) {
       setFileError('The preview could not be generated. Please try again later.');
@@ -139,7 +141,7 @@ const OCRPreview = () => {
     setProcessStatus('processing');
     setProcessError('');
     try {
-      const response = await processDocument(selectedFile, documentType);
+      const response = await processDocument(selectedFile, documentType, activeCompanyId);
       setProcessResult(response);
       setProcessStatus('done');
     } catch (error) {
@@ -200,6 +202,10 @@ const OCRPreview = () => {
       </div>
     );
   };
+
+  if (!activeCompanyId) {
+    return <PageNoAccessState />;
+  }
 
   return (
     <FeatureGate

@@ -10,6 +10,12 @@ vi.mock('../../services/companiesAPI', () => ({
   },
 }));
 
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 1, role: 'admin', companyId: 1 },
+  }),
+}));
+
 const HookTester = () => {
   useLoadCompanies();
   const { companies } = useCompany();

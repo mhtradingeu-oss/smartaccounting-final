@@ -6,6 +6,9 @@ const revokedTokenService = require('../services/revokedTokenService');
 const { getJwtSecret } = require('../utils/jwtConfig');
 const { updateRequestContext } = require('../lib/logger/context');
 
+const isSystemAdminUser = (user) =>
+  Boolean(user && user.role === 'admin' && (user.companyId === null || user.companyId === undefined));
+
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   // Enforce strict Bearer token usage
@@ -49,8 +52,8 @@ const authenticate = async (req, res, next) => {
     }
     req.user = user;
     req.userId = user.id;
-    req.companyId = user.companyId;
-    updateRequestContext({ userId: user.id, companyId: user.companyId });
+    req.isSystemAdmin = isSystemAdminUser(user);
+    updateRequestContext({ userId: user.id });
     req.token = token;
     req.tokenJti = tokenJti;
     req.tokenExp = tokenExp;
@@ -113,6 +116,24 @@ const requireRole =
     next();
   };
 
+const requireSystemAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(403).json({
+      status: 'error',
+      message: 'Insufficient permissions',
+      code: 'INSUFFICIENT_ROLE',
+    });
+  }
+  if (!isSystemAdminUser(req.user)) {
+    return res.status(403).json({
+      status: 'error',
+      message: 'System admin access required',
+      code: 'SYSTEM_ADMIN_REQUIRED',
+    });
+  }
+  return next();
+};
+
 // Legacy aliases used by some routes
 const authorize = (roles) => requireRole(Array.isArray(roles) ? roles : roles ? [roles] : []);
 const requireAdmin = requireRole(['admin']);
@@ -120,6 +141,8 @@ const requireAdmin = requireRole(['admin']);
 module.exports = {
   authenticate,
   requireRole,
+  requireSystemAdmin,
+  isSystemAdminUser,
   authorize,
   requireAdmin,
   requireCompany,

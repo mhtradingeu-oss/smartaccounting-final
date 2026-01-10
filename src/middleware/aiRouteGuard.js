@@ -86,7 +86,7 @@ function createAiRouteGuard(options = {}) {
       }
 
       const user = req.user;
-      const companyId = req.companyId || user?.companyId;
+      const companyId = req.companyId;
 
       if (!companyId) {
         return handleRejection(req, res, {
@@ -96,11 +96,11 @@ function createAiRouteGuard(options = {}) {
         });
       }
 
-      if (!user || user.companyId !== companyId) {
+      if (!user || !companyId) {
         return handleRejection(req, res, {
           status: 403,
           error: 'Forbidden: invalid company context',
-          reason: 'Company context mismatch',
+          reason: 'Missing company context',
         });
       }
 

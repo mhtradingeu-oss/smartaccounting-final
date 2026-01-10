@@ -111,6 +111,7 @@ vi.mock('../context/AuthContext', () => ({
       firstName: 'Demo',
       lastName: 'Admin',
       email: 'demo@demo.com',
+      companyId: 1,
     },
     token: 'route-smoke-token',
     login: vi.fn(),
@@ -147,8 +148,11 @@ import { AppRoutes } from '../App';
 const routeTestCases = [
   { path: '/', expectedText: 'Dashboard page' },
   { path: '/login', expectedText: 'Dashboard page' },
-  { path: '/pricing', expectedText: 'Plans built for modern finance teams.' },
-  { path: '/request-access', expectedText: 'Tell us about your team and we will reserve a seat for you.' },
+  { path: '/pricing', expectedText: 'Preise, die Vertrauen schaffen.' },
+  {
+    path: '/request-access',
+    expectedText: 'Erzählen Sie uns kurz von Ihrem Team – wir reservieren Ihren Platz.',
+  },
   { path: '/onboarding', expectedText: 'Onboarding wizard page' },
   { path: '/rbac', expectedText: 'RBAC management page' },
   { path: '/investor-dashboard', expectedText: 'Investor dashboard page' },
@@ -178,15 +182,18 @@ const routeTestCases = [
 describe('Route smoke test', () => {
   afterEach(() => cleanup());
 
-  it.each(routeTestCases)('renders %s without hitting not-found', async ({ path, expectedText }) => {
-    render(
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>,
-    );
+  it.each(routeTestCases)(
+    'renders %s without hitting not-found',
+    async ({ path, expectedText }) => {
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <AppRoutes />
+        </MemoryRouter>,
+      );
 
-    await waitFor(() => {
-      expect(screen.getByText(expectedText)).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
+      });
+    },
+  );
 });

@@ -16,10 +16,6 @@ async function aiReadGateway(input) {
   const { redactPII } = require('./governance');
   const normalized = { ...input };
 
-  if (!normalized.companyId && normalized.user?.companyId) {
-    normalized.companyId = normalized.user.companyId;
-  }
-
   const rawPrompt =
     normalized.params && typeof normalized.params.prompt === 'string'
       ? normalized.params.prompt
@@ -57,11 +53,11 @@ async function aiReadGateway(input) {
 
   // Contract: Fail closed if required fields are missing
   let meta;
-  const requiredFields = ['requestId', 'user', 'purpose', 'policyVersion'];
+  const requiredFields = ['requestId', 'user', 'purpose', 'policyVersion', 'companyId'];
   let missingField = null;
   for (const field of requiredFields) {
     if (field === 'user') {
-      if (!normalized.user || !normalized.user.id || !normalized.user.companyId) {
+      if (!normalized.user || !normalized.user.id) {
         missingField = 'user';
         break;
       }
@@ -93,11 +89,7 @@ async function aiReadGateway(input) {
     promptKey && (promptKey.startsWith('insights') || promptKey.startsWith('exports'));
   if (isInsightsOrExports) {
     // STRICT: Check company context BEFORE contract validation, even if required fields are missing
-    if (
-      !normalized.companyId ||
-      !normalized.user ||
-      normalized.user.companyId !== normalized.companyId
-    ) {
+    if (!normalized.companyId || !normalized.user) {
       await auditLogger.logRejected(
         buildAuditPayload({
           normalized,

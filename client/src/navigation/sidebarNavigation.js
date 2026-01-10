@@ -42,6 +42,18 @@ export const CORE_NAVIGATION_ITEMS = [
   },
 ];
 
+export const SYSTEM_ADMIN_NAVIGATION_ITEMS = [
+  {
+    nameKey: 'navigation.system_admin_dashboard',
+    href: '/system-admin',
+    icon: HomeIcon,
+    iconSolid: HomeIconSolid,
+    badge: null,
+    description: 'Platform overview and system governance',
+    enabled: true,
+  },
+];
+
 export const ACCOUNTING_NAVIGATION_ITEMS = [
   {
     nameKey: 'navigation.invoices',

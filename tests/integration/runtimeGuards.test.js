@@ -56,7 +56,7 @@ describe('Runtime Guards Integration', () => {
       app,
       method: 'GET',
       url: '/api/companies',
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
     });
     expect([200, 401]).toContain(res.status);
     if (res.status === 200) {
@@ -70,7 +70,7 @@ describe('Runtime Guards Integration', () => {
       app,
       method: 'GET',
       url: '/api/ai/read/invoice-summary?invoiceId=1',
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
     });
     expect([404, 501, 503, 400, 403]).toContain(res.status);
     // Accept error or message for fail-closed
@@ -111,7 +111,7 @@ describe('Runtime Guards Integration', () => {
       app,
       method: 'PUT',
       url: `/api/companies/${testCompany.id}`,
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       body: { name: 'NoAI Inc Updated' },
     });
     const countAfter = await AuditLog.count();
@@ -141,7 +141,7 @@ describe('Runtime Guards Integration', () => {
       app,
       method: 'GET',
       url: '/api/ai/read/invoice-summary?invoiceId=1',
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
     });
     expect([404, 501, 503, 400, 403]).toContain(res.status);
     expect(res.body.error || res.body.message || res.body.status).toBeDefined();

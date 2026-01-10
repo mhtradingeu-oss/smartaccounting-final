@@ -25,6 +25,7 @@ const SAMPLE_CSV_CONTENT =
 
 describe('Smoke: Bank Statements', () => {
   let token;
+  let companyId;
   let agent;
 
   beforeAll(async () => {
@@ -36,11 +37,16 @@ describe('Smoke: Bank Statements', () => {
     });
     expect(res.status).toBe(200);
     token = res.body?.token || res.body?.accessToken;
+    companyId = res.body?.user?.companyId;
     expect(token).toBeTruthy();
+    expect(companyId).toBeTruthy();
   });
 
   it('should list bank statements', async () => {
-    const res = await agent.get('/api/bank-statements').set('Authorization', `Bearer ${token}`);
+    const res = await agent
+      .get('/api/bank-statements')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Company-Id', companyId);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body) || Array.isArray(res.body?.data)).toBe(true);
   });
@@ -53,9 +59,10 @@ describe('Smoke: Bank Statements', () => {
     const res = await agent
       .post('/api/bank-statements/import?dryRun=true')
       .set('Authorization', `Bearer ${token}`)
+      .set('X-Company-Id', companyId)
       .attach('bankStatement', formData.bankStatement, 'smoke-demo-statement.csv')
       .field('format', 'CSV');
     expect(res.status).toBe(200);
-    expect(res.body.confirmationToken || res.body.token).toBeTruthy();
+    expect(res.body.dryRunId).toBeTruthy();
   });
 });

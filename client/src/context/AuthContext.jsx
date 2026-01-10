@@ -23,6 +23,13 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       localStorage.setItem('token', token);
     }
+    if (typeof window !== 'undefined') {
+      const activeCompanyId = user?.companyId ?? null;
+      if (activeCompanyId && !sessionStorage.getItem('activeCompanyId')) {
+        window.__ACTIVE_COMPANY_ID__ = activeCompanyId;
+        sessionStorage.setItem('activeCompanyId', String(activeCompanyId));
+      }
+    }
     setAuthState((prev) => ({
       ...prev,
       status: 'authenticated',
@@ -35,6 +42,10 @@ export const AuthProvider = ({ children }) => {
 
   const applyUnauthenticated = useCallback(() => {
     localStorage.removeItem('token');
+    if (typeof window !== 'undefined') {
+      window.__ACTIVE_COMPANY_ID__ = null;
+      sessionStorage.removeItem('activeCompanyId');
+    }
     companiesAPI.clearCache();
     setAuthState((prev) => ({
       ...prev,

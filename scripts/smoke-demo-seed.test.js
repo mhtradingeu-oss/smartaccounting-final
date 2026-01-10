@@ -19,6 +19,7 @@ assert(DEMO_PASSWORD, 'Demo password missing in demo-contract.json');
 
 describe('Smoke: Demo Seed', () => {
   let token;
+  let companyId;
   let agent;
 
   beforeAll(async () => {
@@ -30,7 +31,9 @@ describe('Smoke: Demo Seed', () => {
     });
     expect(res.status).toBe(200);
     token = res.body?.token || res.body?.accessToken;
+    companyId = res.body?.user?.companyId || null;
     expect(token).toBeTruthy();
+    expect(companyId).toBeTruthy();
   });
 
   const endpoints = [
@@ -44,7 +47,10 @@ describe('Smoke: Demo Seed', () => {
 
   endpoints.forEach((endpoint) => {
     it(`should verify ${endpoint}`, async () => {
-      const res = await agent.get(endpoint).set('Authorization', `Bearer ${token}`);
+      const res = await agent
+        .get(endpoint)
+        .set('Authorization', `Bearer ${token}`)
+        .set('x-company-id', companyId);
       expect([200, 204]).toContain(res.status);
       // Accepts array or object with data array
       const list = Array.isArray(res.body)

@@ -124,7 +124,8 @@
     "ai_insights": "رؤى الذكاء الاصطناعي",
     "investor_dashboard": "لوحة المستثمر",
     "rbac": "وحدة التحكم في الصلاحيات",
-    "ai_assistant": "مساعد الذكاء الاصطناعي"
+    "ai_assistant": "مساعد الذكاء الاصطناعي",
+    "system_admin_dashboard": "لوحة النظام"
   },
   "auth": {
     "logout": "تسجيل الخروج"

@@ -47,7 +47,7 @@ describe('AI Voice Assistant API', () => {
       app,
       method: 'post',
       url: '/api/ai/voice/assistant',
-      headers: AI_HEADERS,
+      headers: { ...AI_HEADERS, 'x-company-id': company.id },
       body: { intent: 'review', transcript: 'Summarize status' },
     });
     expect(res.res.statusCode).toBe(401);
@@ -58,7 +58,7 @@ describe('AI Voice Assistant API', () => {
       app,
       method: 'post',
       url: '/api/ai/voice/assistant',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': company.id },
       body: { intent: 'review', transcript: 'Summarize status' },
     });
     expect(res.res.statusCode).toBe(400);
@@ -70,7 +70,7 @@ describe('AI Voice Assistant API', () => {
       app,
       method: 'post',
       url: '/api/ai/voice/assistant',
-      headers: { Authorization: `Bearer ${adminToken}`, ...AI_HEADERS },
+      headers: { Authorization: `Bearer ${adminToken}`, ...AI_HEADERS, 'x-company-id': company.id },
       body: { intent: 'review', transcript: 'Summarize status' },
     });
     await company.update({ aiEnabled: true });
@@ -83,7 +83,7 @@ describe('AI Voice Assistant API', () => {
       app,
       method: 'post',
       url: '/api/ai/voice/assistant',
-      headers: { Authorization: `Bearer ${viewerToken}`, ...AI_HEADERS },
+      headers: { Authorization: `Bearer ${viewerToken}`, ...AI_HEADERS, 'x-company-id': company.id },
       body: { intent: 'review', transcript: 'Summarize status' },
     });
     expect(res.res.statusCode).toBe(403);
@@ -99,7 +99,7 @@ describe('AI Voice Assistant API', () => {
       app,
       method: 'post',
       url: '/api/ai/voice/assistant',
-      headers: { Authorization: `Bearer ${adminToken}`, ...AI_HEADERS },
+      headers: { Authorization: `Bearer ${adminToken}`, ...AI_HEADERS, 'x-company-id': company.id },
       body: { intent: 'review', transcript: 'Summarize status' },
     });
     process.env.AI_VOICE_ENABLED = 'true';
@@ -112,7 +112,7 @@ describe('AI Voice Assistant API', () => {
       app,
       method: 'post',
       url: '/api/ai/voice/assistant',
-      headers: { Authorization: `Bearer ${adminToken}`, ...AI_HEADERS },
+      headers: { Authorization: `Bearer ${adminToken}`, ...AI_HEADERS, 'x-company-id': company.id },
       body: {
         intent: 'review',
         transcript: 'Summarize status',

@@ -56,18 +56,20 @@ async function loginDemo() {
 
   assert.strictEqual(res.status, 200, 'Login failed');
   const token = res.data?.token || res.data?.accessToken;
+  const companyId = res.data?.user?.companyId;
   assert(token, 'Login response missing token');
+  assert(companyId, 'Login response missing companyId');
 
   console.log('[SMOKE] Login OK');
-  return token;
+  return { token, companyId };
 }
 
 /* --------------------------------------------------
  * Bank Statements Smoke
  * -------------------------------------------------- */
 
-async function smokeBankStatements(token) {
-  const headers = { Authorization: `Bearer ${token}` };
+async function smokeBankStatements({ token, companyId }) {
+  const headers = { Authorization: `Bearer ${token}`, 'X-Company-Id': companyId };
 
   console.log('[SMOKE] Listing bank statements...');
   const listRes = await client.get('/bank-statements', { headers });
@@ -87,19 +89,23 @@ async function smokeBankStatements(token) {
 
   assert.strictEqual(dryRunRes.status, 200, 'Dry-run import failed');
 
-  const confirmationToken = dryRunRes.data?.confirmationToken || dryRunRes.data?.token;
-
-  assert(confirmationToken, 'Dry-run response missing confirmation token');
+  const dryRunId = dryRunRes.data?.dryRunId;
+  assert(dryRunId, 'Dry-run response missing dryRunId');
 
   console.log('[SMOKE] Dry-run import OK');
 
+  console.log('[SMOKE] Confirming dry-run (optional)...');
+  try {
+    const confirmRes = await client.post('/bank-statements/import/confirm', { dryRunId }, { headers });
+    assert.strictEqual(confirmRes.status, 200);
+    console.log('[SMOKE] Import confirm OK');
+  } catch (err) {
+    console.warn('[SMOKE] Import confirm skipped or not supported');
+  }
+
   console.log('[SMOKE] Attempt reconcile (optional)...');
   try {
-    const reconcileRes = await client.post(
-      '/bank-statements/reconcile',
-      { confirmationToken },
-      { headers },
-    );
+    const reconcileRes = await client.post('/bank-statements/reconcile', {}, { headers });
     assert.strictEqual(reconcileRes.status, 200);
     console.log('[SMOKE] Reconcile OK');
   } catch (err) {
@@ -113,8 +119,8 @@ async function smokeBankStatements(token) {
 
 (async () => {
   try {
-    const token = await loginDemo();
-    await smokeBankStatements(token);
+    const session = await loginDemo();
+    await smokeBankStatements(session);
     console.log('✅ Bank Statements smoke test PASSED');
     process.exit(0);
   } catch (err) {

@@ -18,11 +18,13 @@ import {
 } from '@heroicons/react/24/outline';
 import {
   CORE_NAVIGATION_ITEMS,
+  SYSTEM_ADMIN_NAVIGATION_ITEMS,
   ACCOUNTING_NAVIGATION_ITEMS,
   INTELLIGENCE_NAVIGATION_ITEMS,
   COMPLIANCE_NAVIGATION_ITEMS,
   ADMINISTRATION_NAVIGATION_ITEMS,
 } from '../navigation/sidebarNavigation';
+import { isSystemAdmin } from '../lib/systemAdmin';
 
 const NAV_LINK_BASE_CLASSES =
   'relative group flex items-center px-3 py-2.5 text-sm font-medium min-h-[44px] rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
@@ -66,11 +68,22 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       enabled: evaluateEnabled(item),
     }));
 
-  const coreNavigation = enrichNavigation(CORE_NAVIGATION_ITEMS);
-  const accountingNavigation = enrichNavigation(ACCOUNTING_NAVIGATION_ITEMS);
-  const intelligenceNavigation = enrichNavigation(INTELLIGENCE_NAVIGATION_ITEMS);
-  const complianceNavigation = enrichNavigation(COMPLIANCE_NAVIGATION_ITEMS);
-  const administrationNavigation = enrichNavigation(ADMINISTRATION_NAVIGATION_ITEMS);
+  const isSystemAdminUser = isSystemAdmin(user);
+  const coreNavigation = enrichNavigation(
+    isSystemAdminUser ? SYSTEM_ADMIN_NAVIGATION_ITEMS : CORE_NAVIGATION_ITEMS,
+  );
+  const accountingNavigation = isSystemAdminUser
+    ? []
+    : enrichNavigation(ACCOUNTING_NAVIGATION_ITEMS);
+  const intelligenceNavigation = isSystemAdminUser
+    ? []
+    : enrichNavigation(INTELLIGENCE_NAVIGATION_ITEMS);
+  const complianceNavigation = isSystemAdminUser
+    ? []
+    : enrichNavigation(COMPLIANCE_NAVIGATION_ITEMS);
+  const administrationNavigation = isSystemAdminUser
+    ? []
+    : enrichNavigation(ADMINISTRATION_NAVIGATION_ITEMS);
 
   const shouldRenderSection = (items) => Array.isArray(items) && items.length > 0;
 
@@ -278,7 +291,9 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               <h1 className="text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                 SmartAccounting
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Professional Suite</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {isSystemAdminUser ? 'Platform Control' : 'Professional Suite'}
+              </p>
             </div>
           </div>
         )}
@@ -314,10 +329,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               <p className="text-xs text-gray-500 truncate dark:text-gray-400">{user?.email}</p>
               <div className="mt-2 flex items-center space-x-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-100 to-blue-100 text-primary-800 dark:from-primary-900/40 dark:to-blue-900/40 dark:text-primary-200">
-                  {user?.subscriptionPlan || 'Professional'}
+                  {isSystemAdminUser ? 'Platform' : user?.subscriptionPlan || 'Professional'}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
-                  {user?.role || 'Admin'}
+                  {isSystemAdminUser ? 'System Admin' : user?.role || 'Admin'}
                 </span>
               </div>
             </div>

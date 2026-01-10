@@ -70,13 +70,13 @@ export const bankStatementsAPI = {
     });
     return unwrapData(response);
   },
-  confirmImport: async (confirmationToken) => {
-    if (!confirmationToken) {
-      throw new Error('Confirmation token is required to confirm the import.');
+  confirmImport: async (dryRunId) => {
+    if (!dryRunId) {
+      throw new Error('dryRunId is required to confirm the import.');
     }
 
     const response = await api.post('/bank-statements/import/confirm', {
-      confirmationToken,
+      dryRunId,
     });
     return unwrapData(response);
   },

@@ -1,6 +1,6 @@
 const express = require('express');
 const logger = require('../lib/logger');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const germanTaxCompliance = require('../services/germanTaxCompliance');
 const elsterService = require('../services/elsterService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
@@ -9,15 +9,16 @@ const router = express.Router();
 
 router.use(disabledFeatureHandler('VAT/tax reporting'));
 router.use(authenticate);
+router.use(requireCompany);
 
-router.get('/eur/:year', authenticate, async (req, res) => {
+router.get('/eur/:year', async (req, res) => {
   try {
     const year = parseInt(req.params.year);
     if (year < 2020 || year > new Date().getFullYear()) {
       return res.status(400).json({ error: 'Invalid year' });
     }
 
-    const eurData = await germanTaxCompliance.calculateEUR(req.user.companyId, year);
+    const eurData = await germanTaxCompliance.calculateEUR(req.companyId, year);
 
     res.json({
       message: 'EÜR generated successfully',
@@ -28,7 +29,7 @@ router.get('/eur/:year', authenticate, async (req, res) => {
   }
 });
 
-router.post('/vat-return', authenticate, async (req, res) => {
+router.post('/vat-return', async (req, res) => {
   try {
     const { year, quarter, month } = req.body;
 
@@ -38,7 +39,7 @@ router.post('/vat-return', authenticate, async (req, res) => {
       });
     }
 
-    const vatReturn = await germanTaxCompliance.generateVATReturn(req.user.companyId, {
+    const vatReturn = await germanTaxCompliance.generateVATReturn(req.companyId, {
       year,
       quarter,
       month,
@@ -53,7 +54,7 @@ router.post('/vat-return', authenticate, async (req, res) => {
   }
 });
 
-router.post('/elster-export', authenticate, async (req, res) => {
+router.post('/elster-export', async (req, res) => {
   try {
     const { vatReturn } = req.body;
 
@@ -62,7 +63,7 @@ router.post('/elster-export', authenticate, async (req, res) => {
     }
 
     const elsterExport = await germanTaxCompliance.generateElsterExport(
-      req.user.companyId,
+      req.companyId,
       vatReturn,
     );
 
@@ -74,12 +75,12 @@ router.post('/elster-export', authenticate, async (req, res) => {
   }
 });
 
-router.get('/kleinunternehmer/:year', authenticate, async (req, res) => {
+router.get('/kleinunternehmer/:year', async (req, res) => {
   try {
     const year = parseInt(req.params.year);
 
     const eligibility = await germanTaxCompliance.checkKleinunternehmerEligibility(
-      req.user.companyId,
+      req.companyId,
       year,
     );
 
@@ -92,7 +93,7 @@ router.get('/kleinunternehmer/:year', authenticate, async (req, res) => {
   }
 });
 
-router.post('/validate-transaction', authenticate, async (req, res) => {
+router.post('/validate-transaction', async (req, res) => {
   try {
     const { transaction } = req.body;
 
@@ -111,10 +112,10 @@ router.post('/validate-transaction', authenticate, async (req, res) => {
   }
 });
 
-router.post('/submit', authenticate, async (req, res) => {
+router.post('/submit', async (req, res) => {
   try {
     const { reportType, period, data, submitToElster = false } = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const { Company } = require('../models');
     const company = await Company.findByPk(companyId);

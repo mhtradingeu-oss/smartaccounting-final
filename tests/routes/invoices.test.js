@@ -35,7 +35,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       if (res.status !== 201) {
         throw new Error(
@@ -66,7 +66,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(response.status).toBe(400);
       expect(response.body.message).toBe('At least one invoice item is required');
@@ -93,7 +93,7 @@ describe('POST /api/invoices/:id/payments', () => {
         app,
         method: 'GET',
         url: '/api/invoices',
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
 
       expect(response.status).toBe(200);
@@ -121,7 +121,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(response.status).toBe(201);
       const invoice = response.body.invoice ?? response.body.data?.invoice;
@@ -166,7 +166,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(response.status).toBe(400);
     });
@@ -187,7 +187,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(response.status).toBe(400);
       expect(response.body.message).toMatch(/total mismatch/i);
@@ -208,7 +208,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(response.status).toBe(400);
       expect(response.body.message).toMatch(/currency/i);
@@ -239,7 +239,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: invoiceData,
-        headers: { Authorization: `Bearer ${otherToken}` },
+        headers: { Authorization: `Bearer ${otherToken}`, 'x-company-id': otherCompany.id },
       });
       const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
       expect(invoice).toBeDefined();
@@ -250,7 +250,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'PATCH',
         url: `/api/invoices/${invoiceId}/status`,
         body: { status: 'paid' }, // invalid from 'pending' directly to 'paid'
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(patchRes.status).toBe(404);
     });
@@ -273,7 +273,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: buildInvoicePayload(),
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
       expect(invoice).toBeDefined();
@@ -283,7 +283,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'PUT',
         url: `/api/invoices/${invoiceId}`,
         body: { notes: 'Updated while draft' },
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.invoice.notes).toBe('Updated while draft');
@@ -310,7 +310,7 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'POST',
         url: '/api/invoices',
         body: buildInvoicePayload(),
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
       expect(invoice).toBeDefined();
@@ -320,14 +320,14 @@ describe('POST /api/invoices/:id/payments', () => {
         method: 'PATCH',
         url: `/api/invoices/${invoiceId}/status`,
         body: { status: 'sent' },
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       const finalUpdateRes = await global.requestApp({
         app,
         method: 'PUT',
         url: `/api/invoices/${invoiceId}`,
         body: { notes: 'Attempt correction' },
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
       });
       expect(finalUpdateRes.status).toBe(409);
       expect(finalUpdateRes.body.message).toMatch(/immutable after SENT/i);

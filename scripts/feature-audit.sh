@@ -79,11 +79,15 @@ LOGIN_JSON="$(curl -fsS -X POST "$API/api/auth/login" \
   || fail "Login failed"
 
 TOKEN="$(echo "$LOGIN_JSON" | jq -r '.token // .accessToken // empty')"
+COMPANY_ID="$(echo "$LOGIN_JSON" | jq -r '.user.companyId // empty')"
 [[ -n "$TOKEN" && "$TOKEN" != "null" ]] \
   && pass "Login OK (JWT received)" \
   || fail "Login did not return token: $LOGIN_JSON"
+[[ -n "$COMPANY_ID" && "$COMPANY_ID" != "null" ]] \
+  && pass "Company context available ($COMPANY_ID)" \
+  || fail "Login did not return companyId: $LOGIN_JSON"
 
-AUTH=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -H "X-Company-Id: $COMPANY_ID")
 
 # ------------------------------------------------------------
 log "6) Who am I (RBAC sanity)"
@@ -95,11 +99,9 @@ set -e
 # ------------------------------------------------------------
 log "7) Companies: list"
 COMP_LIST="$(curl -fsS "${AUTH[@]}" "$API/api/companies")" || fail "GET /companies failed"
-COMPANY_ID="$(echo "$COMP_LIST" | jq -r '.[0].id // .data[0].id // empty')"
-
-[[ -n "$COMPANY_ID" ]] \
-  && pass "Company available ($COMPANY_ID)" \
-  || fail "No company found for demo user"
+[[ -n "$COMP_LIST" ]] \
+  && pass "Company list returned" \
+  || fail "No company list returned"
 
 # ------------------------------------------------------------
 log "8) Invoices: create"

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ROUTE_DEFINITIONS } from '../App';
 import {
   CORE_NAVIGATION_ITEMS,
+  SYSTEM_ADMIN_NAVIGATION_ITEMS,
   ACCOUNTING_NAVIGATION_ITEMS,
   INTELLIGENCE_NAVIGATION_ITEMS,
   COMPLIANCE_NAVIGATION_ITEMS,
@@ -9,6 +10,7 @@ import {
 } from '../navigation/sidebarNavigation';
 
 const navEntries = [
+  ...SYSTEM_ADMIN_NAVIGATION_ITEMS,
   ...CORE_NAVIGATION_ITEMS,
   ...ACCOUNTING_NAVIGATION_ITEMS,
   ...INTELLIGENCE_NAVIGATION_ITEMS,

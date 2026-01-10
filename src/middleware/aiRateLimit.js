@@ -5,7 +5,7 @@ const WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 30;
 
 module.exports = async function aiRateLimit(req, res, next) {
-  const key = `ai:${req.user.companyId}:${req.user.id}`;
+  const key = `ai:${req.companyId}:${req.user.id}`;
   const now = Date.now();
   let entry = rateLimitMap.get(key);
   if (!entry || now - entry.start > WINDOW_MS) {
@@ -17,7 +17,7 @@ module.exports = async function aiRateLimit(req, res, next) {
   if (entry.count > MAX_REQUESTS) {
     await logRateLimited({
       userId: req.user.id,
-      companyId: req.user.companyId,
+      companyId: req.companyId,
       route: req.originalUrl,
       queryType: req.query.queryType,
       requestId: req.requestId,

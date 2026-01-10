@@ -4,12 +4,10 @@ const { detectMutationIntent } = require('./mutationIntent');
 
 async function getSuggestion(params) {
   // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
-  const { userId, companyId, prompt, context, user, requestId } = params;
+  const { userId, companyId, prompt, context, requestId } = params;
 
-  // Strict cross-company guard
-  const effectiveUserCompanyId = user && user.companyId ? user.companyId : undefined;
-  if (!companyId || (effectiveUserCompanyId && companyId !== effectiveUserCompanyId)) {
-    throw new Error('Cross-company AI access denied');
+  if (!companyId) {
+    throw new Error('Company context required');
   }
 
   const intent = detectMutationIntent(prompt);

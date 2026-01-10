@@ -46,6 +46,7 @@ describe('User deletion guard', () => {
       method: 'DELETE',
       url: `/api/users/${targetUser.id}`,
       body: { reason: 'GDPR requires anonymization' },
+      headers: { 'x-company-id': mockCurrentUser.companyId },
     });
     expect(response.status).toBe(405);
     expect(response.body.error).toMatch(/anonymize/i);
@@ -65,6 +66,7 @@ describe('User deletion guard', () => {
       app,
       method: 'DELETE',
       url: '/api/users/123456',
+      headers: { 'x-company-id': mockCurrentUser.companyId },
     });
     expect(response.status).toBe(404);
     expect(AuditLogService.appendEntry).not.toHaveBeenCalled();

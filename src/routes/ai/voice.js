@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requireCompany } = require('../../middleware/authMiddleware');
 const aiAssistantService = require('../../services/ai/aiAssistantService');
 const aiReadGateway = require('../../services/ai/aiReadGateway');
+const { logRejected } = require('../../services/ai/aiAuditLogger');
 const aiRouteGuard = require('../../middleware/aiRouteGuard');
 const rateLimit = require('../../middleware/aiRateLimit');
 const { Company } = require('../../models');
@@ -45,7 +46,7 @@ const buildGatewayPayload = ({
   responseMode,
 }) => ({
   user: req.user,
-  companyId: req.user?.companyId || req.companyId,
+  companyId: req.companyId,
   requestId: req.requestId,
   purpose: req.aiContext?.purpose,
   policyVersion: req.aiContext?.policyVersion,
@@ -89,7 +90,7 @@ router.post('/assistant', async (req, res, next) => {
     const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
     const prompt = fallbackPrompt;
     const requestedResponseMode = normalizeResponseMode(req.body?.responseMode);
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
     const queryType = `assistant_voice_${intent || 'unknown'}`;
     let responseMode = requestedResponseMode;
     let voiceFallback = false;
@@ -104,6 +105,23 @@ router.post('/assistant', async (req, res, next) => {
       return respondWithError(req, res, 400, 'Intent not supported');
     }
     if (!ALLOWED_ROLES.has(req.user.role)) {
+      try {
+        await logRejected({
+          userId: req.user?.id,
+          companyId,
+          requestId: req.requestId,
+          queryType,
+          route: req.originalUrl,
+          prompt,
+          reason: 'Role not permitted for AI voice assistant',
+          responseMode: requestedResponseMode,
+        });
+      } catch (logError) {
+        if (process.env.NODE_ENV !== 'test') {
+          // eslint-disable-next-line no-console
+          console.error('[ai/voice] Audit log failure', logError.message || logError);
+        }
+      }
       return respondWithError(req, res, 403, 'Insufficient role for voice assistant');
     }
     if (requestedResponseMode === 'voice') {

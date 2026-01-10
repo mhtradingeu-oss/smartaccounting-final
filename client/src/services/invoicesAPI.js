@@ -44,7 +44,11 @@ const normalizeDemoInvoices = (items = []) =>
 
 export const invoicesAPI = {
   list: async (params = {}) => {
-    const response = await api.get('/invoices', { params });
+    const { companyId, ...query } = params;
+    const response = await api.get('/invoices', {
+      params: query,
+      headers: companyId ? { 'X-Company-Id': companyId } : undefined,
+    });
     const data = extractPayload(response.data);
     if (!Array.isArray(data)) {
       throw new Error('Unexpected invoices response shape.');

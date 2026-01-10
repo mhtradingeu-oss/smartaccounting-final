@@ -113,7 +113,7 @@ describe('DATEV export preparation', () => {
       app,
       method: 'GET',
       url: '/api/exports/datev?format=csv&kontenrahmen=skr03&from=2025-01-01&to=2025-01-31',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': companyId },
     });
 
     expect(response.status).toBe(200);

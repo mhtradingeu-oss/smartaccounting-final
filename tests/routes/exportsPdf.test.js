@@ -29,7 +29,7 @@ describe('Exports PDF gating and content', () => {
       app,
       method: 'GET',
       url: '/api/exports/audit-logs?format=pdf',
-      headers: { Authorization: `Bearer ${viewerToken}` },
+      headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': viewer.companyId },
     });
 
     expect(response.status).toBe(403);
@@ -40,7 +40,7 @@ describe('Exports PDF gating and content', () => {
       app,
       method: 'GET',
       url: '/api/exports/audit-logs?format=pdf',
-      headers: { Authorization: `Bearer ${auditorToken}` },
+      headers: { Authorization: `Bearer ${auditorToken}`, 'x-company-id': auditor.companyId },
     });
 
     expect(response.status).toBe(200);

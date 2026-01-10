@@ -42,6 +42,7 @@ describe('POST /api/ai/insights/:id/decisions (read-only)', () => {
       app,
       method: 'post',
       url: `/api/ai/insights/${insight.id}/decisions`,
+      headers: { 'x-company-id': insight.companyId },
     });
     expect(res.status).toBe(401);
   });
@@ -51,7 +52,7 @@ describe('POST /api/ai/insights/:id/decisions (read-only)', () => {
       app,
       method: 'post',
       url: `/api/ai/insights/${insight.id}/decisions`,
-      headers: { Authorization: `Bearer ${viewerToken}` },
+      headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': insight.companyId },
       body: { decision: 'accepted', reason: 'not used' },
     });
     expect(res.status).toBe(403);
@@ -62,7 +63,7 @@ describe('POST /api/ai/insights/:id/decisions (read-only)', () => {
       app,
       method: 'post',
       url: `/api/ai/insights/${insight.id}/decisions`,
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': insight.companyId },
       body: { decision: 'accepted', reason: 'test' },
     });
     expect(res.status).toBe(501);

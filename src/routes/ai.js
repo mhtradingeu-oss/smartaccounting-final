@@ -6,6 +6,7 @@ const aiInsightsService = require('../services/ai/aiInsightsService');
 const aiReadOnlyRouter = require('./aiReadOnly');
 const voiceRouter = require('./ai/voice');
 const governanceRouter = require('./ai/governance');
+const { requirePlanFeature } = require('../middleware/planGuard');
 
 const router = express.Router();
 
@@ -37,6 +38,7 @@ router.post(
 );
 
 const readRouter = express.Router();
+readRouter.use(requirePlanFeature('aiInsights'));
 readRouter.use(aiRouteGuard());
 
 const mergeRequestId = (body, requestId) => {

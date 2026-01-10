@@ -42,7 +42,8 @@ describe('Bank statements list endpoint', () => {
 
     const response = await request
       .get('/api/bank-statements')
-      .set('Authorization', `Bearer ${authToken}`);
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId);
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);

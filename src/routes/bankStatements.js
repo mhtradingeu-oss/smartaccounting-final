@@ -1,13 +1,16 @@
 const express = require('express');
 const fs = require('fs');
-const { authenticate, requireRole } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany, requireRole } = require('../middleware/authMiddleware');
 const bankStatementService = require('../services/bankStatementService');
 const AuditLogService = require('../services/auditLogService');
 const logger = require('../lib/logger');
-const { BankStatement, BankTransaction } = require('../models');
+const { BankStatement, BankTransaction, Company } = require('../models');
 const { createSecureUploader, logUploadMetadata, validateUploadedFile } = require('../middleware/secureUpload');
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(requireCompany);
 
 const upload = createSecureUploader({
   subDir: 'bank-statements',
@@ -53,6 +56,75 @@ const isDryRunRequest = (req) => {
 const isBankImportEnabled = () =>
   String(process.env.BANK_IMPORT_ENABLED || 'false').toLowerCase() === 'true';
 
+const logBankImportRejection = async ({
+  action,
+  reason,
+  companyId,
+  userId,
+  oldValues,
+  newValues,
+}) => {
+  await AuditLogService.appendEntry({
+    action,
+    resourceType: 'BankStatementImport',
+    resourceId: companyId ? String(companyId) : null,
+    userId,
+    reason,
+    oldValues: oldValues || null,
+    newValues: newValues || null,
+  });
+};
+
+const ensureCompanyInGoodStanding = async (req, res, next) => {
+  try {
+    const company = await Company.findByPk(req.companyId);
+    if (!company) {
+      await logBankImportRejection({
+        action: 'bank_import_blocked_company_missing',
+        reason: 'Company not found',
+        companyId: req.companyId,
+        userId: req.user?.id,
+      });
+      return res.status(404).json({
+        code: 'COMPANY_NOT_FOUND',
+        message: 'Company not found.',
+      });
+    }
+    if (!company.isActive || company.suspendedAt) {
+      await AuditLogService.appendEntry({
+        action: 'bank_import_blocked_company',
+        resourceType: 'Company',
+        resourceId: String(company.id),
+        userId: req.user?.id,
+        reason: 'Company suspended or inactive',
+        oldValues: { isActive: company.isActive, suspendedAt: company.suspendedAt },
+      });
+      return res.status(403).json({
+        code: 'COMPANY_SUSPENDED',
+        message: 'Company is suspended or inactive.',
+      });
+    }
+    const subscriptionStatus = (company.subscriptionStatus || '').toLowerCase();
+    if (!['active', 'demo'].includes(subscriptionStatus)) {
+      await AuditLogService.appendEntry({
+        action: 'bank_import_blocked_subscription',
+        resourceType: 'Company',
+        resourceId: String(company.id),
+        userId: req.user?.id,
+        reason: 'Subscription required',
+        oldValues: { subscriptionStatus: company.subscriptionStatus || null },
+      });
+      return res.status(402).json({
+        code: 'SUBSCRIPTION_REQUIRED',
+        message: 'An active subscription is required to import bank statements.',
+      });
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const ensureBankImportEnabled = async (req, res, next) => {
   if (isDryRunRequest(req)) {
     return next();
@@ -91,7 +163,7 @@ const ensureBankImportEnabled = async (req, res, next) => {
   }
 
   return res.status(503).json({
-    error: 'IMPORT_DISABLED',
+    code: 'IMPORT_DISABLED',
     message: 'Bank statement import is currently disabled.',
   });
 };
@@ -103,16 +175,23 @@ const ensureBankImportEnabled = async (req, res, next) => {
  */
 router.post(
   '/import',
-  authenticate,
   requireRole(['admin', 'accountant']),
+  ensureCompanyInGoodStanding,
   ensureBankImportEnabled,
   logUploadMetadata,
   upload.single('bankStatement'),
   async (req, res) => {
     try {
       if (!req.file) {
+        await logBankImportRejection({
+          action: 'bank_import_rejected',
+          reason: 'No file uploaded',
+          companyId: req.companyId,
+          userId: req.user?.id,
+        });
         return res.status(400).json({
           success: false,
+          code: 'BANK_STATEMENT_FILE_REQUIRED',
           message: 'No file uploaded',
         });
       }
@@ -126,8 +205,15 @@ router.post(
             // Ignore cleanup failures.
           }
         }
+        await logBankImportRejection({
+          action: 'bank_import_rejected',
+          reason: `Unsupported file content. ${signatureCheck.reason}`,
+          companyId: req.companyId,
+          userId: req.user?.id,
+        });
         return res.status(400).json({
           success: false,
+          code: 'BANK_STATEMENT_FILE_INVALID',
           message: `Unsupported file content. ${signatureCheck.reason}`,
         });
       }
@@ -149,8 +235,15 @@ router.post(
             // Ignore cleanup failures.
           }
         }
+        await logBankImportRejection({
+          action: 'bank_import_rejected',
+          reason: `Extension mismatch: ${signatureCheck.detected}`,
+          companyId: req.companyId,
+          userId: req.user?.id,
+        });
         return res.status(400).json({
           success: false,
+          code: 'BANK_STATEMENT_EXTENSION_MISMATCH',
           message: `File extension does not match detected content (${signatureCheck.detected}).`,
         });
       }
@@ -159,8 +252,15 @@ router.post(
       const detectedFormat = inferFormat(req.file.originalname, signatureCheck.detected);
       const format = (rawFormat || detectedFormat || '').toUpperCase();
       if (!format || !SUPPORTED_FORMATS.includes(format)) {
+        await logBankImportRejection({
+          action: 'bank_import_rejected',
+          reason: 'Invalid or missing format',
+          companyId: req.companyId,
+          userId: req.user?.id,
+        });
         return res.status(400).json({
           success: false,
+          code: 'BANK_STATEMENT_FORMAT_INVALID',
           message: 'Invalid or missing format',
         });
       }
@@ -228,8 +328,15 @@ router.post(
         data: result,
       });
     } catch (error) {
+      await logBankImportRejection({
+        action: 'bank_import_failed',
+        reason: error.message || 'Failed to import bank statement',
+        companyId: req.companyId,
+        userId: req.user?.id,
+      });
       return res.status(500).json({
         success: false,
+        code: 'BANK_STATEMENT_IMPORT_FAILED',
         message: error.message || 'Failed to import bank statement',
       });
     }
@@ -238,14 +345,22 @@ router.post(
 
 router.post(
   '/import/confirm',
-  authenticate,
   requireRole(['admin', 'accountant']),
+  ensureCompanyInGoodStanding,
   ensureBankImportEnabled,
   async (req, res) => {
-    const { dryRunId } = req.body || {};
-    if (!dryRunId) {
+    const { dryRunId, confirmationToken } = req.body || {};
+    const resolvedDryRunId = dryRunId || confirmationToken;
+    if (!resolvedDryRunId) {
+      await logBankImportRejection({
+        action: 'bank_import_confirm_rejected',
+        reason: 'dryRunId is required',
+        companyId: req.companyId,
+        userId: req.user?.id,
+      });
       return res.status(400).json({
         success: false,
+        code: 'DRY_RUN_ID_REQUIRED',
         message: 'dryRunId is required',
       });
     }
@@ -253,19 +368,28 @@ router.post(
     const transaction = await BankStatement.sequelize.transaction();
     try {
       const dryRunRecord = await bankStatementService.getDryRunById({
-        dryRunId,
+        dryRunId: resolvedDryRunId,
         companyId: req.companyId,
         transaction,
       });
       if (!dryRunRecord) {
         await transaction.rollback();
+        await logBankImportRejection({
+          action: 'bank_import_confirm_rejected',
+          reason: 'Dry run not found',
+          companyId: req.companyId,
+          userId: req.user?.id,
+          newValues: { dryRunId: resolvedDryRunId },
+        });
         return res.status(404).json({
           success: false,
+          code: 'DRY_RUN_NOT_FOUND',
           message: 'Dry run not found',
+          dryRunId: resolvedDryRunId,
         });
       }
       const { summary, bankStatement } = await bankStatementService.confirmDryRunImport({
-        dryRunId,
+        dryRunId: resolvedDryRunId,
         companyId: req.companyId,
         transaction,
       });
@@ -277,7 +401,7 @@ router.post(
         userId: req.user?.id,
         oldValues: null,
         newValues: {
-          dryRunId,
+          dryRunId: resolvedDryRunId,
           bankStatementId: bankStatement.id,
           counts: summary,
         },
@@ -293,7 +417,7 @@ router.post(
         success: true,
         message: 'Bank statement import confirmed',
         data: {
-          dryRunId,
+          dryRunId: resolvedDryRunId,
           bankStatementId: bankStatement.id,
           summary,
         },
@@ -301,9 +425,18 @@ router.post(
     } catch (error) {
       await transaction.rollback();
       const status = error.status || 500;
+      await logBankImportRejection({
+        action: 'bank_import_confirm_failed',
+        reason: error.message || 'Failed to confirm bank statement import',
+        companyId: req.companyId,
+        userId: req.user?.id,
+        newValues: { dryRunId: resolvedDryRunId },
+      });
       return res.status(status).json({
         success: false,
+        code: 'BANK_STATEMENT_CONFIRM_FAILED',
         message: error.message || 'Failed to confirm bank statement import',
+        dryRunId: resolvedDryRunId,
       });
     }
   },
@@ -314,7 +447,7 @@ router.post(
  * List Bank Statements
  * ─────────────────────────────────────────────────────────
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const statements = await BankStatement.findAll({
       where: { companyId: req.companyId },
@@ -338,7 +471,7 @@ router.get('/', authenticate, async (req, res) => {
  * List Transactions for a Statement
  * ─────────────────────────────────────────────────────────
  */
-router.get('/:id/transactions', authenticate, async (req, res) => {
+router.get('/:id/transactions', async (req, res) => {
   try {
     const transactions = await BankTransaction.findAll({
       where: {
@@ -360,7 +493,7 @@ router.get('/:id/transactions', authenticate, async (req, res) => {
   }
 });
 
-router.get('/:id/audit-logs', authenticate, async (req, res) => {
+router.get('/:id/audit-logs', async (req, res) => {
   try {
     const logs = await bankStatementService.getAuditLogEntriesForStatement({
       statementId: Number(req.params.id),
@@ -385,7 +518,7 @@ router.get('/:id/audit-logs', authenticate, async (req, res) => {
  * Reconcile Transactions
  * ─────────────────────────────────────────────────────────
  */
-router.post('/reconcile', authenticate, async (req, res) => {
+router.post('/reconcile', async (req, res) => {
   try {
     const reconciled = await bankStatementService.reconcileTransactions(req.companyId);
 
@@ -407,7 +540,6 @@ router.post('/reconcile', authenticate, async (req, res) => {
 
 router.post(
   '/transactions/:id/reconcile',
-  authenticate,
   requireRole(['admin', 'accountant']),
   async (req, res) => {
     try {
@@ -439,7 +571,6 @@ router.post(
 
 router.post(
   '/transactions/:id/reconcile/undo',
-  authenticate,
   requireRole(['admin']),
   async (req, res) => {
     try {
@@ -472,7 +603,7 @@ router.post(
  * Categorize / Update Transaction
  * ─────────────────────────────────────────────────────────
  */
-router.put('/transactions/:id/categorize', authenticate, async (req, res) => {
+router.put('/transactions/:id/categorize', async (req, res) => {
   try {
     const { category, vatCategory, isReconciled } = req.body;
 

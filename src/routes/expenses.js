@@ -14,7 +14,7 @@ router.get(
   requireRole(['admin', 'accountant', 'auditor', 'viewer']),
   async (req, res, next) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.companyId;
       const expenses = await expenseService.listExpenses(companyId);
       res.status(200).json({ success: true, expenses });
     } catch (error) {

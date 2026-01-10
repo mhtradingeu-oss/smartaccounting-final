@@ -58,7 +58,8 @@ docker compose up -d --build
 ## 4. Seed Demo Data
 
 ```sh
-docker compose run --rm backend npx sequelize-cli db:seed:all
+docker compose run --rm -e DEMO_MODE=true -e ALLOW_DEMO_SEED=true backend \
+  npx sequelize-cli db:seed --seed database/seeders/demo/20251226-demo-seed.js
 ```
 
 **Expected Output:**
@@ -68,6 +69,7 @@ docker compose run --rm backend npx sequelize-cli db:seed:all
 
 **If fails:**
 
+- Ensure `DEMO_MODE=true` and `ALLOW_DEMO_SEED=true` are set.
 - Check for schema mismatches (run migrations again if needed).
 - Review seeder logs for details.
 
@@ -85,8 +87,10 @@ docker compose run --rm backend npx sequelize-cli db:seed:all
 # Demo verification
 node ./scripts/demo-verify.js
 
-# Smoke tests (if present)
-./scripts/smoke.sh
+# Smoke tests
+node ./scripts/smoke-demo-seed.js
+node ./scripts/smoke-bank-statements.js
+node ./scripts/dev-smoke.js
 ```
 
 **Expected Output:**
@@ -100,6 +104,33 @@ node ./scripts/demo-verify.js
 - For audit scripts: check logs and database state.
 - For demo-verify: check seed data and migrations.
 - For smoke: check service health and endpoints.
+
+---
+
+## 6. Run Tests (Backend, Frontend, Postgres Gate)
+
+```sh
+# Backend unit/integration (requires local deps, no Docker)
+npm test
+
+# Frontend unit tests
+npm --prefix client test
+
+# Postgres compliance gate (Docker required)
+npm run test:postgres
+```
+
+**Expected Output:**
+
+- Backend tests complete without failures.
+- Frontend tests complete without failures.
+- Postgres compliance test passes and containers stop cleanly.
+
+**If fails:**
+
+- Check `docker compose ps` for DB/backend status.
+- Ensure `DEMO_MODE`/`ALLOW_DEMO_SEED` and required env vars are set.
+- Re-run migrations (step 2) if schema mismatch errors appear.
 
 ---
 

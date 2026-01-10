@@ -10,7 +10,7 @@ describe('AI meta logging invariants', () => {
       app,
       method: 'get',
       url: '/api/v1/ai/read/monthly-overview',
-      headers: { Authorization: 'Bearer test-token' },
+      headers: { Authorization: 'Bearer test-token', 'x-company-id': global.testCompany?.id },
       query: { month: '2026-01', prompt: 'hello' },
     });
 

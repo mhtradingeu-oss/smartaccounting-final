@@ -47,13 +47,13 @@ const PlanBadge = () => {
   const getPlanName = (plan) => {
     switch (plan) {
       case 'basic':
-        return 'Basic Plan';
+        return 'Starter';
       case 'pro':
-        return 'Pro Plan';
+        return 'Professional';
       case 'enterprise':
-        return 'Enterprise Plan';
+        return 'Business';
       default:
-        return 'No Plan';
+        return 'Kein Plan';
     }
   };
 

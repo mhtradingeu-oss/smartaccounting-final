@@ -6,6 +6,7 @@ const { logSessionEvent } = require('../services/ai/aiAuditLogger');
 const aiReadGateway = require('../services/ai/aiReadGateway');
 const aiRouteGuard = require('../middleware/aiRouteGuard');
 const rateLimit = require('../middleware/aiRateLimit');
+const { requirePlanFeature } = require('../middleware/planGuard');
 const { randomUUID } = require('crypto');
 const { redactPII } = require('../services/ai/governance');
 
@@ -13,11 +14,13 @@ const router = express.Router();
 
 router.use(authenticate);
 router.use(requireCompany);
+router.use(requirePlanFeature('aiRead'));
 router.use(aiRouteGuard());
 router.use(rateLimit);
 
 const normalizeFlag = (value) => String(value ?? '').toLowerCase() === 'true';
 const isAssistantFeatureEnabled = normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
+const requireAssistantPlan = requirePlanFeature('aiAssistant');
 
 const respondWithError = (req, res, status, error) =>
   res.status(status).json({ error, requestId: req.requestId });
@@ -41,7 +44,7 @@ const buildGatewayPayload = ({
   responseMode,
 }) => ({
   user: req.user,
-  companyId: req.user?.companyId || req.companyId,
+  companyId: req.companyId,
   requestId: req.requestId,
   purpose: req.aiContext?.purpose,
   policyVersion: req.aiContext?.policyVersion,
@@ -62,7 +65,7 @@ router.get('/invoice-summary', async (req, res, next) => {
   try {
     const { invoiceId } = req.query;
     const prompt = extractPromptFromQuery(req);
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
     const queryType = 'invoice_summary';
     if (!companyId) {
       return respondWithError(req, res, 403, 'companyId required');
@@ -95,7 +98,7 @@ router.get('/monthly-overview', async (req, res, next) => {
   try {
     const { month } = req.query;
     const prompt = extractPromptFromQuery(req);
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
     const queryType = 'monthly_overview';
     if (!companyId) {
       return respondWithError(req, res, 403, 'companyId required');
@@ -128,7 +131,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
   try {
     const { range } = req.query;
     const prompt = extractPromptFromQuery(req);
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
     const queryType = 'reconciliation_summary';
     if (!companyId) {
       return respondWithError(req, res, 403, 'companyId required');
@@ -156,7 +159,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
   }
 });
 
-router.get('/assistant/context', async (req, res, next) => {
+router.get('/assistant/context', requireAssistantPlan, async (req, res, next) => {
   if (!isAssistantFeatureEnabled) {
     return respondAssistantDisabled(req, res);
   }
@@ -181,7 +184,7 @@ router.get('/assistant/context', async (req, res, next) => {
   }
 });
 
-router.get('/assistant', async (req, res, next) => {
+router.get('/assistant', requireAssistantPlan, async (req, res, next) => {
   if (!isAssistantFeatureEnabled) {
     return respondAssistantDisabled(req, res);
   }
@@ -221,14 +224,14 @@ router.get('/assistant', async (req, res, next) => {
   }
 });
 
-router.get('/session', async (req, res, next) => {
+router.get('/session', requireAssistantPlan, async (req, res, next) => {
   if (!isAssistantFeatureEnabled) {
     return respondAssistantDisabled(req, res);
   }
   try {
     const prompt = extractPromptFromQuery(req);
     const safePrompt = safePromptFromRequest(prompt);
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
     const queryType = 'assistant_session';
     const sessionId = randomUUID();
     const { status, body } = await aiReadGateway(

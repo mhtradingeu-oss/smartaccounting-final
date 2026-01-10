@@ -1,5 +1,6 @@
 const express = require('express');
-const { authenticate, requireRole } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany, requireRole } = require('../middleware/authMiddleware');
+const { requirePlanFeature } = require('../middleware/planGuard');
 const {
   Invoice,
   InvoiceItem,
@@ -13,6 +14,10 @@ const { Op } = require('sequelize');
 const { buildDatevExport } = require('../services/datevExportService');
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(requireCompany);
+router.use(requirePlanFeature('exports'));
 
 const { generateSimplePdf } = require('../utils/pdfGenerator');
 
@@ -70,7 +75,7 @@ const serializeCsv = (headers, rows) => {
     return `"${stringified.replace(/"/g, '""')}"`;
   };
   const lines = [
-    headers.map(escape).join(','),
+    headers.join(','),
     ...rows.map((row) => headers.map((h) => escape(row[h])).join(',')),
   ];
   return lines.join('\n');
@@ -88,7 +93,7 @@ const sendPdfResponse = (res, filename, lines) => {
   res.send(generateSimplePdf(lines));
 };
 
-router.get('/audit-logs', authenticate, requireRole(['auditor']), async (req, res) => {
+router.get('/audit-logs', requireRole(['auditor']), async (req, res) => {
   try {
     const format = ensureFormat(req.query.format);
     const from = parseDate(req.query.from);
@@ -125,7 +130,7 @@ router.get('/audit-logs', authenticate, requireRole(['auditor']), async (req, re
   }
 });
 
-router.get('/accounting-records', authenticate, requireRole(['auditor']), async (req, res) => {
+router.get('/accounting-records', requireRole(['auditor']), async (req, res) => {
   try {
     const format = ensureFormat(req.query.format);
     const from = parseDate(req.query.from);
@@ -229,7 +234,7 @@ router.get('/accounting-records', authenticate, requireRole(['auditor']), async 
   }
 });
 
-router.get('/vat-summaries', authenticate, requireRole(['auditor']), async (req, res) => {
+router.get('/vat-summaries', requireRole(['auditor']), async (req, res) => {
   try {
     const format = ensureFormat(req.query.format);
     const from = parseDate(req.query.from);
@@ -289,7 +294,7 @@ router.get('/vat-summaries', authenticate, requireRole(['auditor']), async (req,
   }
 });
 
-router.get('/datev', authenticate, requireRole(['admin', 'accountant', 'auditor']), async (req, res) => {
+router.get('/datev', requireRole(['admin', 'accountant', 'auditor']), async (req, res) => {
   try {
     const format = ensureDatevFormat(req.query.format);
     const from = parseDate(req.query.from);
@@ -341,7 +346,7 @@ router.get('/datev', authenticate, requireRole(['admin', 'accountant', 'auditor'
   }
 });
 
-router.get('/ai-decisions', authenticate, requireRole(['auditor']), async (req, res) => {
+router.get('/ai-decisions', requireRole(['auditor']), async (req, res) => {
   try {
     const format = ensureFormat(req.query.format);
     const from = parseDate(req.query.from);

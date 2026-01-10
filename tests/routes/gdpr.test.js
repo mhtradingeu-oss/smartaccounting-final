@@ -30,7 +30,7 @@ describe('GDPR API', () => {
         app,
         method: 'get',
         url: '/api/gdpr/export-user-data',
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: { Authorization: `Bearer ${userToken}`, 'x-company-id': user.companyId },
       });
       expect([200, 204, 403, 404]).toContain(res.status);
       if (res.status === 200) {
@@ -47,7 +47,7 @@ describe('GDPR API', () => {
         app,
         method: 'get',
         url: '/api/gdpr/export-user-data',
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': admin.companyId },
         query: { userId: user.id },
       });
       expect([200, 204, 403, 404]).toContain(res.status);
@@ -69,7 +69,7 @@ describe('GDPR API', () => {
         app,
         method: 'get',
         url: '/api/gdpr/export-user-data',
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: { Authorization: `Bearer ${userToken}`, 'x-company-id': user.companyId },
         query: { userId: otherCompanyUser.id },
       });
       // Print server-side resolved user/company if available
@@ -88,7 +88,7 @@ describe('GDPR API', () => {
         app,
         method: 'post',
         url: '/api/gdpr/anonymize-user',
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: { Authorization: `Bearer ${userToken}`, 'x-company-id': user.companyId },
         body: { reason: 'GDPR request' },
       });
       expect([200, 204, 403, 404]).toContain(res.status);
@@ -113,7 +113,7 @@ describe('GDPR API', () => {
         app,
         method: 'post',
         url: '/api/gdpr/anonymize-user',
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': admin.companyId },
         body: { userId: newUser.id, reason: 'Admin GDPR' },
       });
       expect([200, 204, 403, 404]).toContain(res.status);
@@ -131,7 +131,7 @@ describe('GDPR API', () => {
         app,
         method: 'post',
         url: '/api/gdpr/anonymize-user',
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': admin.companyId },
         body: { userId: newUser.user.id, reason: 'GDPR' },
       });
       const foundInvoice = await Invoice.findByPk(invoice.id);
@@ -144,7 +144,7 @@ describe('GDPR API', () => {
         app,
         method: 'post',
         url: '/api/gdpr/anonymize-user',
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': admin.companyId },
         body: { userId: newUser.id, reason: 'GDPR' },
       });
       if ([200, 204].includes(res.status)) {
@@ -167,7 +167,7 @@ describe('GDPR API', () => {
         app,
         method: 'post',
         url: '/api/gdpr/anonymize-user',
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': admin.companyId },
         body: { userId: newUser.id },
       });
       expect([400, 404]).toContain(res.status);

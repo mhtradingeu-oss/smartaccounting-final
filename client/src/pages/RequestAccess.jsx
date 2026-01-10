@@ -32,7 +32,7 @@ const RequestAccess = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!formData.fullName || !formData.email || !formData.company) {
-      setError('Please complete all required fields before submitting.');
+      setError('Bitte füllen Sie alle Pflichtfelder aus.');
       return;
     }
 
@@ -43,7 +43,7 @@ const RequestAccess = () => {
       await new Promise((resolve) => setTimeout(resolve, 700));
       setSubmissionState('success');
     } catch (submitError) {
-      setError('We could not process your request just yet. Please try again.');
+      setError('Ihre Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.');
       setSubmissionState('idle');
     }
   };
@@ -56,30 +56,30 @@ const RequestAccess = () => {
       <div className="mx-auto max-w-4xl space-y-10">
         <header className="space-y-3 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
-            Request access
+            Zugang anfragen
           </p>
           <h1 className="text-3xl font-bold leading-snug sm:text-4xl">
-            Tell us about your team and we will reserve a seat for you.
+            Erzählen Sie uns kurz von Ihrem Team – wir reservieren Ihren Platz.
           </h1>
           <p className="text-sm text-slate-600">
-            We respond within 24 hours with onboarding availability, compliance guidance, and Stripe billing support.
+            Wir melden uns innerhalb von 24 Stunden mit Onboarding-Verfügbarkeit, Governance-Details und einer klaren Preisübersicht.
           </p>
         </header>
 
         <Card className="space-y-6 bg-white">
           {isSuccess ? (
             <div className="space-y-3 text-center">
-              <p className="text-xl font-semibold text-slate-900">You are on the list!</p>
+              <p className="text-xl font-semibold text-slate-900">Sie sind auf der Liste!</p>
               <p className="text-sm text-slate-600">
-                Expect a dedicated email with next steps shortly. We will keep your spot open while you review pricing.
+                In Kürze erhalten Sie eine E-Mail mit den nächsten Schritten. Ihr Platz bleibt während der Prüfung der Preise reserviert.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <Link to="/pricing" className="inline-flex">
-                  <Button size="md">Review plans again</Button>
+                  <Button size="md">Preise erneut ansehen</Button>
                 </Link>
                 <Link to="/" className="inline-flex">
                   <Button variant="secondary" size="md">
-                    Back to landing
+                    Zur Startseite
                   </Button>
                 </Link>
               </div>
@@ -88,7 +88,7 @@ const RequestAccess = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="fullName" className="text-sm font-semibold text-slate-700">
-                  Full name
+                  Vollständiger Name
                 </label>
                 <Input
                   id="fullName"
@@ -102,7 +102,7 @@ const RequestAccess = () => {
               </div>
               <div>
                 <label htmlFor="email" className="text-sm font-semibold text-slate-700">
-                  Work email
+                  Geschäftliche E-Mail
                 </label>
                 <Input
                   id="email"
@@ -110,14 +110,14 @@ const RequestAccess = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="you@company.com"
+                  placeholder="name@unternehmen.de"
                   required
                   disabled={isSubmitting}
                 />
               </div>
               <div>
                 <label htmlFor="company" className="text-sm font-semibold text-slate-700">
-                  Company name
+                  Unternehmensname
                 </label>
                 <Input
                   id="company"
@@ -131,13 +131,13 @@ const RequestAccess = () => {
               </div>
               <div>
                 <label htmlFor="details" className="text-sm font-semibold text-slate-700">
-                  What are you building?
+                  Kurzbeschreibung Ihres Bedarfs
                 </label>
                 <Textarea
                   id="details"
                   name="details"
                   rows={4}
-                  placeholder="Tell us if you need multi-company, compliance, or Stripe billing scoping."
+                  placeholder="Teilen Sie uns mit, ob Sie mehrere Unternehmen, besondere Governance oder Integrationen benötigen."
                   value={formData.details}
                   onChange={handleChange}
                   disabled={isSubmitting}
@@ -153,19 +153,19 @@ const RequestAccess = () => {
                 </div>
               )}
               <Button type="submit" className="w-full" size="md" loading={isSubmitting}>
-                {isSubmitting ? 'Submitting request…' : 'Submit request'}
+                {isSubmitting ? 'Anfrage wird gesendet…' : 'Anfrage senden'}
               </Button>
             </form>
           )}
         </Card>
 
         <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-slate-500">
-          <p>Have questions before you request access?</p>
+          <p>Fragen vor der Anfrage?</p>
           <a
             href="mailto:sales@smartaccounting.de"
             className="font-semibold text-slate-900 underline-offset-4 hover:underline"
           >
-            Email sales@smartaccounting.de
+            sales@smartaccounting.de kontaktieren
           </a>
         </div>
       </div>

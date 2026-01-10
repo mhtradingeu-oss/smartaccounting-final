@@ -33,7 +33,7 @@ router.get('/governance', async (req, res) => {
   const prompt = typeof req.query.prompt === 'string' ? req.query.prompt : '';
   const redactedPrompt = redactPrompt(prompt);
   const userId = req.user?.id || null;
-  const companyId = req.user?.companyId || null;
+  const companyId = req.companyId || null;
   const route = req.originalUrl;
   const queryType = 'governance';
 

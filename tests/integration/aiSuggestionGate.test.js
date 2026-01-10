@@ -48,6 +48,7 @@ describe('API Gate: /api/ai/suggest', () => {
       app,
       method: 'post',
       url: '/api/ai/suggest',
+      headers: { 'x-company-id': testCompany.id },
       body: {
         userId: testUser.id,
         companyId: testCompany.id,
@@ -71,6 +72,7 @@ describe('API Gate: /api/ai/suggest', () => {
       app,
       method: 'post',
       url: '/api/ai/suggest',
+      headers: { 'x-company-id': testCompany.id },
       body: {
         userId: testUser.id,
         companyId: testCompany.id,

@@ -22,7 +22,7 @@ describe('GET /api/compliance/reports/:type (tenant-safe)', () => {
       app,
       method: 'GET',
       url: '/api/compliance/reports/vat',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'x-company-id': global.testCompany.id },
     });
 
     expect(res.status).toBe(200);
@@ -38,7 +38,7 @@ describe('GET /api/compliance/reports/:type (tenant-safe)', () => {
       app,
       method: 'GET',
       url: '/api/compliance/reports/vat',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'x-company-id': global.testCompany.id },
     });
 
     expect(res.status).toBe(200);
@@ -59,7 +59,7 @@ describe('GET /api/compliance/reports/:type (tenant-safe)', () => {
       app,
       method: 'GET',
       url: '/api/compliance/reports/vat',
-      headers: { Authorization: `Bearer ${badToken}` },
+      headers: { Authorization: `Bearer ${badToken}`, 'x-company-id': global.otherCompany.id },
     });
 
     expect(res2.status).toBe(403);

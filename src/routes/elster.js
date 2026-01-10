@@ -1,6 +1,6 @@
 const express = require('express');
 const elsterService = require('../services/elsterService');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const { body, validationResult } = require('express-validator');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 const { elsterLimiter } = require('../middleware/rateLimiter');
@@ -10,10 +10,10 @@ const router = express.Router();
 router.use(elsterLimiter);
 router.use(disabledFeatureHandler('Elster exports'));
 router.use(authenticate);
+router.use(requireCompany);
 
 router.post(
   '/submit',
-  authenticate,
   [
     body('reportType').isIn(['UStVA', 'EÜR']).withMessage('Invalid report type'),
     body('year').isInt({ min: 2020, max: 2030 }).withMessage('Invalid year'),
@@ -32,7 +32,7 @@ router.post(
       }
 
       const { year, month, quarter } = req.body;
-      const companyId = req.user.companyId;
+      const companyId = req.companyId;
 
       let taxReportData;
       if (month) {
@@ -85,7 +85,7 @@ router.post(
   },
 );
 
-router.get('/status/:transferTicket', authenticate, async (req, res) => {
+router.get('/status/:transferTicket', async (req, res) => {
   try {
     const { transferTicket } = req.params;
 
@@ -104,9 +104,9 @@ router.get('/status/:transferTicket', authenticate, async (req, res) => {
   }
 });
 
-router.get('/history', authenticate, async (req, res) => {
+router.get('/history', async (req, res) => {
   try {
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const history = elsterService.getSubmissionHistory(companyId);
 
@@ -130,10 +130,10 @@ router.get('/history', authenticate, async (req, res) => {
   }
 });
 
-router.post('/generate-xml', authenticate, async (req, res) => {
+router.post('/generate-xml', async (req, res) => {
   try {
     const { year, month } = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const taxReportData = await elsterService.processMonthlyData(companyId, year, month);
 
@@ -156,7 +156,7 @@ router.post('/generate-xml', authenticate, async (req, res) => {
   }
 });
 
-router.get('/status/:ticket', authenticate, async (req, res) => {
+router.get('/status/:ticket', async (req, res) => {
   try {
     const { ticket } = req.params;
 
@@ -179,9 +179,9 @@ router.get('/status/:ticket', authenticate, async (req, res) => {
   }
 });
 
-router.get('/history', authenticate, async (req, res) => {
+router.get('/history', async (req, res) => {
   try {
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const history = await elsterService.getSubmissionHistory(companyId);
 

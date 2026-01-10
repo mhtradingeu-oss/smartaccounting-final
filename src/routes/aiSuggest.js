@@ -2,11 +2,13 @@ const express = require('express');
 const { getSuggestion } = require('../services/ai/aiSuggestionService');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const aiRouteGuard = require('../middleware/aiRouteGuard');
+const { requirePlanFeature } = require('../middleware/planGuard');
 
 const router = express.Router();
 
 router.use(authenticate);
 router.use(requireCompany);
+router.use(requirePlanFeature('aiSuggestions'));
 router.use(aiRouteGuard());
 
 const respondWithError = (req, res, status, error) =>

@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const germanTaxEngine = require('../services/germanTaxEngine');
 const elsterService = require('../services/elsterService');
 const gobdService = require('../services/gobdComplianceService');
@@ -9,12 +9,14 @@ const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 const router = express.Router();
 
 router.use(disabledFeatureHandler('Elster/compliance'));
+router.use(authenticate);
+router.use(requireCompany);
 
 // Generate UStVA (VAT advance return)
-router.post('/ustva/generate', authenticate, async (req, res) => {
+router.post('/ustva/generate', async (req, res) => {
   try {
     const { year, quarter } = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const ustvaReport = await germanTaxEngine.generateUStVA(companyId, year, quarter);
 
@@ -40,7 +42,7 @@ router.post('/ustva/generate', authenticate, async (req, res) => {
 });
 
 // Submit UStVA to ELSTER
-router.post('/ustva/submit', authenticate, async (req, res) => {
+router.post('/ustva/submit', async (req, res) => {
   try {
     const { reportData, sessionToken } = req.body;
 
@@ -66,10 +68,10 @@ router.post('/ustva/submit', authenticate, async (req, res) => {
 });
 
 // Generate EÜR (Income-Expense Calculation)
-router.post('/eur/generate', authenticate, async (req, res) => {
+router.post('/eur/generate', async (req, res) => {
   try {
     const { year } = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const eurReport = await germanTaxEngine.generateEUR(companyId, year);
 
@@ -94,10 +96,10 @@ router.post('/eur/generate', authenticate, async (req, res) => {
 });
 
 // Check tax compliance
-router.get('/compliance/check/:year', authenticate, async (req, res) => {
+router.get('/compliance/check/:year', async (req, res) => {
   try {
     const { year } = req.params;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const compliance = await germanTaxEngine.checkTaxCompliance(companyId, parseInt(year));
 
@@ -115,7 +117,7 @@ router.get('/compliance/check/:year', authenticate, async (req, res) => {
 });
 
 // Get tax calendar and deadlines
-router.get('/calendar/:year', authenticate, async (req, res) => {
+router.get('/calendar/:year', async (req, res) => {
   try {
     const { year } = req.params;
 
@@ -139,7 +141,7 @@ router.get('/calendar/:year', authenticate, async (req, res) => {
 });
 
 // Export GoBD-compliant data
-router.post('/export/gobd', authenticate, async (req, res) => {
+router.post('/export/gobd', async (req, res) => {
   try {
     const { startDate, endDate, format = 'XML' } = req.body;
 
@@ -172,7 +174,7 @@ router.post('/export/gobd', authenticate, async (req, res) => {
 });
 
 // Validate data integrity
-router.post('/validate/integrity', authenticate, async (req, res) => {
+router.post('/validate/integrity', async (req, res) => {
   try {
     const validation = await gobdService.validateDataIntegrity();
 
@@ -190,7 +192,7 @@ router.post('/validate/integrity', authenticate, async (req, res) => {
 });
 
 // ELSTER connection test
-router.get('/elster/test', authenticate, async (req, res) => {
+router.get('/elster/test', async (req, res) => {
   try {
     const connectionTest = await elsterService.testConnection();
 

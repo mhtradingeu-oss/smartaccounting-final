@@ -41,7 +41,8 @@ describe('Auth smoke test', () => {
 
     const companiesResponse = await supertestApp
       .get(companiesPath)
-      .set('Authorization', `Bearer ${loginResponse.body.token}`);
+      .set('Authorization', `Bearer ${loginResponse.body.token}`)
+      .set('x-company-id', company.id);
     expect(companiesResponse.status).toBe(200);
 
     expect(Array.isArray(companiesResponse.body.companies)).toBe(true);

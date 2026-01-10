@@ -50,9 +50,8 @@ const createApiTimeoutMiddleware = (options = {}) => {
     const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
 
     const timedOut = () => {
-      timeoutState.value = true;
-
       if (res.headersSent) {
+        timeoutState.value = true;
         return;
       }
 
@@ -70,6 +69,8 @@ const createApiTimeoutMiddleware = (options = {}) => {
         timeoutMs,
         requestId,
       });
+
+      timeoutState.value = true;
     };
 
     const timer = setTimeout(timedOut, timeoutMs);

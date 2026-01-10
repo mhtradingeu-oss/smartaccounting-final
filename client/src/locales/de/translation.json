@@ -104,7 +104,8 @@
     "profile_settings": "Profil & Einstellungen",
     "investor_dashboard": "Investor-Dashboard",
     "rbac": "RBAC-Konsole",
-    "ai_assistant": "AI Assistant"
+    "ai_assistant": "AI Assistant",
+    "system_admin_dashboard": "System-Dashboard"
   },
   "auth": {
     "logout": "Abmelden"

@@ -57,7 +57,6 @@ import { bankStatementsAPI } from '../../services/bankStatementsAPI';
 import { setBankImportEnabled, resetBankImportEnabled } from '../../lib/featureFlags';
 
 const previewResponse = {
-  confirmationToken: 'token-123',
   dryRunId: 88,
   summary: {
     transactionsDetected: 2,
@@ -164,7 +163,7 @@ describe('BankStatementPreview confirmation flow', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(bankStatementsAPI.confirmImport).toHaveBeenCalledWith('token-123');
+      expect(bankStatementsAPI.confirmImport).toHaveBeenCalledWith(88);
     });
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/bank-statements/123', {

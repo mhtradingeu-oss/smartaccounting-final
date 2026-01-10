@@ -112,6 +112,27 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
       },
+      isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
+      suspendedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      subscriptionPlan: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      subscriptionStatus: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      stripeSubscriptionId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       userId: {
         type: DataTypes.INTEGER,
         allowNull: true,

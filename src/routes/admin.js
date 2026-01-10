@@ -11,7 +11,7 @@ router.use(requireCompany);
 router.post('/demo-data/load', async (req, res) => {
   try {
     // Only allow for Default Company and admin
-    const company = await Company.findByPk(req.user.companyId);
+    const company = await Company.findByPk(req.companyId);
     if (!company || company.name !== 'Default Company') {
       return res
         .status(403)

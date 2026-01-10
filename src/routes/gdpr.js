@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { exportUserData, anonymizeUser } = require('../services/gdprService');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, requireCompany } = require('../middleware/authMiddleware');
+
+router.use(authenticate);
+router.use(requireCompany);
 
 // GET /api/gdpr/export-user-data?userId= (default: self)
-router.get('/export-user-data', authenticate, async (req, res) => {
+router.get('/export-user-data', async (req, res) => {
   try {
     const targetUserId = req.query.userId ? Number(req.query.userId) : req.user.id;
     const { User } = require('../models');
@@ -18,12 +21,12 @@ router.get('/export-user-data', authenticate, async (req, res) => {
     // Debug: log both company IDs for deep test diagnosis
     // eslint-disable-next-line no-console
     console.log(
-      '[GDPR route] req.user.companyId =',
-      req.user.companyId,
+      '[GDPR route] req.companyId =',
+      req.companyId,
       'targetUser.companyId =',
       targetUser.companyId,
     );
-    if (targetUser.companyId !== req.user.companyId) {
+    if (targetUser.companyId !== req.companyId) {
       // ❗ لا export، لا log، لا touch
       return res.status(403).json({ error: 'Forbidden' });
     }
@@ -36,7 +39,7 @@ router.get('/export-user-data', authenticate, async (req, res) => {
 });
 
 // POST /api/gdpr/anonymize-user { userId, reason }
-router.post('/anonymize-user', authenticate, async (req, res) => {
+router.post('/anonymize-user', async (req, res) => {
   try {
     const targetUserId = req.body.userId ? Number(req.body.userId) : req.user.id;
     const reason = req.body.reason;

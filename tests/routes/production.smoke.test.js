@@ -49,7 +49,7 @@ describeIfSockets('Production smoke suite', () => {
       app,
       method: 'GET',
       url: '/api/companies',
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': company.id },
     });
     expect(companiesRes.status).toBe(200);
     expect(Array.isArray(companiesRes.body.companies)).toBe(true);
@@ -74,7 +74,7 @@ describeIfSockets('Production smoke suite', () => {
       app,
       method: 'POST',
       url: '/api/invoices',
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': company.id },
       body: invoicePayload,
     });
     expect(invoiceRes.status).toBe(201);
@@ -86,7 +86,7 @@ describeIfSockets('Production smoke suite', () => {
       app,
       method: 'GET',
       url: '/api/invoices',
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': company.id },
     });
     expect(invoicesRes.status).toBe(200);
     expect(Array.isArray(invoicesRes.body.invoices)).toBe(true);

@@ -113,6 +113,10 @@ async function verifySeededEndpoints() {
   }
 
   const token = loginResult.token;
+  const companyId = loginResult.user?.companyId;
+  if (!companyId) {
+    throw new Error('Demo login failed – companyId missing');
+  }
 
   const endpoints = [
     { url: '/api/companies', key: 'companies' },
@@ -128,6 +132,7 @@ async function verifySeededEndpoints() {
       url: endpoint.url,
       headers: {
         Authorization: `Bearer ${token}`,
+        'X-Company-Id': companyId,
       },
     });
 

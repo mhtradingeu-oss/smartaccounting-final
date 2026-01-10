@@ -55,7 +55,7 @@ describe('AI Exports API', () => {
       app,
       method: 'get',
       url: '/api/ai/exports/insights.json',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': company.id },
       query: { purpose: 'insights_export_json', policyVersion: 'v1' },
     });
     expect([200, 400, 403, 404, 501]).toContain(res.status);
@@ -75,7 +75,7 @@ describe('AI Exports API', () => {
       app,
       method: 'get',
       url: '/api/ai/exports/insights.csv',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': company.id },
       query: { purpose: 'insights_export_csv', policyVersion: 'v1' },
     });
     expect([200, 400, 403, 404, 501]).toContain(res.status);
@@ -103,7 +103,7 @@ describe('AI Exports API', () => {
       app,
       method: 'get',
       url: '/api/ai/exports/insights.json',
-      headers: { Authorization: `Bearer ${otherToken}` },
+      headers: { Authorization: `Bearer ${otherToken}`, 'x-company-id': otherCompany.id },
       query: { purpose: 'insights_export_json', policyVersion: 'v1' },
     });
     // Should not see ExportCo's insights

@@ -158,7 +158,7 @@ const logUploadMetadata = (req, res, next) => {
     const { filename, mimetype, size, path: storedPath, originalname } = req.file;
     logger.info('Upload metadata', {
       userId: req.user?.id || null,
-      companyId: req.user?.companyId || null,
+      companyId: req.companyId || null,
       fieldname: req.file.fieldname,
       originalName: originalname,
       storedName: filename,

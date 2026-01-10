@@ -16,7 +16,7 @@ router.get('/', authenticate, requireCompany, async (req, res) => {
     const { page = 1, limit = 20, reportType, period } = req.query;
     const offset = (page - 1) * limit;
 
-    const whereClause = { companyId: req.user.companyId };
+    const whereClause = { companyId: req.companyId };
     if (reportType) {
       whereClause.reportType = reportType;
     }
@@ -61,7 +61,7 @@ router.get(
       const taxReport = await TaxReport.findOne({
         where: {
           id,
-          companyId: req.user.companyId,
+          companyId: req.companyId,
         },
         include: [
           {
@@ -112,7 +112,7 @@ router.post(
 
       const existingReport = await TaxReport.findOne({
         where: {
-          companyId: req.user.companyId,
+          companyId: req.companyId,
           reportType,
           period: JSON.stringify(period),
         },
@@ -122,10 +122,10 @@ router.post(
         return res.status(409).json({ error: 'Tax report for this period already exists' });
       }
 
-      const generatedData = await generateTaxReport(req.user.companyId, reportType, period);
+      const generatedData = await generateTaxReport(req.companyId, reportType, period);
 
       const taxReport = await TaxReport.create({
-        companyId: req.user.companyId,
+        companyId: req.companyId,
         reportType,
         year: period.year || null,
         period: JSON.stringify(period),
@@ -157,7 +157,7 @@ router.put(
       const taxReport = await TaxReport.findOne({
         where: {
           id,
-          companyId: req.user.companyId,
+          companyId: req.companyId,
         },
       });
 
@@ -197,7 +197,7 @@ router.post(
       const taxReport = await TaxReport.findOne({
         where: {
           id,
-          companyId: req.user.companyId,
+          companyId: req.companyId,
         },
       });
 
@@ -231,7 +231,7 @@ router.get('/:id/export/elster', authenticate, requireCompany, async (req, res) 
     const taxReport = await TaxReport.findOne({
       where: {
         id,
-        companyId: req.user.companyId,
+        companyId: req.companyId,
       },
       include: [
         {
@@ -272,7 +272,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), requireCompany, asyn
     const taxReport = await TaxReport.findOne({
       where: {
         id,
-        companyId: req.user.companyId,
+        companyId: req.companyId,
       },
     });
 
@@ -328,7 +328,7 @@ router.post(
 
       const { reportType, period } = req.body;
 
-      const reportData = await generateTaxReport(req.user.companyId, reportType, period);
+      const reportData = await generateTaxReport(req.companyId, reportType, period);
 
       res.json({
         message: 'Tax report generated successfully',

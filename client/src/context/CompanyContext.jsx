@@ -30,21 +30,34 @@ export const CompanyProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!Array.isArray(companies) || companies.length === 0) {
+    if (!activeCompany) {
       return;
     }
 
     const hasActiveCompany =
-      activeCompany &&
+      Array.isArray(companies) &&
       companies.some((company) => String(company.id) === String(activeCompany.id));
 
-    if (!activeCompany || !hasActiveCompany) {
-      // Defer setState to avoid cascading renders in effect
-      Promise.resolve().then(() => {
-        switchCompany(companies[0], { reset: false });
-      });
+    if (!hasActiveCompany && activeCompany) {
+      const timeoutId = setTimeout(() => {
+        switchCompany(null, { reset: false });
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [activeCompany, companies, switchCompany]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (activeCompanyId) {
+      window.__ACTIVE_COMPANY_ID__ = activeCompanyId;
+      sessionStorage.setItem('activeCompanyId', String(activeCompanyId));
+    } else {
+      window.__ACTIVE_COMPANY_ID__ = null;
+      sessionStorage.removeItem('activeCompanyId');
+    }
+  }, [activeCompanyId]);
 
   return (
     <CompanyContext.Provider

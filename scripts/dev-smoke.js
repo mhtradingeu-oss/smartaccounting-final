@@ -61,13 +61,18 @@ async function run() {
   });
 
   const token = loginResponse.data?.token;
+  const companyId = loginResponse.data?.user?.companyId;
   if (!loginResponse.data?.success || !token) {
     throw new Error('Demo login failed or did not return a token');
+  }
+  if (!companyId) {
+    throw new Error('Demo login did not return a companyId');
   }
   log('/api/auth/login succeeded');
 
   const authHeaders = {
     Authorization: `Bearer ${token}`,
+    'X-Company-Id': companyId,
   };
 
   const companies = await request('/api/companies', {

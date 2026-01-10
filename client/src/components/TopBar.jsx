@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import { isReadOnlyRole } from '../lib/permissions';
 import { FEATURE_FLAGS } from '../lib/constants';
+import { isSystemAdmin } from '../lib/systemAdmin';
 import {
   BellIcon,
   MagnifyingGlassIcon,
@@ -66,6 +67,7 @@ const TopBar = ({
 }) => {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const isSystemAdminUser = isSystemAdmin(user);
   const isReadOnlySession = isReadOnlyRole(user?.role);
   useLoadCompanies();
   const { companies } = useCompany();
@@ -324,19 +326,20 @@ const TopBar = ({
             )}
           </div>
 
-          {/* Company Selector (if companies exist) */}
-          <div className="flex items-center gap-2 mr-4">
-            {companies?.length > 0 ? (
-              <CompanySelector />
-            ) : (
-              <span className="text-xs text-gray-400">{t('topbar.no_company')}</span>
-            )}
-            {user?.role && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 dark:from-primary-900/20 dark:to-blue-900/20 dark:text-primary-200 opacity-80">
-                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-              </span>
-            )}
-          </div>
+          {!isSystemAdminUser && (
+            <div className="flex items-center gap-2 mr-4">
+              {companies?.length > 0 ? (
+                <CompanySelector />
+              ) : (
+                <span className="text-xs text-gray-400">{t('topbar.no_company')}</span>
+              )}
+              {user?.role && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 dark:from-primary-900/20 dark:to-blue-900/20 dark:text-primary-200 opacity-80">
+                  {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                </span>
+              )}
+            </div>
+          )}
           {/* Right side enhanced actions */}
           <div className="flex items-center space-x-4">
             {/* Current Time Display */}

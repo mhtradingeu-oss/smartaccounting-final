@@ -4,6 +4,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import CompanyRoute from './components/CompanyRoute';
+import SystemAdminRoute from './components/SystemAdminRoute';
 import LoadingSpinner from './components/LoadingSpinner';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingState } from './components/ui/PageStates';
@@ -12,19 +14,32 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CompanyProvider, useCompany } from './context/CompanyContext';
 import { RoleProvider } from './context/RoleContext';
 import FeatureGate from './components/FeatureGate';
+import { getDefaultRouteForUser } from './lib/systemAdmin';
 
 const withSuspense = (children) => <Suspense fallback={<PageLoadingState />}>{children}</Suspense>;
 
 const wrapRoute = (element) => <RouteErrorBoundary>{element}</RouteErrorBoundary>;
 
-const withProtectedLayout = (element, requiredRole) => (
+const withCompanyLayout = (element, requiredRole) => (
   <ProtectedRoute requiredRole={requiredRole}>
-    <Layout>{withSuspense(element)}</Layout>
+    <CompanyRoute>
+      <Layout>{withSuspense(element)}</Layout>
+    </CompanyRoute>
+  </ProtectedRoute>
+);
+
+const withSystemAdminLayout = (element) => (
+  <ProtectedRoute requiredRole="admin">
+    <SystemAdminRoute>
+      <Layout>{withSuspense(element)}</Layout>
+    </SystemAdminRoute>
   </ProtectedRoute>
 );
 
 const renderProtectedRoute = (element, requiredRole) =>
-  wrapRoute(withProtectedLayout(element, requiredRole));
+  wrapRoute(withCompanyLayout(element, requiredRole));
+
+const renderSystemAdminRoute = (element) => wrapRoute(withSystemAdminLayout(element));
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
@@ -56,6 +71,7 @@ const Companies = lazy(() => import('./pages/Companies'));
 const Users = lazy(() => import('./pages/Users'));
 const GermanTaxReports = lazy(() => import('./pages/GermanTaxReports'));
 const GDPRActions = lazy(() => import('./pages/GDPRActions'));
+const SystemAdminDashboard = lazy(() => import('./pages/SystemAdminDashboard'));
 
 const AIInsights = lazy(() => import('./pages/AIInsights'));
 const AIAssistant = lazy(() => import('./pages/AIAssistant'));
@@ -63,7 +79,7 @@ const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 
 function LandingRoute() {
-  const { status, isAuthenticated } = useAuth();
+  const { status, isAuthenticated, user } = useAuth();
 
   if (status === 'checking') {
     return (
@@ -74,7 +90,7 @@ function LandingRoute() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getDefaultRouteForUser(user)} replace />;
   }
 
   return withSuspense(<Landing />);
@@ -92,7 +108,7 @@ function NotFound() {
 }
 
 function LoginRoute() {
-  const { status, isAuthenticated } = useAuth();
+  const { status, isAuthenticated, user } = useAuth();
 
   if (status === 'checking') {
     return (
@@ -103,7 +119,7 @@ function LoginRoute() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getDefaultRouteForUser(user)} replace />;
   }
 
   return withSuspense(<Login />);
@@ -467,6 +483,14 @@ export const ROUTE_DEFINITIONS = [
     authRequired: true,
     requiredRole: 'admin',
     featureFlags: ['ELSTER_COMPLIANCE'],
+  },
+  {
+    path: '/system-admin',
+    element: renderSystemAdminRoute(<SystemAdminDashboard />),
+    componentFile: 'client/src/pages/SystemAdminDashboard.jsx',
+    authRequired: true,
+    requiredRole: 'admin',
+    featureFlags: [],
   },
   {
     path: '*',

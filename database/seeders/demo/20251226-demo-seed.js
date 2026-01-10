@@ -39,6 +39,7 @@ const DEMO_COMPANY = {
   postalCode: '10115',
   country: 'DE',
   aiEnabled: true,
+  subscriptionStatus: 'demo',
 };
 
 const DEMO_USERS = [
@@ -47,6 +48,13 @@ const DEMO_USERS = [
   { email: 'auditor@demo.de', firstName: 'Freya', lastName: 'Klein', role: 'auditor' },
   { email: 'viewer@demo.de', firstName: 'Jonas', lastName: 'Beck', role: 'viewer' },
 ];
+const SYSTEM_ADMIN_USER = {
+  email: 'sysadmin@demo.local',
+  firstName: 'System',
+  lastName: 'Admin',
+  role: 'admin',
+  companyId: null,
+};
 
 const INVOICE_TEMPLATES = [
   {
@@ -911,6 +919,7 @@ module.exports = {
         country: DEMO_COMPANY.country,
         taxId: DEMO_COMPANY.taxId,
         aiEnabled: DEMO_COMPANY.aiEnabled,
+        subscriptionStatus: DEMO_COMPANY.subscriptionStatus,
         createdAt: now,
         updatedAt: now,
       };
@@ -924,6 +933,7 @@ module.exports = {
           'postalCode',
           'country',
           'aiEnabled',
+          'subscriptionStatus',
           'createdAt',
           'updatedAt',
         ],
@@ -1001,6 +1011,47 @@ module.exports = {
         throw new Error(`[DEMO SEED] Unable to resolve user ${template.email}`);
       }
       userMap[template.role] = rows[0].id;
+    }
+
+    const systemAdminPayload = {
+      email: SYSTEM_ADMIN_USER.email,
+      firstName: SYSTEM_ADMIN_USER.firstName,
+      lastName: SYSTEM_ADMIN_USER.lastName,
+      role: SYSTEM_ADMIN_USER.role,
+      password: passwordHash,
+      companyId: null,
+      isActive: true,
+      isAnonymized: false,
+      anonymizedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    assertKeysMatch(
+      systemAdminPayload,
+      [
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'password',
+        'companyId',
+        'isActive',
+        'isAnonymized',
+        'anonymizedAt',
+        'createdAt',
+        'updatedAt',
+      ],
+      'users',
+    );
+    const [existingSystemAdmin] = await qi.sequelize.query(
+      'SELECT id FROM users WHERE email = :email LIMIT 1;',
+      { replacements: { email: SYSTEM_ADMIN_USER.email } },
+    );
+    if (existingSystemAdmin.length === 0) {
+      await qi.bulkInsert('users', [systemAdminPayload], {});
+      console.log(`[DEMO SEED] Created system admin ${SYSTEM_ADMIN_USER.email}`);
+    } else {
+      console.log(`[DEMO SEED] System admin already exists ${SYSTEM_ADMIN_USER.email}`);
     }
 
     if (companyCreated && userMap.admin) {

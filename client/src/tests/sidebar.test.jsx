@@ -10,7 +10,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key }),
 }));
 
-const createAuthValue = (role) => ({
+const createAuthValue = (role, companyId = 1) => ({
   status: 'authenticated',
   isAuthenticated: true,
   user: {
@@ -18,6 +18,7 @@ const createAuthValue = (role) => ({
     lastName: 'User',
     email: 'demo@example.com',
     role,
+    companyId,
   },
   token: 'sidebar-token',
   login: vi.fn(),
@@ -27,8 +28,8 @@ const createAuthValue = (role) => ({
   loading: false,
 });
 
-const renderSidebar = (role) => {
-  const authValue = createAuthValue(role);
+const renderSidebar = (role, companyId) => {
+  const authValue = createAuthValue(role, companyId);
   return render(
     <MemoryRouter>
       <AuthContext.Provider value={authValue}>
@@ -48,14 +49,15 @@ describe('Sidebar role & feature flags', () => {
   });
 
   it('shows administration links for admin role', () => {
-    renderSidebar(roles.ADMIN);
+    renderSidebar(roles.ADMIN, 1);
 
     expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
   });
 
-  it('shows administration links for super admin role', () => {
-    renderSidebar(roles.SUPER_ADMIN);
+  it('shows system admin dashboard for system admin role', () => {
+    renderSidebar(roles.ADMIN, null);
 
-    expect(screen.getByRole('link', { name: /users/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /system_admin_dashboard/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /users/i })).not.toBeInTheDocument();
   });
 });

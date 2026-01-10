@@ -264,10 +264,10 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
         app,
         method: 'GET',
         url: '/api/companies',
-        headers: { Authorization: `Bearer ${loginResult.token}` },
+        headers: { Authorization: `Bearer ${loginResult.token}`, 'x-company-id': global.testCompany?.id },
       });
       expect(companyRes.status).toBe(403);
-      expect(companyRes.body.code).toBe('PERMISSION_DENIED');
+      expect(companyRes.body.code).toBe('COMPANY_CONTEXT_INVALID');
     });
   });
 });

@@ -50,8 +50,8 @@ const sanitizeStringValue = (value) => (typeof value === 'string' ? value.trim()
 router.get('/', async (req, res, next) => {
   try {
     const filters = [];
-    if (req.user.companyId) {
-      filters.push({ id: req.user.companyId });
+    if (req.companyId) {
+      filters.push({ id: req.companyId });
     }
     if (req.user.id) {
       filters.push({ userId: req.user.id });
@@ -88,7 +88,7 @@ router.put(
       }
 
       const isOwner = company.userId === req.user.id;
-      const isMember = company.id === req.user.companyId;
+      const isMember = company.id === req.companyId;
       if (!isOwner && !isMember) {
         return res.status(403).json({ error: 'You do not manage this company' });
       }

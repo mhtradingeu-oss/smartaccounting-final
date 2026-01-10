@@ -2,7 +2,10 @@ const app = require('../../src/app');
 const buildSystemContext = require('../utils/buildSystemContext');
 const { buildInvoicePayload } = require('../utils/buildPayload');
 
-const getAuthHeader = () => ({ Authorization: `Bearer ${global.testToken}` });
+const getAuthHeader = () => ({
+  Authorization: `Bearer ${global.testToken}`,
+  'x-company-id': global.testCompany?.id,
+});
 
 describe('Accounting period boundaries – status immutability', () => {
   test('returns 409 when editing an invoice after finalization', async () => {

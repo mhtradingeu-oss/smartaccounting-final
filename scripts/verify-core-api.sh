@@ -46,12 +46,16 @@ LOGIN_JSON="$(curl -fsS --retry 5 --retry-delay 2 \
   || fail "Login request failed"
 
 TOKEN="$(echo "$LOGIN_JSON" | jq -r '.token // empty')"
+COMPANY_ID="$(echo "$LOGIN_JSON" | jq -r '.user.companyId // empty')"
 
 [[ -n "$TOKEN" ]] \
   && pass "Login successful (token acquired)" \
   || fail "Login did not return token: $LOGIN_JSON"
+[[ -n "$COMPANY_ID" ]] \
+  && pass "Company context available ($COMPANY_ID)" \
+  || fail "Login did not return companyId: $LOGIN_JSON"
 
-AUTH=(-H "Authorization: Bearer $TOKEN")
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "X-Company-Id: $COMPANY_ID")
 
 # --------------------------------------------------
 log "2) Core endpoints (read-only, accountant role)"

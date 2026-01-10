@@ -48,7 +48,7 @@ describe('OCR results scoping', () => {
       app,
       method: 'GET',
       url: `/api/ocr/results/${document.id}`,
-      headers: { Authorization: `Bearer ${outsiderToken}` },
+      headers: { Authorization: `Bearer ${outsiderToken}`, 'x-company-id': outsider.companyId },
     });
 
     expect(response.status).toBe(404);
@@ -60,7 +60,7 @@ describe('OCR results scoping', () => {
       app,
       method: 'GET',
       url: `/api/ocr/results/${document.id}`,
-      headers: { Authorization: `Bearer ${ownerToken}` },
+      headers: { Authorization: `Bearer ${ownerToken}`, 'x-company-id': owner.companyId },
     });
 
     expect(response.status).toBe(200);

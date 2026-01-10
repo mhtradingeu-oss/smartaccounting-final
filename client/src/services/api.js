@@ -40,6 +40,52 @@ const api = axios.create({
   },
 });
 
+const COMPANY_ID_HEADER = 'X-Company-Id';
+const ACTIVE_COMPANY_STORAGE_KEY = 'activeCompanyId';
+const COMPANY_OPTIONAL_ROUTES = [
+  '/auth',
+  '/system',
+  '/monitoring',
+  '/telemetry',
+  '/logs',
+  '/email-test',
+  '/public',
+];
+
+const parseCompanyId = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+};
+
+const resolveStoredCompanyId = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const active =
+    window.__ACTIVE_COMPANY_ID__ || sessionStorage.getItem(ACTIVE_COMPANY_STORAGE_KEY);
+  return parseCompanyId(active);
+};
+
+const isCompanyOptionalRoute = (path) =>
+  COMPANY_OPTIONAL_ROUTES.some((prefix) => path.startsWith(prefix));
+
+const normalizePath = (urlValue) => {
+  if (typeof urlValue !== 'string') {
+    return '';
+  }
+  if (urlValue.startsWith('http')) {
+    try {
+      return new URL(urlValue).pathname;
+    } catch {
+      return '';
+    }
+  }
+  return urlValue;
+};
+
 /* ================================
    AUTH FORCE LOGOUT EVENT
 ================================ */
@@ -127,6 +173,28 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const path = normalizePath(config.url);
+    if (!isCompanyOptionalRoute(path)) {
+      const existingCompanyHeader =
+        config.headers?.[COMPANY_ID_HEADER] || config.headers?.[COMPANY_ID_HEADER.toLowerCase()];
+      const companyId = resolveStoredCompanyId();
+      if (!existingCompanyHeader) {
+        if (!companyId) {
+          const err = new Error('Company context is required for this request.');
+          err.code = 'COMPANY_HEADER_REQUIRED';
+          return Promise.reject(err);
+        }
+        if (!config.headers) {
+          config.headers = {};
+        }
+        config.headers[COMPANY_ID_HEADER] = companyId;
+      } else if (companyId && String(existingCompanyHeader) !== String(companyId)) {
+        const err = new Error('Company context mismatch detected.');
+        err.code = 'COMPANY_HEADER_MISMATCH';
+        return Promise.reject(err);
+      }
     }
 
     if (isDev) {

@@ -1,23 +1,24 @@
 const Stripe = require('stripe');
 const logger = require('../lib/logger');
 const { Company } = require('../models');
+const { PLAN_CATALOG } = require('../config/plans');
 
 const FALLBACK_PLANS = [
   {
     id: 'price_basic_monthly',
-    nickname: 'Basic Monthly',
-    amount: 1999,
-    currency: 'EUR',
+    nickname: 'Starter Monthly',
+    amount: PLAN_CATALOG.basic.price.monthlyCents,
+    currency: PLAN_CATALOG.basic.price.currency,
     interval: 'month',
-    features: ['Simple bookkeeping', 'Email support'],
+    features: PLAN_CATALOG.basic.highlights,
   },
   {
     id: 'price_pro_monthly',
-    nickname: 'Pro Monthly',
-    amount: 3999,
-    currency: 'EUR',
+    nickname: 'Professional Monthly',
+    amount: PLAN_CATALOG.pro.price.monthlyCents,
+    currency: PLAN_CATALOG.pro.price.currency,
     interval: 'month',
-    features: ['Advanced insights', 'Priority support'],
+    features: PLAN_CATALOG.pro.highlights,
   },
 ];
 

@@ -55,6 +55,7 @@ describe('Full Workflow Integration Tests', () => {
 
       expect(loginResponse.status).toBe(200);
       authToken = loginResponse.body.token;
+      const companyId = loginResponse.body.user?.companyId;
 
       // 3. Create invoice (with items[] and no direct amount injection)
       const items = [
@@ -71,7 +72,7 @@ describe('Full Workflow Integration Tests', () => {
         app,
         method: 'POST',
         url: '/api/invoices',
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': companyId },
         body: {
           invoiceNumber: 'INV-WORKFLOW-001',
           items,
@@ -100,7 +101,7 @@ describe('Full Workflow Integration Tests', () => {
         app,
         method: 'GET',
         url: '/api/dashboard/stats',
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': companyId },
       });
 
       expect(dashboardResponse.status).toBe(200);
@@ -111,7 +112,7 @@ describe('Full Workflow Integration Tests', () => {
         app,
         method: 'PATCH',
         url: `/api/invoices/${invoiceId}/status`,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': companyId },
         body: {
           status: 'SENT',
         },
@@ -124,7 +125,7 @@ describe('Full Workflow Integration Tests', () => {
         app,
         method: 'PATCH',
         url: `/api/invoices/${invoiceId}/status`,
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': companyId },
         body: {
           status: 'PAID',
         },
@@ -140,6 +141,7 @@ describe('Full Workflow Integration Tests', () => {
         app,
         method: 'GET',
         url: '/api/dashboard/stats',
+        headers: { 'x-company-id': global.testCompany?.id },
       });
 
       expect(response.status).toBe(401);
@@ -150,7 +152,7 @@ describe('Full Workflow Integration Tests', () => {
         app,
         method: 'GET',
         url: '/api/dashboard/stats',
-        headers: { Authorization: 'Bearer invalid-token' },
+        headers: { Authorization: 'Bearer invalid-token', 'x-company-id': global.testCompany?.id },
       });
 
       expect(response.status).toBe(401);

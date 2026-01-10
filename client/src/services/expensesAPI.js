@@ -39,7 +39,9 @@ export const expensesAPI = {
       }
 
       try {
-        const response = await api.get(`/expenses?companyId=${companyId}`);
+        const response = await api.get('/expenses', {
+          headers: { 'X-Company-Id': companyId },
+        });
         const payload = response.data ?? response;
         const normalized = Array.isArray(payload)
           ? payload

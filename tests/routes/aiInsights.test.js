@@ -35,7 +35,7 @@ describe('AI Insights API', () => {
       app,
       method: 'post',
       url: '/api/ai/insights/invalid-id/decisions',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'x-company-id': global.testCompany?.id },
       query: { purpose: 'insights', policyVersion: '1' },
       body: { decision: 'accepted', ...systemContext },
     });
@@ -66,7 +66,7 @@ describe('AI Insights API', () => {
       app,
       method: 'get',
       url: '/api/ai/insights',
-      headers: { Authorization: `Bearer ${adminToken}` },
+      headers: { Authorization: `Bearer ${adminToken}`, 'x-company-id': company.id },
       query: { purpose: 'insights', policyVersion: '1' },
     });
     expect([401, 403, 400, 409, 501]).toContain(res.res.statusCode);
@@ -108,7 +108,7 @@ describe('AI Insights API', () => {
       app,
       method: 'get',
       url: '/api/ai/insights',
-      headers: { Authorization: `Bearer ${otherToken}` },
+      headers: { Authorization: `Bearer ${otherToken}`, 'x-company-id': otherCompany.id },
       query: { purpose: 'insights', policyVersion: '1' },
     });
     expect([401, 403, 400, 409, 501]).toContain(res.res.statusCode);
@@ -139,7 +139,7 @@ describe('AI Insights API', () => {
       app,
       method: 'post',
       url: `/api/ai/insights/${insight.id}/decisions`,
-      headers: { Authorization: `Bearer ${accountantToken}` },
+      headers: { Authorization: `Bearer ${accountantToken}`, 'x-company-id': company.id },
       query: { purpose: 'insights', policyVersion: '1' },
       body: { decision: 'accepted', reason: 'Test' },
     });
@@ -173,7 +173,7 @@ describe('AI Insights API', () => {
       app,
       method: 'get',
       url: '/api/ai/insights',
-      headers: { Authorization: `Bearer ${viewerToken}` },
+      headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': company.id },
       query: { purpose: 'insights', policyVersion: '1' },
     });
     expect([401, 403, 400, 409, 501]).toContain(res.res.statusCode);

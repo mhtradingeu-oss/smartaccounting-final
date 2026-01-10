@@ -1,7 +1,11 @@
 const express = require('express');
 const logger = require('../lib/logger');
+const { authenticate, requireSystemAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(requireSystemAdmin);
 
 router.get('/logs', async (req, res) => {
   try {

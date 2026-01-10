@@ -1,5 +1,6 @@
-const { Company } = require('../models');
 const { updateRequestContext } = require('../lib/logger/context');
+const logger = require('../lib/logger');
+const { User } = require('../models');
 
 const parseCompanyId = (value) => {
   if (value === undefined || value === null || value === '') {
@@ -9,62 +10,92 @@ const parseCompanyId = (value) => {
   return Number.isInteger(parsed) ? parsed : null;
 };
 
-const resolveRequestedCompanyId = (req) => {
-  const headerValue = req.headers?.['x-company-id'];
-  const queryValue = req.query?.companyId;
-  return parseCompanyId(headerValue) || parseCompanyId(queryValue);
+const resolveRequestedCompanyId = (req) => parseCompanyId(req.headers?.['x-company-id']);
+
+const logCompanyContextFailure = ({ req, attemptedCompanyId, reason }) => {
+  logger.warn('Company context rejected', {
+    requestId: req.requestId,
+    userId: req.userId || req.user?.id || null,
+    attemptedCompanyId,
+    route: req.originalUrl,
+    reason,
+  });
 };
 
-const requireCompany = async (req, res, next) => {
+const createRequireCompanyMiddleware = (options = {}) => async (req, res, next) => {
+  const { allowSystemAdmin = false } = options;
   try {
+    const headerValue = req.headers?.['x-company-id'];
+    if (headerValue === undefined || headerValue === null || headerValue === '') {
+      logCompanyContextFailure({ req, attemptedCompanyId: null, reason: 'missing_header' });
+      return res.status(400).json({
+        status: 'error',
+        message: 'x-company-id header is required',
+        code: 'COMPANY_CONTEXT_REQUIRED',
+      });
+    }
     const requestedCompanyId = resolveRequestedCompanyId(req);
-    const defaultCompanyId = req.companyId || req.user?.companyId;
-
-    if (!requestedCompanyId && !defaultCompanyId) {
+    if (!requestedCompanyId) {
+      logCompanyContextFailure({ req, attemptedCompanyId: headerValue, reason: 'invalid_header' });
       return res.status(403).json({
         status: 'error',
-        message: 'Company context is required for this resource',
-        code: 'COMPANY_REQUIRED',
+        message: 'Company context is invalid',
+        code: 'COMPANY_CONTEXT_INVALID',
       });
     }
 
-    if (requestedCompanyId && String(requestedCompanyId) !== String(defaultCompanyId)) {
-      if (!req.user?.id) {
-        return res.status(403).json({
-          status: 'error',
-          message: 'Company access denied',
-          code: 'COMPANY_FORBIDDEN',
-        });
-      }
-
-      const company = await Company.findByPk(requestedCompanyId, {
-        attributes: ['id', 'userId'],
-        raw: true,
+    if (req.isSystemAdmin && !allowSystemAdmin) {
+      logCompanyContextFailure({
+        req,
+        attemptedCompanyId: requestedCompanyId,
+        reason: 'system_admin_blocked',
       });
-
-      const isOwner = company?.userId && String(company.userId) === String(req.user.id);
-      const isMember =
-        req.user?.companyId && String(req.user.companyId) === String(requestedCompanyId);
-
-      if (!company || (!isOwner && !isMember)) {
-        return res.status(403).json({
-          status: 'error',
-          message: 'Company access denied',
-          code: 'COMPANY_FORBIDDEN',
-        });
-      }
-
-      req.companyId = requestedCompanyId;
-      updateRequestContext({ companyId: requestedCompanyId });
-      return next();
+      return res.status(403).json({
+        status: 'error',
+        message: 'Company context is invalid',
+        code: 'COMPANY_CONTEXT_INVALID',
+      });
     }
 
-    req.companyId = defaultCompanyId;
-    updateRequestContext({ companyId: defaultCompanyId });
+    const userId = req.userId || req.user?.id;
+    if (!userId) {
+      logCompanyContextFailure({ req, attemptedCompanyId: requestedCompanyId, reason: 'missing_user' });
+      return res.status(403).json({
+        status: 'error',
+        message: 'Company context is invalid',
+        code: 'COMPANY_CONTEXT_INVALID',
+      });
+    }
+
+    if (!req.isSystemAdmin) {
+      const user = await User.findByPk(userId, { attributes: ['id', 'companyId'] });
+      if (!user || !user.companyId || String(user.companyId) !== String(requestedCompanyId)) {
+        logCompanyContextFailure({
+          req,
+          attemptedCompanyId: requestedCompanyId,
+          reason: 'company_mismatch',
+        });
+        return res.status(403).json({
+          status: 'error',
+          message: 'Company context is invalid',
+          code: 'COMPANY_CONTEXT_INVALID',
+        });
+      }
+    }
+
+    req.companyId = requestedCompanyId;
+    updateRequestContext({ companyId: requestedCompanyId });
     return next();
   } catch (error) {
     return next(error);
   }
+};
+
+const requireCompany = (reqOrOptions, res, next) => {
+  if (reqOrOptions && typeof reqOrOptions === 'object' && typeof res === 'object' && typeof next === 'function') {
+    return createRequireCompanyMiddleware({})(reqOrOptions, res, next);
+  }
+  return createRequireCompanyMiddleware(reqOrOptions);
 };
 
 module.exports = requireCompany;

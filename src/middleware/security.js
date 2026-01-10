@@ -233,7 +233,7 @@ const requestLogger = (req, res, next) => {
       durationMs,
       requestId: req.requestId,
       userId: req.user?.id || req.userId || null,
-      companyId: req.companyId || req.user?.companyId || null,
+      companyId: req.companyId || null,
     };
 
     if (METRICS_ENABLED) {

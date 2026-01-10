@@ -57,6 +57,7 @@ const errorHandler = require('./middleware/errorHandler');
 const { createSecurityMiddleware } = require('./middleware/security');
 const { createPerformanceMiddleware, performanceMonitor } = require('./middleware/performance');
 const { createApiTimeoutMiddleware } = require('./middleware/apiTimeout');
+const { maintenanceMiddleware } = require('./middleware/maintenanceMode');
 const { specs, swaggerOptions } = require('./config/swagger');
 const appVersion = require('./config/appVersion');
 
@@ -110,6 +111,7 @@ const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
 const gdprRoutes = require('./routes/gdpr');
+const publicRoutes = require('./routes/public');
 
 // --------------------------------------------------
 // Proxy / Trust
@@ -210,6 +212,8 @@ const readyHandler = async (req, res) => {
   }
 };
 
+app.use(`${API_PREFIX}/public`, publicRoutes);
+
 const metricsHandler = (req, res) => {
   const metrics = performanceMonitor.getMetrics();
   const memory = metrics.memory || {};
@@ -270,6 +274,7 @@ app.use(`${API_PREFIX}/auth`, authRoutes);
 // Authentication & RBAC (protect all other /api routes)
 app.use(API_PREFIX, authMiddleware.authenticate);
 app.use(API_PREFIX, permissionGuard());
+app.use(API_PREFIX, maintenanceMiddleware);
 
 // --------------------------------------------------
 // API Routes
