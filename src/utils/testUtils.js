@@ -11,6 +11,9 @@ const createTestCompany = async (overrides = {}) => {
     city: 'Berlin',
     postalCode: '10115',
     country: 'Germany',
+    isActive: true,
+    subscriptionStatus: 'active',
+    subscriptionPlan: 'basic',
   };
 
   const company = await Company.create({ ...base, ...overrides });

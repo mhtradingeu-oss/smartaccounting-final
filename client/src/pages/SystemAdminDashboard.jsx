@@ -58,6 +58,26 @@ const SystemAdminDashboard = () => {
   const [auditLogs, setAuditLogs] = useState([]);
   const [backups, setBackups] = useState(null);
   const [maintenance, setMaintenance] = useState(null);
+
+  const planMap = useMemo(() => {
+    const map = {};
+    plans.forEach((plan) => {
+      if (plan?.id) {
+        map[plan.id] = plan;
+      }
+    });
+    return map;
+  }, [plans]);
+
+  const resolvePlanName = useCallback(
+    (planId) => {
+      if (!planId) {
+        return 'Plan unavailable';
+      }
+      return planMap[planId]?.name || String(planId);
+    },
+    [planMap],
+  );
   const [config, setConfig] = useState(null);
   const [monitoring, setMonitoring] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -682,7 +702,7 @@ const SystemAdminDashboard = () => {
                 <div>
                   <div className="font-medium text-gray-900">{item.name}</div>
                   <div className="text-xs text-gray-500">
-                    {item.subscriptionPlan || 'basic'} • {item.subscriptionStatus || 'inactive'}
+                    {resolvePlanName(item.subscriptionPlan)} • {item.subscriptionStatus || 'inactive'}
                   </div>
                 </div>
                 <Badge color={item.subscriptionStatus === 'active' ? 'green' : 'gray'}>

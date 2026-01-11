@@ -6,31 +6,6 @@ import { Card } from '../components/ui/Card';
 import { designTokens } from '../lib/designTokens';
 import { fetchPublicPlans } from '../services/plansAPI';
 
-const fallbackCopy = {
-  eyebrow: 'Preise & Pläne',
-  headline: 'Preise, die Vertrauen schaffen.',
-  subhead:
-    'Konservativ kalkuliert, nachvollziehbar erklärt und auf deutsche Buchhaltungsprozesse ausgelegt.',
-  trustHighlights: [
-    'DSGVO-konforme Verarbeitung und EU-Hosting',
-    'Audit Trail mit nachvollziehbaren Änderungsnachweisen',
-    'Rollenbasierte Zugriffssteuerung für Teams',
-  ],
-  ctaPrimary: 'Zugang anfragen',
-  ctaSecondary: 'Zur Startseite',
-  comparisonTitle: 'Funktionsvergleich',
-  comparisonNote: 'Ausbau und individuelle Limits sind jederzeit möglich.',
-  customTitle: 'Individuelle Einführung gewünscht?',
-  customBody:
-    'Gemeinsam definieren wir Plan, Governance und Rollout – ohne Überversprechen oder intransparente Vertragsklauseln.',
-  customCta: 'Beratung anfragen',
-  customEmail: 'sales@smartaccounting.de',
-  legalNotes: [
-    'Es wird keine DATEV-, ELSTER- oder Finanzamt-Zertifizierung oder -Übermittlung zugesichert.',
-    'KI-Funktionen liefern ausschließlich beratende Hinweise und ersetzen keine fachliche Prüfung.',
-  ],
-};
-
 const stripeReady = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const CheckMark = () => (
@@ -76,6 +51,7 @@ const formatAnnualPrice = (price) => {
 const Pricing = () => {
   const [payload, setPayload] = useState(null);
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -89,13 +65,18 @@ const Pricing = () => {
         if (isMounted) {
           setError(true);
         }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
       });
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const copy = useMemo(() => payload?.copy || fallbackCopy, [payload]);
+  const copy = useMemo(() => payload?.copy || null, [payload]);
   const plans = useMemo(() => payload?.plans || [], [payload]);
   const featureMatrix = useMemo(() => payload?.featureMatrix || [], [payload]);
 
@@ -114,6 +95,43 @@ const Pricing = () => {
         return 'grid-cols-4';
     }
   }, [columnCount]);
+
+  if (loading && !payload) {
+    return (
+      <div
+        className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900 flex items-center justify-center"
+        style={{ fontFamily: designTokens.font.body }}
+      >
+        <div className="text-sm text-slate-500">Planinformationen werden geladen.</div>
+      </div>
+    );
+  }
+
+  if ((!copy || error) && !payload) {
+    return (
+      <div
+        className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900 flex items-center justify-center"
+        style={{ fontFamily: designTokens.font.body }}
+      >
+        <div className="text-sm text-slate-600">
+          Planinformationen sind derzeit nicht verfuegbar. Bitte kontaktieren Sie uns fuer Details.
+        </div>
+      </div>
+    );
+  }
+
+  if (!copy) {
+    return (
+      <div
+        className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900 flex items-center justify-center"
+        style={{ fontFamily: designTokens.font.body }}
+      >
+        <div className="text-sm text-slate-600">
+          Planinformationen sind derzeit nicht verfuegbar. Bitte kontaktieren Sie uns fuer Details.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

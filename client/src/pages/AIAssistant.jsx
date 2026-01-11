@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import InfoTooltip from '../components/ui/InfoTooltip';
@@ -22,6 +23,7 @@ import ChatMessageGroup from '../components/ChatMessageGroup';
 import ChatEmptyState from '../components/ChatEmptyState';
 import ChatTypingIndicator from '../components/ChatTypingIndicator';
 import MutationIntentGuard, { detectMutationIntent } from '../components/MutationIntentGuard';
+import PlanRestrictedState from '../components/PlanRestrictedState';
 
 const INTENT_OPTIONS = [
   {
@@ -49,6 +51,7 @@ const INTENT_OPTIONS = [
 ];
 
 const VOICE_CONSENT_KEY = 'ai_voice_consent_v1';
+const MAX_PROMPT_LENGTH = 8000;
 
 const initialMessageText = (context) => {
   if (!context) {
@@ -88,6 +91,7 @@ const AIAssistant = () => {
   const { activeCompany } = useCompany();
   const activeCompanyId = activeCompany?.id;
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [context, setContext] = useState(null);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
@@ -105,13 +109,22 @@ const AIAssistant = () => {
   const [isListening, setIsListening] = useState(false);
   const [voiceConsentAccepted, setVoiceConsentAccepted] = useState(false);
   const [showVoiceConsent, setShowVoiceConsent] = useState(false);
+  const [showRequestIds, setShowRequestIds] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
   const recognitionRef = useRef(null);
+  const streamAbortRef = useRef(null);
   const aiAssistantEnabled = isAIAssistantEnabled();
   const aiVoiceEnabled = isAIVoiceEnabled();
   const userRole = user?.role || 'viewer';
+  const isSystemAdmin =
+    userRole === 'admin' && (user?.companyId === null || user?.companyId === undefined);
   const isReadOnly = isReadOnlyRole(userRole);
+  const supportsStreaming = useMemo(
+    () => typeof window !== 'undefined' && typeof window.fetch === 'function' && !!window.ReadableStream,
+    [],
+  );
   const aiFeatureGateProps = {
     enabled: aiAssistantEnabled,
     featureName: 'AI Assistant',
@@ -262,7 +275,7 @@ const AIAssistant = () => {
     };
 
     // If AI is disabled, no company, or user is read-only, do not call AI APIs
-    if (!aiAssistantEnabled || !activeCompanyId || isReadOnly) {
+    if (!aiAssistantEnabled || !activeCompanyId || isReadOnly || isSystemAdmin) {
       prepareForLoad();
       setLoading(false);
       lastLoadedCompanyIdRef.current = null;
@@ -291,7 +304,7 @@ const AIAssistant = () => {
         }
       } catch (err) {
         if (!cancelled) {
-          setContextError(formatApiError(err, 'Unable to load the AI assistant.').message);
+          setContextError(formatApiError(err, 'Unable to load the AI assistant.'));
         }
       } finally {
         if (!cancelled) {
@@ -304,7 +317,7 @@ const AIAssistant = () => {
     return () => {
       cancelled = true;
     };
-  }, [aiAssistantEnabled, activeCompanyId, isReadOnly]);
+  }, [aiAssistantEnabled, activeCompanyId, isReadOnly, isSystemAdmin]);
 
   useEffect(() => {
     if (!aiVoiceEnabled || typeof window === 'undefined') {
@@ -332,7 +345,10 @@ const AIAssistant = () => {
       {
         id: 'assistant-intro',
         speaker: 'assistant',
+        role: 'assistant',
         text: intro,
+        createdAt: new Date().toISOString(),
+        requestId: null,
         meta: buildAssistantMeta(),
       },
     ]);
@@ -369,6 +385,18 @@ const AIAssistant = () => {
     }
     return context.bankTransactions.filter((tx) => !tx.isReconciled).length;
   }, [context]);
+
+  if (isSystemAdmin) {
+    return (
+      <FeatureGate {...aiFeatureGateProps}>
+        <EmptyState
+          title={t('states.ai_assistant_system_admin_blocked.title')}
+          description={t('states.ai_assistant_system_admin_blocked.description')}
+          help={t('states.ai_assistant_system_admin_blocked.help')}
+        />
+      </FeatureGate>
+    );
+  }
 
   if (!activeCompany) {
     return (
@@ -475,15 +503,22 @@ const AIAssistant = () => {
   const handleIntent = async (intentId, options = {}) => {
     const promptText =
       options.prompt || INTENT_OPTIONS.find((intent) => intent.id === intentId)?.label;
+    if (promptText && promptText.length > MAX_PROMPT_LENGTH) {
+      setInputError('Your message exceeds the 8000 character limit.');
+      return;
+    }
     if (promptText && detectMutationIntent(promptText)) {
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-error-${Date.now()}`,
           speaker: 'assistant',
+          role: 'assistant',
           text: '',
           error:
             'This assistant is read-only. I can explain and summarize, but I cannot modify records.',
+          createdAt: new Date().toISOString(),
+          requestId: null,
           timestamp: new Date().toLocaleTimeString(),
           meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
@@ -497,8 +532,11 @@ const AIAssistant = () => {
         {
           id: `assistant-error-${Date.now()}`,
           speaker: 'assistant',
+          role: 'assistant',
           text: '',
           error: 'Your role does not permit interacting with the AI assistant.',
+          createdAt: new Date().toISOString(),
+          requestId: null,
           timestamp: new Date().toLocaleTimeString(),
           meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
@@ -511,8 +549,11 @@ const AIAssistant = () => {
         {
           id: `assistant-error-${Date.now()}`,
           speaker: 'assistant',
+          role: 'assistant',
           text: '',
           error: 'Session is initializing. Please wait a moment.',
+          createdAt: new Date().toISOString(),
+          requestId: null,
           timestamp: new Date().toLocaleTimeString(),
           meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
         },
@@ -522,52 +563,163 @@ const AIAssistant = () => {
     const intentMeta = INTENT_OPTIONS.find((intent) => intent.id === intentId);
     const prompt = options.prompt || intentMeta?.label || intentId;
 
-    setIsAsking(true);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        speaker: 'user',
-        text: prompt,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
+    const sendNonStreaming = async ({ includeUserMessage = true } = {}) => {
+      setIsAsking(true);
+      if (includeUserMessage) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `user-${Date.now()}`,
+            speaker: 'user',
+            role: 'user',
+            text: prompt,
+            createdAt: new Date().toISOString(),
+            requestId: null,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
+      setUserTyping(false);
+      try {
+        const response = await aiAssistantAPI.askIntent({
+          intent: intentId,
+          prompt,
+          targetInsightId: options.targetInsightId,
+          sessionId,
+          companyId: activeCompanyId,
+        });
+        const answer = response?.answer ?? {};
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-${Date.now()}`,
+            speaker: 'assistant',
+            role: 'assistant',
+            text: answer.message || 'The assistant has no data yet.',
+            highlights: answer.highlights,
+            references: answer.references,
+            requestId: response?.requestId ?? null,
+            createdAt: new Date().toISOString(),
+            timestamp: new Date().toLocaleTimeString(),
+            meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
+          },
+        ]);
+      } catch (err) {
+        const errorRequestId = err?.response?.data?.requestId ?? null;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-error-${Date.now()}`,
+            speaker: 'assistant',
+            role: 'assistant',
+            text: '',
+            error: formatApiError(err, 'Unable to reach the assistant.').message,
+            requestId: errorRequestId,
+            createdAt: new Date().toISOString(),
+            timestamp: new Date().toLocaleTimeString(),
+            meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
+          },
+        ]);
+      } finally {
+        setIsAsking(false);
+      }
+    };
+
+    if (!supportsStreaming) {
+      return sendNonStreaming();
+    }
+
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      speaker: 'user',
+      role: 'user',
+      text: prompt,
+      createdAt: new Date().toISOString(),
+      requestId: null,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    const assistantMessageId = `assistant-stream-${Date.now()}`;
+    const assistantMessage = {
+      id: assistantMessageId,
+      speaker: 'assistant',
+      role: 'assistant',
+      text: '',
+      highlights: [],
+      references: [],
+      requestId: null,
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toLocaleTimeString(),
+      meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
+    };
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setUserTyping(false);
+    setIsStreaming(true);
+    setIsAsking(true);
+
+    let receivedChunk = false;
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
+
+    const updateAssistant = (patch) => {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, ...patch } : msg)),
+      );
+    };
+    const appendAssistantText = (nextText, requestId) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                text: `${msg.text || ''}${nextText || ''}`,
+                requestId: requestId || msg.requestId || null,
+              }
+            : msg,
+        ),
+      );
+    };
+
     try {
-      const response = await aiAssistantAPI.askIntent({
+      await aiAssistantAPI.askIntentStream({
         intent: intentId,
         prompt,
         targetInsightId: options.targetInsightId,
         sessionId,
         companyId: activeCompanyId,
+        signal: controller.signal,
+        onEvent: ({ event, data }) => {
+          if (event === 'chunk') {
+            receivedChunk = true;
+            appendAssistantText(data?.token, data?.requestId);
+          } else if (event === 'error') {
+            updateAssistant({
+              error: data?.message || 'Streaming error.',
+              requestId: data?.requestId || null,
+            });
+          } else if (event === 'done') {
+            updateAssistant({ requestId: data?.requestId || null });
+            setIsStreaming(false);
+            setIsAsking(false);
+          }
+        },
       });
-      const answer = response?.answer ?? {};
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          speaker: 'assistant',
-          text: answer.message || 'The assistant has no data yet.',
-          highlights: answer.highlights,
-          references: answer.references,
-          timestamp: new Date().toLocaleTimeString(),
-          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
-        },
-      ]);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-error-${Date.now()}`,
-          speaker: 'assistant',
-          text: '',
+      if (err?.name === 'AbortError') {
+        updateAssistant({ error: 'Streaming canceled.', requestId: null });
+      } else if (!receivedChunk) {
+        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
+        await sendNonStreaming({ includeUserMessage: false });
+        return;
+      } else {
+        updateAssistant({
           error: formatApiError(err, 'Unable to reach the assistant.').message,
-          timestamp: new Date().toLocaleTimeString(),
-          meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
-        },
-      ]);
+          requestId: err?.response?.data?.requestId ?? null,
+        });
+      }
     } finally {
+      setIsStreaming(false);
       setIsAsking(false);
+      streamAbortRef.current = null;
     }
   };
 
@@ -581,8 +733,11 @@ const AIAssistant = () => {
         {
           id: `assistant-error-${Date.now()}`,
           speaker: 'assistant',
+          role: 'assistant',
           text: '',
           error: 'Session is initializing. Please wait a moment.',
+          createdAt: new Date().toISOString(),
+          requestId: null,
           timestamp: new Date().toLocaleTimeString(),
           meta: buildAssistantMeta({ targetInsightId: null }),
         },
@@ -604,7 +759,10 @@ const AIAssistant = () => {
       {
         id: `user-${Date.now()}`,
         speaker: 'user',
+        role: 'user',
         text: transcript,
+        createdAt: new Date().toISOString(),
+        requestId: null,
         timestamp: new Date().toLocaleTimeString(),
       },
     ]);
@@ -624,9 +782,12 @@ const AIAssistant = () => {
         {
           id: `assistant-${Date.now()}`,
           speaker: 'assistant',
+          role: 'assistant',
           text: answer.message || 'The assistant has no data yet.',
           highlights: answer.highlights,
           references: answer.references,
+          requestId: response?.requestId ?? null,
+          createdAt: new Date().toISOString(),
           timestamp: new Date().toLocaleTimeString(),
           meta: buildAssistantMeta({ targetInsightId: null }),
         },
@@ -634,13 +795,17 @@ const AIAssistant = () => {
       setVoiceTranscript('');
       setVoiceTranscriptDraft('');
     } catch (err) {
+      const errorRequestId = err?.response?.data?.requestId ?? null;
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-error-${Date.now()}`,
           speaker: 'assistant',
+          role: 'assistant',
           text: '',
           error: formatApiError(err, 'Unable to reach the assistant.').message,
+          requestId: errorRequestId,
+          createdAt: new Date().toISOString(),
           timestamp: new Date().toLocaleTimeString(),
           meta: buildAssistantMeta({ targetInsightId: null }),
         },
@@ -661,11 +826,20 @@ const AIAssistant = () => {
   }
 
   if (contextError) {
+    if (contextError.type === 'plan_restricted') {
+      return (
+        <PlanRestrictedState
+          feature="AI assistant"
+          message={contextError.message}
+          upgradePath={contextError.upgradePath}
+        />
+      );
+    }
     return (
       <>
         <EmptyState
           title="Unable to load the AI assistant"
-          description={contextError || 'Please try again later.'}
+          description={contextError.message || 'Please try again later.'}
           action={
             <Button variant="primary" onClick={() => window.location.reload()}>
               Retry
@@ -935,13 +1109,13 @@ const AIAssistant = () => {
             </div>
             {/* Chat area redesign: grouped messages, empty state, typing indicator, error in-chat */}
             <div className="min-h-[220px] max-h-[340px] overflow-y-auto px-1 py-2 bg-gray-50 rounded-lg border border-gray-100 transition-all duration-300 ease-in-out">
-              {messages.length === 0 ? (
-                <ChatEmptyState />
-              ) : (
-                groupMessages(messages).map((group, idx) => (
-                  <ChatMessageGroup key={idx} group={group} />
-                ))
-              )}
+            {messages.length === 0 ? (
+              <ChatEmptyState />
+            ) : (
+              groupMessages(messages).map((group, idx) => (
+                <ChatMessageGroup key={idx} group={group} showRequestIds={showRequestIds} />
+              ))
+            )}
               {isAsking && <ChatTypingIndicator isAssistant />}
               {userTyping && !isAsking && <ChatTypingIndicator isAssistant={false} />}
             </div>
@@ -997,6 +1171,10 @@ const AIAssistant = () => {
                     setInputError('Enter a question to send.');
                     return;
                   }
+                  if (prompt.length > MAX_PROMPT_LENGTH) {
+                    setInputError('Your message exceeds the 8000 character limit.');
+                    return;
+                  }
                   handleIntent('review', { prompt });
                   setDraftMessage('');
                 }}
@@ -1004,6 +1182,21 @@ const AIAssistant = () => {
               >
                 Send
               </Button>
+              {isStreaming && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (streamAbortRef.current) {
+                      streamAbortRef.current.abort();
+                    }
+                    setIsStreaming(false);
+                    setIsAsking(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              )}
               {aiVoiceEnabled && speechSupported && (
                 <Button
                   variant={isListening ? 'secondary' : 'outline'}
@@ -1090,6 +1283,15 @@ const AIAssistant = () => {
             <p className="text-xs text-gray-500">
               Session ID: {sessionId ? sessionId : 'pending...'}
             </p>
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:text-blue-800 text-left"
+                onClick={() => setShowRequestIds((prev) => !prev)}
+              >
+                {showRequestIds ? 'Hide request IDs' : 'Show request IDs'}
+              </button>
+            )}
             <Button
               variant="outline"
               size="sm"

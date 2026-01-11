@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const { body, validationResult } = require('express-validator');
-const { FileAttachment } = require('../models');
+const { FileAttachment, Company } = require('../models');
 const ocrService = require('../services/ocrService');
 const { runOCRPreview } = ocrService;
 const AuditLogService = require('../services/auditLogService');
@@ -25,6 +25,50 @@ router.use(ocrLimiter);
 router.use(authenticate);
 router.use(requireCompany);
 router.use(logUploadMetadata);
+
+const ensureCompanyInGoodStanding = async (req, res, next) => {
+  try {
+    const company = await Company.findByPk(req.companyId);
+    if (!company) {
+      await AuditLogService.appendEntry({
+        action: 'ocr_blocked_company_missing',
+        resourceType: 'Company',
+        resourceId: req.companyId ? String(req.companyId) : null,
+        userId: req.userId,
+        reason: 'Company not found',
+      });
+      return sendError(res, 'Company not found.', 404);
+    }
+    if (!company.isActive || company.suspendedAt) {
+      await AuditLogService.appendEntry({
+        action: 'ocr_blocked_company',
+        resourceType: 'Company',
+        resourceId: String(company.id),
+        userId: req.userId,
+        reason: 'Company suspended or inactive',
+        oldValues: { isActive: company.isActive, suspendedAt: company.suspendedAt },
+      });
+      return sendError(res, 'Company is suspended or inactive.', 403);
+    }
+    const subscriptionStatus = (company.subscriptionStatus || '').toLowerCase();
+    if (!['active', 'demo'].includes(subscriptionStatus)) {
+      await AuditLogService.appendEntry({
+        action: 'ocr_blocked_subscription',
+        resourceType: 'Company',
+        resourceId: String(company.id),
+        userId: req.userId,
+        reason: 'Subscription required',
+        oldValues: { subscriptionStatus: company.subscriptionStatus || null },
+      });
+      return sendError(res, 'An active subscription is required to use OCR.', 402);
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
+router.use(ensureCompanyInGoodStanding);
 
 const validateDocument = [
   body('documentType')

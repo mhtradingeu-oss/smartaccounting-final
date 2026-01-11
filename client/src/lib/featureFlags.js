@@ -56,3 +56,18 @@ export const setAIVoiceEnabled = (value) => {
 export const resetAIVoiceEnabled = () => {
   aiVoiceEnabled = DEFAULT_AI_VOICE_ENABLED;
 };
+
+const DEFAULT_AI_SUGGESTIONS_ENABLED = normalizeFlag(
+  import.meta.env.VITE_AI_SUGGESTIONS_ENABLED ?? 'false',
+);
+let aiSuggestionsEnabled = DEFAULT_AI_SUGGESTIONS_ENABLED;
+
+export const isAISuggestionsEnabled = () => aiSuggestionsEnabled;
+
+export const setAISuggestionsEnabled = (value) => {
+  aiSuggestionsEnabled = normalizeFlag(value);
+};
+
+export const resetAISuggestionsEnabled = () => {
+  aiSuggestionsEnabled = DEFAULT_AI_SUGGESTIONS_ENABLED;
+};

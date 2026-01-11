@@ -6,6 +6,8 @@ const { logRejected } = require('../../services/ai/aiAuditLogger');
 const aiRouteGuard = require('../../middleware/aiRouteGuard');
 const rateLimit = require('../../middleware/aiRateLimit');
 const { Company } = require('../../models');
+const { isAssistantRoleAllowed } = require('../../services/ai/assistantAuthorization');
+const { sendAIError } = require('../../utils/aiErrorResponse');
 
 const router = express.Router();
 
@@ -14,10 +16,20 @@ const isAssistantFeatureEnabled = () =>
   normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
 const isVoiceFeatureEnabled = () => normalizeFlag(process.env.AI_VOICE_ENABLED ?? 'false');
 const isTtsFeatureEnabled = () => normalizeFlag(process.env.AI_TTS_ENABLED ?? 'false');
-const ALLOWED_ROLES = new Set(['admin', 'accountant']);
 
-const respondWithError = (req, res, status, error) =>
-  res.status(status).json({ error, requestId: req.requestId });
+const respondWithError = (req, res, status, message, errorCode) =>
+  sendAIError(res, {
+    status,
+    message,
+    errorCode,
+    requestId: req.requestId,
+  });
+
+const respondVoiceRoleDenied = (req, res) =>
+  respondWithError(req, res, 403, 'Insufficient role for AI assistant', 'AI_ASSISTANT_FORBIDDEN');
+
+const respondVoiceDisabled = (req, res) =>
+  respondWithError(req, res, 403, 'AI Voice is disabled', 'AI_VOICE_DISABLED');
 
 const normalizeResponseMode = (value) => (value === 'voice' ? 'voice' : 'text');
 
@@ -96,15 +108,15 @@ router.post('/assistant', async (req, res, next) => {
     let voiceFallback = false;
 
     if (!isAssistantFeatureEnabled() || !isVoiceFeatureEnabled()) {
-      return respondWithError(req, res, 403, 'AI Voice is disabled');
+      return respondVoiceDisabled(req, res);
     }
     if (!intent) {
-      return respondWithError(req, res, 400, 'intent is required');
+      return respondWithError(req, res, 400, 'intent is required', 'BAD_REQUEST');
     }
     if (!aiAssistantService.INTENT_LABELS[intent]) {
-      return respondWithError(req, res, 400, 'Intent not supported');
+      return respondWithError(req, res, 400, 'Intent not supported', 'BAD_REQUEST');
     }
-    if (!ALLOWED_ROLES.has(req.user.role)) {
+    if (!isAssistantRoleAllowed(req.user.role)) {
       try {
         await logRejected({
           userId: req.user?.id,
@@ -122,7 +134,7 @@ router.post('/assistant', async (req, res, next) => {
           console.error('[ai/voice] Audit log failure', logError.message || logError);
         }
       }
-      return respondWithError(req, res, 403, 'Insufficient role for voice assistant');
+      return respondVoiceRoleDenied(req, res);
     }
     if (requestedResponseMode === 'voice') {
       const isAdmin = req.user.role === 'admin';
@@ -145,7 +157,12 @@ router.post('/assistant', async (req, res, next) => {
             return buildSafeVoiceSummary();
           }
           const context = await aiAssistantService.getContext(scopedCompanyId);
-          return aiAssistantService.answerIntent({ intent, context, targetInsightId });
+          return aiAssistantService.answerIntentCompliance({
+            intent,
+            context,
+            targetInsightId,
+            prompt,
+          });
         },
         responseMeta: { sessionId, targetInsightId, voiceFallback },
         sessionId,
@@ -153,7 +170,13 @@ router.post('/assistant', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
-      return respondWithError(req, res, status, body?.error || body?.message || 'AI request failed');
+      return respondWithError(
+        req,
+        res,
+        status,
+        body?.message || body?.error || 'AI request failed',
+        body?.errorCode,
+      );
     }
     res.json({ answer: body?.data || null, requestId: req.requestId, responseMode });
   } catch (err) {

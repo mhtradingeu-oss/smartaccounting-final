@@ -104,7 +104,7 @@ async function logResponded({
 async function logSessionEvent({
   userId,
   companyId,
-  _requestId,
+  requestId,
   sessionId,
   event = 'started',
   route,
@@ -119,6 +119,7 @@ async function logSessionEvent({
     oldValues: null,
     newValues: {
       event,
+      requestId: requestId || 'unknown',
       sessionId,
       route,
       prompt: safePrompt,

@@ -131,10 +131,21 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
   }
 
   if (error.response) {
-    const { status } = error.response;
+    const { status, data } = error.response;
     formatted.status = status;
 
     // Keep fallback message or type-specific overrides only
+
+    const errorCode = data?.code || data?.errorCode;
+    if (errorCode === 'PLAN_RESTRICTED') {
+      formatted.type = 'plan_restricted';
+      formatted.message = data?.message || fallbackMessage;
+      formatted.feature = data?.feature || null;
+      formatted.plan = data?.plan || null;
+      formatted.upgradePath = data?.upgradePath || '/pricing';
+      formatted.retryable = false;
+      return formatted;
+    }
 
     if (status === 401) {
       formatted.type = 'unauthorized';

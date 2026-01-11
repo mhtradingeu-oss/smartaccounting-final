@@ -130,6 +130,11 @@
       "description": "Daten sind unternehmensspezifisch. Wählen Sie eines aus, um fortzufahren.",
       "action": "Unternehmen auswählen"
     },
+    "ai_assistant_system_admin_blocked": {
+      "title": "KI-Assistent nicht verfügbar",
+      "description": "Systemadministratoren haben keinen Zugriff auf den KI-Assistenten eines Unternehmens.",
+      "help": "Melden Sie sich mit einem Unternehmensnutzer an, um den Assistenten zu nutzen."
+    },
     "read_only": {
       "label": "Nur-Lesen:",
       "default_message": "Sie haben nur Lesezugriff. Aktionen sind für Ihre Rolle deaktiviert.",

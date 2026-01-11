@@ -19,13 +19,13 @@ Dieses Statement basiert ausschließlich auf den im Repository dokumentierten Da
 
 - Die Auswertung von Beträgen folgt festen Regeln: Das Constraint-Set `expenses_net_vat_gross_consistency`, `invoice_items_line_consistency` und `transactions_vat_credit_debit_checks` stellt sicher, dass alle erforderlichen Felder befüllt, nicht-negativ und logisch miteinander verknüpft sind (database/migrations/20260108001000-add-financial-integrity-checks.js:3).
 - Vor diesem Constraint wurden in der `expenses`-Tabelle alle historischen Null-Werte auf gültige Defaults zurückgeführt und `netAmount`/`vatAmount`/`grossAmount`/`vatRate` mit Mandatory-Checks ausgestattet, sodass bei bestehender Buchung keine Felder ohne Wert bleiben (database/migrations/20260110000000-lock-expenses-accountability-and-vat.js:1).
-- Die erweiterte `tax_reports`-Tabelle bewahrt neben dem Berichtstyp und Status auch strukturierte `data` (JSON), `generatedAt`/`submittedAt`, den verantwortlichen `submittedBy` sowie ELSTER-Metadaten, sodass jede deklarierte VAT-Meldung vollständig dokumentiert ist (database/migrations/20251228000200-update-tax-reports-schema.js:29).
+- Die erweiterte `tax_reports`-Tabelle bewahrt neben dem Berichtstyp und Status auch strukturierte `data` (JSON), `generatedAt`/`submittedAt`, den verantwortlichen `submittedBy` sowie ELSTER-bezogene Metadaten als interne Workflow-Daten, ohne eine tatsächliche ELSTER-Einreichung zu behaupten (database/migrations/20251228000200-update-tax-reports-schema.js:29).
 
 ### Richtigkeit
 
 - Die Basistabellen `invoices` und `invoice_items` verlangen eindeutige Rechnungsnummern und Pflichtfelder wie `subtotal`, `total`, `vatRate` sowie `lineNet`/`lineVat`/`lineGross`, sodass abweichende oder falsch zusammengesetzte Belege physisch nicht gespeichert werden können (database/migrations/20251225000500-create-invoices.js:11, database/migrations/20251225000600-create-invoice-items.js:9).
 - Für jede Transaktion ist `transaction_date` zwingend und `amount` darf nicht negativ sein; `vat_rate`/`vat_amount` werden über Default-Werte plus Integritätscheck validiert, so dass jede Buchung korrekt mit ihrer VAT-Logik verknüpft ist (database/migrations/20251228000100-create-transactions.js:39).
-- Die Tax-Reports akzeptieren nur definierte Statuswerte (database/migrations/20260109002000-lock-tax-report-status.js:7) und schreiben Datum/Uhrzeit für Erstellung und Übermittlung fest, was implizit falsche Stände ausschließt (database/migrations/20251228000200-update-tax-reports-schema.js:38).
+- Die Tax-Reports akzeptieren nur definierte Statuswerte (database/migrations/20260109002000-lock-tax-report-status.js:7) und schreiben Datum/Uhrzeit für Erstellung und interne Statuswechsel fest; dies beschreibt Workflow-Zustände, keine externe Übermittlung (database/migrations/20251228000200-update-tax-reports-schema.js:38).
 
 ### Zeitgerechte Buchung
 
@@ -57,4 +57,4 @@ Jeder Schreibzugriff erzeugt einen Audit-Eintrag mit `action`, `resourceType`, `
 - Die Hash-Kette (`hash`, `previousHash`) in Kombination mit `requestId`/`companyId` verhindert das heimliche Überschreiben oder Entfernen von Audit-Einträgen, da jeder Eintrag eine schreibgeschützte Verbindung zu seinem Vorgänger erhält (database/migrations/20251225000400-create-audit-logs.js:61, database/migrations/20260112000000-add-audit-log-company-requestid.js:24).
 - Spread-Summen und Status-Enum-Checks in `expenses`, `invoices`, `transactions` und `tax_reports` verbieten stille Änderungen, da inkonsistente Beträge, leere `status`-Werte oder nicht definierte Tax-Report-Zustände nicht gespeichert werden dürfen (database/migrations/20260108001000-add-financial-integrity-checks.js:3, database/migrations/20260109002000-lock-tax-report-status.js:7).
 
-“Based on the implemented controls and evidence, the system complies with GoBD requirements.”
+Basierend auf den implementierten Kontrollen belegt dieses Dokument, dass die GoBD-relevanten Datenstrukturen und Audit-Prinzipien im System verankert sind; eine externe Zertifizierung oder behördliche Bestätigung wird nicht behauptet.

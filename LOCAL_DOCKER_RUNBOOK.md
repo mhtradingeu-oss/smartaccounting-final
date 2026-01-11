@@ -134,6 +134,13 @@ npm run test:postgres
 
 ---
 
+## Company Context Reminder
+
+- Company-scoped API calls must include `x-company-id`.
+- System admin calls must use `/api/system/*` only and never include `x-company-id`.
+
+---
+
 ## General Troubleshooting
 
 - Use `docker compose logs <service>` for details.

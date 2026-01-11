@@ -18,7 +18,6 @@ const { getMaintenanceState, setMaintenanceState } = require('../lib/maintenance
 const { performanceMonitor } = require('../middleware/performance');
 const logger = require('../lib/logger');
 const buildMetadata = require('../config/buildMetadata');
-const StripeService = require('../services/stripeService');
 const { getSystemPlansFallback } = require('../services/planService');
 
 const router = express.Router();
@@ -449,13 +448,7 @@ router.patch('/users/:userId', async (req, res) => {
 
 router.get('/plans', async (req, res) => {
   try {
-    let plans = [];
-    try {
-      plans = await StripeService.getPricingPlans();
-    } catch (error) {
-      plans = getSystemPlansFallback();
-    }
-
+    const plans = getSystemPlansFallback();
     res.json({ plans });
   } catch (error) {
     logger.error('System plans error:', error);

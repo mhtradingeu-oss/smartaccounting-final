@@ -5,6 +5,8 @@ import { auditLogsAPI } from '../services/auditLogsAPI';
 import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import { isReadOnlyRole } from '../lib/permissions';
+import { formatApiError } from '../services/api';
+import PlanRestrictedState from '../components/PlanRestrictedState';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
@@ -21,7 +23,7 @@ export default function AuditLogs() {
           setLogs(data);
         }
       })
-      .catch((err) => setError(err?.message || 'Failed to load audit logs'))
+      .catch((err) => setError(formatApiError(err, 'Failed to load audit logs')))
       .finally(() => setLoading(false));
     return () => {
       mounted = false;
@@ -46,7 +48,15 @@ export default function AuditLogs() {
             description="Gathering the latest activity records."
           />
         ) : error ? (
-          <PageErrorState message={error} onRetry={() => window.location.reload()} />
+          error.type === 'plan_restricted' ? (
+            <PlanRestrictedState
+              feature="Audit log exports"
+              message={error.message}
+              upgradePath={error.upgradePath}
+            />
+          ) : (
+            <PageErrorState message={error.message} onRetry={() => window.location.reload()} />
+          )
         ) : logs.length === 0 ? (
           <PageEmptyState title="Export is empty" description="No audit entries were exported yet." />
         ) : (

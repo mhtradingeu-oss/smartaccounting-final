@@ -8,9 +8,11 @@ import { Button } from '../components/ui/Button';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import AITrustBanner from '../components/AITrustBanner';
 import { AIBadge } from '../components/AIBadge';
+import PlanRestrictedState from '../components/PlanRestrictedState';
 import { useAuth } from '../context/AuthContext';
 import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
+import { isAISuggestionsEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
 
 const AIInsights = () => {
@@ -19,12 +21,20 @@ const AIInsights = () => {
   const activeCompanyId = activeCompany?.id;
   const isReadOnly = user && isReadOnlyRole(user.role);
   const navigate = useNavigate();
+  const aiSuggestionsEnabled = isAISuggestionsEnabled();
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewerLimited, setViewerLimited] = useState(false);
 
   const loadInsights = useCallback(async () => {
+    if (!aiSuggestionsEnabled) {
+      setInsights([]);
+      setViewerLimited(false);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     if (!activeCompanyId) {
       setInsights([]);
       setViewerLimited(false);
@@ -49,7 +59,7 @@ const AIInsights = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeCompanyId]);
+  }, [activeCompanyId, aiSuggestionsEnabled]);
 
   useEffect(() => {
     loadInsights();
@@ -63,6 +73,16 @@ const AIInsights = () => {
     return () => window.removeEventListener('ai-insights:refresh', handleRefresh);
   }, [loadInsights]);
 
+  if (!aiSuggestionsEnabled) {
+    return (
+      <EmptyState
+        title="AI suggestions unavailable"
+        description="This capability is disabled until approval workflows and audit guards are ready."
+        help="Check back after compliance review or contact support for enablement."
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="py-12" role="status" aria-live="polite" aria-label="Loading AI insights">
@@ -72,6 +92,15 @@ const AIInsights = () => {
     );
   }
   if (error) {
+    if (error.type === 'plan_restricted') {
+      return (
+        <PlanRestrictedState
+          feature="AI insights"
+          message={error.message}
+          upgradePath={error.upgradePath}
+        />
+      );
+    }
     return (
       <EmptyState
         icon={null}

@@ -5,8 +5,18 @@ import React from 'react';
  * Props:
  * - group: { speaker: "user"|"assistant", messages: [{ id, text, timestamp, highlights, references, error }], avatar?: ReactNode }
  */
-export default function ChatMessageGroup({ group }) {
+export default function ChatMessageGroup({ group, showRequestIds = false }) {
   const isAssistant = group.speaker === 'assistant';
+  const handleCopy = async (requestId) => {
+    if (!requestId || !navigator?.clipboard?.writeText) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(requestId);
+    } catch {
+      // Ignore clipboard failures silently to keep UI non-intrusive
+    }
+  };
   return (
     <div className={`flex w-full ${isAssistant ? 'justify-start' : 'justify-end'} mb-4`}>
       {isAssistant && (
@@ -40,6 +50,19 @@ export default function ChatMessageGroup({ group }) {
                 Source: {msg.meta.source || 'Not available'} · Confidence:{' '}
                 {msg.meta.confidence || 'Not available'} · Last updated:{' '}
                 {msg.meta.lastUpdated || 'Not available'}
+              </div>
+            )}
+            {showRequestIds && msg.requestId && (
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
+                <span>Request ID: {msg.requestId}</span>
+                <button
+                  type="button"
+                  className="text-blue-600 hover:text-blue-800"
+                  onClick={() => handleCopy(msg.requestId)}
+                  aria-label="Copy request ID"
+                >
+                  Copy
+                </button>
               </div>
             )}
             {msg.timestamp && (

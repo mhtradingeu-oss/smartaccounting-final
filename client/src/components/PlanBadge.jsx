@@ -3,10 +3,12 @@ import { getSafeErrorMeta } from '../lib/errorMeta';
 
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { resolvePlanLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 
 const PlanBadge = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { planMap } = usePlanCatalog();
 
   useEffect(() => {
     fetchSubscriptionStatus();
@@ -44,18 +46,7 @@ const PlanBadge = () => {
     return 'bg-red-100 text-red-800';
   };
 
-  const getPlanName = (plan) => {
-    switch (plan) {
-      case 'basic':
-        return 'Starter';
-      case 'pro':
-        return 'Professional';
-      case 'enterprise':
-        return 'Business';
-      default:
-        return 'Kein Plan';
-    }
-  };
+  const getPlanName = (plan) => resolvePlanLabel(plan, planMap) || 'Plan unavailable';
 
   return (
     <div className="inline-flex items-center">

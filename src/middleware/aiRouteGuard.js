@@ -3,6 +3,7 @@ const { Company } = require('../models');
 const promptRegistry = require('../services/ai/promptRegistry');
 const { logRejected } = require('../services/ai/aiAuditLogger');
 const { redactPII } = require('../services/ai/governance');
+const { sendAIError } = require('../utils/aiErrorResponse');
 
 const DEFAULT_METHODS = ['GET', 'HEAD'];
 
@@ -12,7 +13,7 @@ function extractPrompt(req) {
   return redactPII(fromQuery || fromBody || '');
 }
 
-async function handleRejection(req, res, { status = 403, error, reason }) {
+async function handleRejection(req, res, { status = 403, error, reason, errorCode }) {
   const prompt = extractPrompt(req);
   try {
       await logRejected({
@@ -31,8 +32,10 @@ async function handleRejection(req, res, { status = 403, error, reason }) {
       console.error('[aiRouteGuard] Audit log failure', logError.message || logError);
     }
   }
-  return res.status(status).json({
-    error,
+  return sendAIError(res, {
+    status,
+    message: error,
+    errorCode,
     requestId: req.requestId,
   });
 }
@@ -79,9 +82,10 @@ function createAiRouteGuard(options = {}) {
       const method = (req.method || '').toUpperCase();
       if (allowedMethods && !allowedMethods.includes(method)) {
         return handleRejection(req, res, {
-          status: 501,
+          status: 405,
           error: 'AI endpoints are read-only (GET/HEAD only)',
           reason: 'Read-only guard',
+          errorCode: 'METHOD_NOT_ALLOWED',
         });
       }
 
@@ -93,6 +97,7 @@ function createAiRouteGuard(options = {}) {
           status: 403,
           error: 'Company context required for AI routes',
           reason: 'Missing company context',
+          errorCode: 'COMPANY_CONTEXT_REQUIRED',
         });
       }
 
@@ -101,6 +106,7 @@ function createAiRouteGuard(options = {}) {
           status: 403,
           error: 'Forbidden: invalid company context',
           reason: 'Missing company context',
+          errorCode: 'COMPANY_CONTEXT_INVALID',
         });
       }
 
@@ -119,6 +125,7 @@ function createAiRouteGuard(options = {}) {
             status: 501,
             error: 'AI is disabled for this company',
             reason: 'AI feature flag disabled',
+            errorCode: 'AI_DISABLED',
           });
         }
       }
@@ -131,6 +138,7 @@ function createAiRouteGuard(options = {}) {
           status: 400,
           error: 'purpose is required for AI requests',
           reason: 'Missing purpose',
+          errorCode: 'BAD_REQUEST',
         });
       }
 
@@ -139,6 +147,7 @@ function createAiRouteGuard(options = {}) {
           status: 400,
           error: 'policyVersion is required for AI requests',
           reason: 'Missing policyVersion',
+          errorCode: 'BAD_REQUEST',
         });
       }
 
@@ -152,6 +161,7 @@ function createAiRouteGuard(options = {}) {
           status: 403,
           error: 'AI_POLICY_VIOLATION: invalid purpose or policyVersion',
           reason: 'Missing prompt meta',
+          errorCode: 'AI_POLICY_VIOLATION',
         });
       }
 
@@ -166,6 +176,7 @@ function createAiRouteGuard(options = {}) {
           status: 403,
           error: 'AI_POLICY_VIOLATION: invalid purpose or policyVersion',
           reason: 'Policy version mismatch',
+          errorCode: 'AI_POLICY_VIOLATION',
         });
       }
 

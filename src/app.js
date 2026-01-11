@@ -131,6 +131,7 @@ app.use(requestIdMiddleware);
 // 2. CORS
 const corsMiddleware = require('./middleware/cors');
 app.use(corsMiddleware);
+app.options('*', corsMiddleware);
 
 // 3. Security headers, rate limits, etc.
 createSecurityMiddleware().forEach((mw) => app.use(mw));

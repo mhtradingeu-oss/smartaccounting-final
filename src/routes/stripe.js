@@ -1,5 +1,6 @@
 const express = require('express');
 const StripeService = require('../services/stripeService');
+const { getSystemPlansFallback } = require('../services/planService');
 const { Company, User } = require('../models');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const { sendSuccess, sendError } = require('../utils/responseHelpers');
@@ -28,7 +29,7 @@ router.get('/health', (req, res) => {
 
 router.get('/plans', authenticate, async (req, res) => {
   try {
-    const plans = await StripeService.getPricingPlans();
+    const plans = getSystemPlansFallback();
     return sendSuccess(res, 'Pricing plans retrieved', { plans });
   } catch (error) {
     logger.error('Failed to fetch Stripe plans', { error: error.message });

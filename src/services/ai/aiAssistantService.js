@@ -1,7 +1,13 @@
 const { sanitizeContext } = require('./contextContract');
+const { redactPII } = require('./governance');
+const { validateAssistantResponse } = require('./assistantResponseSchema');
 const { Company, Invoice, Expense, BankTransaction, AIInsight } = require('../../models');
 
 const MAX_ITEMS = 5;
+const MAX_PROMPT_CHARS = 8000;
+const MAX_SUMMARY_CHARS = 1200;
+const MAX_ITEM_CHARS = 240;
+const MAX_LIST_ITEMS = 6;
 const DEFAULT_CURRENCY = 'EUR';
 const SEVERITY_ORDER = {
   high: 3,
@@ -72,6 +78,103 @@ function formatEvidence(evidence) {
   }
 
   return String(evidence);
+}
+
+function truncateText(value, maxLength) {
+  const text = String(value || '');
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function sanitizeText(value, maxLength) {
+  return truncateText(redactPII(String(value || '')), maxLength).trim();
+}
+
+function sanitizeList(items, maxLength = MAX_ITEM_CHARS, maxItems = MAX_LIST_ITEMS) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items
+    .filter(Boolean)
+    .slice(0, maxItems)
+    .map((item) => sanitizeText(item, maxLength))
+    .filter(Boolean);
+}
+
+function normalizeContext(context) {
+  const safeContext = context && typeof context === 'object' ? context : {};
+  return {
+    company: safeContext.company || {},
+    invoices: Array.isArray(safeContext.invoices) ? safeContext.invoices : [],
+    expenses: Array.isArray(safeContext.expenses) ? safeContext.expenses : [],
+    bankTransactions: Array.isArray(safeContext.bankTransactions) ? safeContext.bankTransactions : [],
+    insights: Array.isArray(safeContext.insights) ? safeContext.insights : [],
+  };
+}
+
+function buildSafeContextSummary(context) {
+  const invoices = context.invoices || [];
+  const expenses = context.expenses || [];
+  const bankTransactions = context.bankTransactions || [];
+  const insights = context.insights || [];
+  const overdueCount = invoices.filter(
+    (invoice) => String(invoice.status).toUpperCase() === 'OVERDUE',
+  ).length;
+  const unreconciledCount = bankTransactions.filter((tx) => !tx.isReconciled).length;
+  const severityCounts = insights.reduce(
+    (acc, insight) => {
+      const severity = insight.severity || 'low';
+      acc[severity] = (acc[severity] || 0) + 1;
+      return acc;
+    },
+    { high: 0, medium: 0, low: 0 },
+  );
+
+  const summary = [
+    `Invoices: ${invoices.length} total, ${overdueCount} overdue.`,
+    `Expenses: ${expenses.length} total.`,
+    `Bank transactions: ${bankTransactions.length} total, ${unreconciledCount} unreconciled.`,
+    `Insights: ${insights.length} total (high ${severityCounts.high}, medium ${severityCounts.medium}, low ${severityCounts.low}).`,
+  ].join(' ');
+
+  return sanitizeText(summary, 600);
+}
+
+function resolveDataGaps(context) {
+  const gaps = [];
+  if (!context.invoices?.length) {
+    gaps.push('Invoices data not available');
+  }
+  if (!context.expenses?.length) {
+    gaps.push('Expenses data not available');
+  }
+  if (!context.bankTransactions?.length) {
+    gaps.push('Bank transactions data not available');
+  }
+  if (!context.insights?.length) {
+    gaps.push('AI insights data not available');
+  }
+  return gaps;
+}
+
+function estimateConfidenceLabel(context) {
+  const insights = context.insights || [];
+  const withConfidence = insights.find((insight) =>
+    Number.isFinite(Number(insight.confidenceScore)),
+  );
+  if (!withConfidence) {
+    return null;
+  }
+  const score = Number(withConfidence.confidenceScore);
+  if (score >= 0.8) {
+    return 'estimated-high';
+  }
+  if (score >= 0.5) {
+    return 'estimated-medium';
+  }
+  return 'estimated-low';
 }
 
 function mapInvoiceRecord(invoice) {
@@ -247,7 +350,7 @@ function selectInsight(insights = [], insightId) {
 }
 
 function buildReviewResponse(context) {
-  const { company, invoices, bankTransactions, insights } = context;
+  const { invoices, bankTransactions, insights } = context;
   const lines = [];
 
   if (insights.length) {
@@ -295,14 +398,13 @@ function buildReviewResponse(context) {
 
   const message =
     lines.length > 0
-      ? `For ${company.name}, focus your review on the following items:\n- ${lines.join('\n- ')}`
+      ? `Focus your review on the following items:\n- ${lines.join('\n- ')}`
       : 'No immediate review points were detected. Keep monitoring the dashboard for new insights.';
 
   return {
     message,
     highlights: lines,
     references: [
-      `Company: ${company.name}`,
       `Insights known: ${insights.length}`,
       `Invoices surfaced: ${invoices.length}`,
     ],
@@ -310,7 +412,7 @@ function buildReviewResponse(context) {
 }
 
 function buildRiskResponse(context) {
-  const { company, insights } = context;
+  const { insights } = context;
   const breakdown = insights.reduce(
     (acc, insight) => {
       const severity = insight.severity || 'low';
@@ -323,7 +425,7 @@ function buildRiskResponse(context) {
   const highSeverityInsight = insights.find((insight) => insight.severity === 'high');
   const message = highSeverityInsight
     ? `High-severity risk detected (${highSeverityInsight.type}) on ${highSeverityInsight.entityType} ${highSeverityInsight.entityId}: ${highSeverityInsight.summary}`
-    : `No high-severity AI flags right now for ${company.name}. Medium severity alerts: ${breakdown.medium}, low severity alerts: ${breakdown.low}.`;
+    : `No high-severity AI flags right now. Medium severity alerts: ${breakdown.medium}, low severity alerts: ${breakdown.low}.`;
 
   const highlights = insights
     .slice(0, 2)
@@ -349,7 +451,8 @@ function buildExplainResponse(insight) {
     };
   }
 
-  const confidence = Math.round((insight.confidenceScore || 0) * 100);
+  const confidenceScore = Number(insight.confidenceScore);
+  const confidence = Number.isFinite(confidenceScore) ? Math.round(confidenceScore * 100) : null;
   const evidence = formatEvidence(insight.evidence);
 
   const message = `Transaction context: ${insight.entityType} ${insight.entityId} flagged as ${insight.type}. Summary: ${insight.summary}. Why: ${insight.why}. Evidence: ${evidence}.`;
@@ -357,9 +460,9 @@ function buildExplainResponse(insight) {
   return {
     message,
     highlights: [
-      `Confidence: ${confidence}%`,
-      `Legal context: ${insight.legalContext}`,
-      `Rule: ${insight.ruleId}`,
+      confidence !== null ? `Confidence: ${confidence}%` : 'Confidence: not available',
+      `Legal context: ${insight.legalContext || 'Not available'}`,
+      `Rule: ${insight.ruleId || 'Not available'}`,
     ],
     references: [`Entity: ${insight.entityType} ${insight.entityId}`],
   };
@@ -379,12 +482,15 @@ function buildWhyFlaggedResponse(insight) {
 
   const message = `This transaction was flagged because ${insight.why}. The governing rule is ${insight.ruleId}, which references ${insight.legalContext}. Evidence: ${evidence}.`;
 
+  const confidenceScore = Number(insight.confidenceScore);
+  const confidence = Number.isFinite(confidenceScore) ? Math.round(confidenceScore * 100) : null;
+
   return {
     message,
     highlights: [
-      `Rule: ${insight.ruleId}`,
-      `Legal context: ${insight.legalContext}`,
-      `Statistic: confidence ${Math.round((insight.confidenceScore || 0) * 100)}%`,
+      `Rule: ${insight.ruleId || 'Not available'}`,
+      `Legal context: ${insight.legalContext || 'Not available'}`,
+      confidence !== null ? `Statistic: confidence ${confidence}%` : 'Statistic: confidence not available',
     ],
     references: [`Entity: ${insight.entityType} ${insight.entityId}`],
   };
@@ -417,8 +523,68 @@ function answerIntent({ intent, context, targetInsightId }) {
   }
 }
 
+function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
+  const safePrompt = sanitizeText(prompt || '', MAX_PROMPT_CHARS);
+  const normalizedContext = normalizeContext(context);
+  const base = answerIntent({ intent, context: normalizedContext, targetInsightId });
+  const companyName = normalizedContext.company?.name;
+  const baseMessage =
+    companyName && typeof base.message === 'string'
+      ? base.message.split(companyName).join('your company')
+      : base.message;
+  const dataGaps = sanitizeList(resolveDataGaps(normalizedContext), MAX_ITEM_CHARS, MAX_LIST_ITEMS);
+  const contextSummary = buildSafeContextSummary(normalizedContext);
+  const clarifyingQuestion =
+    'Please confirm the tax period, document type, and evidence before compliance guidance.';
+  const risks = sanitizeList(base.highlights, MAX_ITEM_CHARS, MAX_LIST_ITEMS);
+  const requiredActions = sanitizeList([clarifyingQuestion], MAX_ITEM_CHARS, 3);
+  const summaryBase = sanitizeText(baseMessage || '', MAX_SUMMARY_CHARS);
+  const summary =
+    dataGaps.length > 0
+      ? sanitizeText(
+          `${summaryBase} Data not available for: ${dataGaps
+            .map((gap) => gap.replace(' data not available', ''))
+            .join(', ')}.`,
+          MAX_SUMMARY_CHARS,
+        )
+      : summaryBase;
+  const response = {
+    summary,
+    risks,
+    requiredActions,
+    dataGaps,
+    confidence: estimateConfidenceLabel(normalizedContext),
+    contextSummary,
+    sanitizedPrompt: safePrompt,
+  };
+  const validation = validateAssistantResponse(response);
+  if (!validation.success) {
+    return {
+      summary: 'Data not available. Please provide additional records.',
+      risks: [],
+      requiredActions,
+      dataGaps,
+      confidence: null,
+      contextSummary,
+      sanitizedPrompt: safePrompt,
+    };
+  }
+  return response;
+}
+
+function answerIntentCompliance({ intent, context, targetInsightId, prompt }) {
+  const compliance = applyComplianceWrapper({ intent, context, targetInsightId, prompt });
+  return {
+    message: compliance.summary,
+    highlights: compliance.risks,
+    references: compliance.dataGaps,
+    ...compliance,
+  };
+}
+
 module.exports = {
   getContext,
   answerIntent,
+  answerIntentCompliance,
   INTENT_LABELS,
 };

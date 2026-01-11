@@ -9,6 +9,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import { isReadOnlyRole } from '../lib/permissions';
 import { FEATURE_FLAGS } from '../lib/constants';
 import { isSystemAdmin } from '../lib/systemAdmin';
+import { resolvePlanLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 import {
   BellIcon,
   MagnifyingGlassIcon,
@@ -69,6 +70,8 @@ const TopBar = ({
   const { user, logout } = useAuth();
   const isSystemAdminUser = isSystemAdmin(user);
   const isReadOnlySession = isReadOnlyRole(user?.role);
+  const { planMap } = usePlanCatalog();
+  const planLabel = resolvePlanLabel(user?.subscriptionPlan, planMap);
   useLoadCompanies();
   const { companies } = useCompany();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -546,7 +549,7 @@ const TopBar = ({
                     {user?.firstName} {user?.lastName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {user?.role} • {user?.subscriptionPlan || t('topbar.profile.plan_professional')}
+                    {user?.role} • {planLabel || 'Plan unavailable'}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
                     {isReadOnlySession ? (
@@ -585,7 +588,7 @@ const TopBar = ({
                             {user?.role}
                           </span>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
-                            {user?.subscriptionPlan || t('topbar.profile.plan_pro')}
+                            {planLabel || 'Plan unavailable'}
                           </span>
                         </div>
                       </div>

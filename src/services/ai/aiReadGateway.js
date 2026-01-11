@@ -50,6 +50,17 @@ async function aiReadGateway(input) {
     sessionId: auditContext.sessionId,
     responseMode: auditContext.responseMode,
   };
+  const requestId = normalized.requestId || 'unknown';
+
+  function buildErrorBody({ errorCode, message, extra = {} }) {
+    return {
+      errorCode,
+      message,
+      requestId,
+      ...(extra.error ? {} : message ? { error: message } : {}),
+      ...extra,
+    };
+  }
 
   // Contract: Fail closed if required fields are missing
   let meta;
@@ -78,7 +89,11 @@ async function aiReadGateway(input) {
     );
     return {
       status: 403,
-      body: { error: `${missingField}` },
+      body: buildErrorBody({
+        errorCode: 'MISSING_FIELD',
+        message: `${missingField} required`,
+        extra: { error: `${missingField}` },
+      }),
     };
   }
   // ...existing code...
@@ -101,7 +116,10 @@ async function aiReadGateway(input) {
       );
       return {
         status: 403,
-        body: { error: 'Forbidden: invalid company context' },
+        body: buildErrorBody({
+          errorCode: 'COMPANY_CONTEXT_INVALID',
+          message: 'Forbidden: invalid company context',
+        }),
       };
     }
     // Check feature flag
@@ -126,7 +144,11 @@ async function aiReadGateway(input) {
         // Not a status: 200, so do not logRequested here
         return {
           status: 501,
-          body: { status: 'disabled', feature: 'AI Insights' },
+          body: buildErrorBody({
+            errorCode: 'AI_DISABLED',
+            message: 'AI is disabled for this company',
+            extra: { status: 'disabled', feature: 'AI Insights' },
+          }),
         };
       }
     }
@@ -152,7 +174,10 @@ async function aiReadGateway(input) {
       );
       return {
         status: 403,
-        body: { error: `Mutation not allowed: ${mutation.reason}` },
+        body: buildErrorBody({
+          errorCode: 'MUTATION_INTENT',
+          message: `Mutation not allowed: ${mutation.reason}`,
+        }),
       };
     }
   }
@@ -190,7 +215,7 @@ async function aiReadGateway(input) {
       status: 403,
       body: {
         ...shapeAIReadOutput({
-          requestId: normalized.requestId,
+          requestId,
           disclaimer:
             'AI suggestions are advisory only. No data is changed without explicit user approval. All actions are logged. GDPR/GoBD enforced.',
           policyVersion: meta && meta.policyVersion ? meta.policyVersion : normalized.policyVersion,
@@ -198,6 +223,8 @@ async function aiReadGateway(input) {
           data: {},
           status: 403,
         }),
+        errorCode: 'AI_POLICY_VIOLATION',
+        message: 'AI_POLICY_VIOLATION: invalid purpose or policyVersion',
         error: 'AI_POLICY_VIOLATION: invalid purpose or policyVersion',
       },
     };
@@ -217,8 +244,37 @@ async function aiReadGateway(input) {
     } else {
       data = {};
     }
-  } catch (e) {
-    data = {};
+  } catch (err) {
+    const statusCandidate = err?.status || err?.statusCode;
+    const status =
+      Number.isInteger(statusCandidate) && statusCandidate >= 400 && statusCandidate < 500
+        ? statusCandidate
+        : 500;
+    const errorCodeMap = {
+      400: 'BAD_REQUEST',
+      401: 'UNAUTHORIZED',
+      403: 'FORBIDDEN',
+      404: 'NOT_FOUND',
+      409: 'CONFLICT',
+      422: 'UNPROCESSABLE_ENTITY',
+      429: 'RATE_LIMITED',
+    };
+    const errorCode =
+      err?.errorCode || err?.code || errorCodeMap[status] || 'AI_HANDLER_ERROR';
+    const message = err?.message || 'AI handler failed';
+    await auditLogger.logRejected(
+      buildAuditPayload({
+        normalized,
+        safePrompt,
+        meta,
+        reason: `HANDLER_ERROR:${errorCode}`,
+        overrides: auditOverrides,
+      }),
+    );
+    return {
+      status,
+      body: buildErrorBody({ errorCode, message }),
+    };
   }
 
   // 9️⃣ Shape FINAL contract response
@@ -247,7 +303,7 @@ async function aiReadGateway(input) {
   return {
     status: 200,
     body: shapeAIReadOutput({
-      requestId: normalized.requestId,
+      requestId,
       disclaimer:
         'AI suggestions are advisory only. No data is changed without explicit user approval. All actions are logged. GDPR/GoBD enforced.',
       policyVersion: meta && meta.policyVersion ? meta.policyVersion : normalized.policyVersion,

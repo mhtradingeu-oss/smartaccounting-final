@@ -11,6 +11,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import FeatureGate from '../components/FeatureGate';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { resolvePlanLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 
 const Billing = () => {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ const Billing = () => {
   const [loading, setLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { planMap } = usePlanCatalog();
 
   useEffect(() => {
     if (!billingEnabled) {
@@ -229,7 +231,7 @@ const Billing = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-500">Plan</span>
                     <span className="text-sm text-gray-900 capitalize">
-                      {subscriptionStatus.plan}
+                      {resolvePlanLabel(subscriptionStatus.plan, planMap) || 'Plan unavailable'}
                     </span>
                   </div>
                 )}

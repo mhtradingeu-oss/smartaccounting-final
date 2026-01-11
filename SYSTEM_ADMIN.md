@@ -34,7 +34,7 @@ This document describes the System Admin (platform) domain versus Company User d
   - `user.role === 'admin'` **and**
   - `user.companyId` is null/undefined.
 - `requireSystemAdmin` enforces system-only routes.
-- `requireCompany` enforces `x-company-id` and blocks system admins unless explicitly allowed per route.
+- `requireCompany` enforces `x-company-id` and blocks system admins from all company routes.
 - Company context is derived **only** from the `x-company-id` header (never from token, query, or body).
 
 ### Frontend
@@ -76,8 +76,7 @@ This document describes the System Admin (platform) domain versus Company User d
 - System Admin:
   - Authenticate → redirect to `/system-admin`.
   - Company context is not loaded.
-  - Company routes are denied unless the route explicitly allows system admin access **and**
-    a valid `x-company-id` header is provided.
+  - Company routes are always denied, even if an `x-company-id` header is provided.
 - Company User:
   - Authenticate → redirect to `/dashboard`.
   - Company context is supplied via `x-company-id` on every company-scoped request.
@@ -90,6 +89,7 @@ System routes (system admin only):
 Company routes (company context required):
 - `x-company-id` header required; missing → 400 `COMPANY_CONTEXT_REQUIRED`.
 - Invalid / not accessible → 403 `COMPANY_CONTEXT_INVALID`.
+- System admins are blocked from company routes (403) regardless of header.
 - `GET/POST /api/dashboard/*`
 - `GET/POST /api/invoices/*`
 - `GET/POST /api/expenses/*`

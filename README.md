@@ -92,7 +92,7 @@ SmartAccounting™ AI acts as:
 - VAT logic: 19% / 7% / 0% / Reverse-Charge
 - Kleinunternehmerregelung
 - EÜR, UStVA, tax forecasting
-- DATEV-ready & ELSTER-ready exports
+- DATEV/ELSTER preparation exports (design-only, no submission)
 - GDPR data rights (export / deletion)
 
 ---

@@ -1,7 +1,7 @@
 // Detects mutation intent in AI prompts and blocks unsafe requests
 import React from 'react';
 
-import mutationIntentConfig from '../../../shared/ai/mutationIntentConfig.json';
+import mutationIntentConfig from '../shared/ai/mutationIntentConfig.json';
 
 const compiledPatterns = (mutationIntentConfig.patterns || []).map((pattern) => ({
   regex: new RegExp(pattern.pattern, pattern.flags || 'i'),

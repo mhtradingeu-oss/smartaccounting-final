@@ -25,6 +25,7 @@ import {
   ADMINISTRATION_NAVIGATION_ITEMS,
 } from '../navigation/sidebarNavigation';
 import { isSystemAdmin } from '../lib/systemAdmin';
+import { resolvePlanLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 
 const NAV_LINK_BASE_CLASSES =
   'relative group flex items-center px-3 py-2.5 text-sm font-medium min-h-[44px] rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
@@ -34,6 +35,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { user } = useAuth();
   const { role } = useRole();
   const location = useLocation();
+  const { planMap } = usePlanCatalog();
+  const planLabel = resolvePlanLabel(user?.subscriptionPlan, planMap);
   const [, setHoveredItem] = React.useState(null);
   const [isCompact, setIsCompact] = React.useState(false);
   const navRef = React.useRef(null);
@@ -292,7 +295,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                 SmartAccounting
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {isSystemAdminUser ? 'Platform Control' : 'Professional Suite'}
+                {isSystemAdminUser ? 'Platform Control' : 'Company Workspace'}
               </p>
             </div>
           </div>
@@ -329,7 +332,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
               <p className="text-xs text-gray-500 truncate dark:text-gray-400">{user?.email}</p>
               <div className="mt-2 flex items-center space-x-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary-100 to-blue-100 text-primary-800 dark:from-primary-900/40 dark:to-blue-900/40 dark:text-primary-200">
-                  {isSystemAdminUser ? 'Platform' : user?.subscriptionPlan || 'Professional'}
+                  {isSystemAdminUser ? 'Platform' : planLabel || 'Plan unavailable'}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
                   {isSystemAdminUser ? 'System Admin' : user?.role || 'Admin'}

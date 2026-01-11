@@ -131,6 +131,11 @@
       "description": "Data is scoped to a company. Choose one to continue.",
       "action": "Select company"
     },
+    "ai_assistant_system_admin_blocked": {
+      "title": "AI Assistant unavailable",
+      "description": "System administrators do not have access to company AI assistants.",
+      "help": "Sign in with a company user to use the assistant."
+    },
     "read_only": {
       "label": "Read-only (GoBD):",
       "default_message": "Sie haben nur Leserechte. Änderungen sind gemäß GoBD (Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern, Aufzeichnungen und Unterlagen in elektronischer Form) nicht gestattet.",

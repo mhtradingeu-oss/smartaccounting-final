@@ -32,6 +32,7 @@ describe('AI Governance Gateway', () => {
 
     jest.spyOn(auditLogger, 'logRequested').mockImplementation(jest.fn());
     jest.spyOn(auditLogger, 'logRejected').mockImplementation(jest.fn());
+    jest.spyOn(auditLogger, 'logResponded').mockImplementation(jest.fn());
 
     jest.spyOn(promptRegistry, 'getPromptMeta').mockImplementation(() => ({
       policyVersion: '10.0.0',
@@ -102,5 +103,27 @@ describe('AI Governance Gateway', () => {
     expect(call.prompt).toMatch(/\[REDACTED_EMAIL\]/);
     expect(call.prompt).toMatch(/\[REDACTED_PHONE\]/);
     expect(call.prompt).toMatch(/\[REDACTED_IBAN\]/);
+  });
+
+  it('returns non-200 and logs rejection when handler throws', async () => {
+    jest.spyOn(promptRegistry, 'getPromptMeta').mockImplementation(() => ({
+      policyVersion: '10.0.0',
+      modelVersion: 'test-model',
+      handler: async () => {
+        throw new Error('Handler failure');
+      },
+    }));
+
+    const result = await aiReadGateway(baseInput);
+
+    expect(result.status).toBe(500);
+    expect(result.body).toMatchObject({
+      errorCode: 'AI_HANDLER_ERROR',
+      message: 'Handler failure',
+      requestId,
+    });
+    expect(auditLogger.logRejected).toHaveBeenCalled();
+    expect(auditLogger.logRequested).not.toHaveBeenCalled();
+    expect(auditLogger.logResponded).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@
 ## Import (CSV, PDF)
 
 - [x] Auth, company, role, feature flag enforced
+- [x] Company active + subscription required (402 on missing subscription)
 - [x] Secure uploader restricts MIME/size
 - [x] PDF files stored as-is, not parsed/executed
 - [x] Audit logs for all state-changing actions
@@ -52,4 +53,5 @@
 
 **Reviewed: January 2026**
 
-All requirements in scope are met. System is compliant and ready for release.
+All in-scope controls are enforced in code and covered by tests. This checklist
+does not represent external certification or regulatory approval.

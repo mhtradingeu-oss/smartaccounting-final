@@ -65,6 +65,9 @@ async function createTestUser(overrides = {}) {
           city: 'Berlin',
           postalCode: '10115',
           country: 'Germany',
+          isActive: true,
+          subscriptionStatus: 'active',
+          subscriptionPlan: 'basic',
           userId: user.id,
         });
         await user.update({ companyId: company.id });
@@ -93,6 +96,9 @@ async function createTestUser(overrides = {}) {
         city: 'Berlin',
         postalCode: '10115',
         country: 'Germany',
+        isActive: true,
+        subscriptionStatus: 'active',
+        subscriptionPlan: 'basic',
         userId: null,
       });
     }
@@ -104,6 +110,9 @@ async function createTestUser(overrides = {}) {
       city: 'Berlin',
       postalCode: '10115',
       country: 'Germany',
+      isActive: true,
+      subscriptionStatus: 'active',
+      subscriptionPlan: 'basic',
       userId: null,
     });
   }
