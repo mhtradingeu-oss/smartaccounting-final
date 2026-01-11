@@ -3,11 +3,15 @@ import api, { SKIP_FORCE_LOGOUT_ON_401_FLAG } from './api';
 export const authAPI = {
   refresh: async () => {
     // Try to refresh JWT using cookie-based refresh token
-    const response = await api.post('/auth/refresh');
+    const response = await api.post('/auth/refresh', null, {
+      [SKIP_FORCE_LOGOUT_ON_401_FLAG]: true,
+    });
     return response.data;
   },
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
+    const response = await api.post('/auth/login', credentials, {
+      [SKIP_FORCE_LOGOUT_ON_401_FLAG]: true,
+    });
     return response.data;
   },
   logout: async () => {
@@ -15,7 +19,9 @@ export const authAPI = {
     return response.data;
   },
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
+    const response = await api.post('/auth/register', userData, {
+      [SKIP_FORCE_LOGOUT_ON_401_FLAG]: true,
+    });
     return response.data;
   },
   me: async () => {

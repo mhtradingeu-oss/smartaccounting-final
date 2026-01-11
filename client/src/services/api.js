@@ -22,7 +22,7 @@ if (raw) {
     API_BASE_URL = raw;
   } else {
     console.warn(
-      `[api] Invalid VITE_API_URL "${raw}". Docker service names are not allowed in browser. Falling back to "/api".`,
+      `[api] Invalid VITE_API_URL '${raw}'. Docker service names are not allowed in browser. Falling back to '/api'.`,
     );
   }
 } else {
@@ -165,17 +165,27 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
 ================================ */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (!config.headers) {
+      config.headers = {};
     }
 
-    const path = normalizePath(config.url);
-    if (!isCompanyOptionalRoute(path)) {
-    const existingCompanyHeader =
-      config.headers?.[COMPANY_ID_HEADER] || config.headers?.[COMPANY_ID_HEADER.toLowerCase()];
-    const companyId = getStoredActiveCompanyId();
+    const rawPath = normalizePath(config.url);
+    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    const pathWithoutQuery = normalizedPath.split('?')[0];
+
+    // Don't send Authorization header for auth endpoints (login, register, etc.)
+    // to avoid sending expired/invalid tokens during authentication
+    if (!pathWithoutQuery.startsWith('/auth')) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    if (!isCompanyOptionalRoute(pathWithoutQuery)) {
+      const existingCompanyHeader =
+        config.headers?.[COMPANY_ID_HEADER] || config.headers?.[COMPANY_ID_HEADER.toLowerCase()];
+      const companyId = getStoredActiveCompanyId();
       if (!existingCompanyHeader) {
         if (!companyId) {
           const err = new Error('Company context is required for this request.');
@@ -232,16 +242,22 @@ api.interceptors.response.use(
     if (reqId && typeof window !== 'undefined') {
       window.__LAST_REQUEST_ID__ = reqId;
     }
+    const rawPath = normalizePath(error?.config?.url ?? '');
+    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    const pathWithoutQuery = normalizedPath.split('?')[0];
+    const isAuthLoginRoute = pathWithoutQuery === '/auth/login';
+    const isAuthRefreshRoute = pathWithoutQuery === '/auth/refresh';
+    const isAuthRegisterRoute = pathWithoutQuery === '/auth/register';
     if (error.response) {
       const { status } = error.response;
       logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
-      const skipForceLogout =
-        Boolean(
-          error?.config?.[SKIP_FORCE_LOGOUT_ON_401_FLAG] ??
-            error?.config?.skipForceLogoutOn401 ??
-            false,
-        );
-      if (status === 401 && !skipForceLogout) {
+      const skipForceLogout = Boolean(
+        error?.config?.[SKIP_FORCE_LOGOUT_ON_401_FLAG] ??
+        error?.config?.skipForceLogoutOn401 ??
+        false,
+      );
+      const isAuthRoute = isAuthLoginRoute || isAuthRefreshRoute || isAuthRegisterRoute;
+      if (status === 401 && !skipForceLogout && !isAuthRoute) {
         emitForceLogout();
       }
     } else if (error.request) {
