@@ -45,7 +45,7 @@ router.get('/', authenticate, requireCompany, async (req, res) => {
       currentPage: parseInt(page),
     });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    next(new ApiError(500, 'Internal server error', 'TAX_REPORTS_LIST_ERROR'));
   }
 });
 
@@ -73,12 +73,12 @@ router.get(
       });
 
       if (!taxReport) {
-        return res.status(404).json({ error: 'Tax report not found' });
+        return next(new ApiError(404, 'Tax report not found', 'TAX_REPORT_NOT_FOUND'));
       }
 
       res.json(taxReport);
     } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+      next(new ApiError(500, 'Internal server error', 'TAX_REPORTS_GET_ERROR'));
     }
   },
 );
@@ -98,16 +98,19 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: errors.array(),
-        });
+        return next(
+          new ApiError(400, 'Validation failed', 'TAX_REPORT_VALIDATION_ERROR', {
+            details: errors.array(),
+          }),
+        );
       }
 
       const { reportType, period, data } = req.body;
 
       if (!reportType || !period) {
-        return res.status(400).json({ error: 'Report type and period are required' });
+        return next(
+          new ApiError(400, 'Report type and period are required', 'MISSING_REPORT_TYPE_PERIOD'),
+        );
       }
 
       const existingReport = await TaxReport.findOne({

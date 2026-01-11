@@ -1,0 +1,291 @@
+
+> smartaccounting@1.0.0 lint
+> eslint .
+
+
+/Users/nadeemnour/smartaccounting-final/src/middleware/aiRouteGuard.js
+  36:5  warning  'skipPurposeValidation' is assigned a value but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/middleware/apiTimeout.js
+   1:24  error  Strings must use singlequote  quotes
+   2:26  error  Strings must use singlequote  quotes
+   4:48  error  Strings must use singlequote  quotes
+  17:31  error  Strings must use singlequote  quotes
+  18:28  error  Strings must use singlequote  quotes
+  19:62  error  Strings must use singlequote  quotes
+  27:4   error  Strings must use singlequote  quotes
+  27:12  error  Strings must use singlequote  quotes
+  27:20  error  Strings must use singlequote  quotes
+  28:36  error  Strings must use singlequote  quotes
+  48:13  error  Strings must use singlequote  quotes
+  51:52  error  Strings must use singlequote  quotes
+  51:71  error  Strings must use singlequote  quotes
+  59:19  error  Strings must use singlequote  quotes
+  69:27  error  Strings must use singlequote  quotes
+  69:46  error  Strings must use singlequote  quotes
+  81:14  error  Strings must use singlequote  quotes
+  82:14  error  Strings must use singlequote  quotes
+  83:14  error  Strings must use singlequote  quotes
+
+/Users/nadeemnour/smartaccounting-final/src/middleware/errorHandler.js
+  7:38  warning  'next' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/routes/aiReadOnly.js
+    1:25  error    Strings must use singlequote                                           quotes
+    2:50  error    Strings must use singlequote                                           quotes
+    3:31  error    Strings must use singlequote                                           quotes
+    4:36  error    Strings must use singlequote                                           quotes
+    5:50  error    Strings must use singlequote                                           quotes
+    6:31  error    Strings must use singlequote                                           quotes
+    7:34  error    Strings must use singlequote                                           quotes
+    8:27  error    Strings must use singlequote                                           quotes
+    9:42  error    Strings must use singlequote                                           quotes
+   10:40  error    Strings must use singlequote                                           quotes
+   11:32  error    Strings must use singlequote                                           quotes
+   12:31  error    Strings must use singlequote                                           quotes
+   13:44  error    Strings must use singlequote                                           quotes
+   14:26  error    Strings must use singlequote                                           quotes
+   21:31  error    Strings must use singlequote                                           quotes
+   24:50  error    Strings must use singlequote                                           quotes
+   24:72  error    Strings must use singlequote                                           quotes
+   25:85  error    Strings must use singlequote                                           quotes
+   30:26  error    Strings must use singlequote                                           quotes
+   30:51  error    Strings must use singlequote                                           quotes
+   33:26  error    Strings must use singlequote                                           quotes
+   33:52  error    Strings must use singlequote                                           quotes
+   35:7   warning  'respondAssistantMethodNotAllowed' is assigned a value but never used  no-unused-vars
+   36:26  error    Strings must use singlequote                                           quotes
+   36:48  error    Strings must use singlequote                                           quotes
+   39:26  error    Strings must use singlequote                                           quotes
+   39:43  error    Strings must use singlequote                                           quotes
+   42:26  error    Strings must use singlequote                                           quotes
+   42:45  error    Strings must use singlequote                                           quotes
+   45:31  error    Strings must use singlequote                                           quotes
+   45:61  error    Strings must use singlequote                                           quotes
+   47:63  error    Strings must use singlequote                                           quotes
+   77:12  error    Strings must use singlequote                                           quotes
+   82:23  error    Strings must use singlequote                                           quotes
+   84:37  error    Strings must use singlequote                                           quotes
+   84:65  error    Strings must use singlequote                                           quotes
+   87:37  error    Strings must use singlequote                                           quotes
+   87:52  error    Strings must use singlequote                                           quotes
+  104:30  error    Strings must use singlequote                                           quotes
+  105:43  error    Strings must use singlequote                                           quotes
+  116:12  error    Strings must use singlequote                                           quotes
+  121:23  error    Strings must use singlequote                                           quotes
+  123:37  error    Strings must use singlequote                                           quotes
+  123:65  error    Strings must use singlequote                                           quotes
+  126:37  error    Strings must use singlequote                                           quotes
+  126:52  error    Strings must use singlequote                                           quotes
+  143:30  error    Strings must use singlequote                                           quotes
+  144:43  error    Strings must use singlequote                                           quotes
+  155:12  error    Strings must use singlequote                                           quotes
+  160:23  error    Strings must use singlequote                                           quotes
+  162:37  error    Strings must use singlequote                                           quotes
+  162:65  error    Strings must use singlequote                                           quotes
+  165:37  error    Strings must use singlequote                                           quotes
+  165:52  error    Strings must use singlequote                                           quotes
+  182:30  error    Strings must use singlequote                                           quotes
+  183:43  error    Strings must use singlequote                                           quotes
+  193:12  error    Strings must use singlequote                                           quotes
+  203:20  error    Strings must use singlequote                                           quotes
+  213:30  error    Strings must use singlequote                                           quotes
+  214:43  error    Strings must use singlequote                                           quotes
+  224:12  error    Strings must use singlequote                                           quotes
+  226:23  error    Strings must use singlequote                                           quotes
+  226:45  error    Strings must use singlequote                                           quotes
+  231:3   error    Strings must use singlequote                                           quotes
+  233:35  error    Strings must use singlequote                                           quotes
+  239:39  error    Strings must use singlequote                                           quotes
+  243:53  error    Strings must use singlequote                                           quotes
+  243:82  error    Strings must use singlequote                                           quotes
+  247:97  error    Strings must use singlequote                                           quotes
+  249:48  error    Strings must use singlequote                                           quotes
+  251:51  error    Strings must use singlequote                                           quotes
+  260:21  error    Strings must use singlequote                                           quotes
+  263:40  error    Strings must use singlequote                                           quotes
+  265:27  error    Strings must use singlequote                                           quotes
+  271:39  error    Strings must use singlequote                                           quotes
+  271:54  error    Strings must use singlequote                                           quotes
+  274:39  error    Strings must use singlequote                                           quotes
+  274:54  error    Strings must use singlequote                                           quotes
+  299:32  error    Strings must use singlequote                                           quotes
+  300:45  error    Strings must use singlequote                                           quotes
+  312:3   error    Strings must use singlequote                                           quotes
+  314:35  error    Strings must use singlequote                                           quotes
+  320:39  error    Strings must use singlequote                                           quotes
+  324:53  error    Strings must use singlequote                                           quotes
+  324:82  error    Strings must use singlequote                                           quotes
+  328:97  error    Strings must use singlequote                                           quotes
+  330:48  error    Strings must use singlequote                                           quotes
+  332:51  error    Strings must use singlequote                                           quotes
+  341:21  error    Strings must use singlequote                                           quotes
+  344:40  error    Strings must use singlequote                                           quotes
+  346:27  error    Strings must use singlequote                                           quotes
+  352:39  error    Strings must use singlequote                                           quotes
+  352:54  error    Strings must use singlequote                                           quotes
+  355:39  error    Strings must use singlequote                                           quotes
+  355:54  error    Strings must use singlequote                                           quotes
+  358:21  error    Strings must use singlequote                                           quotes
+  358:37  error    Strings must use singlequote                                           quotes
+  359:21  error    Strings must use singlequote                                           quotes
+  359:38  error    Strings must use singlequote                                           quotes
+  360:21  error    Strings must use singlequote                                           quotes
+  360:35  error    Strings must use singlequote                                           quotes
+  361:21  error    Strings must use singlequote                                           quotes
+  361:42  error    Strings must use singlequote                                           quotes
+  364:37  error    Strings must use singlequote                                           quotes
+  365:34  error    Strings must use singlequote                                           quotes
+  402:31  error    Strings must use singlequote                                           quotes
+  403:15  error    Strings must use singlequote                                           quotes
+  404:34  error    Strings must use singlequote                                           quotes
+  405:19  error    Strings must use singlequote                                           quotes
+  408:27  error    Strings must use singlequote                                           quotes
+  409:17  error    Strings must use singlequote                                           quotes
+  410:49  error    Strings must use singlequote                                           quotes
+  412:19  error    Strings must use singlequote                                           quotes
+  416:46  error    Strings must use singlequote                                           quotes
+  417:52  error    Strings must use singlequote                                           quotes
+  419:19  error    Strings must use singlequote                                           quotes
+  421:17  error    Strings must use singlequote                                           quotes
+  424:36  error    Strings must use singlequote                                           quotes
+  427:17  error    Empty block statement                                                  no-empty
+  429:21  error    Strings must use singlequote                                           quotes
+  429:37  error    Strings must use singlequote                                           quotes
+  430:21  error    Strings must use singlequote                                           quotes
+  430:38  error    Strings must use singlequote                                           quotes
+  431:21  error    Strings must use singlequote                                           quotes
+  431:35  error    Strings must use singlequote                                           quotes
+  432:21  error    Strings must use singlequote                                           quotes
+  432:42  error    Strings must use singlequote                                           quotes
+  433:39  error    Strings must use singlequote                                           quotes
+  434:17  error    Strings must use singlequote                                           quotes
+  437:40  error    Strings must use singlequote                                           quotes
+  442:17  error    Strings must use singlequote                                           quotes
+  449:12  error    Strings must use singlequote                                           quotes
+  457:23  error    Strings must use singlequote                                           quotes
+  468:23  error    Strings must use singlequote                                           quotes
+  475:30  error    Strings must use singlequote                                           quotes
+  476:43  error    Strings must use singlequote                                           quotes
+  485:14  error    Strings must use singlequote                                           quotes
+
+/Users/nadeemnour/smartaccounting-final/src/routes/germanTax.js
+   19:14  error  'next' is not defined      no-undef
+   19:23  error  'ApiError' is not defined  no-undef
+   29:5   error  'next' is not defined      no-undef
+   29:14  error  'ApiError' is not defined  no-undef
+   38:14  error  'next' is not defined      no-undef
+   39:13  error  'ApiError' is not defined  no-undef
+   58:5   error  'next' is not defined      no-undef
+   58:14  error  'ApiError' is not defined  no-undef
+   67:14  error  'next' is not defined      no-undef
+   67:23  error  'ApiError' is not defined  no-undef
+   76:5   error  'next' is not defined      no-undef
+   76:14  error  'ApiError' is not defined  no-undef
+   94:5   error  'next' is not defined      no-undef
+   95:11  error  'ApiError' is not defined  no-undef
+  105:14  error  'next' is not defined      no-undef
+  105:23  error  'ApiError' is not defined  no-undef
+  115:5   error  'next' is not defined      no-undef
+  115:14  error  'ApiError' is not defined  no-undef
+  128:14  error  'next' is not defined      no-undef
+  128:23  error  'ApiError' is not defined  no-undef
+  203:5   error  'next' is not defined      no-undef
+  203:14  error  'ApiError' is not defined  no-undef
+
+/Users/nadeemnour/smartaccounting-final/src/routes/logs.js
+  103:5   error  'next' is not defined      no-undef
+  103:14  error  'ApiError' is not defined  no-undef
+
+/Users/nadeemnour/smartaccounting-final/src/routes/system.js
+  100:5   error  'next' is not defined      no-undef
+  100:14  error  'ApiError' is not defined  no-undef
+  123:5   error  'next' is not defined      no-undef
+  123:14  error  'ApiError' is not defined  no-undef
+  147:5   error  'next' is not defined      no-undef
+  147:14  error  'ApiError' is not defined  no-undef
+  161:5   error  'next' is not defined      no-undef
+  161:14  error  'ApiError' is not defined  no-undef
+  197:5   error  'next' is not defined      no-undef
+  197:14  error  'ApiError' is not defined  no-undef
+  209:14  error  'next' is not defined      no-undef
+  210:13  error  'ApiError' is not defined  no-undef
+  222:16  error  'next' is not defined      no-undef
+  222:25  error  'ApiError' is not defined  no-undef
+  240:5   error  'next' is not defined      no-undef
+  240:14  error  'ApiError' is not defined  no-undef
+  248:14  error  'next' is not defined      no-undef
+  248:23  error  'ApiError' is not defined  no-undef
+  260:5   error  'next' is not defined      no-undef
+  260:14  error  'ApiError' is not defined  no-undef
+  268:14  error  'next' is not defined      no-undef
+  268:23  error  'ApiError' is not defined  no-undef
+  279:5   error  'next' is not defined      no-undef
+  279:14  error  'ApiError' is not defined  no-undef
+  287:14  error  'next' is not defined      no-undef
+  287:23  error  'ApiError' is not defined  no-undef
+  299:14  error  'next' is not defined      no-undef
+  299:23  error  'ApiError' is not defined  no-undef
+  306:5   error  'next' is not defined      no-undef
+  306:14  error  'ApiError' is not defined  no-undef
+  314:14  error  'next' is not defined      no-undef
+  314:23  error  'ApiError' is not defined  no-undef
+  335:14  error  'next' is not defined      no-undef
+  336:13  error  'ApiError' is not defined  no-undef
+  358:5   error  'next' is not defined      no-undef
+  358:14  error  'ApiError' is not defined  no-undef
+  386:5   error  'next' is not defined      no-undef
+  386:14  error  'ApiError' is not defined  no-undef
+  394:14  error  'next' is not defined      no-undef
+  394:23  error  'ApiError' is not defined  no-undef
+  400:14  error  'next' is not defined      no-undef
+  400:23  error  'ApiError' is not defined  no-undef
+  405:14  error  'next' is not defined      no-undef
+  405:23  error  'ApiError' is not defined  no-undef
+  422:5   error  'next' is not defined      no-undef
+  422:14  error  'ApiError' is not defined  no-undef
+  430:14  error  'next' is not defined      no-undef
+  430:23  error  'ApiError' is not defined  no-undef
+  445:14  error  'next' is not defined      no-undef
+  445:23  error  'ApiError' is not defined  no-undef
+  453:14  error  'next' is not defined      no-undef
+  453:23  error  'ApiError' is not defined  no-undef
+  460:5   error  'next' is not defined      no-undef
+  460:14  error  'ApiError' is not defined  no-undef
+  470:5   error  'next' is not defined      no-undef
+  470:14  error  'ApiError' is not defined  no-undef
+  491:5   error  'next' is not defined      no-undef
+  491:14  error  'ApiError' is not defined  no-undef
+  516:5   error  'next' is not defined      no-undef
+  516:14  error  'ApiError' is not defined  no-undef
+  544:5   error  'next' is not defined      no-undef
+  544:14  error  'ApiError' is not defined  no-undef
+  580:5   error  'next' is not defined      no-undef
+  580:14  error  'ApiError' is not defined  no-undef
+
+/Users/nadeemnour/smartaccounting-final/src/routes/taxReports.js
+   48:5   error  'next' is not defined      no-undef
+   48:14  error  'ApiError' is not defined  no-undef
+   76:16  error  'next' is not defined      no-undef
+   76:25  error  'ApiError' is not defined  no-undef
+   81:7   error  'next' is not defined      no-undef
+   81:16  error  'ApiError' is not defined  no-undef
+  101:16  error  'next' is not defined      no-undef
+  102:15  error  'ApiError' is not defined  no-undef
+  111:16  error  'next' is not defined      no-undef
+  112:15  error  'ApiError' is not defined  no-undef
+
+/Users/nadeemnour/smartaccounting-final/src/routes/telemetry.js
+  52:5   error  'next' is not defined      no-undef
+  52:14  error  'ApiError' is not defined  no-undef
+
+/Users/nadeemnour/smartaccounting-final/src/routes/users.js
+   71:25  error  'ApiError' is not defined  no-undef
+  114:25  error  'ApiError' is not defined  no-undef
+  126:25  error  'ApiError' is not defined  no-undef
+  186:23  error  'ApiError' is not defined  no-undef
+  190:23  error  'ApiError' is not defined  no-undef
+
+✖ 263 problems (260 errors, 3 warnings)
+  154 errors and 0 warnings potentially fixable with the `--fix` option.
+

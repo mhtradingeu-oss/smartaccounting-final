@@ -1,4 +1,5 @@
 const { sanitizePayload, containsNoSqlOperators } = require('../utils/security');
+const ApiError = require('../lib/errors/apiError');
 
 const sanitizeInput = (req, res, next) => {
   req.body = sanitizePayload(req.body);
@@ -10,10 +11,7 @@ const preventNoSqlInjection = (req, res, next) => {
   const payload = sources.find((source) => containsNoSqlOperators(source));
 
   if (payload) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid request payload',
-    });
+    return next(new ApiError(400, 'BAD_REQUEST', 'Invalid request payload'));
   }
 
   next();

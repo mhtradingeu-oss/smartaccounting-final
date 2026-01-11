@@ -2,6 +2,7 @@ const express = require('express');
 const vatComplianceService = require('../services/vatComplianceService');
 const { authenticate, requireCompany, requireRole } = require('../middleware/authMiddleware');
 const AuditLogService = require('../services/auditLogService');
+const ApiError = require('../lib/errors/apiError');
 
 const router = express.Router();
 
@@ -9,16 +10,20 @@ router.use(authenticate);
 router.use(requireCompany);
 
 // VAT/UStG compliance validation endpoint
-router.post('/validate-transaction', async (req, res) => {
+router.post('/validate-transaction', async (req, res, next) => {
   const { net, vat, gross, vatRate, currency } = req.body;
   const result = vatComplianceService.validateTransaction({ net, vat, gross, vatRate, currency });
   if (!result.valid) {
-    return res.status(422).json({ success: false, errors: result.errors });
+    return next(
+      new ApiError(422, 'TRANSACTION_VALIDATION_ERROR', 'Transaction validation failed', {
+        errors: result.errors,
+      }),
+    );
   }
   res.json({ success: true });
 });
 // GoBD audit log export endpoint
-router.get('/gobd/export', requireRole(['auditor']), async (req, res) => {
+router.get('/gobd/export', requireRole(['auditor']), async (req, res, next) => {
   try {
     const { format = 'json', from, to } = req.query;
     const logs = await AuditLogService.exportLogs({
@@ -33,7 +38,7 @@ router.get('/gobd/export', requireRole(['auditor']), async (req, res) => {
     }
     res.json({ success: true, logs });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to export GoBD audit logs' });
+    return next(new ApiError(500, 'INTERNAL_ERROR', 'Failed to export GoBD audit logs'));
   }
 });
 

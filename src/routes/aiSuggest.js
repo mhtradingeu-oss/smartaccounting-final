@@ -1,9 +1,8 @@
 const express = require('express');
-const { getSuggestion } = require('../services/ai/aiSuggestionService');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
-const aiRouteGuard = require('../middleware/aiRouteGuard');
+const { aiRouteGuard } = require('../middleware/aiRouteGuard');
 const { requirePlanFeature } = require('../middleware/planGuard');
-const { sendAIError } = require('../utils/aiErrorResponse');
+const ApiError = require('../lib/errors/apiError');
 
 const router = express.Router();
 
@@ -12,47 +11,13 @@ router.use(requireCompany);
 router.use(requirePlanFeature('aiSuggestions'));
 router.use(aiRouteGuard());
 
-const isSuggestionsEnabled = () =>
-  String(process.env.AI_SUGGESTIONS_ENABLED ?? 'false').toLowerCase() === 'true';
+const respondNotReady = (req, res, next) => {
+  // Always return 501 for disabled feature
+  return next(new ApiError(501, 'AI_SUGGEST_NOT_READY', 'AI suggestions are not production-ready'));
+};
 
-const respondWithError = (req, res, status, message, errorCode) =>
-  sendAIError(res, {
-    status,
-    message,
-    errorCode,
-    requestId: req.requestId,
-  });
-
-router.get('/suggest', async (req, res) => {
-  const { userId, companyId } = req;
-  const { prompt, context } = req.query;
-  try {
-    if (!isSuggestionsEnabled()) {
-      return respondWithError(
-        req,
-        res,
-        501,
-        'AI suggestions are not production-ready',
-        'AI_SUGGEST_NOT_READY',
-      );
-    }
-    const suggestion = await getSuggestion({
-      userId,
-      companyId,
-      prompt,
-      context,
-      requestId: req.requestId,
-    });
-    res.json({ suggestion, requestId: req.requestId });
-  } catch (err) {
-    respondWithError(
-      req,
-      res,
-      err.status || 400,
-      err.message || 'Suggestion request failed',
-      err.errorCode,
-    );
-  }
-});
+router.get('/', respondNotReady);
+router.get('', respondNotReady);
+router.get('*', respondNotReady);
 
 module.exports = router;

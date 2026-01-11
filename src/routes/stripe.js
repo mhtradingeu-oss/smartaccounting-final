@@ -9,7 +9,8 @@ const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
 
-router.use(disabledFeatureHandler('Stripe billing'));
+// Explicitly block unsupported methods for Stripe billing endpoints
+router.all('/billing/*', disabledFeatureHandler('Stripe billing'));
 router.use(authenticate);
 router.use(requireCompany);
 

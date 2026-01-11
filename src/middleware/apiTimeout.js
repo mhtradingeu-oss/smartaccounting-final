@@ -1,6 +1,7 @@
-const logger = require('../lib/logger');
+const logger = require("../lib/logger");
+const ApiError = require("../lib/errors/apiError");
 
-const API_PREFIX = process.env.API_BASE_URL || '/api';
+const API_PREFIX = process.env.API_BASE_URL || "/api";
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.API_REQUEST_TIMEOUT_MS) || 500;
 const DASHBOARD_TIMEOUT_MS = Number(process.env.DASHBOARD_REQUEST_TIMEOUT_MS) || 800;
@@ -13,9 +14,9 @@ const TIMEOUT_OVERRIDES = [
 ];
 
 const resolveTimeoutMs = (req, overrides, defaultMs = DEFAULT_TIMEOUT_MS) => {
-  const base = req.baseUrl || '';
-  const path = req.path || '';
-  const requestPath = `${base}${path}` || req.originalUrl || '';
+  const base = req.baseUrl || "";
+  const path = req.path || "";
+  const requestPath = `${base}${path}` || req.originalUrl || "";
   const override = (overrides || TIMEOUT_OVERRIDES).find((entry) =>
     requestPath.startsWith(entry.prefix),
   );
@@ -23,8 +24,8 @@ const resolveTimeoutMs = (req, overrides, defaultMs = DEFAULT_TIMEOUT_MS) => {
 };
 
 const preventPostTimeoutWrites = (res, hasTimedOutRef) => {
-  ['send', 'json', 'end'].forEach((methodName) => {
-    if (typeof res[methodName] !== 'function') {
+  ["send", "json", "end"].forEach((methodName) => {
+    if (typeof res[methodName] !== "function") {
       return;
     }
 
@@ -44,10 +45,10 @@ const createApiTimeoutMiddleware = (options = {}) => {
 
   return (req, res, next) => {
     const timeoutMs = resolveTimeoutMs(req, overrides, defaultTimeoutMs);
-    res.set('X-API-Timeout', `${timeoutMs}ms`);
+    res.set("X-API-Timeout", `${timeoutMs}ms`);
 
     const timeoutState = { value: false };
-    const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
+    const requestId = req.requestId || req.headers["x-request-id"] || "unknown";
 
     const timedOut = () => {
       if (res.headersSent) {
@@ -55,7 +56,7 @@ const createApiTimeoutMiddleware = (options = {}) => {
         return;
       }
 
-      logger.warn('API request exceeded timeout threshold', {
+      logger.warn("API request exceeded timeout threshold", {
         timeoutMs,
         route: `${req.baseUrl}${req.path}`,
         requestId,
@@ -63,14 +64,10 @@ const createApiTimeoutMiddleware = (options = {}) => {
         userId: req.user?.id,
       });
 
-      res.status(504).json({
-        status: 'error',
-        message: 'Request timed out',
-        timeoutMs,
-        requestId,
-      });
-
       timeoutState.value = true;
+      return next(
+        new ApiError(504, "REQUEST_TIMEOUT", "Request timed out", { timeoutMs, requestId }),
+      );
     };
 
     const timer = setTimeout(timedOut, timeoutMs);
@@ -81,9 +78,9 @@ const createApiTimeoutMiddleware = (options = {}) => {
 
     preventPostTimeoutWrites(res, timeoutState);
 
-    res.once('finish', cleanup);
-    res.once('close', cleanup);
-    req.once('aborted', cleanup);
+    res.once("finish", cleanup);
+    res.once("close", cleanup);
+    req.once("aborted", cleanup);
 
     next();
   };

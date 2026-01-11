@@ -49,7 +49,7 @@ router.post('/client-error', telemetryLimiter, (req, res) => {
     res.status(200).json({ success: true });
   } catch (err) {
     logger.error('Failed to process client telemetry', { error: err.message });
-    res.status(500).json({ error: 'Failed to process telemetry' });
+    next(new ApiError(500, 'Failed to process telemetry', 'TELEMETRY_PROCESS_ERROR'));
   }
 });
 

@@ -1,69 +1,50 @@
-const express = require('express');
-const { authenticate, requireCompany } = require('../middleware/authMiddleware');
-const aiDataService = require('../services/ai/aiDataService');
-const aiAssistantService = require('../services/ai/aiAssistantService');
-const { logRejected, logSessionEvent } = require('../services/ai/aiAuditLogger');
-const aiReadGateway = require('../services/ai/aiReadGateway');
-const aiRouteGuard = require('../middleware/aiRouteGuard');
-const rateLimit = require('../middleware/aiRateLimit');
-const { requirePlanFeature } = require('../middleware/planGuard');
-const { randomUUID } = require('crypto');
-const { redactPII } = require('../services/ai/governance');
-const { isAssistantRoleAllowed } = require('../services/ai/assistantAuthorization');
-const { sendAIError } = require('../utils/aiErrorResponse');
+const express = require("express");
+const { authenticate, requireCompany } = require("../middleware/authMiddleware");
+const aiDataService = require("../services/ai/aiDataService");
+const aiAssistantService = require("../services/ai/aiAssistantService");
+const { logRejected, logSessionEvent } = require("../services/ai/aiAuditLogger");
+const aiReadGateway = require("../services/ai/aiReadGateway");
+const { aiRouteGuard } = require("../middleware/aiRouteGuard");
+const rateLimit = require("../middleware/aiRateLimit");
+const { requireAssistantPlan } = require("../middleware/aiPlanGuards");
+const { requirePlanFeature } = require("../middleware/planGuard");
+const { randomUUID } = require("crypto");
+const { redactPII } = require("../services/ai/governance");
+const { isAssistantRoleAllowed } = require("../services/ai/assistantAuthorization");
+const ApiError = require("../lib/errors/apiError");
 
 const router = express.Router();
 
+// Global middlewares
 router.use(authenticate);
 router.use(requireCompany);
-router.use(requirePlanFeature('aiRead'));
-router.use((req, res, next) => {
-  const guard =
-    req.path === '/assistant' || req.path === '/assistant/stream'
-      ? aiRouteGuard({ allowedMethods: ['GET', 'POST'] })
-      : aiRouteGuard();
-  return guard(req, res, next);
-});
+router.use(requirePlanFeature("aiRead"));
 router.use(rateLimit);
 
-const normalizeFlag = (value) => String(value ?? '').toLowerCase() === 'true';
-const isAssistantFeatureEnabled = normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
-const requireAssistantPlan = requirePlanFeature('aiAssistant');
+const normalizeFlag = (value) => String(value ?? "").toLowerCase() === "true";
+const isAssistantFeatureEnabled = normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? "true");
 const MAX_PROMPT_LENGTH = 8000;
 
-const respondWithError = (req, res, status, message, errorCode) =>
-  sendAIError(res, {
-    status,
-    message,
-    errorCode,
-    requestId: req.requestId,
-  });
+// Error helpers using ApiError only
+const respondAssistantDisabled = (req, res, next) =>
+  next(new ApiError(501, "AI_ASSISTANT_DISABLED", "AI Assistant is disabled"));
 
-const respondAssistantDisabled = (req, res) =>
-  respondWithError(req, res, 501, 'AI Assistant is disabled', 'AI_ASSISTANT_DISABLED');
+const respondAssistantRoleDenied = (req, res, next) =>
+  next(new ApiError(403, "AI_ASSISTANT_FORBIDDEN", "Insufficient role for AI assistant"));
 
-const respondAssistantRoleDenied = (req, res) =>
-  respondWithError(req, res, 403, 'Insufficient role for AI assistant', 'AI_ASSISTANT_FORBIDDEN');
+const respondAssistantMethodNotAllowed = (req, res, next) =>
+  next(new ApiError(405, "METHOD_NOT_ALLOWED", "POST is required for AI assistant requests"));
 
-const respondAssistantMethodNotAllowed = (req, res) =>
-  respondWithError(
-    req,
-    res,
-    405,
-    'POST is required for AI assistant requests',
-    'METHOD_NOT_ALLOWED',
-  );
+const respondPromptInUrl = (req, res, next) =>
+  next(new ApiError(400, "PROMPT_IN_URL", "Prompt must be sent in the request body"));
 
-const respondPromptInUrl = (req, res) =>
-  respondWithError(req, res, 400, 'Prompt must be sent in the request body', 'PROMPT_IN_URL');
-
-const respondInputTooLarge = (req, res) =>
-  respondWithError(req, res, 413, 'Prompt exceeds maximum length', 'INPUT_TOO_LARGE');
+const respondInputTooLarge = (req, res, next) =>
+  next(new ApiError(413, "INPUT_TOO_LARGE", "Prompt exceeds maximum length"));
 
 const extractPromptFromQuery = (req) =>
-  typeof req.query.prompt === 'string' ? req.query.prompt : '';
+  typeof req.query.prompt === "string" ? req.query.prompt : "";
 
-const safePromptFromRequest = (prompt) => redactPII(prompt || '');
+const safePromptFromRequest = (prompt) => redactPII(prompt || "");
 
 const buildGatewayPayload = ({
   req,
@@ -93,17 +74,17 @@ const buildGatewayPayload = ({
 });
 
 // GET /api/ai/read/invoice-summary?invoiceId=...  (companyId from req.user)
-router.get('/invoice-summary', async (req, res, next) => {
+router.get("/invoice-summary", async (req, res, next) => {
   try {
     const { invoiceId } = req.query;
     const prompt = extractPromptFromQuery(req);
     const companyId = req.companyId;
-    const queryType = 'invoice_summary';
+    const queryType = "invoice_summary";
     if (!companyId) {
-      return respondWithError(req, res, 403, 'companyId required', 'COMPANY_CONTEXT_REQUIRED');
+      return next(new ApiError(403, "COMPANY_CONTEXT_REQUIRED", "companyId required"));
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      return respondWithError(req, res, 400, 'Query not allowed', 'BAD_REQUEST');
+      return next(new ApiError(400, "BAD_REQUEST", "Query not allowed"));
     }
     const { status, body } = await aiReadGateway(
       buildGatewayPayload({
@@ -117,12 +98,12 @@ router.get('/invoice-summary', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+      return next(
+        new ApiError(
+          status,
+          body?.errorCode || "AI_REQUEST_FAILED",
+          body?.message || body?.error || "AI request failed",
+        ),
       );
     }
     res.json({ summary: body?.data || null, requestId: req.requestId });
@@ -132,17 +113,17 @@ router.get('/invoice-summary', async (req, res, next) => {
 });
 
 // GET /api/ai/read/monthly-overview?month=YYYY-MM
-router.get('/monthly-overview', async (req, res, next) => {
+router.get("/monthly-overview", async (req, res, next) => {
   try {
     const { month } = req.query;
     const prompt = extractPromptFromQuery(req);
     const companyId = req.companyId;
-    const queryType = 'monthly_overview';
+    const queryType = "monthly_overview";
     if (!companyId) {
-      return respondWithError(req, res, 403, 'companyId required', 'COMPANY_CONTEXT_REQUIRED');
+      return next(new ApiError(403, "COMPANY_CONTEXT_REQUIRED", "companyId required"));
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      return respondWithError(req, res, 400, 'Query not allowed', 'BAD_REQUEST');
+      return next(new ApiError(400, "BAD_REQUEST", "Query not allowed"));
     }
     const { status, body } = await aiReadGateway(
       buildGatewayPayload({
@@ -156,12 +137,12 @@ router.get('/monthly-overview', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+      return next(
+        new ApiError(
+          status,
+          body?.errorCode || "AI_REQUEST_FAILED",
+          body?.message || body?.error || "AI request failed",
+        ),
       );
     }
     res.json({ overview: body?.data || null, requestId: req.requestId });
@@ -171,17 +152,17 @@ router.get('/monthly-overview', async (req, res, next) => {
 });
 
 // GET /api/ai/read/reconciliation-summary?range=YYYY-MM-DD_to_YYYY-MM-DD
-router.get('/reconciliation-summary', async (req, res, next) => {
+router.get("/reconciliation-summary", async (req, res, next) => {
   try {
     const { range } = req.query;
     const prompt = extractPromptFromQuery(req);
     const companyId = req.companyId;
-    const queryType = 'reconciliation_summary';
+    const queryType = "reconciliation_summary";
     if (!companyId) {
-      return respondWithError(req, res, 403, 'companyId required', 'COMPANY_CONTEXT_REQUIRED');
+      return next(new ApiError(403, "COMPANY_CONTEXT_REQUIRED", "companyId required"));
     }
     if (!aiDataService.isAllowedQuery(queryType)) {
-      return respondWithError(req, res, 400, 'Query not allowed', 'BAD_REQUEST');
+      return next(new ApiError(400, "BAD_REQUEST", "Query not allowed"));
     }
     const { status, body } = await aiReadGateway(
       buildGatewayPayload({
@@ -195,12 +176,12 @@ router.get('/reconciliation-summary', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+      return next(
+        new ApiError(
+          status,
+          body?.errorCode || "AI_REQUEST_FAILED",
+          body?.message || body?.error || "AI request failed",
+        ),
       );
     }
     res.json({ summary: body?.data || null, requestId: req.requestId });
@@ -209,7 +190,7 @@ router.get('/reconciliation-summary', async (req, res, next) => {
   }
 });
 
-router.get('/assistant/context', requireAssistantPlan, async (req, res, next) => {
+router.get("/assistant/context", requireAssistantPlan, async (req, res, next) => {
   if (!isAssistantFeatureEnabled) {
     return respondAssistantDisabled(req, res);
   }
@@ -219,19 +200,19 @@ router.get('/assistant/context', requireAssistantPlan, async (req, res, next) =>
       buildGatewayPayload({
         req,
         prompt,
-        queryType: 'assistant_context',
+        queryType: "assistant_context",
         params: { prompt },
         handler: ({ companyId }) => aiAssistantService.getContext(companyId),
         responseMeta: { contextLoaded: true },
       }),
     );
     if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+      return next(
+        new ApiError(
+          status,
+          body?.errorCode || "AI_REQUEST_FAILED",
+          body?.message || body?.error || "AI request failed",
+        ),
       );
     }
     res.json({ context: body?.data || null, requestId: req.requestId });
@@ -240,199 +221,232 @@ router.get('/assistant/context', requireAssistantPlan, async (req, res, next) =>
   }
 });
 
-router.get('/assistant', requireAssistantPlan, async (req, res) => {
-  return respondAssistantMethodNotAllowed(req, res);
+router.get("/assistant", requireAssistantPlan, (req, res, next) => {
+  return next(
+    new ApiError(405, "METHOD_NOT_ALLOWED", "POST is required for AI assistant requests"),
+  );
 });
 
-router.post('/assistant', requireAssistantPlan, async (req, res, next) => {
-  if (!isAssistantFeatureEnabled) {
-    return respondAssistantDisabled(req, res);
-  }
-  try {
-    if (typeof req.query.prompt === 'string' && req.query.prompt.length > 0) {
-      return respondPromptInUrl(req, res);
+router.post(
+  "/assistant",
+  requireAssistantPlan,
+  aiRouteGuard({ allowedMethods: ["POST"] }),
+  async (req, res, next) => {
+    if (!isAssistantFeatureEnabled) {
+      return respondAssistantDisabled(req, res, next);
     }
-    const { intent, targetInsightId, sessionId } = req.body || {};
-    const rawPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt : '';
-    if (rawPrompt && rawPrompt.length > MAX_PROMPT_LENGTH) {
-      return respondInputTooLarge(req, res);
-    }
-    const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
-    const prompt = fallbackPrompt;
-    const queryType = `assistant_${intent || 'unknown'}`;
-    if (!isAssistantRoleAllowed(req.user?.role)) {
-      const safePrompt = redactPII(rawPrompt || '');
-      try {
-        await logRejected({
-          userId: req.user?.id,
-          companyId: req.companyId,
-          requestId: req.requestId,
-          queryType,
-          route: req.originalUrl,
-          prompt: safePrompt,
-          reason: 'Role not permitted for AI assistant',
-        });
-      } catch (logError) {
-        if (process.env.NODE_ENV !== 'test') {
-          // eslint-disable-next-line no-console
-          console.error('[ai/read] Audit log failure', logError.message || logError);
-        }
+    try {
+      if (typeof req.query.prompt === "string" && req.query.prompt.length > 0) {
+        return respondPromptInUrl(req, res, next);
       }
-      return respondAssistantRoleDenied(req, res);
-    }
-    if (!intent) {
-      return respondWithError(req, res, 400, 'intent is required', 'BAD_REQUEST');
-    }
-    if (!aiAssistantService.INTENT_LABELS[intent]) {
-      return respondWithError(req, res, 400, 'Intent not supported', 'BAD_REQUEST');
-    }
-    const { status, body } = await aiReadGateway(
-      buildGatewayPayload({
-        req,
-        prompt,
-        queryType,
-        params: { intent, targetInsightId, prompt },
-        handler: async ({ companyId: scopedCompanyId }) => {
-          const context = await aiAssistantService.getContext(scopedCompanyId);
-          return aiAssistantService.answerIntentCompliance({
-            intent,
-            context,
-            targetInsightId,
-            prompt,
+      const { intent, targetInsightId, sessionId } = req.body || {};
+      const rawPrompt = typeof req.body?.prompt === "string" ? req.body.prompt : "";
+      if (rawPrompt && rawPrompt.length > MAX_PROMPT_LENGTH) {
+        return respondInputTooLarge(req, res, next);
+      }
+      const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || "";
+      const prompt = fallbackPrompt;
+      const queryType = `assistant_${intent || "unknown"}`;
+      if (!isAssistantRoleAllowed(req.user?.role)) {
+        const safePrompt = redactPII(rawPrompt || "");
+        try {
+          await logRejected({
+            userId: req.user?.id,
+            companyId: req.companyId,
+            requestId: req.requestId,
+            queryType,
+            route: req.originalUrl,
+            prompt: safePrompt,
+            reason: "Role not permitted for AI assistant",
           });
-        },
-        responseMeta: { sessionId, targetInsightId },
-        sessionId,
-      }),
-    );
-    if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+        } catch (logError) {
+          if (process.env.NODE_ENV !== "test") {
+            // eslint-disable-next-line no-console
+            console.error("[ai/read] Audit log failure", logError.message || logError);
+          }
+        }
+        return respondAssistantRoleDenied(req, res, next);
+      }
+      if (!intent) {
+        return next(new ApiError(400, "BAD_REQUEST", "intent is required"));
+      }
+      if (!aiAssistantService.INTENT_LABELS[intent]) {
+        return next(new ApiError(400, "BAD_REQUEST", "Intent not supported"));
+      }
+      const { status, body } = await aiReadGateway(
+        buildGatewayPayload({
+          req,
+          prompt,
+          queryType,
+          params: { intent, targetInsightId, prompt },
+          handler: async ({ companyId: scopedCompanyId }) => {
+            const context = await aiAssistantService.getContext(scopedCompanyId);
+            return aiAssistantService.answerIntentCompliance({
+              intent,
+              context,
+              targetInsightId,
+              prompt,
+            });
+          },
+          responseMeta: { sessionId, targetInsightId },
+          sessionId,
+        }),
       );
+      if (status !== 200) {
+        return next(
+          new ApiError(
+            status,
+            body?.errorCode || "AI_REQUEST_FAILED",
+            body?.message || body?.error || "AI request failed",
+          ),
+        );
+      }
+      res.json({ answer: body?.data || null, requestId: req.requestId });
+    } catch (err) {
+      next(err);
     }
-    res.json({ answer: body?.data || null, requestId: req.requestId });
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
-router.post('/assistant/stream', requireAssistantPlan, async (req, res, _next) => {
-  if (!isAssistantFeatureEnabled) {
-    return respondAssistantDisabled(req, res);
-  }
-  try {
-    if (typeof req.query.prompt === 'string' && req.query.prompt.length > 0) {
-      return respondPromptInUrl(req, res);
+router.post(
+  "/assistant/stream",
+  requireAssistantPlan,
+  aiRouteGuard({ allowedMethods: ["POST"] }),
+  async (req, res, next) => {
+    if (!isAssistantFeatureEnabled) {
+      return respondAssistantDisabled(req, res);
     }
-    const { intent, targetInsightId, sessionId } = req.body || {};
-    const rawPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt : '';
-    if (rawPrompt && rawPrompt.length > MAX_PROMPT_LENGTH) {
-      return respondInputTooLarge(req, res);
-    }
-    const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
-    const prompt = fallbackPrompt;
-    const queryType = `assistant_${intent || 'unknown'}`;
-    if (!isAssistantRoleAllowed(req.user?.role)) {
-      const safePrompt = redactPII(rawPrompt || '');
-      try {
-        await logRejected({
-          userId: req.user?.id,
-          companyId: req.companyId,
-          requestId: req.requestId,
-          queryType,
-          route: req.originalUrl,
-          prompt: safePrompt,
-          reason: 'Role not permitted for AI assistant',
-        });
-      } catch (logError) {
-        if (process.env.NODE_ENV !== 'test') {
-          // eslint-disable-next-line no-console
-          console.error('[ai/read] Audit log failure', logError.message || logError);
+    try {
+      if (typeof req.query.prompt === "string" && req.query.prompt.length > 0) {
+        return respondPromptInUrl(req, res);
+      }
+      const { intent, targetInsightId, sessionId } = req.body || {};
+      const rawPrompt = typeof req.body?.prompt === "string" ? req.body.prompt : "";
+      if (rawPrompt && rawPrompt.length > MAX_PROMPT_LENGTH) {
+        return respondInputTooLarge(req, res);
+      }
+      const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || "";
+      const prompt = fallbackPrompt;
+      const queryType = `assistant_${intent || "unknown"}`;
+      if (!isAssistantRoleAllowed(req.user?.role)) {
+        const safePrompt = redactPII(rawPrompt || "");
+        try {
+          await logRejected({
+            userId: req.user?.id,
+            companyId: req.companyId,
+            requestId: req.requestId,
+            queryType,
+            route: req.originalUrl,
+            prompt: safePrompt,
+            reason: "Role not permitted for AI assistant",
+          });
+        } catch (logError) {
+          if (process.env.NODE_ENV !== "test") {
+            // eslint-disable-next-line no-console
+            console.error("[ai/read] Audit log failure", logError.message || logError);
+          }
+        }
+        return respondAssistantRoleDenied(req, res);
+      }
+      if (!intent) {
+        return next(new ApiError(400, "BAD_REQUEST", "intent is required"));
+      }
+      if (!aiAssistantService.INTENT_LABELS[intent]) {
+        return next(new ApiError(400, "BAD_REQUEST", "Intent not supported"));
+      }
+
+      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      // Skip flushHeaders in test environment as mocked responses don't support internal Node.js buffer structures
+      if (
+        typeof res.flushHeaders === "function" &&
+        process.env.NODE_ENV !== "test" &&
+        process.env.JEST_WORKER_ID === undefined
+      ) {
+        try {
+          res.flushHeaders();
+        } catch (_) {
+          // ignore in test/mocked environments
         }
       }
-      return respondAssistantRoleDenied(req, res);
-    }
-    if (!intent) {
-      return respondWithError(req, res, 400, 'intent is required', 'BAD_REQUEST');
-    }
-    if (!aiAssistantService.INTENT_LABELS[intent]) {
-      return respondWithError(req, res, 400, 'Intent not supported', 'BAD_REQUEST');
-    }
 
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    if (typeof res.flushHeaders === 'function') {
-      res.flushHeaders();
-    }
+      const sendEvent = (event, data) => {
+        res.write(`event: ${event}\n`);
+        res.write(`data: ${JSON.stringify({ ...data, requestId: req.requestId })}\n\n`);
+      };
 
-    const sendEvent = (event, data) => {
-      res.write(`event: ${event}\n`);
-      res.write(`data: ${JSON.stringify({ ...data, requestId: req.requestId })}\n\n`);
-    };
+      const { status, body } = await aiReadGateway(
+        buildGatewayPayload({
+          req,
+          prompt,
+          queryType,
+          params: { intent, targetInsightId, prompt },
+          handler: async ({ companyId: scopedCompanyId }) => {
+            const context = await aiAssistantService.getContext(scopedCompanyId);
+            return aiAssistantService.answerIntentCompliance({
+              intent,
+              context,
+              targetInsightId,
+              prompt,
+            });
+          },
+          responseMeta: { sessionId, targetInsightId, stream: true },
+          sessionId,
+        }),
+      );
 
-    const { status, body } = await aiReadGateway(
-      buildGatewayPayload({
-        req,
-        prompt,
-        queryType,
-        params: { intent, targetInsightId, prompt },
-        handler: async ({ companyId: scopedCompanyId }) => {
-          const context = await aiAssistantService.getContext(scopedCompanyId);
-          return aiAssistantService.answerIntentCompliance({
-            intent,
-            context,
-            targetInsightId,
-            prompt,
-          });
-        },
-        responseMeta: { sessionId, targetInsightId, stream: true },
-        sessionId,
-      }),
-    );
+      if (status !== 200) {
+        const errorCode =
+          body?.errorCode === "METHOD_NOT_ALLOWED"
+            ? "AI_READ_ONLY"
+            : body?.errorCode || "AI_STREAM_ERROR";
+        sendEvent("error", {
+          errorCode,
+          message:
+            errorCode === "AI_READ_ONLY"
+              ? "AI is in read-only mode"
+              : body?.message || body?.error || "AI request failed",
+        });
+        sendEvent("done", {});
+        return res.end();
+      }
 
-    if (status !== 200) {
-      sendEvent('error', {
-        errorCode: body?.errorCode || 'AI_STREAM_ERROR',
-        message: body?.message || body?.error || 'AI request failed',
+      const message = body?.data?.message || "";
+      const chunks = message.match(/.{1,60}/g) || [""];
+      chunks.forEach((chunk, index) => {
+        sendEvent("chunk", { token: chunk, index });
       });
-      sendEvent('done', {});
+      sendEvent("done", {});
       return res.end();
+    } catch (err) {
+      if (process.env.NODE_ENV === "test") {
+        try {
+          process.stderr.write(`STREAM_ERROR_STACK:${(err && err.stack) || String(err)}\n`);
+        } catch {}
+      }
+      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      const message = err?.message || "AI stream failed";
+      res.write("event: error\n");
+      res.write(
+        `data: ${JSON.stringify({
+          errorCode: err?.errorCode || "AI_STREAM_ERROR",
+          message,
+          requestId: req.requestId,
+        })}\n\n`,
+      );
+      res.write("event: done\n");
+      res.write(`data: ${JSON.stringify({ requestId: req.requestId })}\n\n`);
+      res.end();
     }
+  },
+);
 
-    const message = body?.data?.message || '';
-    const chunks = message.match(/.{1,60}/g) || [''];
-    chunks.forEach((chunk, index) => {
-      sendEvent('chunk', { token: chunk, index });
-    });
-    sendEvent('done', {});
-    return res.end();
-  } catch (err) {
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    const message = err?.message || 'AI stream failed';
-    res.write('event: error\n');
-    res.write(
-      `data: ${JSON.stringify({
-        errorCode: err?.errorCode || 'AI_STREAM_ERROR',
-        message,
-        requestId: req.requestId,
-      })}\n\n`,
-    );
-    res.write('event: done\n');
-    res.write(`data: ${JSON.stringify({ requestId: req.requestId })}\n\n`);
-    res.end();
-  }
-});
-
-router.get('/session', requireAssistantPlan, async (req, res, next) => {
+router.get("/session", requireAssistantPlan, async (req, res, next) => {
   if (!isAssistantFeatureEnabled) {
     return respondAssistantDisabled(req, res);
   }
@@ -440,7 +454,7 @@ router.get('/session', requireAssistantPlan, async (req, res, next) => {
     const prompt = extractPromptFromQuery(req);
     const safePrompt = safePromptFromRequest(prompt);
     const companyId = req.companyId;
-    const queryType = 'assistant_session';
+    const queryType = "assistant_session";
     const sessionId = randomUUID();
     const { status, body } = await aiReadGateway(
       buildGatewayPayload({
@@ -451,16 +465,16 @@ router.get('/session', requireAssistantPlan, async (req, res, next) => {
         handler: async () => ({ sessionId }),
         responseMeta: { sessionId },
         sessionId,
-        responseMode: 'session',
+        responseMode: "session",
       }),
     );
     if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+      return next(
+        new ApiError(
+          status,
+          body?.errorCode || "AI_REQUEST_FAILED",
+          body?.message || body?.error || "AI request failed",
+        ),
       );
     }
     await logSessionEvent({
@@ -468,7 +482,7 @@ router.get('/session', requireAssistantPlan, async (req, res, next) => {
       companyId,
       requestId: req.requestId,
       sessionId,
-      event: 'started',
+      event: "started",
       route: req.originalUrl,
       prompt: safePrompt,
     });

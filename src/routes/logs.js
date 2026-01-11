@@ -100,7 +100,7 @@ router.post('/', authenticate, logsLimiter, (req, res) => {
     res.status(200).json({ success: true });
   } catch (error) {
     logger.error('Failed to process frontend log', { error: error.message });
-    res.status(500).json({ error: 'Failed to process log' });
+    next(new ApiError(500, 'Failed to process log', 'LOG_PROCESS_ERROR'));
   }
 });
 

@@ -1,0 +1,118 @@
+  console.log
+    [DB] test sqlite storage = :memory:
+
+      at log (src/config/database.js:118:13)
+
+  console.info
+    [2026-01-11T16:14:15.449Z] [INFO] HTTP request {"meta":{"method":"POST","path":"/api/auth/login","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":75.29,"requestId":"06631f4a-722f-4597-92f0-3f5dd65ac91a","userId":null,"companyId":null}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:15.464Z] [INFO] HTTP request {"meta":{"method":"GET","path":"/api/auth/me","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":8.74,"requestId":"9db9442d-4735-4334-a6a9-5134455af24b","userId":2,"companyId":null}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.info
+    [2026-01-11T16:14:15.719Z] [INFO] HTTP request {"meta":{"method":"POST","path":"/api/auth/refresh","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":4.64,"requestId":"8c598fc5-46ba-44f7-abec-f58f48bafe48","userId":null,"companyId":null}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 4 companyId: 5
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:15.722Z] [INFO] HTTP request {"meta":{"method":"GET","path":"/api/auth/me","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":2.5,"requestId":"60673398-5d34-4415-8d6b-04c6589d2795","userId":4,"companyId":null}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 5 companyId: 6
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:15.875Z] [INFO] HTTP request {"meta":{"method":"POST","path":"/api/auth/logout","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":5.2,"requestId":"c9402a20-e33b-48b0-bf96-20045d6015a6","userId":5,"companyId":null}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 6 companyId: 7
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 7 companyId: 8
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 7 companyId: 8
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 8 companyId: 9
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 8 companyId: 9
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 9 companyId: 10
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 9 companyId: 10
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:16.461Z] [INFO] HTTP request {"meta":{"method":"GET","path":"/health","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":0.37,"requestId":"ca68fbda-a42b-4d43-b62b-3fe2bf0a8692","userId":null,"companyId":null}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 10 companyId: null
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 10 companyId: null
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+PASS tests/security/authFlow.test.js
+  Security: Auth flow, RBAC, and middleware invariants
+    Authentication flow
+      ✓ login issues tokens and /me returns the profile (168 ms)
+      ✓ expired tokens are rejected with TOKEN_INVALID (105 ms)
+      ✓ refresh endpoint rotates refresh tokens and rejects replayed values (154 ms)
+      ✓ logout revokes tokens and refreshes are blocked afterward (156 ms)
+    RBAC for each role
+      ✓ admin can reach the admin-only guard (141 ms)
+      ✓ accountant can use accountant routes but is blocked from admin-only (146 ms)
+      ✓ auditor can access auditor-only routes but not accountant-only (147 ms)
+      ✓ viewer is limited to viewer-only routes and denied auditor-specific (146 ms)
+    Middleware invariants
+      ✓ every response carries an X-Request-Id header (2 ms)
+      ✓ error responses surface the requestId header and payload
+      ✓ requireCompany rejects tokens without company context (163 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        2.408 s, estimated 3 s
+Ran all test suites matching /tests\/security\/authFlow.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

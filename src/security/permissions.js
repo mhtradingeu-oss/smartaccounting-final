@@ -27,6 +27,7 @@ module.exports = {
       'POST /api/bank-statements/reconcile',
 
       'GET /api/ai/read/*',
+      'POST /api/ai/read/*',
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
 
@@ -52,6 +53,8 @@ module.exports = {
 
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
+      'GET /api/ai/read/*',
+      'POST /api/ai/read/*',
 
       'GET /api/exports/*',
       'GET /api/compliance/*',
@@ -69,6 +72,8 @@ module.exports = {
       'GET /api/telemetry/client-error',
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
+      'GET /api/ai/read/*',
+      'POST /api/ai/read/*',
     ],
   },
 };

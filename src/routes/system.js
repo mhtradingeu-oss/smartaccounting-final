@@ -97,7 +97,7 @@ router.get('/overview', async (req, res) => {
     });
   } catch (error) {
     logger.error('System overview error:', error);
-    res.status(500).json({ error: 'System overview failed' });
+    next(new ApiError(500, 'System overview failed', 'SYSTEM_OVERVIEW_ERROR'));
   }
 });
 
@@ -120,7 +120,7 @@ router.get('/health-detailed', async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    res.status(500).json({ error: 'Health check failed' });
+    next(new ApiError(500, 'Health check failed', 'SYSTEM_HEALTH_ERROR'));
   }
 });
 
@@ -144,7 +144,7 @@ router.get('/stats', async (req, res) => {
     res.json(stats);
   } catch (error) {
     logger.error('System stats error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new ApiError(500, 'Internal server error', 'SYSTEM_STATS_ERROR'));
   }
 });
 
@@ -158,7 +158,7 @@ router.get('/db-test', async (req, res) => {
     });
   } catch (error) {
     logger.error('Database test error:', error);
-    res.status(500).json({ error: 'Database connection failed' });
+    next(new ApiError(500, 'Database connection failed', 'DB_CONNECTION_ERROR'));
   }
 });
 
@@ -182,7 +182,9 @@ router.get('/companies', async (req, res) => {
         'createdAt',
         'updatedAt',
         [
-          sequelize.literal('(SELECT COUNT(*) FROM users WHERE users."companyId" = "Company"."id")'),
+          sequelize.literal(
+            '(SELECT COUNT(*) FROM users WHERE users."companyId" = "Company"."id")',
+          ),
           'userCount',
         ],
       ],
@@ -192,7 +194,7 @@ router.get('/companies', async (req, res) => {
     res.json({ companies });
   } catch (error) {
     logger.error('System companies list error:', error);
-    res.status(500).json({ error: 'Failed to load companies' });
+    next(new ApiError(500, 'Failed to load companies', 'COMPANIES_LIST_ERROR'));
   }
 });
 
@@ -204,14 +206,20 @@ router.post('/companies', async (req, res) => {
       .filter(([, value]) => !value)
       .map(([key]) => key);
     if (missing.length) {
-      return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
+      return next(
+        new ApiError(
+          400,
+          `Missing required fields: ${missing.join(', ')}`,
+          'MISSING_REQUIRED_FIELDS',
+        ),
+      );
     }
 
     let owner = null;
     if (ownerUserId) {
       owner = await User.findByPk(ownerUserId);
       if (!owner) {
-        return res.status(404).json({ error: 'Owner user not found' });
+        return next(new ApiError(404, 'Owner user not found', 'OWNER_USER_NOT_FOUND'));
       }
     }
 
@@ -229,7 +237,7 @@ router.post('/companies', async (req, res) => {
     res.status(201).json({ company });
   } catch (error) {
     logger.error('System company create error:', error);
-    res.status(500).json({ error: 'Failed to create company' });
+    next(new ApiError(500, 'Failed to create company', 'COMPANY_CREATE_ERROR'));
   }
 });
 
@@ -237,7 +245,7 @@ router.patch('/companies/:companyId/suspend', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
     }
 
     const reason = (req.body?.reason || '').trim();
@@ -249,7 +257,7 @@ router.patch('/companies/:companyId/suspend', async (req, res) => {
     res.json({ company, reason: reason || null });
   } catch (error) {
     logger.error('System company suspend error:', error);
-    res.status(500).json({ error: 'Failed to suspend company' });
+    next(new ApiError(500, 'Failed to suspend company', 'COMPANY_SUSPEND_ERROR'));
   }
 });
 
@@ -257,7 +265,7 @@ router.patch('/companies/:companyId/restore', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
     }
 
     await company.update({
@@ -268,7 +276,7 @@ router.patch('/companies/:companyId/restore', async (req, res) => {
     res.json({ company });
   } catch (error) {
     logger.error('System company restore error:', error);
-    res.status(500).json({ error: 'Failed to restore company' });
+    next(new ApiError(500, 'Failed to restore company', 'COMPANY_RESTORE_ERROR'));
   }
 });
 
@@ -276,7 +284,7 @@ router.patch('/companies/:companyId/flags', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
     }
 
     const updates = {};
@@ -288,14 +296,14 @@ router.patch('/companies/:companyId/flags', async (req, res) => {
     }
 
     if (!Object.keys(updates).length) {
-      return res.status(400).json({ error: 'No flag updates provided' });
+      return next(new ApiError(400, 'No flag updates provided', 'NO_FLAG_UPDATES'));
     }
 
     await company.update(updates);
     res.json({ company });
   } catch (error) {
     logger.error('System company flag update error:', error);
-    res.status(500).json({ error: 'Failed to update company flags' });
+    next(new ApiError(500, 'Failed to update company flags', 'COMPANY_FLAGS_UPDATE_ERROR'));
   }
 });
 
@@ -303,7 +311,7 @@ router.delete('/companies/:companyId', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
     }
 
     const [userCount, invoiceCount, expenseCount, statementCount, transactionCount, reportCount] =
@@ -324,24 +332,30 @@ router.delete('/companies/:companyId', async (req, res) => {
       transactionCount ||
       reportCount
     ) {
-      return res.status(409).json({
-        error: 'Company has existing records and cannot be deleted. Suspend the company instead.',
-        counts: {
-          users: userCount,
-          invoices: invoiceCount,
-          expenses: expenseCount,
-          bankStatements: statementCount,
-          bankTransactions: transactionCount,
-          taxReports: reportCount,
-        },
-      });
+      return next(
+        new ApiError(
+          409,
+          'Company has existing records and cannot be deleted. Suspend the company instead.',
+          'COMPANY_DELETE_CONFLICT',
+          {
+            counts: {
+              users: userCount,
+              invoices: invoiceCount,
+              expenses: expenseCount,
+              bankStatements: statementCount,
+              bankTransactions: transactionCount,
+              taxReports: reportCount,
+            },
+          },
+        ),
+      );
     }
 
     await company.destroy();
     res.json({ success: true });
   } catch (error) {
     logger.error('System company delete error:', error);
-    res.status(500).json({ error: 'Failed to delete company' });
+    next(new ApiError(500, 'Failed to delete company', 'COMPANY_DELETE_ERROR'));
   }
 });
 
@@ -369,7 +383,7 @@ router.get('/users', async (req, res) => {
     res.json({ users: payload });
   } catch (error) {
     logger.error('System users list error:', error);
-    res.status(500).json({ error: 'Failed to load users' });
+    next(new ApiError(500, 'Failed to load users', 'USERS_LIST_ERROR'));
   }
 });
 
@@ -377,18 +391,18 @@ router.post('/users', async (req, res) => {
   try {
     const { email, password, firstName, lastName, role, companyId } = req.body || {};
     if (!email || !password || !firstName || !lastName) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return next(new ApiError(400, 'Missing required fields', 'MISSING_REQUIRED_FIELDS'));
     }
 
     const normalizedEmail = normalizeEmail(email);
     const existing = await User.findOne({ where: { email: normalizedEmail } });
     if (existing) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return next(new ApiError(400, 'Email already registered', 'EMAIL_ALREADY_REGISTERED'));
     }
 
     const resolvedRole = role || 'viewer';
     if (!companyId && resolvedRole !== 'admin') {
-      return res.status(400).json({ error: 'System users must have admin role' });
+      return next(new ApiError(400, 'System users must have admin role', 'SYSTEM_USER_ROLE_ERROR'));
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -405,7 +419,7 @@ router.post('/users', async (req, res) => {
     res.status(201).json({ user: user.toJSON() });
   } catch (error) {
     logger.error('System user create error:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    next(new ApiError(500, 'Failed to create user', 'USER_CREATE_ERROR'));
   }
 });
 
@@ -413,7 +427,7 @@ router.patch('/users/:userId', async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return next(new ApiError(404, 'User not found', 'USER_NOT_FOUND'));
     }
 
     const updates = {};
@@ -428,21 +442,22 @@ router.patch('/users/:userId', async (req, res) => {
     }
 
     if (!Object.keys(updates).length) {
-      return res.status(400).json({ error: 'No updates provided' });
+      return next(new ApiError(400, 'No updates provided', 'NO_UPDATES_PROVIDED'));
     }
 
-    const nextCompanyId =
-      Object.prototype.hasOwnProperty.call(updates, 'companyId') ? updates.companyId : user.companyId;
+    const nextCompanyId = Object.prototype.hasOwnProperty.call(updates, 'companyId')
+      ? updates.companyId
+      : user.companyId;
     const nextRole = updates.role || user.role;
     if ((nextCompanyId === null || nextCompanyId === undefined) && nextRole !== 'admin') {
-      return res.status(400).json({ error: 'System users must have admin role' });
+      return next(new ApiError(400, 'System users must have admin role', 'SYSTEM_USER_ROLE_ERROR'));
     }
 
     await user.update(updates);
     res.json({ user: user.toJSON() });
   } catch (error) {
     logger.error('System user update error:', error);
-    res.status(500).json({ error: 'Failed to update user' });
+    next(new ApiError(500, 'Failed to update user', 'USER_UPDATE_ERROR'));
   }
 });
 
@@ -452,7 +467,7 @@ router.get('/plans', async (req, res) => {
     res.json({ plans });
   } catch (error) {
     logger.error('System plans error:', error);
-    res.status(500).json({ error: 'Failed to load plans' });
+    next(new ApiError(500, 'Failed to load plans', 'PLANS_LIST_ERROR'));
   }
 });
 
@@ -473,7 +488,7 @@ router.get('/subscriptions', async (req, res) => {
     res.json({ subscriptions: companies });
   } catch (error) {
     logger.error('System subscriptions error:', error);
-    res.status(500).json({ error: 'Failed to load subscriptions' });
+    next(new ApiError(500, 'Failed to load subscriptions', 'SUBSCRIPTIONS_LIST_ERROR'));
   }
 });
 
@@ -498,7 +513,7 @@ router.get('/feature-flags', async (req, res) => {
     });
   } catch (error) {
     logger.error('System feature flags error:', error);
-    res.status(500).json({ error: 'Failed to load feature flags' });
+    next(new ApiError(500, 'Failed to load feature flags', 'FEATURE_FLAGS_ERROR'));
   }
 });
 
@@ -526,7 +541,7 @@ router.get('/audit-logs', async (req, res) => {
     res.json({ logs });
   } catch (error) {
     logger.error('System audit logs error:', error);
-    res.status(500).json({ error: 'Failed to load audit logs' });
+    next(new ApiError(500, 'Failed to load audit logs', 'AUDIT_LOGS_ERROR'));
   }
 });
 
@@ -562,7 +577,7 @@ router.get('/backups', async (req, res) => {
     });
   } catch (error) {
     logger.error('System backups error:', error);
-    res.status(500).json({ error: 'Failed to load backups' });
+    next(new ApiError(500, 'Failed to load backups', 'BACKUPS_ERROR'));
   }
 });
 

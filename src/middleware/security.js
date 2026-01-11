@@ -8,10 +8,13 @@ function validateContentType(allowedTypes) {
     if (allowedTypes.some((type) => contentType.includes(type))) {
       return next();
     }
-    return res.status(415).json({
-      success: false,
-      message: `Unsupported Content-Type. Allowed: ${allowedTypes.join(', ')}`,
-    });
+    return next(
+      new ApiError(
+        415,
+        'UNSUPPORTED_MEDIA_TYPE',
+        `Unsupported Content-Type. Allowed: ${allowedTypes.join(', ')}`,
+      ),
+    );
   };
 }
 
@@ -24,17 +27,11 @@ function requestSizeLimiter(limit = '10mb') {
   return function (req, res, next) {
     jsonParser(req, res, (err) => {
       if (err) {
-        return res.status(413).json({
-          success: false,
-          message: 'Request body too large',
-        });
+        return next(new ApiError(413, 'INPUT_TOO_LARGE', 'Request body too large'));
       }
       urlencodedParser(req, res, (err2) => {
         if (err2) {
-          return res.status(413).json({
-            success: false,
-            message: 'Request body too large',
-          });
+          return next(new ApiError(413, 'INPUT_TOO_LARGE', 'Request body too large'));
         }
         next();
       });
@@ -50,6 +47,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const { validationResult } = require('express-validator');
 const logger = require('../lib/logger');
+const ApiError = require('../lib/errors/apiError');
 const { METRICS_ENABLED, LOG_SLOW_REQUEST_MS, recordMetrics } = require('./metrics');
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -263,11 +261,9 @@ const validateRequest = (validations) => async (req, res, next) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation failed',
-      errors: errors.array(),
-    });
+    return next(
+      new ApiError(400, 'VALIDATION_ERROR', 'Validation failed', { errors: errors.array() }),
+    );
   }
 
   next();
@@ -281,10 +277,7 @@ const ipWhitelist =
     const clientIP = req.ip || req.connection.remoteAddress;
     if (allowedIPs.length && !allowedIPs.includes(clientIP)) {
       logger.warn('Blocked request from unauthorized IP', { ip: clientIP });
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied from your IP address',
-      });
+      return next(new ApiError(403, 'FORBIDDEN', 'Access denied from your IP address'));
     }
 
     next();
@@ -301,10 +294,7 @@ const csrfProtection = (req, res, next) => {
   const sessionToken = req.session?.csrfToken;
 
   if (!csrfToken || !sessionToken || csrfToken !== sessionToken) {
-    return res.status(403).json({
-      success: false,
-      message: 'CSRF token validation failed',
-    });
+    return next(new ApiError(403, 'FORBIDDEN', 'CSRF token validation failed'));
   }
 
   next();

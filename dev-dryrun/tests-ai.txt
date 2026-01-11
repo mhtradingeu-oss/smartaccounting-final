@@ -1,0 +1,150 @@
+  console.log
+    [DB] test sqlite storage = :memory:
+
+      at log (src/config/database.js:118:13)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:01.541Z] [INFO] HTTP request {"meta":{"method":"post","path":"/api/ai/read/assistant/stream","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":36.72,"requestId":"f475c685-b3c4-4547-bf81-772554dfd730","userId":2,"companyId":3}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+PASS tests/routes/aiAssistantStream.test.js
+  AI Assistant Stream API
+    ✓ streams chunks with requestId and done event (43 ms)
+
+  console.log
+    [DB] test sqlite storage = :memory:
+
+      at log (src/config/database.js:118:13)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+PASS tests/routes/aiSuggest.test.js
+  AI Suggestions API
+    ✓ returns 501 when AI suggestions are disabled (8 ms)
+
+  console.log
+    [DB] test sqlite storage = :memory:
+
+      at log (src/config/database.js:118:13)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 5 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 5 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 5 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 4 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 4 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 4 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 2 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:02.534Z] [INFO] HTTP request {"meta":{"method":"post","path":"/api/ai/read/assistant","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":17.05,"requestId":"92b8d394-feff-4bd9-8a4a-3aad6da63ce9","userId":2,"companyId":3}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 3 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 3 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.debug
+    [authMiddleware][TEST] Authenticated user: userId: 3 companyId: 3
+
+      at debug (src/middleware/authMiddleware.js:56:15)
+
+  console.info
+    [2026-01-11T16:14:02.545Z] [INFO] HTTP request {"meta":{"method":"post","path":"/api/ai/read/assistant","ip":"127.0.0.1","userAgent":"","statusCode":200,"durationMs":10.89,"requestId":"0a55bcfe-8761-4409-9edd-6a01885c00af","userId":3,"companyId":3}}
+
+      at method (src/lib/logger/index.js:217:3)
+
+PASS tests/routes/aiAssistantRead.test.js
+  AI Text Assistant API
+    ✓ should forbid viewer and auditor roles (16 ms)
+    ✓ returns structured errors for wrong method (6 ms)
+    ✓ should allow admin and accountant roles (30 ms)
+
+Test Suites: 3 passed, 3 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        2.182 s, estimated 4 s
+Ran all test suites matching /tests\/routes\/aiAssistantRead.test.js|tests\/routes\/aiAssistantStream.test.js|tests\/routes\/aiSuggest.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
+const ApiError = require('../lib/errors/apiError');
 
 module.exports = function jwtTenantContext(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Missing token' });
+    return next(new ApiError(401, 'UNAUTHORIZED', 'Missing token'));
   }
 
   const token = authHeader.split(' ')[1];
@@ -13,10 +14,7 @@ module.exports = function jwtTenantContext(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'testsecret');
 
     if (!decoded.companyId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Company context required',
-      });
+      return next(new ApiError(403, 'COMPANY_CONTEXT_REQUIRED', 'Company context required'));
     }
 
     req.user = {
@@ -26,6 +24,6 @@ module.exports = function jwtTenantContext(req, res, next) {
 
     next();
   } catch (err) {
-    return res.status(401).json({ success: false, message: 'Invalid token' });
+    return next(new ApiError(401, 'TOKEN_INVALID', 'Invalid token', { original: err }));
   }
 };

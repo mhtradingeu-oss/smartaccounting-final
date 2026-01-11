@@ -1,0 +1,120 @@
+src/routes/taxReports.js:125:        return res.status(409).json({ error: 'Tax report for this period already exists' });
+src/routes/taxReports.js:140:      res.status(201).json({
+src/routes/taxReports.js:145:      res.status(500).json({ error: 'Internal server error' });
+src/routes/taxReports.js:168:        return res.status(404).json({ error: 'Tax report not found' });
+src/routes/taxReports.js:172:        return res.status(400).json({ error: 'Cannot edit submitted tax reports' });
+src/routes/taxReports.js:186:      res.status(500).json({ error: 'Internal server error' });
+src/routes/taxReports.js:208:        return res.status(404).json({ error: 'Tax report not found' });
+src/routes/taxReports.js:212:        return res.status(400).json({ error: 'Tax report already submitted' });
+src/routes/taxReports.js:225:      res.status(500).json({ error: 'Internal server error' });
+src/routes/taxReports.js:248:      return res.status(404).json({ error: 'Tax report not found' });
+src/routes/taxReports.js:260:    res.status(500).json({ error: 'Export failed' });
+src/routes/taxReports.js:283:      return res.status(404).json({ error: 'Tax report not found' });
+src/routes/taxReports.js:287:      return res.status(400).json({ error: 'Cannot delete submitted tax reports' });
+src/routes/taxReports.js:307:    res.status(500).json({ error: 'Internal server error' });
+src/routes/taxReports.js:326:        return res.status(400).json({
+src/routes/taxReports.js:344:      res.status(500).json({ error: 'Internal server error' });
+src/routes/gdpr.js:18:      return res.status(404).json({ error: 'Not found' });
+src/routes/gdpr.js:31:      return res.status(403).json({ error: 'Forbidden' });
+src/routes/gdpr.js:35:    return res.status(200).json({ success: true, data });
+src/routes/gdpr.js:37:    res.status(500).json({ error: err.message || 'Internal server error' });
+src/routes/gdpr.js:49:    res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+src/routes/germanTaxCompliance.js:38:    res.status(500).json({
+src/routes/germanTaxCompliance.js:64:    res.status(500).json({
+src/routes/germanTaxCompliance.js:92:    res.status(500).json({
+src/routes/germanTaxCompliance.js:113:    res.status(500).json({
+src/routes/germanTaxCompliance.js:137:    res.status(500).json({
+src/routes/germanTaxCompliance.js:170:    res.status(500).json({
+src/routes/germanTaxCompliance.js:188:    res.status(500).json({
+src/routes/germanTaxCompliance.js:206:    res.status(500).json({
+src/routes/ai.js:92:    return res.status(status).json(body);
+src/routes/ai.js:102:    return res.status(status).json(body);
+src/routes/ai.js:120:    return res.status(status).json(body);
+src/routes/monitoring.js:24:    res.status(500).json({ error: 'Failed to retrieve logs' });
+src/routes/bankStatements.js:88:      return res.status(404).json({
+src/routes/bankStatements.js:102:      return res.status(403).json({
+src/routes/bankStatements.js:117:      return res.status(402).json({
+src/routes/bankStatements.js:165:  return res.status(503).json({
+src/routes/bankStatements.js:192:        return res.status(400).json({
+src/routes/bankStatements.js:214:        return res.status(400).json({
+src/routes/bankStatements.js:244:        return res.status(400).json({
+src/routes/bankStatements.js:261:        return res.status(400).json({
+src/routes/bankStatements.js:337:      return res.status(500).json({
+src/routes/bankStatements.js:361:      return res.status(400).json({
+src/routes/bankStatements.js:384:        return res.status(404).json({
+src/routes/bankStatements.js:435:      return res.status(status).json({
+src/routes/bankStatements.js:462:    return res.status(500).json({
+src/routes/bankStatements.js:489:    return res.status(500).json({
+src/routes/bankStatements.js:509:    return res.status(status).json({
+src/routes/bankStatements.js:534:    return res.status(500).json({
+src/routes/bankStatements.js:564:      return res.status(status).json({
+src/routes/bankStatements.js:593:      return res.status(status).json({
+src/routes/bankStatements.js:618:      return res.status(404).json({
+src/routes/bankStatements.js:636:      return res.status(400).json({
+src/routes/bankStatements.js:650:    return res.status(500).json({
+src/routes/telemetry.js:49:    res.status(200).json({ success: true });
+src/routes/system.js:237:    res.status(201).json({ company });
+src/routes/system.js:419:    res.status(201).json({ user: user.toJSON() });
+src/routes/auth.js:73:    return res.status(401).json({
+src/routes/auth.js:84:      return res.status(401).json({
+src/routes/auth.js:93:      return res.status(401).json({
+src/routes/auth.js:103:      return res.status(401).json({
+src/routes/auth.js:150:    return res.status(200).json({
+src/routes/auth.js:156:    return res.status(401).json({
+src/routes/auth.js:173:      res.status(201).json({ success: true, user: user.toJSON() });
+src/routes/auth.js:193:      res.status(200).json({
+src/routes/auth.js:201:        return res.status(error.status).json({
+src/routes/auth.js:220:    res.status(200).json({ success: true, message: 'Logged out successfully (all devices)' });
+src/routes/auth.js:230:    return res.status(200).json({
+src/routes/auth.js:236:  return res.status(401).json({
+src/routes/exports.js:126:    res.status(error.status || 500).json({
+src/routes/exports.js:230:    res.status(error.status || 500).json({
+src/routes/exports.js:290:    res.status(error.status || 500).json({
+src/routes/exports.js:342:    res.status(error.status || 500).json({
+src/routes/exports.js:406:    res.status(error.status || 500).json({
+src/routes/compliance.js:80:    res.status(500).json({
+src/routes/compliance.js:92:    return res.status(403).json({
+src/routes/compliance.js:102:    return res.status(400).json({
+src/routes/compliance.js:108:  return res.status(200).json({
+src/routes/compliance.js:138:    res.status(500).json({
+src/routes/users.js:89:      res.status(201).json({
+src/routes/users.js:205:    res.status(405).json({
+src/routes/expenses.js:19:      res.status(200).json({ success: true, expenses });
+src/routes/expenses.js:34:        return res.status(404).json({ success: false, message: 'Expense not found' });
+src/routes/expenses.js:36:      res.status(200).json({ success: true, expense });
+src/routes/expenses.js:64:    res.status(201).json({
+src/routes/expenses.js:99:    res.status(200).json({
+src/routes/elster.js:27:        return res.status(400).json({
+src/routes/elster.js:43:        return res.status(400).json({
+src/routes/elster.js:53:        return res.status(404).json({
+src/routes/elster.js:79:      res.status(500).json({
+src/routes/elster.js:99:    res.status(500).json({
+src/routes/elster.js:125:    res.status(500).json({
+src/routes/elster.js:151:    res.status(500).json({
+src/routes/elster.js:174:    res.status(500).json({
+src/routes/elster.js:194:    res.status(500).json({
+src/routes/companies.js:87:        return res.status(404).json({ error: 'Company not found' });
+src/routes/companies.js:93:        return res.status(403).json({ error: 'You do not manage this company' });
+src/routes/companies.js:108:        return res.status(400).json({ error: 'No valid fields provided for update' });
+src/routes/invoices.js:18:      res.status(200).json({ success: true, auditLog: logs });
+src/routes/invoices.js:53:      res.status(201).json({
+src/routes/invoices.js:96:          return res.status(err.status).json({ success: false, message: err.message });
+src/routes/invoices.js:100:      res.status(201).json({ success: true, payment: result.payment, invoice: result.invoice });
+src/routes/invoices.js:117:      res.status(200).json({ success: true, invoices });
+src/routes/invoices.js:132:        return res.status(404).json({ success: false, message: 'Invoice not found' });
+src/routes/invoices.js:134:      res.status(200).json({ success: true, invoice });
+src/routes/invoices.js:157:    res.status(201).json({ success: true, invoice });
+src/routes/invoices.js:181:      return res.status(404).json({ success: false, message: 'Invoice not found' });
+src/routes/invoices.js:183:    res.status(200).json({ success: true, invoice });
+src/routes/invoices.js:211:        return res.status(err.status).json({ success: false, message: err.message });
+src/routes/invoices.js:220:    res.status(200).json({ success: true, invoice });
+src/routes/ai/governance.js:63:  return res.status(200).json({
+src/routes/admin.js:110:    return res.status(500).json({ success: false, message: err.message });
+src/routes/logs.js:100:    res.status(200).json({ success: true });
+src/routes/dashboard.js:18:    res.status(200).json({
+src/middleware/errorHandler.js:50:  res.status(status).json({
+src/app.js:185:    res.status(200).json(payload);
+src/app.js:187:    res.status(503).json(payload);
+src/app.js:198:    res.status(200).json({
+src/app.js:208:    res.status(503).json({
+src/app.js:318:  res.status(404).json({

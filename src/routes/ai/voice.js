@@ -3,33 +3,25 @@ const { authenticate, requireCompany } = require('../../middleware/authMiddlewar
 const aiAssistantService = require('../../services/ai/aiAssistantService');
 const aiReadGateway = require('../../services/ai/aiReadGateway');
 const { logRejected } = require('../../services/ai/aiAuditLogger');
-const aiRouteGuard = require('../../middleware/aiRouteGuard');
+const { aiRouteGuard } = require('../../middleware/aiRouteGuard');
 const rateLimit = require('../../middleware/aiRateLimit');
 const { Company } = require('../../models');
 const { isAssistantRoleAllowed } = require('../../services/ai/assistantAuthorization');
-const { sendAIError } = require('../../utils/aiErrorResponse');
+const ApiError = require('../../lib/errors/apiError');
 
 const router = express.Router();
 
 const normalizeFlag = (value) => String(value ?? '').toLowerCase() === 'true';
-const isAssistantFeatureEnabled = () =>
-  normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
+const isAssistantFeatureEnabled = () => normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
 const isVoiceFeatureEnabled = () => normalizeFlag(process.env.AI_VOICE_ENABLED ?? 'false');
 const isTtsFeatureEnabled = () => normalizeFlag(process.env.AI_TTS_ENABLED ?? 'false');
 
-const respondWithError = (req, res, status, message, errorCode) =>
-  sendAIError(res, {
-    status,
-    message,
-    errorCode,
-    requestId: req.requestId,
-  });
+// Error helpers using ApiError only
+const respondVoiceRoleDenied = (req, res, next) =>
+  next(new ApiError(403, 'AI_FORBIDDEN', 'AI access denied'));
 
-const respondVoiceRoleDenied = (req, res) =>
-  respondWithError(req, res, 403, 'Insufficient role for AI assistant', 'AI_ASSISTANT_FORBIDDEN');
-
-const respondVoiceDisabled = (req, res) =>
-  respondWithError(req, res, 403, 'AI Voice is disabled', 'AI_VOICE_DISABLED');
+const respondVoiceDisabled = (req, res, next) =>
+  next(new ApiError(403, 'AI_VOICE_DISABLED', 'AI Voice is disabled'));
 
 const normalizeResponseMode = (value) => (value === 'voice' ? 'voice' : 'text');
 
@@ -111,10 +103,10 @@ router.post('/assistant', async (req, res, next) => {
       return respondVoiceDisabled(req, res);
     }
     if (!intent) {
-      return respondWithError(req, res, 400, 'intent is required', 'BAD_REQUEST');
+      return next(new ApiError(400, 'BAD_REQUEST', 'intent is required'));
     }
     if (!aiAssistantService.INTENT_LABELS[intent]) {
-      return respondWithError(req, res, 400, 'Intent not supported', 'BAD_REQUEST');
+      return next(new ApiError(400, 'BAD_REQUEST', 'Intent not supported'));
     }
     if (!isAssistantRoleAllowed(req.user.role)) {
       try {
@@ -170,12 +162,12 @@ router.post('/assistant', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
-      return respondWithError(
-        req,
-        res,
-        status,
-        body?.message || body?.error || 'AI request failed',
-        body?.errorCode,
+      return next(
+        new ApiError(
+          status,
+          body?.errorCode || 'AI_REQUEST_FAILED',
+          body?.message || body?.error || 'AI request failed',
+        ),
       );
     }
     res.json({ answer: body?.data || null, requestId: req.requestId, responseMode });

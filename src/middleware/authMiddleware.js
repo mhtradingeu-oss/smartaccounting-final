@@ -1,31 +1,32 @@
 // Authentication/authorization middleware source of truth for protected routes.
 const jwt = require('jsonwebtoken');
 const { User, Company } = require('../models');
+const ApiError = require('../lib/errors/apiError');
 const requireCompany = require('./requireCompany');
 const revokedTokenService = require('../services/revokedTokenService');
 const { getJwtSecret } = require('../utils/jwtConfig');
 const { updateRequestContext } = require('../lib/logger/context');
 
 const isSystemAdminUser = (user) =>
-  Boolean(user && user.role === 'admin' && (user.companyId === null || user.companyId === undefined));
+  Boolean(
+    user && user.role === 'admin' && (user.companyId === null || user.companyId === undefined),
+  );
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   // Enforce strict Bearer token usage
   if (!authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Authorization header must be in the format: Bearer <token>',
-      code: 'AUTH_MISSING',
-    });
+    return next(
+      new ApiError(
+        401,
+        'AUTH_MISSING',
+        'Authorization header must be in the format: Bearer <token>',
+      ),
+    );
   }
   const token = authHeader.slice(7);
   if (!token) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Authentication credentials are missing',
-      code: 'AUTH_MISSING',
-    });
+    return next(new ApiError(401, 'AUTH_MISSING', 'Authentication credentials are missing'));
   }
   try {
     const decoded = jwt.verify(token, getJwtSecret());
@@ -34,21 +35,13 @@ const authenticate = async (req, res, next) => {
     const tokenJti = decoded.jti || null;
     const tokenExp = decoded.exp ? new Date(decoded.exp * 1000) : null;
     if (tokenJti && (await revokedTokenService.isTokenRevoked(tokenJti))) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Token has been revoked',
-        code: 'TOKEN_REVOKED',
-      });
+      return next(new ApiError(401, 'TOKEN_REVOKED', 'Token has been revoked'));
     }
     const user = await User.findByPk(decoded.userId, {
       include: [{ model: Company, as: 'company' }],
     });
     if (!user || !user.isActive) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid authentication token',
-        code: 'TOKEN_INVALID',
-      });
+      return next(new ApiError(401, 'TOKEN_INVALID', 'Invalid authentication token'));
     }
     req.user = user;
     req.userId = user.id;
@@ -72,17 +65,9 @@ const authenticate = async (req, res, next) => {
   } catch (error) {
     // Distinguish between expired and invalid tokens
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Token expired',
-        code: 'TOKEN_INVALID',
-      });
+      return next(new ApiError(401, 'TOKEN_INVALID', 'Token expired'));
     }
-    return res.status(401).json({
-      status: 'error',
-      message: 'Invalid token',
-      code: 'TOKEN_INVALID',
-    });
+    return next(new ApiError(401, 'TOKEN_INVALID', 'Invalid token', { original: error }));
   }
 };
 
@@ -93,11 +78,7 @@ const requireRole =
       return next();
     }
     if (!req.user) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Insufficient permissions',
-        code: 'INSUFFICIENT_ROLE',
-      });
+      return next(new ApiError(403, 'INSUFFICIENT_ROLE', 'Insufficient permissions'));
     }
     // Hierarchical roles: admin > accountant > auditor > viewer
     const roleHierarchy = ['viewer', 'auditor', 'accountant', 'admin'];
@@ -107,29 +88,17 @@ const requireRole =
       ? allowedRoles.some((r) => userRoleIdx >= roleHierarchy.indexOf(r))
       : userRoleIdx >= roleHierarchy.indexOf(allowedRoles);
     if (!isAllowed) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Insufficient permissions',
-        code: 'INSUFFICIENT_ROLE',
-      });
+      return next(new ApiError(403, 'INSUFFICIENT_ROLE', 'Insufficient permissions'));
     }
     next();
   };
 
 const requireSystemAdmin = (req, res, next) => {
   if (!req.user) {
-    return res.status(403).json({
-      status: 'error',
-      message: 'Insufficient permissions',
-      code: 'INSUFFICIENT_ROLE',
-    });
+    return next(new ApiError(403, 'INSUFFICIENT_ROLE', 'Insufficient permissions'));
   }
   if (!isSystemAdminUser(req.user)) {
-    return res.status(403).json({
-      status: 'error',
-      message: 'System admin access required',
-      code: 'SYSTEM_ADMIN_REQUIRED',
-    });
+    return next(new ApiError(403, 'SYSTEM_ADMIN_REQUIRED', 'System admin access required'));
   }
   return next();
 };

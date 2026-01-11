@@ -8,7 +8,8 @@ const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
 
-router.use(disabledFeatureHandler('Elster/compliance'));
+// Explicitly block unsupported methods for Elster/compliance endpoints
+router.all('/elster/*', disabledFeatureHandler('Elster/compliance'));
 router.use(authenticate);
 router.use(requireCompany);
 

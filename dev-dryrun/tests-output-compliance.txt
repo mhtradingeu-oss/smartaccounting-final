@@ -1,0 +1,29 @@
+  console.log
+    [DB] test sqlite storage = :memory:
+
+      at log (src/config/database.js:118:13)
+
+FAIL tests/routes/compliance.test.js
+  ● Test suite failed to run
+
+    ReferenceError: Cannot access 'requireAssistantPlan' before initialization
+
+      24 | router.get(
+      25 |   "/assistant",
+    > 26 |   requireAssistantPlan,
+         |   ^
+      27 |   aiRouteGuard({ allowedMethods: ["GET", "POST"] }),
+      28 |   (req, res, next) => {
+      29 |     // ...existing code for GET /assistant...
+
+      at Object.requireAssistantPlan (src/routes/aiReadOnly.js:26:3)
+      at Object.require (src/routes/ai.js:6:26)
+      at Object.require (src/app.js:111:18)
+      at Object.require (tests/routes/compliance.test.js:1:13)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.558 s, estimated 1 s
+Ran all test suites matching /tests\/routes\/compliance.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
