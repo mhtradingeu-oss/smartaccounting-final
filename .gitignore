@@ -216,3 +216,5 @@ build
 .vscode
 .idea
 EOF
+client/node_modules/
+client/dist/
