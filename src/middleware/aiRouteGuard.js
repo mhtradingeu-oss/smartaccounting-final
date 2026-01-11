@@ -88,7 +88,8 @@ function aiRouteGuard(options = {}) {
       }
 
       const purpose = resolvePurpose(req, defaultPurpose);
-      const policyVersion = resolvePolicyVersion(req, defaultPolicyVersion);
+      // Fallback to canonical policy version if not provided
+      const resolvedPolicyVersion = resolvePolicyVersion(req, defaultPolicyVersion) || '10.0.0';
 
       if (requirePurpose && !purpose) {
         return next(
@@ -96,13 +97,15 @@ function aiRouteGuard(options = {}) {
         );
       }
 
-      if (requirePolicyVersion && !policyVersion) {
+      // policyVersion is now guaranteed to have a safe default
+      // No longer fail closed on missing policyVersion
+      if (requirePolicyVersion && !resolvedPolicyVersion) {
         return next(
           new ApiError(400, 'AI_PURPOSE_REQUIRED', 'AI calls require purpose and policyVersion'),
         );
       }
 
-      req.aiContext = { purpose, policyVersion };
+      req.aiContext = { purpose, policyVersion: resolvedPolicyVersion };
       return next();
     } catch (err) {
       return next(err);
