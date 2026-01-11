@@ -1,0 +1,15 @@
+========================================
+SMARTACCOUNTING CORE API AUDIT
+Started: 2026-01-11 22:24:54 UTC
+API_URL: http://localhost:5001/api
+User: demo-accountant@demo.com
+========================================
+
+▶ 1) Login as demo accountant
+✅ Login successful (token acquired)
+✅ Company context available (1)
+▶ 2) Core endpoints (read-only, accountant role)
+✅ All core API endpoints returned expected responses
+
+Finished: 2026-01-11 22:24:54 UTC
+========================================

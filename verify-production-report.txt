@@ -1,0 +1,17 @@
+========================================
+SMARTACCOUNTING PRODUCTION VERIFY
+Started: 2026-01-11 22:25:05 UTC
+Mode: host
+Base URL: http://localhost:5001
+User: demo-accountant@demo.com
+========================================
+
+▶ 1) Wait for /health
+✅ /health OK
+▶ 2) Wait for /ready
+✅ /ready OK
+▶ 3) Login as demo accountant
+✅ Login successful (JWT issued)
+✅ Company context available (1)
+▶ 4) Authenticated endpoints (RBAC-safe)
+❌ /api/dashboard/stats FAILED
