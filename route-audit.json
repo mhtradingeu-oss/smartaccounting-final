@@ -1,0 +1,1029 @@
+{
+  "generatedAt": "2026-01-11T21:55:54.375Z",
+  "environment": "audit",
+  "total": 146,
+  "routes": [
+    {
+      "path": "*",
+      "methods": [
+        "OPTIONS"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/admin/demo-data/load",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/exports/insights.csv",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/exports/insights.json",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/governance/governance",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/insights",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/insights/:id/decisions",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/insights/generate",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/assistant",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/assistant",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/assistant/context",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/assistant/stream",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/invoice-summary",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/monthly-overview",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/reconciliation-summary",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/read/session",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/suggest",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ai/voice/assistant",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/auth/login",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/auth/logout",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/auth/me",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/auth/refresh",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/auth/register",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/:id/audit-logs",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/:id/transactions",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/import",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/import/confirm",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/reconcile",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/transactions/:id/categorize",
+      "methods": [
+        "PUT"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/transactions/:id/reconcile",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/bank-statements/transactions/:id/reconcile/undo",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/companies/",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/companies/:companyId",
+      "methods": [
+        "PUT"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/compliance/deadlines",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/compliance/gobd/export",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/compliance/overview",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/compliance/reports/:type",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/compliance/test",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/compliance/validate-transaction",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/dashboard/stats",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/elster/generate-xml",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/elster/history",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/elster/history",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/elster/status/:ticket",
+      "methods": [
+        "GET"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/elster/status/:transferTicket",
+      "methods": [
+        "GET"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/elster/submit",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/email-test/send-test",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/email-test/test-config",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/email-test/test-connection",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/email-test/test-template/:type",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/expenses/",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/expenses/",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/expenses/:expenseId",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/expenses/:expenseId/status",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/exports/accounting-records",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/exports/ai-decisions",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/exports/audit-logs",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/exports/datev",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/exports/vat-summaries",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/gdpr/anonymize-user",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/gdpr/export-user-data",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/calendar/:year",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/compliance/check/:year",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/elster/*",
+      "methods": [
+        "_ALL"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/elster/test",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/eur/generate",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/export/gobd",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/ustva/generate",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/ustva/submit",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax-compliance/validate/integrity",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/elster-export",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/eur/:year",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/kleinunternehmer/:year",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/submit",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/validate-transaction",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/vat-return",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/german-tax/vat/*",
+      "methods": [
+        "_ALL"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/health",
+      "methods": [
+        "GET"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/invoices/",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/:invoiceId",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/:invoiceId",
+      "methods": [
+        "PUT"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/:invoiceId/audit-log",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/:invoiceId/credit-note",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/:invoiceId/payments",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/invoices/:invoiceId/status",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/logs/",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/metrics",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/monitoring/logs",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ocr/preview",
+      "methods": [
+        "_ALL"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ocr/process",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ocr/reprocess/:fileId",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ocr/results/:fileId",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ocr/search",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ocr/validate/:documentId",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/public/plans",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/ready",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/billing-history",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/billing/*",
+      "methods": [
+        "_ALL"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/cancel-subscription",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/create-customer",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/create-subscription",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/health",
+      "methods": [
+        "GET"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/stripe/plans",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/stripe/subscription",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/audit-logs",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/backups",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/companies",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/companies",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/companies/:companyId",
+      "methods": [
+        "DELETE"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/companies/:companyId/flags",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/companies/:companyId/restore",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/companies/:companyId/suspend",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/config",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/db-test",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/feature-flags",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/health-detailed",
+      "methods": [
+        "GET"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/api/system/info",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/maintenance",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/maintenance",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/monitoring",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/overview",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/plans",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/stats",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/subscriptions",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/system/users",
+      "methods": [
+        "GET"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/api/system/users",
+      "methods": [
+        "POST"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/api/system/users/:userId",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/api/system/version",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/:id",
+      "methods": [
+        "DELETE"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/:id",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/:id",
+      "methods": [
+        "PUT"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/:id/export/elster",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/:id/submit",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/tax-reports/generate",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/telemetry/client-error",
+      "methods": [
+        "POST"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/api/users/",
+      "methods": [
+        "GET"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/api/users/",
+      "methods": [
+        "POST"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/api/users/:userId",
+      "methods": [
+        "DELETE"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/api/users/:userId",
+      "methods": [
+        "PUT"
+      ],
+      "access": "admin"
+    },
+    {
+      "path": "/health",
+      "methods": [
+        "GET"
+      ],
+      "access": "public"
+    },
+    {
+      "path": "/metrics",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    },
+    {
+      "path": "/ready",
+      "methods": [
+        "GET"
+      ],
+      "access": "authenticated"
+    }
+  ]
+}

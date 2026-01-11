@@ -1,10 +1,10 @@
-const { updateRequestContext } = require("../lib/logger/context");
-const logger = require("../lib/logger");
-const { User, Company } = require("../models");
-const ApiError = require("../lib/errors/apiError");
+const { updateRequestContext } = require('../lib/logger/context');
+const logger = require('../lib/logger');
+const { User, Company } = require('../models');
+const ApiError = require('../lib/errors/apiError');
 
 const parseCompanyId = (value) => {
-  if (value === undefined || value === null || value === "") {
+  if (value === undefined || value === null || value === '') {
     return null;
   }
   const parsed = Number(value);
@@ -13,16 +13,16 @@ const parseCompanyId = (value) => {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_COMPANY_COLUMNS = [
-  "uuid",
-  "companyUuid",
-  "company_uuid",
-  "publicId",
-  "public_id",
-  "externalId",
-  "external_id",
+  'uuid',
+  'companyUuid',
+  'company_uuid',
+  'publicId',
+  'public_id',
+  'externalId',
+  'external_id',
 ];
 
-const isUuid = (value) => UUID_REGEX.test(String(value || "").trim());
+const isUuid = (value) => UUID_REGEX.test(String(value || '').trim());
 
 let cachedCompanyUuidColumn = null;
 let cachedCompanyUuidColumnChecked = false;
@@ -38,7 +38,7 @@ const resolveCompanyUuidColumn = async () => {
   cachedCompanyUuidColumnPromise = (async () => {
     try {
       const queryInterface = Company.sequelize.getQueryInterface();
-      const table = await queryInterface.describeTable("companies");
+      const table = await queryInterface.describeTable('companies');
       const columns = Object.keys(table || {});
       for (const candidate of UUID_COMPANY_COLUMNS) {
         if (columns.includes(candidate)) {
@@ -59,7 +59,7 @@ const resolveCompanyUuidColumn = async () => {
 };
 
 const logCompanyContextFailure = ({ req, attemptedCompanyId, attemptedCompanyUuid, reason }) => {
-  logger.warn("Company context rejected", {
+  logger.warn('Company context rejected', {
     requestId: req.requestId,
     userId: req.userId || req.user?.id || null,
     attemptedCompanyId,
@@ -74,19 +74,19 @@ const createRequireCompanyMiddleware =
   async (req, res, next) => {
     const { allowSystemAdmin = false } = options;
     try {
-      const rawHeaderValue = req.headers?.["x-company-id"];
+      const rawHeaderValue = req.headers?.['x-company-id'];
       const headerValue = Array.isArray(rawHeaderValue) ? rawHeaderValue[0] : rawHeaderValue;
       const normalizedHeaderValue =
-        typeof headerValue === "string" ? headerValue.trim() : headerValue;
+        typeof headerValue === 'string' ? headerValue.trim() : headerValue;
 
       if (
         normalizedHeaderValue === undefined ||
         normalizedHeaderValue === null ||
-        normalizedHeaderValue === ""
+        normalizedHeaderValue === ''
       ) {
-        logCompanyContextFailure({ req, attemptedCompanyId: null, reason: "missing_header" });
+        logCompanyContextFailure({ req, attemptedCompanyId: null, reason: 'missing_header' });
         return next(
-          new ApiError(400, "COMPANY_CONTEXT_REQUIRED", "x-company-id header is required"),
+          new ApiError(400, 'COMPANY_CONTEXT_REQUIRED', 'x-company-id header is required'),
         );
       }
 
@@ -98,9 +98,9 @@ const createRequireCompanyMiddleware =
           logCompanyContextFailure({
             req,
             attemptedCompanyId: normalizedHeaderValue,
-            reason: "invalid_header",
+            reason: 'invalid_header',
           });
-          return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+          return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
         }
 
         requestedCompanyUuid = String(normalizedHeaderValue).trim();
@@ -109,23 +109,23 @@ const createRequireCompanyMiddleware =
           logCompanyContextFailure({
             req,
             attemptedCompanyUuid: requestedCompanyUuid,
-            reason: "uuid_column_missing",
+            reason: 'uuid_column_missing',
           });
-          return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+          return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
         }
 
         const company = await Company.findOne({
           where: { [uuidColumn]: requestedCompanyUuid },
-          attributes: ["id"],
+          attributes: ['id'],
           raw: true,
         });
         if (!company || !company.id) {
           logCompanyContextFailure({
             req,
             attemptedCompanyUuid: requestedCompanyUuid,
-            reason: "company_not_found",
+            reason: 'company_not_found',
           });
-          return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+          return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
         }
 
         requestedCompanyId = company.id;
@@ -135,18 +135,18 @@ const createRequireCompanyMiddleware =
         logCompanyContextFailure({
           req,
           attemptedCompanyId: normalizedHeaderValue,
-          reason: "invalid_header",
+          reason: 'invalid_header',
         });
-        return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+        return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
       }
 
       if (req.isSystemAdmin && !allowSystemAdmin) {
         logCompanyContextFailure({
           req,
           attemptedCompanyId: requestedCompanyId,
-          reason: "system_admin_blocked",
+          reason: 'system_admin_blocked',
         });
-        return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+        return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
       }
 
       const userId = req.userId || req.user?.id;
@@ -154,20 +154,20 @@ const createRequireCompanyMiddleware =
         logCompanyContextFailure({
           req,
           attemptedCompanyId: requestedCompanyId,
-          reason: "missing_user",
+          reason: 'missing_user',
         });
-        return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+        return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
       }
 
       if (!req.isSystemAdmin) {
-        const user = await User.findByPk(userId, { attributes: ["id", "companyId"] });
+        const user = await User.findByPk(userId, { attributes: ['id', 'companyId'] });
         if (!user || !user.companyId || String(user.companyId) !== String(requestedCompanyId)) {
           logCompanyContextFailure({
             req,
             attemptedCompanyId: requestedCompanyId,
-            reason: "company_mismatch",
+            reason: 'company_mismatch',
           });
-          return next(new ApiError(403, "COMPANY_CONTEXT_INVALID", "Company context is invalid"));
+          return next(new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Company context is invalid'));
         }
       }
 
@@ -179,7 +179,7 @@ const createRequireCompanyMiddleware =
       return next();
     } catch (error) {
       return next(
-        new ApiError(500, "INTERNAL_ERROR", "Failed to resolve company context", {
+        new ApiError(500, 'INTERNAL_ERROR', 'Failed to resolve company context', {
           original: error,
         }),
       );
@@ -189,9 +189,9 @@ const createRequireCompanyMiddleware =
 const requireCompany = (reqOrOptions, res, next) => {
   if (
     reqOrOptions &&
-    typeof reqOrOptions === "object" &&
-    typeof res === "object" &&
-    typeof next === "function"
+    typeof reqOrOptions === 'object' &&
+    typeof res === 'object' &&
+    typeof next === 'function'
   ) {
     return createRequireCompanyMiddleware({})(reqOrOptions, res, next);
   }
