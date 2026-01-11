@@ -87,6 +87,8 @@ const emitForceLogout = () => {
   }
 };
 
+export const SKIP_FORCE_LOGOUT_ON_401_FLAG = 'skipForceLogoutOn401';
+
 /* ================================
    DEV LOGGING (SAFE)
 ================================ */
@@ -233,7 +235,13 @@ api.interceptors.response.use(
     if (error.response) {
       const { status } = error.response;
       logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
-      if (status === 401) {
+      const skipForceLogout =
+        Boolean(
+          error?.config?.[SKIP_FORCE_LOGOUT_ON_401_FLAG] ??
+            error?.config?.skipForceLogoutOn401 ??
+            false,
+        );
+      if (status === 401 && !skipForceLogout) {
         emitForceLogout();
       }
     } else if (error.request) {

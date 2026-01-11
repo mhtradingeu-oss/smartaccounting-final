@@ -1,6 +1,7 @@
 import { companiesAPI } from '../services/companiesAPI';
 import { dashboardAPI } from '../services/dashboardAPI';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
+import { expensesAPI } from '../services/expensesAPI';
 
 // Utility to reset all client-side state on company switch
 // Call this in CompanyContext.switchCompany
@@ -14,5 +15,6 @@ export function resetClientState() {
   companiesAPI.clearCache();
   dashboardAPI.clearCache();
   aiAssistantAPI.reset();
+  expensesAPI.clearCache();
   // Add more resets as needed (e.g., query cache, redux, etc.)
 }

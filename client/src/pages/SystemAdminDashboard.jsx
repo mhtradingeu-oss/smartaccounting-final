@@ -168,9 +168,18 @@ const SystemAdminDashboard = () => {
   const handleCreateCompany = async () => {
     setActionError(null);
     try {
+      let ownerUserId = companyForm.ownerUserId;
+      if (!ownerUserId || isNaN(Number(ownerUserId))) {
+        ownerUserId = null;
+      } else {
+        ownerUserId = Number(ownerUserId);
+      }
       const payload = {
         ...companyForm,
-        ownerUserId: companyForm.ownerUserId || null,
+        ownerUserId,
+        aiEnabled: true,
+        isActive: true,
+        ttsEnabled: false,
       };
       await systemAdminAPI.createCompany(payload);
       setCompanyForm(defaultCompanyForm);
@@ -341,9 +350,7 @@ const SystemAdminDashboard = () => {
           <div className="grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border border-gray-200 p-4">
               <p className="text-xs uppercase text-gray-500">Version</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {overview?.version || '—'}
-              </p>
+              <p className="text-sm font-semibold text-gray-900">{overview?.version || '—'}</p>
             </div>
             <div className="rounded-lg border border-gray-200 p-4">
               <p className="text-xs uppercase text-gray-500">Uptime</p>
@@ -467,9 +474,7 @@ const SystemAdminDashboard = () => {
                         {company.suspendedAt ? `Since ${formatDateTime(company.suspendedAt)}` : '—'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">
-                      {company.userCount ?? 0}
-                    </td>
+                    <td className="px-4 py-3 text-sm">{company.userCount ?? 0}</td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex flex-col gap-1">
                         <Button
@@ -643,11 +648,13 @@ const SystemAdminDashboard = () => {
                         ))}
                       </Select>
                     </td>
+                    <td className="px-4 py-3 text-sm">{user.company?.name || 'System'}</td>
                     <td className="px-4 py-3 text-sm">
-                      {user.company?.name || 'System'}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {user.isActive ? <Badge color="green">Active</Badge> : <Badge color="red">Disabled</Badge>}
+                      {user.isActive ? (
+                        <Badge color="green">Active</Badge>
+                      ) : (
+                        <Badge color="red">Disabled</Badge>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
                       <Button
@@ -702,7 +709,8 @@ const SystemAdminDashboard = () => {
                 <div>
                   <div className="font-medium text-gray-900">{item.name}</div>
                   <div className="text-xs text-gray-500">
-                    {resolvePlanName(item.subscriptionPlan)} • {item.subscriptionStatus || 'inactive'}
+                    {resolvePlanName(item.subscriptionPlan)} •{' '}
+                    {item.subscriptionStatus || 'inactive'}
                   </div>
                 </div>
                 <Badge color={item.subscriptionStatus === 'active' ? 'green' : 'gray'}>
@@ -710,7 +718,9 @@ const SystemAdminDashboard = () => {
                 </Badge>
               </div>
             ))}
-            {!subscriptions.length && <p className="text-sm text-gray-500">No subscriptions found.</p>}
+            {!subscriptions.length && (
+              <p className="text-sm text-gray-500">No subscriptions found.</p>
+            )}
           </div>
         </Card>
       </div>
@@ -753,7 +763,10 @@ const SystemAdminDashboard = () => {
                 {maintenance?.enabled ? 'Maintenance active' : 'System normal'}
               </span>
             </div>
-            <Button variant={maintenance?.enabled ? 'secondary' : 'danger'} onClick={handleMaintenanceToggle}>
+            <Button
+              variant={maintenance?.enabled ? 'secondary' : 'danger'}
+              onClick={handleMaintenanceToggle}
+            >
               {maintenance?.enabled ? 'Disable maintenance' : 'Enable maintenance'}
             </Button>
           </div>

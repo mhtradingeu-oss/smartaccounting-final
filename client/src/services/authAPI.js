@@ -1,4 +1,4 @@
-import api from './api';
+import api, { SKIP_FORCE_LOGOUT_ON_401_FLAG } from './api';
 
 export const authAPI = {
   refresh: async () => {
@@ -19,7 +19,7 @@ export const authAPI = {
     return response.data;
   },
   me: async () => {
-    const response = await api.get('/auth/me');
+    const response = await api.get('/auth/me', { [SKIP_FORCE_LOGOUT_ON_401_FLAG]: true });
     return response.data;
   },
 };
