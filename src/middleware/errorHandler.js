@@ -4,7 +4,7 @@ const logger = require('../lib/logger');
 const telemetry = require('../services/telemetry');
 const ApiError = require('../lib/errors/apiError');
 
-function errorHandler(err, req, res, next) {
+function errorHandler(err, req, res, _next) {
   let status = err.status || err.statusCode || 500;
   let code = err.code || err.errorCode || 'INTERNAL_ERROR';
   let message = err.message || 'Internal Server Error';

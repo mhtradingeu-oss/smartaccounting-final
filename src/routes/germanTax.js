@@ -1,5 +1,6 @@
 const express = require('express');
 const logger = require('../lib/logger');
+const ApiError = require('../lib/errors/apiError');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const germanTaxCompliance = require('../services/germanTaxCompliance');
 const elsterService = require('../services/elsterService');
@@ -12,7 +13,7 @@ router.all('/vat/*', disabledFeatureHandler('VAT/tax reporting'));
 router.use(authenticate);
 router.use(requireCompany);
 
-router.get('/eur/:year', async (req, res) => {
+router.get('/eur/:year', async (req, res, next) => {
   try {
     const year = parseInt(req.params.year);
     if (year < 2020 || year > new Date().getFullYear()) {
@@ -30,7 +31,7 @@ router.get('/eur/:year', async (req, res) => {
   }
 });
 
-router.post('/vat-return', async (req, res) => {
+router.post('/vat-return', async (req, res, next) => {
   try {
     const { year, quarter, month } = req.body;
 
@@ -59,7 +60,7 @@ router.post('/vat-return', async (req, res) => {
   }
 });
 
-router.post('/elster-export', async (req, res) => {
+router.post('/elster-export', async (req, res, next) => {
   try {
     const { vatReturn } = req.body;
 
@@ -77,7 +78,7 @@ router.post('/elster-export', async (req, res) => {
   }
 });
 
-router.get('/kleinunternehmer/:year', async (req, res) => {
+router.get('/kleinunternehmer/:year', async (req, res, next) => {
   try {
     const year = parseInt(req.params.year);
 
@@ -97,7 +98,7 @@ router.get('/kleinunternehmer/:year', async (req, res) => {
   }
 });
 
-router.post('/validate-transaction', async (req, res) => {
+router.post('/validate-transaction', async (req, res, next) => {
   try {
     const { transaction } = req.body;
 
@@ -116,7 +117,7 @@ router.post('/validate-transaction', async (req, res) => {
   }
 });
 
-router.post('/submit', async (req, res) => {
+router.post('/submit', async (req, res, next) => {
   try {
     const { reportType, period, data, submitToElster = false } = req.body;
     const companyId = req.companyId;

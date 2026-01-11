@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const ApiError = require('../lib/errors/apiError');
 const {
   Company,
   User,
@@ -61,7 +62,7 @@ router.get('/info', (req, res) => {
   });
 });
 
-router.get('/overview', async (req, res) => {
+router.get('/overview', async (req, res, next) => {
   try {
     const [totalUsers, totalCompanies, totalInvoices, totalTaxReports] = await Promise.all([
       User.count(),
@@ -101,7 +102,7 @@ router.get('/overview', async (req, res) => {
   }
 });
 
-router.get('/health-detailed', async (req, res) => {
+router.get('/health-detailed', async (req, res, next) => {
   try {
     let databaseStatus = 'unknown';
 
@@ -124,7 +125,7 @@ router.get('/health-detailed', async (req, res) => {
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', async (req, res, next) => {
   try {
     const [totalUsers, totalCompanies, totalInvoices, totalTaxReports] = await Promise.all([
       User.count(),
@@ -148,7 +149,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-router.get('/db-test', async (req, res) => {
+router.get('/db-test', async (req, res, next) => {
   try {
     await sequelize.authenticate();
     res.json({
@@ -162,7 +163,7 @@ router.get('/db-test', async (req, res) => {
   }
 });
 
-router.get('/companies', async (req, res) => {
+router.get('/companies', async (req, res, next) => {
   try {
     const companies = await Company.findAll({
       attributes: [
@@ -198,7 +199,7 @@ router.get('/companies', async (req, res) => {
   }
 });
 
-router.post('/companies', async (req, res) => {
+router.post('/companies', async (req, res, next) => {
   try {
     const { name, taxId, address, city, postalCode, country, ownerUserId } = req.body || {};
     const required = { name, taxId, address, city, postalCode, country };
@@ -241,7 +242,7 @@ router.post('/companies', async (req, res) => {
   }
 });
 
-router.patch('/companies/:companyId/suspend', async (req, res) => {
+router.patch('/companies/:companyId/suspend', async (req, res, next) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
@@ -261,7 +262,7 @@ router.patch('/companies/:companyId/suspend', async (req, res) => {
   }
 });
 
-router.patch('/companies/:companyId/restore', async (req, res) => {
+router.patch('/companies/:companyId/restore', async (req, res, next) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
@@ -280,7 +281,7 @@ router.patch('/companies/:companyId/restore', async (req, res) => {
   }
 });
 
-router.patch('/companies/:companyId/flags', async (req, res) => {
+router.patch('/companies/:companyId/flags', async (req, res, next) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
@@ -307,7 +308,7 @@ router.patch('/companies/:companyId/flags', async (req, res) => {
   }
 });
 
-router.delete('/companies/:companyId', async (req, res) => {
+router.delete('/companies/:companyId', async (req, res, next) => {
   try {
     const company = await Company.findByPk(req.params.companyId);
     if (!company) {
@@ -359,7 +360,7 @@ router.delete('/companies/:companyId', async (req, res) => {
   }
 });
 
-router.get('/users', async (req, res) => {
+router.get('/users', async (req, res, next) => {
   try {
     const users = await User.findAll({
       include: [
@@ -387,7 +388,7 @@ router.get('/users', async (req, res) => {
   }
 });
 
-router.post('/users', async (req, res) => {
+router.post('/users', async (req, res, next) => {
   try {
     const { email, password, firstName, lastName, role, companyId } = req.body || {};
     if (!email || !password || !firstName || !lastName) {
@@ -423,7 +424,7 @@ router.post('/users', async (req, res) => {
   }
 });
 
-router.patch('/users/:userId', async (req, res) => {
+router.patch('/users/:userId', async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.userId);
     if (!user) {
@@ -461,7 +462,7 @@ router.patch('/users/:userId', async (req, res) => {
   }
 });
 
-router.get('/plans', async (req, res) => {
+router.get('/plans', async (req, res, next) => {
   try {
     const plans = getSystemPlansFallback();
     res.json({ plans });
@@ -471,7 +472,7 @@ router.get('/plans', async (req, res) => {
   }
 });
 
-router.get('/subscriptions', async (req, res) => {
+router.get('/subscriptions', async (req, res, next) => {
   try {
     const companies = await Company.findAll({
       attributes: [
@@ -492,7 +493,7 @@ router.get('/subscriptions', async (req, res) => {
   }
 });
 
-router.get('/feature-flags', async (req, res) => {
+router.get('/feature-flags', async (req, res, next) => {
   try {
     const totalCompanies = await Company.count();
     const aiEnabledCount = await Company.count({ where: { aiEnabled: true } });
@@ -517,7 +518,7 @@ router.get('/feature-flags', async (req, res) => {
   }
 });
 
-router.get('/audit-logs', async (req, res) => {
+router.get('/audit-logs', async (req, res, next) => {
   try {
     const limit = parseLimit(req.query.limit);
     const logs = await AuditLog.findAll({
@@ -545,7 +546,7 @@ router.get('/audit-logs', async (req, res) => {
   }
 });
 
-router.get('/backups', async (req, res) => {
+router.get('/backups', async (req, res, next) => {
   try {
     const backupsDir = path.resolve(process.cwd(), 'backups');
     let files = [];

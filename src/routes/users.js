@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const ApiError = require('../lib/errors/apiError');
 const { body, param } = require('express-validator');
 const { User, Company } = require('../models');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');

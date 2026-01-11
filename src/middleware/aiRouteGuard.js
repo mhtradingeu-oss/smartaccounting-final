@@ -33,7 +33,6 @@ function aiRouteGuard(options = {}) {
     defaultPurpose,
     defaultPolicyVersion,
     rejectDisabled = true,
-    skipPurposeValidation = false,
   } = options;
 
   return async function (req, res, next) {
