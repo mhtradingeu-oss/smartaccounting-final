@@ -5,6 +5,11 @@ import { getSafeErrorMeta } from '../lib/errorMeta';
 import { authAPI } from '../services/authAPI';
 import { AUTH_FORCE_LOGOUT_EVENT } from '../services/api';
 import { companiesAPI } from '../services/companiesAPI';
+import {
+  clearStoredActiveCompanyId,
+  getStoredActiveCompanyId,
+  setStoredActiveCompanyId,
+} from '../lib/companyStorage';
 
 // Create the AuthContext
 const AuthContext = createContext();
@@ -23,12 +28,9 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       localStorage.setItem('token', token);
     }
-    if (typeof window !== 'undefined') {
-      const activeCompanyId = user?.companyId ?? null;
-      if (activeCompanyId && !sessionStorage.getItem('activeCompanyId')) {
-        window.__ACTIVE_COMPANY_ID__ = activeCompanyId;
-        sessionStorage.setItem('activeCompanyId', String(activeCompanyId));
-      }
+    const activeCompanyId = user?.companyId ?? null;
+    if (activeCompanyId && getStoredActiveCompanyId() === null) {
+      setStoredActiveCompanyId(activeCompanyId);
     }
     setAuthState((prev) => ({
       ...prev,
@@ -42,10 +44,7 @@ export const AuthProvider = ({ children }) => {
 
   const applyUnauthenticated = useCallback(() => {
     localStorage.removeItem('token');
-    if (typeof window !== 'undefined') {
-      window.__ACTIVE_COMPANY_ID__ = null;
-      sessionStorage.removeItem('activeCompanyId');
-    }
+    clearStoredActiveCompanyId();
     companiesAPI.clearCache();
     setAuthState((prev) => ({
       ...prev,
@@ -149,6 +148,15 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: 'Login failed. Please check your credentials.' };
     } catch (error) {
       logger.error('Login failed', getSafeErrorMeta(error));
+      if (import.meta.env.DEV) {
+        const status = error?.response?.status || 'unknown';
+        const code =
+          error?.response?.data?.code ||
+          error?.response?.data?.errorCode ||
+          error?.response?.data?.status ||
+          'none';
+        console.warn(`[auth] login failed status=${status} code=${code}`);
+      }
       const sanitizedError = formatApiError(error, 'Login failed. Please try again.');
       if (error?.response?.status === 429) {
         setAuthState((prev) => ({

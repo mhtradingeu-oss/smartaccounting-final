@@ -96,6 +96,22 @@ vi.mock('../pages/GDPRActions', () => ({
   default: () => <div>GDPR actions page</div>,
 }));
 
+vi.mock('../services/plansAPI', () => ({
+  __esModule: true,
+  fetchPublicPlans: vi.fn().mockResolvedValue({
+    copy: {
+      eyebrow: 'Tarife',
+      headline: 'Preise, die Vertrauen schaffen.',
+      subhead: 'Transparente Preise für Ihr Wachstum.',
+      ctaPrimary: 'Jetzt starten',
+      ctaSecondary: 'Mehr erfahren',
+      trustHighlights: ['Sicherheit', 'Compliance'],
+    },
+    plans: [],
+    featureMatrix: [],
+  }),
+}));
+
 vi.mock('../components/Layout', () => ({
   __esModule: true,
   default: ({ children }) => <div>{children}</div>,

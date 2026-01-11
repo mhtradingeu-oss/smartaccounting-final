@@ -7,7 +7,7 @@ set -euo pipefail
 REPORT="verify-production-report.txt"
 START="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
-EMAIL="${VERIFY_EMAIL:-accountant@demo.de}"
+EMAIL="${VERIFY_EMAIL:-demo-accountant@demo.com}"
 PASSWORD="${VERIFY_PASSWORD:-Demo123!}"
 
 HOST_MARKER="/.dockerenv"

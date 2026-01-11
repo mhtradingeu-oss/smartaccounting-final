@@ -39,14 +39,15 @@ const DEMO_COMPANY = {
   postalCode: '10115',
   country: 'DE',
   aiEnabled: true,
-  subscriptionStatus: 'demo',
+  subscriptionPlan: 'pro',
+  subscriptionStatus: 'active',
 };
 
 const DEMO_USERS = [
-  { email: 'admin@demo.de', firstName: 'Svenja', lastName: 'Pilot', role: 'admin' },
-  { email: 'accountant@demo.de', firstName: 'Lukas', lastName: 'Thiel', role: 'accountant' },
-  { email: 'auditor@demo.de', firstName: 'Freya', lastName: 'Klein', role: 'auditor' },
-  { email: 'viewer@demo.de', firstName: 'Jonas', lastName: 'Beck', role: 'viewer' },
+  { email: 'demo-admin@demo.com', firstName: 'Svenja', lastName: 'Pilot', role: 'admin' },
+  { email: 'demo-accountant@demo.com', firstName: 'Lukas', lastName: 'Thiel', role: 'accountant' },
+  { email: 'demo-auditor@demo.com', firstName: 'Freya', lastName: 'Klein', role: 'auditor' },
+  { email: 'demo-viewer@demo.com', firstName: 'Jonas', lastName: 'Beck', role: 'viewer' },
 ];
 const SYSTEM_ADMIN_USER = {
   email: 'sysadmin@demo.local',
@@ -889,6 +890,7 @@ const getQuarterKey = (dateString) => {
 module.exports = {
   up: async (queryInterface, _Sequelize) => {
     requireDemoSeedEnabled('up');
+    console.log(`[DEMO SEED] Demo password: ${DEMO_PASSWORD}`);
     // --- QueryInterface runtime guard ---
     const qi =
       queryInterface && typeof queryInterface.bulkInsert === 'function'
@@ -920,6 +922,7 @@ module.exports = {
         taxId: DEMO_COMPANY.taxId,
         aiEnabled: DEMO_COMPANY.aiEnabled,
         subscriptionStatus: DEMO_COMPANY.subscriptionStatus,
+        subscriptionPlan: DEMO_COMPANY.subscriptionPlan,
         createdAt: now,
         updatedAt: now,
       };
@@ -934,6 +937,7 @@ module.exports = {
           'country',
           'aiEnabled',
           'subscriptionStatus',
+          'subscriptionPlan',
           'createdAt',
           'updatedAt',
         ],
@@ -1228,6 +1232,8 @@ module.exports = {
 
         currency: 'EUR',
         date: template.expenseDate,
+        expenseDate: template.expenseDate,
+        category: template.category || 'General',
 
         // 🔐 Accountability
         userId: ownerId,
@@ -1255,6 +1261,8 @@ module.exports = {
           'grossAmount',
           'currency',
           'date',
+          'expenseDate',
+          'category',
           'userId',
           'companyId',
           'createdByUserId',

@@ -6,7 +6,7 @@ Frontend: http://localhost:3000
 ========================================
 
 ▶ 0) Load demo contract (single source of truth)
-✅ Demo credentials loaded (admin@demo.de)
+✅ Demo credentials loaded (demo-admin@demo.com)
 ▶ 1) Start Docker Local (fresh)
 ❌ docker compose up failed
 AUDIT FAILED ❌

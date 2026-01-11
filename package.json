@@ -30,6 +30,7 @@
     "db:seed:demo:reset": "npx sequelize-cli db:seed:undo --seed 20251226-demo-seed.js --seeders-path database/seeders/demo",
     "readiness:auth": "node scripts/auth-readiness.js",
     "demo:verify": "node scripts/demo-verify.js",
+    "demo:integration-verify": "node scripts/demo-integration-verify.js",
     "test:postgres": "docker compose -f docker-compose.test.yml up -d --build db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"CI=true NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && CI=true NODE_ENV=test USE_SQLITE=false npx jest --runInBand --ci tests/postgres/complianceConstraints.test.js\" && docker compose -f docker-compose.test.yml down -v",
     "migrate:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate\" && docker compose -f docker-compose.test.yml down",
     "seed:demo:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"DEMO_MODE=true ALLOW_DEMO_SEED=true NODE_ENV=test USE_SQLITE=false node scripts/seed-demo-prod.js\" && docker compose -f docker-compose.test.yml down"

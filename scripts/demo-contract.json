@@ -15,22 +15,22 @@
 
   "users": [
     {
-      "email": "admin@demo.de",
+    "email": "demo-admin@demo.com",
       "role": "admin",
       "description": "Full system access"
     },
     {
-      "email": "accountant@demo.de",
+    "email": "demo-accountant@demo.com",
       "role": "accountant",
       "description": "Accounting & VAT management"
     },
     {
-      "email": "auditor@demo.de",
+    "email": "demo-auditor@demo.com",
       "role": "auditor",
       "description": "Audit & compliance (read-only)"
     },
     {
-      "email": "viewer@demo.de",
+    "email": "demo-viewer@demo.com",
       "role": "viewer",
       "description": "Dashboard & reports (read-only)"
     }

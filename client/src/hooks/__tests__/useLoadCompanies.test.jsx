@@ -25,6 +25,9 @@ const HookTester = () => {
 describe('useLoadCompanies hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    window.__ACTIVE_COMPANY_ID__ = null;
   });
 
   it('fetches companies only once per mount and tolerates rerenders', async () => {

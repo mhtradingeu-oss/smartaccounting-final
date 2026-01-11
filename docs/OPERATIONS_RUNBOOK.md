@@ -220,10 +220,12 @@
   - Logs in as `demo-accountant@demo.com` and validates core API endpoints for companies, invoices, expenses, and bank statements.
 - **Command:** `bash scripts/verify-production.sh`
   - Production-oriented verification: health, ready, login, and authenticated endpoints including `/api/ai/insights`.
+- **Command:** `npm run demo:integration-verify`
+  - Logs in via the HTTP API as `demo-accountant@demo.com`, verifies `/api/companies`, and then `/api/dashboard/stats` with `x-company-id`, emitting PASS/FAIL for each step so plan guards and auth wiring are covered.
 
 ### Demo users & passwords
 - `scripts/seed-demo-prod.js` prints the login sheet after seeding. Default credentials:
-  - `admin@demo.de`, `accountant@demo.de`, `auditor@demo.de`, `viewer@demo.de` with password `Demo123!` unless `DEMO_PASSWORD` is overridden.
+  - `demo-admin@demo.com`, `demo-accountant@demo.com`, `demo-auditor@demo.com`, `demo-viewer@demo.com` with password `Demo123!` unless `DEMO_PASSWORD` is overridden.
 
 ### Guards that prevent production misuse
 - `scripts/seed-demo-prod.js` aborts unless `DEMO_MODE=true` and `ALLOW_DEMO_SEED=true` (and `ALLOW_DEMO_SEED_PROD=true` when `NODE_ENV=production`). The script also resets `NODE_ENV` to `production` internally before seeding, so you must explicitly provide the override flags.

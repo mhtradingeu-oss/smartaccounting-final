@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../Button';
 import FormField from '../ui/FormField';
 import Label from '../ui/Label';
@@ -28,8 +28,10 @@ const INITIAL_FORM_STATE = {
 const normalizeNumericField = (value) =>
   value === undefined || value === null ? '' : String(value);
 
+const EMPTY_INITIAL_VALUES = {};
+
 const InvoiceForm = ({
-  initialValues = {},
+  initialValues = EMPTY_INITIAL_VALUES,
   disabled = false,
   loading = false,
   submitLabel = 'Save invoice',
@@ -50,11 +52,25 @@ const InvoiceForm = ({
     [initialValues],
   );
 
+  const normalizedInitialSignature = useMemo(
+    () => JSON.stringify(normalizedInitial),
+    [normalizedInitial],
+  );
+
+  const normalizedSignatureRef = useRef(normalizedInitialSignature);
+
   const [formState, setFormState] = useState(normalizedInitial);
 
   useEffect(() => {
-    setFormState(normalizedInitial);
-  }, [normalizedInitial]);
+    if (normalizedSignatureRef.current === normalizedInitialSignature) {
+      return undefined;
+    }
+    normalizedSignatureRef.current = normalizedInitialSignature;
+    const timeoutId = setTimeout(() => {
+      setFormState(normalizedInitial);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [normalizedInitial, normalizedInitialSignature]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -112,7 +128,6 @@ const InvoiceForm = ({
   const validateVAT = () => {
     const errors = [];
     let totalNet = 0,
-      // totalVat = 0,
       totalGross = 0;
     formState.items.forEach((item, idx) => {
       // const qty = parseFloat(item.quantity) || 0;
@@ -122,7 +137,6 @@ const InvoiceForm = ({
       const vat = parseFloat(item.vatAmount) || 0;
       const gross = parseFloat(item.grossAmount) || 0;
       totalNet += net;
-      totalVat += vat;
       totalGross += gross;
       if (item.vatRate === '' || isNaN(vatR)) {
         errors.push(`Line ${idx + 1}: VAT rate is required.`);

@@ -21,6 +21,7 @@ vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({
     user: {
       role: 'admin',
+      companyId: 1,
     },
   }),
 }));
@@ -69,7 +70,7 @@ describe('AI Assistant page – requestId traceability', () => {
 
   it('renders requestId when present on assistant responses', async () => {
     window.fetch = vi.fn();
-    window.ReadableStream = function ReadableStream() {};
+    window.ReadableStream = undefined;
     aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
     aiAssistantAPI.getContext.mockResolvedValueOnce({
       company: { id: 1, name: 'TraceCo', city: 'Berlin', country: 'DE', aiEnabled: true },

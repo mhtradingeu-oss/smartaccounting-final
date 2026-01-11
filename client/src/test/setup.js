@@ -1,6 +1,6 @@
 
 import '../i18n';
-import { expect, afterEach } from 'vitest';
+import { expect, afterEach, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
@@ -32,6 +32,12 @@ Object.defineProperty(window, 'localStorage', {
 afterEach(() => {
   cleanup();
   window.localStorage?.clear();
+  window.__ACTIVE_COMPANY_ID__ = null;
+});
+
+beforeEach(() => {
+  window.localStorage?.setItem('activeCompanyId', '1');
+  window.__ACTIVE_COMPANY_ID__ = 1;
 });
 
 Object.defineProperty(window, 'matchMedia', {

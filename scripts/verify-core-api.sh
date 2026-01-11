@@ -9,7 +9,7 @@ if [[ "$API_URL" == *"backend:"* ]] || [[ "$API_URL" != http://localhost* ]]; th
   echo "❌ API_URL must point to localhost, never docker service name (backend:)."
   exit 1
 fi
-EMAIL="${DEMO_EMAIL:-accountant@demo.de}"
+EMAIL="${DEMO_EMAIL:-demo-accountant@demo.com}"
 PASSWORD="${DEMO_PASSWORD:-Demo123!}"
 
 START="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"

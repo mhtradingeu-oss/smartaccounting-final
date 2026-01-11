@@ -4,6 +4,7 @@ This seeder now creates one deterministic demo company, four demo users (admin/a
 
 ## What the demo seed covers
 - Role-specific users: `demo-admin@demo.com`, `demo-accountant@demo.com`, `demo-auditor@demo.com`, `demo-viewer@demo.com` (password configurable via `DEMO_PASSWORD`, default `Demo123!`).
+- Demo company runs on the `pro` subscription plan with `subscriptionStatus=active`, so exports, AI, and bank-statement imports stay unlocked for every user without plan gating.
 - Invoice flows in `DRAFT`, `SENT`, and `PAID` states complete with line items.
 - Expenses in draft/booked/archived states plus bank statements/reconciliations showing both matched and unmatched transactions.
 - Ledger transactions that feed tax calculations, a VAT report placeholder, and audit logs trace every seeded action.
@@ -13,6 +14,7 @@ This seeder now creates one deterministic demo company, four demo users (admin/a
 - `database/seeders/demo/20251226-demo-seed.js` now throws unless both `DEMO_MODE=true` **and** `ALLOW_DEMO_SEED=true` are present in the environment, regardless of `NODE_ENV`.
 - The seeder also requires the backend to have the schema that matches `src/models` (snake/camel case columns like `dueDate`, `createdByUserId`, and `fileName`).
 - The `down` method uses the same guards, so reversal (`demo-reset`) is equally explicit.
+- Each run logs `[DEMO SEED] Demo password: <value>` so the deterministic credential is easy to copy while seeding.
 
 ## Local development (SQLite)
 1. Ensure the SQLite file is reachable (defaults to `database/dev.sqlite`). You can reuse it across runs or delete it to start fresh – the seeder is idempotent.
@@ -64,3 +66,11 @@ USE_SQLITE=true NODE_ENV=development JWT_SECRET=demo-jwt-secret npm run demo:ver
 ```
 
 The helper logs in as `demo-admin@demo.com`, reuses the returned JWT, and confirms `/api/companies`, `/api/invoices`, and `/api/bank-statements` all respond cleanly with seeded data.
+
+If you just need a quick integration smoke check from the host shell, run:
+
+```bash
+npm run demo:integration-verify
+```
+
+That script logs in as `demo-accountant@demo.com`, hits `/api/companies` and `/api/dashboard/stats`, and prints a PASS/FAIL outcome for each step so you can detect auth or plan gating issues instantly.

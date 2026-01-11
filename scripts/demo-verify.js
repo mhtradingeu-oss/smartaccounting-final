@@ -102,7 +102,7 @@ async function verifySeededEndpoints() {
   console.log('[DEMO VERIFY] Logging in as demo admin...');
 
   const credentials = {
-    email: process.env.DEMO_EMAIL || 'admin@demo.de',
+    email: process.env.DEMO_EMAIL || 'demo-admin@demo.com',
     password: process.env.DEMO_PASSWORD || 'Demo123!',
   };
 

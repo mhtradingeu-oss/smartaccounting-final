@@ -6,14 +6,14 @@
   ```bash
   DEMO_MODE=true ALLOW_DEMO_SEED=true node scripts/seed-demo-prod.js
   ```
-  Add `ALLOW_DEMO_SEED_PROD=true` when you are intentionally stepping into a production `NODE_ENV` so the guard is satisfied. The script prints a login sheet for `admin@demo.de`, `accountant@demo.de`, `auditor@demo.de`, and `viewer@demo.de`.
+  Add `ALLOW_DEMO_SEED_PROD=true` when you are intentionally stepping into a production `NODE_ENV` so the guard is satisfied. The script prints a login sheet for `demo-admin@demo.com`, `demo-accountant@demo.com`, `demo-auditor@demo.com`, and `demo-viewer@demo.com`.
 
 ## API verification (`curl`)
 1. Log in as the admin and capture a bearer token:
    ```bash
-   TOKEN=$(curl -s http://localhost:5000/api/auth/login \
-     -H 'Content-Type: application/json' \
-     -d '{"email":"admin@demo.de","password":"Demo123!"}' | jq -r '.token')
+  TOKEN=$(curl -s http://localhost:5000/api/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"demo-admin@demo.com","password":"Demo123!"}' | jq -r '.token')
    ```
    (Replace `jq` with another JSON parser if it is not available.)
 2. List invoices for the new company:

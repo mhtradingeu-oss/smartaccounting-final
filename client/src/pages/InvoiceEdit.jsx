@@ -111,6 +111,22 @@ const InvoiceEdit = () => {
     return STATUS_TRANSITIONS[invoice.status] || [];
   }, [invoice]);
 
+  const initialFormValues = useMemo(() => {
+    if (!invoice) {
+      return null;
+    }
+    return {
+      invoiceNumber: invoice.invoiceNumber,
+      clientName: invoice.clientName,
+      date: invoice.date,
+      dueDate: invoice.dueDate,
+      currency: invoice.currency,
+      subtotal: invoice.subtotal,
+      total: invoice.total,
+      notes: invoice.notes || '',
+    };
+  }, [invoice]);
+
   if (!activeCompany) {
     return (
       <EmptyState
@@ -193,16 +209,7 @@ const InvoiceEdit = () => {
         <div className="space-y-6">
           <PermissionGuard action="invoice.edit" role={user?.role}>
             <InvoiceForm
-              initialValues={{
-                invoiceNumber: invoice.invoiceNumber,
-                clientName: invoice.clientName,
-                date: invoice.date,
-                dueDate: invoice.dueDate,
-                currency: invoice.currency,
-                subtotal: invoice.subtotal,
-                total: invoice.total,
-                notes: invoice.notes || '',
-              }}
+              initialValues={initialFormValues || undefined}
               onSubmit={handleUpdate}
               loading={formSubmitting}
               disabled={!canEdit || formSubmitting}

@@ -12,7 +12,7 @@
 
 ## 2. Demo mode & seed safety
 
-- `scripts/seed-demo-prod.js` enforces `DEMO_MODE=true`, `ALLOW_DEMO_SEED=true`, and `ALLOW_DEMO_SEED_PROD=true` before seeding, resets `NODE_ENV` to `production`, runs `scripts/verify-schema.js`, and prints safe credentials (`admin@demo.de` etc.). The seeder (`database/seeders/demo/20251226-demo-seed.js`) generates invoices with PAID/SENT/DRAFT statuses, expenses with VAT/edge cases, and AI insights (VAT anomaly, duplicate suspicion), so manual DB tweaks are unnecessary.
+- `scripts/seed-demo-prod.js` enforces `DEMO_MODE=true`, `ALLOW_DEMO_SEED=true`, and `ALLOW_DEMO_SEED_PROD=true` before seeding, resets `NODE_ENV` to `production`, runs `scripts/verify-schema.js`, and prints safe credentials (`demo-admin@demo.com`, `demo-accountant@demo.com`, `demo-auditor@demo.com`, `demo-viewer@demo.com`). The seeder (`database/seeders/demo/20251226-demo-seed.js`) generates invoices with PAID/SENT/DRAFT statuses, expenses with VAT/edge cases, and AI insights (VAT anomaly, duplicate suspicion), so manual DB tweaks are unnecessary.
 - `docs/compliance/DEMO_SEED_VERIFICATION.md` documents the `curl`/SQL/AI question checks that prove every critical table (invoices, bank transactions, tax reports, audit logs, ai insights) holds realistic data before a demo or automated test starts.
 
 ## 3. Feature flags & disabled flows

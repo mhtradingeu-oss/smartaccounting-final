@@ -6,9 +6,13 @@ const isProduction = NODE_ENV === 'production';
 
 const defaultOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:5173',
   'https://localhost:3000',
+  'https://localhost:3001',
   'https://localhost:5173',
+  'http://host.docker.internal:3000',
+  'http://host.docker.internal:3001',
 ];
 
 const allowedOrigins = new Set(
@@ -36,6 +40,8 @@ const corsOptions = {
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
+    'authorization',
+    'content-type',
     'Content-Type',
     'Authorization',
     'x-company-id',

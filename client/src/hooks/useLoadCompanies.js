@@ -13,6 +13,7 @@ export function useLoadCompanies() {
   const companiesRef = useRef(companies);
   const loadAttemptedRef = useRef(false);
   const resolvedRef = useRef(false);
+  const lastUserIdRef = useRef(user?.id ?? null);
 
   useEffect(() => {
     companiesRef.current = companies;
@@ -24,6 +25,19 @@ export function useLoadCompanies() {
   }, [reloadToken]);
 
   useEffect(() => {
+    const currentUserId = user?.id ?? null;
+    if (lastUserIdRef.current !== currentUserId) {
+      lastUserIdRef.current = currentUserId;
+      loadAttemptedRef.current = false;
+      resolvedRef.current = false;
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return undefined;
+    }
+
     if (resolvedRef.current || (companiesRef.current && companiesRef.current.length > 0)) {
       resolvedRef.current = true;
       return undefined;

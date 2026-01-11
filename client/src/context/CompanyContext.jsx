@@ -1,5 +1,41 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { resetClientState } from '../lib/resetClientState';
+import {
+  clearStoredActiveCompanyId,
+  getStoredActiveCompanyId,
+  parseCompanyId,
+  setStoredActiveCompanyId,
+} from '../lib/companyStorage';
+
+const normalizeCompany = (company) => {
+  if (!company) {
+    return null;
+  }
+  const normalizedId = parseCompanyId(company.id);
+  if (normalizedId === null) {
+    return company;
+  }
+  if (normalizedId === company.id) {
+    return company;
+  }
+  return { ...company, id: normalizedId };
+};
+
+const toComparableCompanyId = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return String(value);
+};
+
+const companyIdsMatch = (left, right) => {
+  const leftId = toComparableCompanyId(left);
+  const rightId = toComparableCompanyId(right);
+  if (leftId === null || rightId === null) {
+    return false;
+  }
+  return leftId === rightId;
+};
 
 // CompanyContext will provide the current company and a setter
 const CompanyContext = createContext();
@@ -19,7 +55,7 @@ export const CompanyProvider = ({ children }) => {
     if (options.reset !== false) {
       resetClientState();
     }
-    setActiveCompany(company);
+    setActiveCompany(normalizeCompany(company));
     // Optionally: clear other state here (e.g., user, dashboard, etc.)
   }, []);
 
@@ -36,9 +72,9 @@ export const CompanyProvider = ({ children }) => {
 
     const hasActiveCompany =
       Array.isArray(companies) &&
-      companies.some((company) => String(company.id) === String(activeCompany.id));
+      companies.some((company) => companyIdsMatch(company.id, activeCompany.id));
 
-    if (!hasActiveCompany && activeCompany) {
+    if (!hasActiveCompany) {
       const timeoutId = setTimeout(() => {
         switchCompany(null, { reset: false });
       }, 0);
@@ -47,15 +83,36 @@ export const CompanyProvider = ({ children }) => {
   }, [activeCompany, companies, switchCompany]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (!Array.isArray(companies) || companies.length === 0) {
       return;
     }
+
+    if (
+      activeCompany &&
+      companies.some((company) => companyIdsMatch(company.id, activeCompany.id))
+    ) {
+      return;
+    }
+
+    const storedCompanyId = getStoredActiveCompanyId();
+    const storedMatch =
+      storedCompanyId !== null
+        ? companies.find((company) => companyIdsMatch(company.id, storedCompanyId))
+        : null;
+    const targetCompany = storedMatch ?? companies[0];
+    if (!targetCompany) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => switchCompany(targetCompany, { reset: false }), 0);
+    return () => clearTimeout(timeoutId);
+  }, [companies, activeCompany, switchCompany]);
+
+  useEffect(() => {
     if (activeCompanyId) {
-      window.__ACTIVE_COMPANY_ID__ = activeCompanyId;
-      sessionStorage.setItem('activeCompanyId', String(activeCompanyId));
+      setStoredActiveCompanyId(activeCompanyId);
     } else {
-      window.__ACTIVE_COMPANY_ID__ = null;
-      sessionStorage.removeItem('activeCompanyId');
+      clearStoredActiveCompanyId();
     }
   }, [activeCompanyId]);
 

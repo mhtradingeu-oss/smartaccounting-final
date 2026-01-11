@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getSafeErrorMeta } from '../lib/errorMeta';
+import { getStoredActiveCompanyId } from '../lib/companyStorage';
 
 /**
  * API BASE URL
@@ -41,7 +42,6 @@ const api = axios.create({
 });
 
 const COMPANY_ID_HEADER = 'X-Company-Id';
-const ACTIVE_COMPANY_STORAGE_KEY = 'activeCompanyId';
 const COMPANY_OPTIONAL_ROUTES = [
   '/auth',
   '/system',
@@ -51,23 +51,6 @@ const COMPANY_OPTIONAL_ROUTES = [
   '/email-test',
   '/public',
 ];
-
-const parseCompanyId = (value) => {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : null;
-};
-
-const resolveStoredCompanyId = () => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  const active =
-    window.__ACTIVE_COMPANY_ID__ || sessionStorage.getItem(ACTIVE_COMPANY_STORAGE_KEY);
-  return parseCompanyId(active);
-};
 
 const isCompanyOptionalRoute = (path) =>
   COMPANY_OPTIONAL_ROUTES.some((prefix) => path.startsWith(prefix));
@@ -188,9 +171,9 @@ api.interceptors.request.use(
 
     const path = normalizePath(config.url);
     if (!isCompanyOptionalRoute(path)) {
-      const existingCompanyHeader =
-        config.headers?.[COMPANY_ID_HEADER] || config.headers?.[COMPANY_ID_HEADER.toLowerCase()];
-      const companyId = resolveStoredCompanyId();
+    const existingCompanyHeader =
+      config.headers?.[COMPANY_ID_HEADER] || config.headers?.[COMPANY_ID_HEADER.toLowerCase()];
+    const companyId = getStoredActiveCompanyId();
       if (!existingCompanyHeader) {
         if (!companyId) {
           const err = new Error('Company context is required for this request.');
