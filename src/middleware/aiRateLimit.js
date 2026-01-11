@@ -1,5 +1,7 @@
 // Simple per-user/company rate limiter for AI endpoints
 const { logRateLimited } = require('../services/ai/aiAuditLogger');
+const ApiError = require('../lib/errors/apiError');
+
 const rateLimitMap = new Map();
 const WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 30;
@@ -24,10 +26,13 @@ module.exports = async function aiRateLimit(req, res, next) {
       prompt: req.query.prompt || req.body?.prompt || req.body?.transcript,
       responseMode: req.body?.responseMode || req.query.responseMode,
     });
-    return res.status(429).json({
-      code: 'AI_RATE_LIMIT_EXCEEDED',
-      message: 'AI insight rate limit exceeded. Try again later.',
-    });
+    return next(
+      new ApiError(
+        429,
+        'AI_RATE_LIMIT_EXCEEDED',
+        'AI insight rate limit exceeded. Try again later.',
+      ),
+    );
   }
   next();
 };

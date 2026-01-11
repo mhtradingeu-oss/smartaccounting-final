@@ -1,4 +1,5 @@
 const express = require('express');
+const ApiError = require('../lib/errors/apiError');
 const { TaxReport, Company } = require('../models');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const { body, validationResult } = require('express-validator');
@@ -11,7 +12,7 @@ const router = express.Router();
 
 router.use(disabledFeatureHandler('Tax reporting'));
 
-router.get('/', authenticate, requireCompany, async (req, res) => {
+router.get('/', authenticate, requireCompany, async (req, res, next) => {
   try {
     const { page = 1, limit = 20, reportType, period } = req.query;
     const offset = (page - 1) * limit;
@@ -45,7 +46,7 @@ router.get('/', authenticate, requireCompany, async (req, res) => {
       currentPage: parseInt(page),
     });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    next(new ApiError(500, 'Internal server error', 'TAX_REPORTS_LIST_ERROR'));
   }
 });
 
@@ -54,7 +55,7 @@ router.get(
   authenticate,
   requireRole(['admin', 'accountant', 'auditor']),
   requireCompany,
-  async (req, res) => {
+  async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -73,12 +74,12 @@ router.get(
       });
 
       if (!taxReport) {
-        return res.status(404).json({ error: 'Tax report not found' });
+        return next(new ApiError(404, 'Tax report not found', 'TAX_REPORT_NOT_FOUND'));
       }
 
       res.json(taxReport);
     } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+      next(new ApiError(500, 'Internal server error', 'TAX_REPORTS_GET_ERROR'));
     }
   },
 );
@@ -94,20 +95,23 @@ router.post(
     body('period.quarter').optional().isInt({ min: 1, max: 4 }).withMessage('Invalid quarter'),
     body('period.month').optional().isInt({ min: 1, max: 12 }).withMessage('Invalid month'),
   ],
-  async (req, res) => {
+  async (req, res, next) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: errors.array(),
-        });
+        return next(
+          new ApiError(400, 'Validation failed', 'TAX_REPORT_VALIDATION_ERROR', {
+            details: errors.array(),
+          }),
+        );
       }
 
       const { reportType, period, data } = req.body;
 
       if (!reportType || !period) {
-        return res.status(400).json({ error: 'Report type and period are required' });
+        return next(
+          new ApiError(400, 'Report type and period are required', 'MISSING_REPORT_TYPE_PERIOD'),
+        );
       }
 
       const existingReport = await TaxReport.findOne({
@@ -149,7 +153,7 @@ router.put(
   authenticate,
   requireRole(['admin', 'accountant']),
   requireCompany,
-  async (req, res) => {
+  async (req, res, _next) => {
     try {
       const { id } = req.params;
       const { data, status } = req.body;
@@ -190,7 +194,7 @@ router.post(
   authenticate,
   requireRole(['admin', 'accountant']),
   requireCompany,
-  async (req, res) => {
+  async (req, res, _next) => {
     try {
       const { id } = req.params;
 
@@ -224,7 +228,7 @@ router.post(
   },
 );
 
-router.get('/:id/export/elster', authenticate, requireCompany, async (req, res) => {
+router.get('/:id/export/elster', authenticate, requireCompany, async (req, res, _next) => {
   try {
     const { id } = req.params;
 
@@ -258,52 +262,58 @@ router.get('/:id/export/elster', authenticate, requireCompany, async (req, res) 
   }
 });
 
-router.delete('/:id', authenticate, requireRole(['admin']), requireCompany, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const reason = (req.body?.reason || req.query?.reason || '').trim();
+router.delete(
+  '/:id',
+  authenticate,
+  requireRole(['admin']),
+  requireCompany,
+  async (req, res, _next) => {
+    try {
+      const { id } = req.params;
+      const reason = (req.body?.reason || req.query?.reason || '').trim();
 
-    if (!reason) {
-      return res
-        .status(400)
-        .json({ error: 'A documented reason is required for deleting tax reports.' });
+      if (!reason) {
+        return res
+          .status(400)
+          .json({ error: 'A documented reason is required for deleting tax reports.' });
+      }
+
+      const taxReport = await TaxReport.findOne({
+        where: {
+          id,
+          companyId: req.companyId,
+        },
+      });
+
+      if (!taxReport) {
+        return res.status(404).json({ error: 'Tax report not found' });
+      }
+
+      if (taxReport.status === 'submitted') {
+        return res.status(400).json({ error: 'Cannot delete submitted tax reports' });
+      }
+
+      const oldValues = { status: taxReport.status, reportType: taxReport.reportType };
+      await taxReport.destroy();
+
+      await AuditLogService.appendEntry({
+        action: 'TAX_REPORT_DELETED',
+        resourceType: 'TaxReport',
+        resourceId: String(taxReport.id),
+        userId: req.user.id,
+        oldValues,
+        newValues: { deletedAt: new Date().toISOString(), reason },
+        reason,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+
+      res.json({ message: 'Tax report deleted successfully', reason });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
     }
-
-    const taxReport = await TaxReport.findOne({
-      where: {
-        id,
-        companyId: req.companyId,
-      },
-    });
-
-    if (!taxReport) {
-      return res.status(404).json({ error: 'Tax report not found' });
-    }
-
-    if (taxReport.status === 'submitted') {
-      return res.status(400).json({ error: 'Cannot delete submitted tax reports' });
-    }
-
-    const oldValues = { status: taxReport.status, reportType: taxReport.reportType };
-    await taxReport.destroy();
-
-    await AuditLogService.appendEntry({
-      action: 'TAX_REPORT_DELETED',
-      resourceType: 'TaxReport',
-      resourceId: String(taxReport.id),
-      userId: req.user.id,
-      oldValues,
-      newValues: { deletedAt: new Date().toISOString(), reason },
-      reason,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-    });
-
-    res.json({ message: 'Tax report deleted successfully', reason });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  },
+);
 
 router.post(
   '/generate',
@@ -316,7 +326,7 @@ router.post(
     body('period.quarter').optional().isInt({ min: 1, max: 4 }).withMessage('Invalid quarter'),
     body('period.month').optional().isInt({ min: 1, max: 12 }).withMessage('Invalid month'),
   ],
-  async (req, res) => {
+  async (req, res, _next) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {

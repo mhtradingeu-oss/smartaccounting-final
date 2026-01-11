@@ -1,5 +1,6 @@
 const express = require('express');
 const logger = require('../lib/logger');
+const ApiError = require('../lib/errors/apiError');
 const { authenticate, requireCompany } = require('../middleware/authMiddleware');
 const germanTaxCompliance = require('../services/germanTaxCompliance');
 const elsterService = require('../services/elsterService');
@@ -7,15 +8,16 @@ const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
 
-router.use(disabledFeatureHandler('VAT/tax reporting'));
+// Explicitly block unsupported methods for VAT/tax reporting endpoints
+router.all('/vat/*', disabledFeatureHandler('VAT/tax reporting'));
 router.use(authenticate);
 router.use(requireCompany);
 
-router.get('/eur/:year', async (req, res) => {
+router.get('/eur/:year', async (req, res, next) => {
   try {
     const year = parseInt(req.params.year);
     if (year < 2020 || year > new Date().getFullYear()) {
-      return res.status(400).json({ error: 'Invalid year' });
+      return next(new ApiError(400, 'Invalid year', 'INVALID_YEAR'));
     }
 
     const eurData = await germanTaxCompliance.calculateEUR(req.companyId, year);
@@ -25,18 +27,22 @@ router.get('/eur/:year', async (req, res) => {
       data: eurData,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate EÜR' });
+    next(new ApiError(500, 'Failed to generate EÜR', 'EUE_GENERATION_ERROR'));
   }
 });
 
-router.post('/vat-return', async (req, res) => {
+router.post('/vat-return', async (req, res, next) => {
   try {
     const { year, quarter, month } = req.body;
 
     if (!year || (!quarter && !month)) {
-      return res.status(400).json({
-        error: 'Year and either quarter or month must be provided',
-      });
+      return next(
+        new ApiError(
+          400,
+          'Year and either quarter or month must be provided',
+          'INVALID_VAT_PARAMS',
+        ),
+      );
     }
 
     const vatReturn = await germanTaxCompliance.generateVATReturn(req.companyId, {
@@ -50,32 +56,29 @@ router.post('/vat-return', async (req, res) => {
       data: vatReturn,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate VAT return' });
+    next(new ApiError(500, 'Failed to generate VAT return', 'VAT_GENERATION_ERROR'));
   }
 });
 
-router.post('/elster-export', async (req, res) => {
+router.post('/elster-export', async (req, res, next) => {
   try {
     const { vatReturn } = req.body;
 
     if (!vatReturn) {
-      return res.status(400).json({ error: 'VAT return data is required' });
+      return next(new ApiError(400, 'VAT return data is required', 'MISSING_VAT_RETURN'));
     }
 
-    const elsterExport = await germanTaxCompliance.generateElsterExport(
-      req.companyId,
-      vatReturn,
-    );
+    const elsterExport = await germanTaxCompliance.generateElsterExport(req.companyId, vatReturn);
 
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Content-Disposition', `attachment; filename="${elsterExport.filename}"`);
     res.send(elsterExport.xml);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate ELSTER export' });
+    next(new ApiError(500, 'Failed to generate ELSTER export', 'ELSTER_EXPORT_ERROR'));
   }
 });
 
-router.get('/kleinunternehmer/:year', async (req, res) => {
+router.get('/kleinunternehmer/:year', async (req, res, next) => {
   try {
     const year = parseInt(req.params.year);
 
@@ -89,16 +92,18 @@ router.get('/kleinunternehmer/:year', async (req, res) => {
       data: eligibility,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check Kleinunternehmer eligibility' });
+    next(
+      new ApiError(500, 'Failed to check Kleinunternehmer eligibility', 'KLEINUNTERNEHMER_ERROR'),
+    );
   }
 });
 
-router.post('/validate-transaction', async (req, res) => {
+router.post('/validate-transaction', async (req, res, next) => {
   try {
     const { transaction } = req.body;
 
     if (!transaction) {
-      return res.status(400).json({ error: 'Transaction data is required' });
+      return next(new ApiError(400, 'Transaction data is required', 'MISSING_TRANSACTION'));
     }
 
     const compliance = germanTaxCompliance.validateGoBDCompliance(transaction);
@@ -108,11 +113,11 @@ router.post('/validate-transaction', async (req, res) => {
       data: compliance,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to validate transaction' });
+    next(new ApiError(500, 'Failed to validate transaction', 'TRANSACTION_VALIDATION_ERROR'));
   }
 });
 
-router.post('/submit', async (req, res) => {
+router.post('/submit', async (req, res, next) => {
   try {
     const { reportType, period, data, submitToElster = false } = req.body;
     const companyId = req.companyId;
@@ -121,10 +126,7 @@ router.post('/submit', async (req, res) => {
     const company = await Company.findByPk(companyId);
 
     if (!company) {
-      return res.status(404).json({
-        success: false,
-        message: 'Company not found',
-      });
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
     }
 
     const taxReport = {
@@ -199,11 +201,7 @@ router.post('/submit', async (req, res) => {
     });
   } catch (error) {
     logger.error('Failed to submit tax report', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit tax report',
-      error: error.message,
-    });
+    next(new ApiError(500, 'Failed to submit tax report', 'TAX_SUBMIT_ERROR'));
   }
 });
 

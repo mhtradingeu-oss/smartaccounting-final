@@ -1,4 +1,5 @@
 const permissions = require('./permissions');
+const ApiError = require('../lib/errors/apiError');
 
 const normalizePath = (path) => {
   return path.replace(/\/\d+/g, '/:id').replace(/\/[a-f0-9-]{36}/gi, '/:id');
@@ -25,20 +26,12 @@ const permissionGuard = () => {
   return (req, res, next) => {
     const role = req.user?.role;
     if (!role) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required',
-        code: 'AUTH_MISSING',
-      });
+      return next(new ApiError(401, 'AUTH_MISSING', 'Authentication required'));
     }
 
     const rolePerms = permissions[role];
     if (!rolePerms) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Role not allowed',
-        code: 'ROLE_UNKNOWN',
-      });
+      return next(new ApiError(403, 'ROLE_UNKNOWN', 'Role not allowed'));
     }
 
     if (rolePerms.allow.includes('*')) {
@@ -55,11 +48,7 @@ const permissionGuard = () => {
     const allowed = rolePerms.allow.some((rule) => matchRule(rule, method, path));
 
     if (!allowed) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Access denied',
-        code: 'PERMISSION_DENIED',
-      });
+      return next(new ApiError(403, 'PERMISSION_DENIED', 'Access denied'));
     }
 
     next();

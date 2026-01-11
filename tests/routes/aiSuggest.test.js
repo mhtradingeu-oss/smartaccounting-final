@@ -17,7 +17,7 @@ describe('AI Suggestions API', () => {
     originalEnv = { ...process.env };
     process.env.AI_SUGGESTIONS_ENABLED = 'false';
 
-    company = await createTestCompany();
+    company = await createTestCompany({ subscriptionPlan: 'pro' });
     admin = await testUtils.createTestUser({ role: 'admin', companyId: company.id });
     adminToken = testUtils.createAuthToken(admin.id, admin.companyId);
   });

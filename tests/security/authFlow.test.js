@@ -42,6 +42,7 @@ rbacTestRouter.get('/viewer-only', authenticate, requireRole(['viewer']), (_req,
 const rbacApp = express();
 rbacApp.use(express.json());
 rbacApp.use(rbacTestRouter);
+rbacApp.use(errorHandler);
 
 const errorApp = express();
 errorApp.use(requestIdMiddleware);
@@ -95,7 +96,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
         headers: { Authorization: `Bearer ${expiredToken}` },
       });
       expect(response.status).toBe(401);
-      expect(response.body.code).toBe('TOKEN_INVALID');
+      expect(response.body.errorCode).toBe('TOKEN_INVALID');
     });
 
     test('refresh endpoint rotates refresh tokens and rejects replayed values', async () => {
@@ -161,7 +162,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       expect(meAfterLogout.status).toBe(401);
-      expect(meAfterLogout.body.code).toBe('TOKEN_REVOKED');
+      expect(meAfterLogout.body.errorCode).toBe('TOKEN_REVOKED');
 
       const refreshAfterLogout = await global.requestApp({
         app,
@@ -195,7 +196,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
       expect(allowed.status).toBe(200);
       const blocked = await requestRbac('admin-only', loginResult.token);
       expect(blocked.status).toBe(403);
-      expect(blocked.body.code).toBe('INSUFFICIENT_ROLE');
+      expect(blocked.body.errorCode).toBe('INSUFFICIENT_ROLE');
     });
 
     test('auditor can access auditor-only routes but not accountant-only', async () => {
@@ -208,7 +209,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
       expect(allowed.status).toBe(200);
       const blocked = await requestRbac('accountant-only', loginResult.token);
       expect(blocked.status).toBe(403);
-      expect(blocked.body.code).toBe('INSUFFICIENT_ROLE');
+      expect(blocked.body.errorCode).toBe('INSUFFICIENT_ROLE');
     });
 
     test('viewer is limited to viewer-only routes and denied auditor-specific', async () => {
@@ -221,7 +222,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
       expect(allowed.status).toBe(200);
       const blocked = await requestRbac('auditor-only', loginResult.token);
       expect(blocked.status).toBe(403);
-      expect(blocked.body.code).toBe('INSUFFICIENT_ROLE');
+      expect(blocked.body.errorCode).toBe('INSUFFICIENT_ROLE');
     });
   });
 
@@ -252,7 +253,7 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
         password: await bcrypt.hash(LOGIN_PASSWORD, 10),
         firstName: 'NoCompany',
         lastName: 'User',
-        role: 'viewer',
+        role: 'accountant',
         isActive: true,
         companyId: null,
       });
@@ -264,10 +265,13 @@ describe('Security: Auth flow, RBAC, and middleware invariants', () => {
         app,
         method: 'GET',
         url: '/api/companies',
-        headers: { Authorization: `Bearer ${loginResult.token}`, 'x-company-id': global.testCompany?.id },
+        headers: {
+          Authorization: `Bearer ${loginResult.token}`,
+          'x-company-id': global.testCompany?.id,
+        },
       });
       expect(companyRes.status).toBe(403);
-      expect(companyRes.body.code).toBe('COMPANY_CONTEXT_INVALID');
+      expect(companyRes.body.errorCode).toBe('COMPANY_CONTEXT_INVALID');
     });
   });
 });

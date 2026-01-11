@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const ApiError = require('../lib/errors/apiError');
 const logger = require('../lib/logger');
 const router = express.Router();
 
@@ -25,7 +26,7 @@ function sanitizeErrorPayload(payload) {
 }
 
 // POST /api/telemetry/client-error
-router.post('/client-error', telemetryLimiter, (req, res) => {
+router.post('/client-error', telemetryLimiter, (req, res, next) => {
   try {
     // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
     const { message, route, buildVersion, featureFlags, errorType, stack, ...rest } =
@@ -49,7 +50,7 @@ router.post('/client-error', telemetryLimiter, (req, res) => {
     res.status(200).json({ success: true });
   } catch (err) {
     logger.error('Failed to process client telemetry', { error: err.message });
-    res.status(500).json({ error: 'Failed to process telemetry' });
+    next(new ApiError(500, 'Failed to process telemetry', 'TELEMETRY_PROCESS_ERROR'));
   }
 });
 

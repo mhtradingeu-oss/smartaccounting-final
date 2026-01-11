@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const ApiError = require('../lib/errors/apiError');
 const { body, param } = require('express-validator');
 const { User, Company } = require('../models');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
@@ -68,7 +69,7 @@ router.post(
 
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
-        return res.status(400).json({ error: 'User with this email already exists' });
+        return next(new ApiError(400, 'User with this email already exists', 'USER_EMAIL_EXISTS'));
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
@@ -111,7 +112,7 @@ router.put(
       });
 
       if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+        return next(new ApiError(404, 'User not found', 'USER_NOT_FOUND'));
       }
 
       const updates = {};
@@ -123,7 +124,7 @@ router.put(
       }
 
       if (!Object.keys(updates).length) {
-        return res.status(400).json({ error: 'No updatable fields provided' });
+        return next(new ApiError(400, 'No updatable fields provided', 'NO_UPDATABLE_FIELDS'));
       }
 
       const before = { role: user.role, isActive: user.isActive };
@@ -183,11 +184,11 @@ router.delete('/:userId', requireRole(['admin']), async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return next(new ApiError(404, 'User not found', 'USER_NOT_FOUND'));
     }
 
     if (user.id === req.user.id) {
-      return res.status(400).json({ error: 'Cannot delete your own account' });
+      return next(new ApiError(400, 'Cannot delete your own account', 'CANNOT_DELETE_SELF'));
     }
 
     await AuditLogService.appendEntry({

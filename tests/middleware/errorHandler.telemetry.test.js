@@ -32,7 +32,7 @@ describe('errorHandler telemetry', () => {
     const mockReportError = jest.fn();
     let loggedLevel = null;
 
-    jest.doMock('../../src/lib/telemetryReporter', () => ({
+    jest.doMock('../../src/services/telemetry', () => ({
       reportError: mockReportError,
     }));
 

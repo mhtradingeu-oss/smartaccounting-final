@@ -60,6 +60,7 @@ const { createApiTimeoutMiddleware } = require('./middleware/apiTimeout');
 const { maintenanceMiddleware } = require('./middleware/maintenanceMode');
 const { specs, swaggerOptions } = require('./config/swagger');
 const appVersion = require('./config/appVersion');
+const ApiError = require('./lib/errors/apiError');
 
 const getCacheStatus = () => {
   if (!cache || typeof cache.getStats !== 'function') {
@@ -180,7 +181,11 @@ const healthHandler = async (req, res) => {
     payload.db.error = dbError;
   }
 
-  res.status(dbStatus === 'connected' ? 200 : 503).json(payload);
+  if (dbStatus === 'connected') {
+    res.status(200).json(payload);
+  } else {
+    res.status(503).json(payload);
+  }
 };
 
 const readyHandler = async (req, res) => {
@@ -302,6 +307,9 @@ app.use(`${API_PREFIX}/logs`, logRoutes);
 app.use(`${API_PREFIX}/exports`, exportRoutes);
 app.use(`${API_PREFIX}/email-test`, emailTestRoutes);
 app.use(`${API_PREFIX}/expenses`, expenseRoutes);
+app.get(`${API_PREFIX}/ai/suggest`, (req, res, next) => {
+  return next(new ApiError(501, 'AI_SUGGEST_NOT_READY', 'AI suggestions are not production-ready'));
+});
 
 // --------------------------------------------------
 // Fallback & Error handling

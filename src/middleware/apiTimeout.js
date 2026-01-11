@@ -1,4 +1,5 @@
 const logger = require('../lib/logger');
+const ApiError = require('../lib/errors/apiError');
 
 const API_PREFIX = process.env.API_BASE_URL || '/api';
 
@@ -63,14 +64,10 @@ const createApiTimeoutMiddleware = (options = {}) => {
         userId: req.user?.id,
       });
 
-      res.status(504).json({
-        status: 'error',
-        message: 'Request timed out',
-        timeoutMs,
-        requestId,
-      });
-
       timeoutState.value = true;
+      return next(
+        new ApiError(504, 'REQUEST_TIMEOUT', 'Request timed out', { timeoutMs, requestId }),
+      );
     };
 
     const timer = setTimeout(timedOut, timeoutMs);

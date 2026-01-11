@@ -1,7 +1,7 @@
 const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const aiReadGateway = require('../services/ai/aiReadGateway');
-const aiRouteGuard = require('../middleware/aiRouteGuard');
+const { aiRouteGuard } = require('../middleware/aiRouteGuard');
 const aiInsightsService = require('../services/ai/aiInsightsService');
 const aiReadOnlyRouter = require('./aiReadOnly');
 const voiceRouter = require('./ai/voice');
@@ -18,12 +18,10 @@ router.use('/read', aiReadOnlyRouter);
 router.use('/governance', governanceRouter);
 router.use('/voice', voiceRouter);
 
-const respondWithError = (req, res, status, error) => {
-  return res.status(status).json({ error, requestId: req.requestId });
-};
+const ApiError = require('../lib/errors/apiError');
 
-const respondMutationDisabled = (featureName) => (req, res) =>
-  respondWithError(req, res, 501, `${featureName} is disabled`);
+const respondMutationDisabled = (featureName) => (req, res, next) =>
+  next(new ApiError(501, `${featureName} is disabled`, 'AI_MUTATION_DISABLED'));
 
 router.post(
   '/insights/:id/decisions',
@@ -87,43 +85,41 @@ async function proxyAiGatewayCall(req, promptKey, params = {}) {
   };
 }
 
-readRouter.get('/insights', async (req, res) => {
+readRouter.get('/insights', async (req, res, next) => {
   try {
     const params = { ...req.query };
     const { status, body } = await proxyAiGatewayCall(req, 'insights_list', params);
     return res.status(status).json(body);
   } catch (err) {
-    return respondWithError(req, res, 500, err.message || 'Internal server error');
+    return next(new ApiError(500, 'INTERNAL_ERROR', err.message || 'Internal server error'));
   }
 });
 
-readRouter.get('/exports/insights.json', async (req, res) => {
+readRouter.get('/exports/insights.json', async (req, res, next) => {
   try {
     const params = { ...req.query, format: 'json' };
     const { status, body } = await proxyAiGatewayCall(req, 'insights_export_json', params);
     return res.status(status).json(body);
   } catch (err) {
-    return respondWithError(req, res, 500, err.message || 'Internal server error');
+    return next(new ApiError(500, 'INTERNAL_ERROR', err.message || 'Internal server error'));
   }
 });
 
-readRouter.get('/exports/insights.csv', async (req, res) => {
+readRouter.get('/exports/insights.csv', async (req, res, next) => {
   try {
     const params = { ...req.query, format: 'csv' };
     const { status, body } = await proxyAiGatewayCall(req, 'insights_export_csv', params);
     if (status === 200) {
       res.setHeader('Content-Type', 'text/csv');
       const csvPayload =
-        typeof body === 'string'
-          ? body
-          : body?.csv || body?.data || body?.data?.csv;
+        typeof body === 'string' ? body : body?.csv || body?.data || body?.data?.csv;
       if (typeof csvPayload === 'string') {
         return res.status(200).send(csvPayload);
       }
     }
     return res.status(status).json(body);
   } catch (err) {
-    return respondWithError(req, res, 500, err.message || 'Internal server error');
+    return next(new ApiError(500, 'INTERNAL_ERROR', err.message || 'Internal server error'));
   }
 });
 

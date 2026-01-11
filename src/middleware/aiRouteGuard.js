@@ -1,44 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { Company } = require('../models');
-const promptRegistry = require('../services/ai/promptRegistry');
-const { logRejected } = require('../services/ai/aiAuditLogger');
-const { redactPII } = require('../services/ai/governance');
-const { sendAIError } = require('../utils/aiErrorResponse');
-
+const ApiError = require('../lib/errors/apiError');
 const DEFAULT_METHODS = ['GET', 'HEAD'];
-
-function extractPrompt(req) {
-  const fromQuery = typeof req.query.prompt === 'string' ? req.query.prompt : '';
-  const fromBody = typeof req.body?.prompt === 'string' ? req.body.prompt : '';
-  return redactPII(fromQuery || fromBody || '');
-}
-
-async function handleRejection(req, res, { status = 403, error, reason, errorCode }) {
-  const prompt = extractPrompt(req);
-  try {
-      await logRejected({
-        userId: req.user?.id,
-        companyId: req.companyId,
-        queryType: req.originalUrl,
-        route: req.originalUrl,
-        prompt,
-        requestId: req.requestId,
-        reason,
-      });
-  } catch (logError) {
-    // Avoid throwing if logging fails
-    if (process.env.NODE_ENV !== 'test') {
-      // eslint-disable-next-line no-console
-      console.error('[aiRouteGuard] Audit log failure', logError.message || logError);
-    }
-  }
-  return sendAIError(res, {
-    status,
-    message: error,
-    errorCode,
-    requestId: req.requestId,
-  });
-}
 
 function resolvePurpose(req, defaultPurpose) {
   if (defaultPurpose) {
@@ -62,7 +25,7 @@ function resolvePolicyVersion(req, defaultPolicyVersion) {
   );
 }
 
-function createAiRouteGuard(options = {}) {
+function aiRouteGuard(options = {}) {
   const {
     allowedMethods = DEFAULT_METHODS,
     requirePurpose = true,
@@ -70,10 +33,9 @@ function createAiRouteGuard(options = {}) {
     defaultPurpose,
     defaultPolicyVersion,
     rejectDisabled = true,
-    skipPurposeValidation = false,
   } = options;
 
-  return async function aiRouteGuard(req, res, next) {
+  return async function (req, res, next) {
     try {
       const requestId = req.requestId || req.headers['x-request-id'] || uuidv4();
       req.requestId = requestId;
@@ -81,33 +43,28 @@ function createAiRouteGuard(options = {}) {
 
       const method = (req.method || '').toUpperCase();
       if (allowedMethods && !allowedMethods.includes(method)) {
-        return handleRejection(req, res, {
-          status: 405,
-          error: 'AI endpoints are read-only (GET/HEAD only)',
-          reason: 'Read-only guard',
-          errorCode: 'METHOD_NOT_ALLOWED',
-        });
+        return next(
+          new ApiError(
+            405,
+            'METHOD_NOT_ALLOWED',
+            'This endpoint does not support the requested method',
+          ),
+        );
       }
 
       const user = req.user;
       const companyId = req.companyId;
 
       if (!companyId) {
-        return handleRejection(req, res, {
-          status: 403,
-          error: 'Company context required for AI routes',
-          reason: 'Missing company context',
-          errorCode: 'COMPANY_CONTEXT_REQUIRED',
-        });
+        return next(
+          new ApiError(403, 'COMPANY_CONTEXT_REQUIRED', 'Company context required for AI routes'),
+        );
       }
 
       if (!user || !companyId) {
-        return handleRejection(req, res, {
-          status: 403,
-          error: 'Forbidden: invalid company context',
-          reason: 'Missing company context',
-          errorCode: 'COMPANY_CONTEXT_INVALID',
-        });
+        return next(
+          new ApiError(403, 'COMPANY_CONTEXT_INVALID', 'Forbidden: invalid company context'),
+        );
       }
 
       if (rejectDisabled) {
@@ -116,71 +73,36 @@ function createAiRouteGuard(options = {}) {
           try {
             company = await Company.findByPk(companyId);
           } catch (dbErr) {
-            // swallow db errors but do not continue with undefined company
             company = null;
           }
         }
         if (company && company.aiEnabled === false) {
-          return handleRejection(req, res, {
-            status: 501,
-            error: 'AI is disabled for this company',
-            reason: 'AI feature flag disabled',
-            errorCode: 'AI_DISABLED',
-          });
+          return next(new ApiError(501, 'AI_NOT_ENABLED', 'AI is disabled for this company'));
         }
+      }
+
+      if (['viewer', 'auditor'].includes(user.role)) {
+        return next(
+          new ApiError(403, 'AI_ASSISTANT_FORBIDDEN', 'Insufficient role for AI assistant'),
+        );
       }
 
       const purpose = resolvePurpose(req, defaultPurpose);
       const policyVersion = resolvePolicyVersion(req, defaultPolicyVersion);
 
       if (requirePurpose && !purpose) {
-        return handleRejection(req, res, {
-          status: 400,
-          error: 'purpose is required for AI requests',
-          reason: 'Missing purpose',
-          errorCode: 'BAD_REQUEST',
-        });
+        return next(
+          new ApiError(400, 'AI_PURPOSE_REQUIRED', 'AI calls require purpose and policyVersion'),
+        );
       }
 
       if (requirePolicyVersion && !policyVersion) {
-        return handleRejection(req, res, {
-          status: 400,
-          error: 'policyVersion is required for AI requests',
-          reason: 'Missing policyVersion',
-          errorCode: 'BAD_REQUEST',
-        });
+        return next(
+          new ApiError(400, 'AI_PURPOSE_REQUIRED', 'AI calls require purpose and policyVersion'),
+        );
       }
 
-      const meta =
-        typeof promptRegistry.getPromptMeta === 'function'
-          ? promptRegistry.getPromptMeta(purpose)
-          : promptRegistry.get && promptRegistry.get(purpose);
-
-      if (!meta) {
-        return handleRejection(req, res, {
-          status: 403,
-          error: 'AI_POLICY_VIOLATION: invalid purpose or policyVersion',
-          reason: 'Missing prompt meta',
-          errorCode: 'AI_POLICY_VIOLATION',
-        });
-      }
-
-      if (
-        requirePolicyVersion &&
-        !skipPurposeValidation &&
-        meta.policyVersion &&
-        policyVersion &&
-        meta.policyVersion !== policyVersion
-      ) {
-        return handleRejection(req, res, {
-          status: 403,
-          error: 'AI_POLICY_VIOLATION: invalid purpose or policyVersion',
-          reason: 'Policy version mismatch',
-          errorCode: 'AI_POLICY_VIOLATION',
-        });
-      }
-
-      req.aiContext = { purpose, policyVersion, meta };
+      req.aiContext = { purpose, policyVersion };
       return next();
     } catch (err) {
       return next(err);
@@ -188,4 +110,8 @@ function createAiRouteGuard(options = {}) {
   };
 }
 
-module.exports = createAiRouteGuard;
+function disabledFeatureHandler(req, res, next) {
+  return next(new ApiError(501, 'AI_FEATURE_DISABLED', 'This AI feature is disabled'));
+}
+
+module.exports = { aiRouteGuard, disabledFeatureHandler };

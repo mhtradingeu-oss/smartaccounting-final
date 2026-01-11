@@ -1,4 +1,5 @@
 const { getMaintenanceState } = require('../lib/maintenanceMode');
+const ApiError = require('../lib/errors/apiError');
 
 const maintenanceMiddleware = (req, res, next) => {
   const state = getMaintenanceState();
@@ -10,12 +11,11 @@ const maintenanceMiddleware = (req, res, next) => {
     return next();
   }
 
-  return res.status(503).json({
-    status: 'error',
-    message: 'System is in maintenance mode',
-    reason: state.reason || null,
-    code: 'MAINTENANCE_MODE',
-  });
+  return next(
+    new ApiError(503, 'MAINTENANCE_MODE', 'System is in maintenance mode', {
+      reason: state.reason || null,
+    }),
+  );
 };
 
 module.exports = {

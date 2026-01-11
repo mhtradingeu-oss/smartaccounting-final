@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const ApiError = require('../lib/errors/apiError');
 const logger = require('../lib/logger');
 const { authenticate } = require('../middleware/authMiddleware');
 const router = express.Router();
@@ -65,7 +66,7 @@ function sanitizeLogBody(body) {
   return sanitized;
 }
 
-router.post('/', authenticate, logsLimiter, (req, res) => {
+router.post('/', authenticate, logsLimiter, (req, res, next) => {
   try {
     const sanitized = sanitizeLogBody(req.body || {});
     // Never log forbidden keys at top level
@@ -100,7 +101,7 @@ router.post('/', authenticate, logsLimiter, (req, res) => {
     res.status(200).json({ success: true });
   } catch (error) {
     logger.error('Failed to process frontend log', { error: error.message });
-    res.status(500).json({ error: 'Failed to process log' });
+    next(new ApiError(500, 'Failed to process log', 'LOG_PROCESS_ERROR'));
   }
 });
 
