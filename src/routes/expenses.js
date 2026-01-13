@@ -2,6 +2,10 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const expenseService = require('../services/expenseService');
 const { expenseSchema } = require('../validators/expenseValidator');
+const {
+  normalizeExpensePayload,
+  logDemoAutoFills,
+} = require('../utils/demoPayloadNormalizer');
 
 const router = express.Router();
 
@@ -42,7 +46,23 @@ router.get(
 
 // Create expense (manual entry)
 router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) => {
-  const { error, value } = expenseSchema.validate(req.body, {
+  // Demo mode: normalize payload with auto-fills
+  const { normalizedData, demoFills } = normalizeExpensePayload(
+    req.body,
+    req.userId,
+    req.companyId,
+  );
+
+  // Log demo auto-fills to audit trail
+  logDemoAutoFills(demoFills, {
+    userId: req.userId,
+    companyId: req.companyId,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    originalPayload: req.body,
+  });
+
+  const { error, value } = expenseSchema.validate(normalizedData, {
     abortEarly: false,
     stripUnknown: true,
   });
@@ -53,19 +73,21 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
   }
 
   try {
-    const { systemContext, reason } = req.body;
+    const { systemContext, reason } = normalizedData;
     const expense = await expenseService.createExpense(value, req.userId, req.companyId, {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
       userId: req.userId,
       ...(systemContext ? { ...systemContext } : {}),
       ...(reason ? { reason } : {}),
+      demoFills: demoFills.length > 0 ? demoFills : undefined,
     });
     res.status(201).json({
       success: true,
       expense,
       systemContext: systemContext || null,
       reason: reason || null,
+      demoFills: demoFills.length > 0 ? demoFills : undefined,
     });
   } catch (error) {
     next(error);

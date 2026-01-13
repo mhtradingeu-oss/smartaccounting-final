@@ -20,6 +20,7 @@ const { performanceMonitor } = require('../middleware/performance');
 const logger = require('../lib/logger');
 const buildMetadata = require('../config/buildMetadata');
 const { getSystemPlansFallback } = require('../services/planService');
+const demoSimulationService = require('../services/demoSimulationService');
 
 const router = express.Router();
 
@@ -539,7 +540,24 @@ router.get('/audit-logs', async (req, res, next) => {
         'companyId',
       ],
     });
-    res.json({ logs });
+
+    // If no logs and demo mode enabled, generate demo logs
+    if (logs.length === 0 && demoSimulationService.DEMO_MODE_ENABLED) {
+      demoSimulationService.logDemoSimulation('system_audit_logs', { limit });
+      const demoLogs = demoSimulationService.generateDemoAuditLogs(null, null, Math.min(limit, 10));
+
+      return res.json({
+        logs: demoLogs,
+        demo: true,
+        _simulated: true,
+        message: 'Simulated audit logs for demo environment',
+      });
+    }
+
+    res.json({
+      logs,
+      demo: false,
+    });
   } catch (error) {
     logger.error('System audit logs error:', error);
     next(new ApiError(500, 'Failed to load audit logs', 'AUDIT_LOGS_ERROR'));

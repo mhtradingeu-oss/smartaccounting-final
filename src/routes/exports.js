@@ -12,6 +12,7 @@ const {
 const AuditLogService = require('../services/auditLogService');
 const { Op } = require('sequelize');
 const { buildDatevExport } = require('../services/datevExportService');
+const demoSimulationService = require('../services/demoSimulationService');
 
 const router = express.Router();
 
@@ -243,10 +244,29 @@ router.get('/vat-summaries', requireRole(['auditor']), async (req, res) => {
       companyId: req.companyId,
       ...buildDateWhere('createdAt', from, to),
     };
-    const reports = await TaxReport.findAll({
+    let reports = await TaxReport.findAll({
       where,
       order: [['createdAt', 'DESC']],
     });
+
+    // If no reports and demo mode enabled, generate demo VAT summary
+    if (reports.length === 0 && demoSimulationService.DEMO_MODE_ENABLED) {
+      demoSimulationService.logDemoSimulation('vat_summaries_export', { from, to });
+      const demoVatSummary = demoSimulationService.generateDemoVatSummary(to);
+
+      if (format === 'json') {
+        return res.json({
+          success: true,
+          summaries: [demoVatSummary],
+          demo: true,
+          _simulated: true,
+          message: 'Simulated VAT summary for demo environment',
+        });
+      }
+      // For CSV/PDF, include demo marker
+      reports = [{ data: demoVatSummary, period: demoVatSummary.period, status: 'DEMO', _demo: true }];
+    }
+
     if (format === 'csv') {
       const headers = [
         'id',
@@ -259,8 +279,8 @@ router.get('/vat-summaries', requireRole(['auditor']), async (req, res) => {
         'data',
       ];
       const rows = reports.map((report) => ({
-        id: report.id,
-        reportType: report.reportType,
+        id: report.id || '[DEMO]',
+        reportType: report.reportType || 'vat_summary',
         period: report.period,
         status: report.status,
         year: report.year,

@@ -2,6 +2,11 @@ const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const invoiceService = require('../services/invoiceService');
 const { withAuditLog } = require('../services/withAuditLog');
+const {
+  normalizeInvoicePayload,
+  logDemoAutoFills,
+} = require('../utils/demoPayloadNormalizer');
+const demoSimulationService = require('../services/demoSimulationService');
 
 const router = express.Router();
 
@@ -16,6 +21,54 @@ router.get(
     try {
       const logs = await invoiceService.getInvoiceAuditLog(req.params.invoiceId, req.companyId);
       res.status(200).json({ success: true, auditLog: logs });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// Get payment history for invoice (demo simulation if empty)
+router.get(
+  '/:invoiceId/payments',
+  requireRole(['admin', 'accountant', 'auditor', 'viewer']),
+  async (req, res, next) => {
+    try {
+      const invoiceId = req.params.invoiceId;
+      const invoice = await invoiceService.getInvoiceById(invoiceId, req.companyId);
+
+      if (!invoice) {
+        return res.status(404).json({ success: false, message: 'Invoice not found' });
+      }
+
+      // Try to get real payments from invoiceService if available
+      let payments = [];
+      try {
+        if (invoiceService.getInvoicePayments) {
+          payments = await invoiceService.getInvoicePayments(invoiceId, req.companyId);
+        }
+      } catch (err) {
+        // Payments endpoint may not exist - continue without error
+      }
+
+      // If no payments and demo mode enabled, generate demo payments
+      if (payments.length === 0 && demoSimulationService.DEMO_MODE_ENABLED) {
+        demoSimulationService.logDemoSimulation('invoice_payment_history', { invoiceId });
+        payments = demoSimulationService.generateDemoInvoicePayments(invoiceId, invoice.total || 1190);
+
+        return res.status(200).json({
+          success: true,
+          payments,
+          demo: true,
+          _simulated: true,
+          message: 'Simulated payment history for demo environment',
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        payments,
+        demo: false,
+      });
     } catch (error) {
       next(error);
     }
@@ -140,6 +193,22 @@ router.get(
 
 // Create invoice (with items, attachments)
 router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) => {
+  // Demo mode: normalize payload with auto-fills
+  const { normalizedData, demoFills } = normalizeInvoicePayload(
+    req.body,
+    req.userId,
+    req.companyId,
+  );
+
+  // Log demo auto-fills to audit trail
+  logDemoAutoFills(demoFills, {
+    userId: req.userId,
+    companyId: req.companyId,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    originalPayload: req.body,
+  });
+
   try {
     const invoice = await withAuditLog(
       {
@@ -148,13 +217,18 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
         resourceId: null,
         userId: req.userId,
         oldValues: null,
-        newValues: req.body,
+        newValues: normalizedData,
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
+        demoFills: demoFills.length > 0 ? demoFills : undefined,
       },
-      async () => invoiceService.createInvoice(req.body, req.userId, req.companyId),
+      async () => invoiceService.createInvoice(normalizedData, req.userId, req.companyId),
     );
-    res.status(201).json({ success: true, invoice });
+    res.status(201).json({
+      success: true,
+      invoice,
+      demoFills: demoFills.length > 0 ? demoFills : undefined,
+    });
   } catch (error) {
     next(error);
   }

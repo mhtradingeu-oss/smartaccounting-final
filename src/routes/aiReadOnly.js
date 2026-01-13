@@ -12,6 +12,7 @@ const { randomUUID } = require('crypto');
 const { redactPII } = require('../services/ai/governance');
 const { isAssistantRoleAllowed } = require('../services/ai/assistantAuthorization');
 const ApiError = require('../lib/errors/apiError');
+const demoSimulationService = require('../services/demoSimulationService');
 
 const router = express.Router();
 
@@ -95,6 +96,18 @@ router.get('/invoice-summary', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
+      // If AI failed and demo mode enabled, return demo data instead
+      if (demoSimulationService.DEMO_MODE_ENABLED) {
+        demoSimulationService.logDemoSimulation('invoice_summary_fallback', { invoiceId });
+        const demoSummary = demoSimulationService.generateDemoInvoiceSummary(invoiceId);
+        return res.json({
+          summary: demoSummary,
+          requestId: req.requestId,
+          demo: true,
+          _simulated: true,
+          message: 'Simulated invoice summary (AI unavailable in demo)',
+        });
+      }
       return next(
         new ApiError(
           status,
@@ -103,7 +116,21 @@ router.get('/invoice-summary', async (req, res, next) => {
         ),
       );
     }
-    res.json({ summary: body?.data || null, requestId: req.requestId });
+
+    // If AI returned null/empty and demo mode enabled, provide demo data
+    if (!body?.data && demoSimulationService.DEMO_MODE_ENABLED) {
+      demoSimulationService.logDemoSimulation('invoice_summary_empty_fallback', { invoiceId });
+      const demoSummary = demoSimulationService.generateDemoInvoiceSummary(invoiceId);
+      return res.json({
+        summary: demoSummary,
+        requestId: req.requestId,
+        demo: true,
+        _simulated: true,
+        message: 'Simulated invoice summary (no real data available)',
+      });
+    }
+
+    res.json({ summary: body?.data || null, requestId: req.requestId, demo: false });
   } catch (err) {
     next(err);
   }
@@ -173,6 +200,18 @@ router.get('/reconciliation-summary', async (req, res, next) => {
       }),
     );
     if (status !== 200) {
+      // If AI failed and demo mode enabled, return demo data instead
+      if (demoSimulationService.DEMO_MODE_ENABLED) {
+        demoSimulationService.logDemoSimulation('reconciliation_summary_fallback', { range });
+        const demoSummary = demoSimulationService.generateDemoReconciliationSummary(range, req.companyId);
+        return res.json({
+          summary: demoSummary,
+          requestId: req.requestId,
+          demo: true,
+          _simulated: true,
+          message: 'Simulated reconciliation summary (AI unavailable in demo)',
+        });
+      }
       return next(
         new ApiError(
           status,
@@ -181,7 +220,21 @@ router.get('/reconciliation-summary', async (req, res, next) => {
         ),
       );
     }
-    res.json({ summary: body?.data || null, requestId: req.requestId });
+
+    // If AI returned null/empty and demo mode enabled, provide demo data
+    if (!body?.data && demoSimulationService.DEMO_MODE_ENABLED) {
+      demoSimulationService.logDemoSimulation('reconciliation_summary_empty_fallback', { range });
+      const demoSummary = demoSimulationService.generateDemoReconciliationSummary(range, req.companyId);
+      return res.json({
+        summary: demoSummary,
+        requestId: req.requestId,
+        demo: true,
+        _simulated: true,
+        message: 'Simulated reconciliation summary (no real data available)',
+      });
+    }
+
+    res.json({ summary: body?.data || null, requestId: req.requestId, demo: false });
   } catch (err) {
     next(err);
   }
