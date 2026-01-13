@@ -51,6 +51,80 @@ describe('POST /api/invoices/:id/payments', () => {
   });
 
   describe('POST /api/invoices', () => {
+    test('should auto-generate invoiceNumber in DEMO MODE if missing', async () => {
+      process.env.ENTERPRISE_DEMO_MODE = 'true';
+      const invoiceData = {
+        currency: 'EUR',
+        status: 'pending',
+        date: new Date().toISOString().slice(0, 10),
+        dueDate: new Date().toISOString().slice(0, 10),
+        clientName: 'Demo Client',
+        items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+      };
+      const response = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: invoiceData,
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(response.status).toBe(201);
+      const invoice = response.body.invoice ?? response.body.data?.invoice;
+      expect(invoice.invoiceNumber).toMatch(new RegExp(`^SA-${testCompany.id}-\\d{4}-\\d+$`));
+    });
+
+    test('should auto-generate invoiceNumber in PRODUCTION if missing', async () => {
+      process.env.ENTERPRISE_DEMO_MODE = 'false';
+      const invoiceData = {
+        currency: 'EUR',
+        status: 'pending',
+        date: new Date().toISOString().slice(0, 10),
+        dueDate: new Date().toISOString().slice(0, 10),
+        clientName: 'Prod Client',
+        items: [{ description: 'Service B', quantity: 1, unitPrice: 200, vatRate: 0.19 }],
+      };
+      const response = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: invoiceData,
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(response.status).toBe(201);
+      const invoice = response.body.invoice ?? response.body.data?.invoice;
+      expect(invoice.invoiceNumber).toMatch(new RegExp(`^SA-${testCompany.id}-\\d{4}-\\d+$`));
+    });
+
+    test('should not allow duplicate invoiceNumbers under concurrency', async () => {
+      process.env.ENTERPRISE_DEMO_MODE = 'false';
+      const invoiceData = {
+        currency: 'EUR',
+        status: 'pending',
+        date: new Date().toISOString().slice(0, 10),
+        dueDate: new Date().toISOString().slice(0, 10),
+        clientName: 'Concurrent Client',
+        items: [{ description: 'Service C', quantity: 1, unitPrice: 300, vatRate: 0.19 }],
+      };
+      // Simulate parallel requests
+      const promises = Array.from({ length: 5 }).map(() =>
+        global.requestApp({
+          app,
+          method: 'POST',
+          url: '/api/invoices',
+          body: { ...invoiceData },
+          headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+        }),
+      );
+      const responses = await Promise.all(promises);
+      const numbers = responses.map(
+        (r) => r.body.invoice?.invoiceNumber ?? r.body.data?.invoice?.invoiceNumber,
+      );
+      const uniqueNumbers = new Set(numbers);
+      expect(uniqueNumbers.size).toBe(numbers.length);
+      numbers.forEach((num) => {
+        expect(num).toMatch(new RegExp(`^SA-${testCompany.id}-\\d{4}-\\d+$`));
+      });
+    });
     test('should reject invoice without items', async () => {
       const invoiceData = {
         invoiceNumber: 'INV-101',

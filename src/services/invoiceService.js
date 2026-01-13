@@ -239,14 +239,12 @@ const PROHIBITED_DERIVED_FIELDS = new Set(['subtotal', 'total', 'amount']);
 
 const createInvoice = async (data, userId, companyId) => {
   const currency = enforceCurrencyIsEur(data.currency);
-  // Validate at least one item
   if (!Array.isArray(data.items) || data.items.length === 0) {
     const err = new Error('At least one invoice item is required');
     err.status = 400;
     throw err;
   }
 
-  // Calculate line and invoice totals
   let invoiceSubtotal = 0;
   let invoiceGross = 0;
   const items = data.items.map((item) => {
@@ -257,15 +255,8 @@ const createInvoice = async (data, userId, companyId) => {
     const lineVat = +(lineNet * vatRate).toFixed(2);
     const lineGross = +(lineNet + lineVat).toFixed(2);
     invoiceSubtotal += lineNet;
-
     invoiceGross += lineGross;
-    ensureVatTotalsMatch({
-      net: lineNet,
-      vat: lineVat,
-      gross: lineGross,
-      vatRate,
-      currency,
-    });
+    ensureVatTotalsMatch({ net: lineNet, vat: lineVat, gross: lineGross, vatRate, currency });
     return {
       description: item.description,
       quantity,
@@ -281,28 +272,68 @@ const createInvoice = async (data, userId, companyId) => {
   assertProvidedMatches(data.subtotal, invoiceSubtotal, 'subtotal');
   assertProvidedMatches(data.total, invoiceGross, 'total');
   assertProvidedMatches(data.amount, invoiceGross, 'amount');
-  const invoicePayload = {
-    invoiceNumber: data.invoiceNumber,
-    subtotal: invoiceSubtotal,
-    total: invoiceGross,
-    amount: invoiceGross,
-    currency,
-    status,
-    date: data.date || data.issueDate,
-    dueDate: data.dueDate,
-    clientName: data.clientName,
-    userId,
-    companyId,
-    notes: data.notes || null,
-  };
 
+  // Transaction-safe invoiceNumber generation
   const createdInvoice = await sequelize.transaction(async (t) => {
+    let invoiceNumber = data.invoiceNumber;
+    if (!invoiceNumber) {
+      // Find max increment for company/year
+      const year = new Date().getFullYear();
+      const result = await Invoice.findOne({
+        where: {
+          companyId,
+          invoiceNumber: { [sequelize.Op.like]: `SA-${companyId}-${year}-%` },
+        },
+        order: [
+          [
+            sequelize.literal(
+              "CAST(SUBSTRING(invoiceNumber, LENGTH('SA-') + LENGTH(CAST(companyId AS TEXT)) + 2 + LENGTH(CAST(year AS TEXT)) + 2) AS INTEGER)",
+            ),
+            'DESC',
+          ],
+        ],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      let increment = 1;
+      if (result && result.invoiceNumber) {
+        const parts = result.invoiceNumber.split('-');
+        increment = parseInt(parts[3], 10) + 1;
+      }
+      invoiceNumber = `SA-${companyId}-${year}-${increment}`;
+      // Audit log: invoiceNumber auto-generated
+      await AuditLogService.create(
+        {
+          action: 'invoiceNumber_auto_generated',
+          resourceType: 'Invoice',
+          resourceId: null,
+          companyId,
+          userId,
+          newValues: { invoiceNumber },
+          reason: 'Auto-generated invoiceNumber (canonical, transaction-safe)',
+          timestamp: new Date(),
+        },
+        { transaction: t },
+      );
+    }
+    const invoicePayload = {
+      invoiceNumber,
+      subtotal: invoiceSubtotal,
+      total: invoiceGross,
+      amount: invoiceGross,
+      currency,
+      status,
+      date: data.date || data.issueDate,
+      dueDate: data.dueDate,
+      clientName: data.clientName,
+      userId,
+      companyId,
+      notes: data.notes || null,
+    };
     const invoice = await Invoice.create(invoicePayload, { transaction: t });
-    // Attach items
     for (const item of items) {
       await InvoiceItem.create({ ...item, invoiceId: invoice.id }, { transaction: t });
     }
-    // Attach files if provided
     if (Array.isArray(data.attachments) && data.attachments.length > 0) {
       for (const fileId of data.attachments) {
         await FileAttachment.update(

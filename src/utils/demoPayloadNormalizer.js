@@ -25,9 +25,16 @@
  *    - Original request body is preserved in audit context
  */
 
+// Helper: generate DEMO invoice number
+function generateDemoInvoiceNumber(companyId) {
+  // Enterprise-traceable demo invoice number
+  return `DEMO-${companyId}-${Date.now()}`;
+}
+
 const logger = require('../lib/logger');
 
-const DEMO_MODE_ENABLED = String(process.env.ENTERPRISE_DEMO_MODE || 'false').toLowerCase() === 'true';
+const DEMO_MODE_ENABLED =
+  String(process.env.ENTERPRISE_DEMO_MODE || 'false').toLowerCase() === 'true';
 
 /**
  * Safe defaults for demo expenses
@@ -53,15 +60,6 @@ const DEMO_INVOICE_DEFAULTS = {
   status: 'DRAFT',
   clientName: 'Demo Client',
   invoiceNumber: null, // Handled separately to avoid duplicates
-};
-
-/**
- * Fields that are MANDATORY per GoBD/VAT regulations
- * These cannot be auto-filled because they have legal meaning
- */
-const MANDATORY_FIELDS = {
-  expense: ['netAmount', 'vatRate', 'currency'],
-  invoice: ['items', 'currency'],
 };
 
 /**
@@ -92,6 +90,17 @@ const CALCULATED_FIELDS = {
 function normalizeExpensePayload(inputData, userId, companyId) {
   const demoFills = [];
   const normalized = { ...inputData };
+
+  // AUTO-GENERATE invoiceNumber in DEMO MODE
+  if (DEMO_MODE_ENABLED && !normalized.invoiceNumber) {
+    const generated = `DEMO-${companyId}-${Date.now()}`;
+    normalized.invoiceNumber = generated;
+    demoFills.push({
+      field: 'invoiceNumber',
+      reason: 'DEMO_AUTO_GENERATED',
+      value: generated,
+    });
+  }
 
   if (!DEMO_MODE_ENABLED) {
     return { normalizedData: normalized, demoFills: [] };
@@ -197,11 +206,36 @@ function normalizeExpensePayload(inputData, userId, companyId) {
     });
   }
 
-  // 5. Strip and reject calculated fields - they are never from user input
+  // 5. Strip user-provided calculated fields (DEMO only)
   for (const field of CALCULATED_FIELDS.expense) {
     if (field in normalized) {
       delete normalized[field];
     }
+  }
+
+  // 5.5 Compute calculated fields in DEMO MODE so validators & DB are satisfied
+  if (DEMO_MODE_ENABLED) {
+    const net = typeof normalized.netAmount === 'number' ? normalized.netAmount : 0;
+    const rate = typeof normalized.vatRate === 'number' ? normalized.vatRate : 0;
+
+    const vatAmount = Number((net * rate).toFixed(2));
+    const grossAmount = Number((net + vatAmount).toFixed(2));
+
+    normalized.vatAmount = vatAmount;
+    normalized.grossAmount = grossAmount;
+
+    demoFills.push(
+      {
+        field: 'vatAmount',
+        reason: 'CALCULATED_BY_SYSTEM',
+        value: vatAmount,
+      },
+      {
+        field: 'grossAmount',
+        reason: 'CALCULATED_BY_SYSTEM',
+        value: grossAmount,
+      },
+    );
   }
 
   // 6. Mark notes to indicate demo auto-fill
@@ -262,6 +296,17 @@ function normalizeInvoicePayload(inputData, userId, companyId) {
     });
   }
 
+  // 2.5 Auto-generate invoiceNumber in DEMO mode if missing
+  if (!normalized.invoiceNumber) {
+    const generated = generateDemoInvoiceNumber(companyId);
+    normalized.invoiceNumber = generated;
+    demoFills.push({
+      field: 'invoiceNumber',
+      reason: 'AUTO_GENERATED_DEMO_NUMBER',
+      value: generated,
+    });
+  }
+
   // 3. Auto-fill optional fields (do NOT auto-fill items - that's mandatory input)
   if (!normalized.clientName) {
     normalized.clientName = DEMO_INVOICE_DEFAULTS.clientName;
@@ -315,7 +360,7 @@ function normalizeInvoicePayload(inputData, userId, companyId) {
     normalized.items = normalized.items.map((item) => {
       const normalized_item = { ...item };
       // Auto-fill VAT rate if missing
-      if (!normalized_item.vatRate && typeof normalized_item.vatRate !== 'number') {
+      if (typeof normalized_item.vatRate !== 'number') {
         normalized_item.vatRate = DEMO_EXPENSE_DEFAULTS.vatRate;
         demoFills.push({
           field: 'items[].vatRate',
@@ -338,18 +383,18 @@ function normalizeInvoicePayload(inputData, userId, companyId) {
  * @param {Object} context - { userId, companyId, ipAddress, userAgent, originalPayload }
  */
 function logDemoAutoFills(demoFills, context) {
-  if (!DEMO_MODE_ENABLED || demoFills.length === 0) {
+  if (!DEMO_MODE_ENABLED || !Array.isArray(demoFills) || demoFills.length === 0) {
     return;
   }
 
   logger.info('DEMO_MODE_AUTO_FILL', {
     userId: context.userId,
     companyId: context.companyId,
-    ipAddress: context.ipAddress,
-    userAgent: context.userAgent,
+    ipAddress: context.ipAddress || null,
+    userAgent: context.userAgent || null,
     fillCount: demoFills.length,
     fills: demoFills,
-    originalPayloadKeys: Object.keys(context.originalPayload || {}),
+    originalPayloadKeys: context.originalPayload ? Object.keys(context.originalPayload) : [],
     timestamp: new Date().toISOString(),
   });
 }
@@ -358,8 +403,4 @@ module.exports = {
   normalizeExpensePayload,
   normalizeInvoicePayload,
   logDemoAutoFills,
-  DEMO_MODE_ENABLED,
-  MANDATORY_FIELDS,
-  SYSTEM_REQUIRED_FIELDS,
-  CALCULATED_FIELDS,
 };

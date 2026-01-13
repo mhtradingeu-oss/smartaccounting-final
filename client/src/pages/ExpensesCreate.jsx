@@ -53,15 +53,30 @@ const ExpensesCreate = () => {
     }
     setLoading(true);
     setError('');
+
+    // حساب VAT
+    const netAmount = Number(form.amount) || 0;
+    const vatRate = 0.19;
+    const vatAmount = +(netAmount * vatRate).toFixed(2);
+    const grossAmount = +(netAmount + vatAmount).toFixed(2);
+
+    // استخراج userId من سياق المستخدم
+    const createdByUserId = user?.id || 1;
+
     const payload = {
-      vendorName: form.vendor || 'Unknown vendor',
-      description: form.description,
-      category: form.category || 'materials',
-      grossAmount: Number(form.amount) || 0,
-      netAmount: Number(form.amount) || 0,
-      currency: form.currency,
-      expenseDate: form.date || new Date().toISOString(),
       companyId: activeCompany.id,
+      createdByUserId,
+      expenseDate: form.date || new Date().toISOString().split('T')[0],
+      currency: form.currency,
+      status: 'draft',
+      source: 'manual',
+      category: form.category || 'Office Supplies',
+      description: form.description,
+      netAmount,
+      vatAmount,
+      grossAmount,
+      vatRate,
+      vendorName: form.vendor || 'Unknown vendor',
     };
     try {
       await expensesAPI.create(payload);

@@ -1,4 +1,3 @@
-
 const Joi = require('joi');
 
 export const userSchemas = {
@@ -10,12 +9,12 @@ export const userSchemas = {
     role: Joi.string().valid('admin', 'accountant', 'auditor', 'viewer').default('viewer'),
     companyId: Joi.string().uuid().optional(),
   }),
-  
+
   login: Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().required(),
   }),
-  
+
   update: Joi.object({
     firstName: Joi.string().min(2).max(50).optional(),
     lastName: Joi.string().min(2).max(50).optional(),
@@ -32,7 +31,7 @@ export const companySchemas = {
     email: Joi.string().email().required(),
     phone: Joi.string().min(10).max(20).optional(),
   }),
-  
+
   update: Joi.object({
     name: Joi.string().min(2).max(100).optional(),
     taxId: Joi.string().min(5).max(20).optional(),
@@ -44,16 +43,21 @@ export const companySchemas = {
 
 export const invoiceSchemas = {
   create: Joi.object({
-    invoiceNumber: Joi.string().required(),
+    invoiceNumber: Joi.string().optional(),
     customerId: Joi.string().uuid().required(),
     amount: Joi.number().positive().required(),
     vatAmount: Joi.number().min(0).required(),
     dueDate: Joi.date().required(),
-    items: Joi.array().items(Joi.object({
-      description: Joi.string().required(),
-      quantity: Joi.number().positive().required(),
-      unitPrice: Joi.number().positive().required(),
-      vatRate: Joi.number().min(0).max(1).required(),
-    })).min(1).required(),
+    items: Joi.array()
+      .items(
+        Joi.object({
+          description: Joi.string().required(),
+          quantity: Joi.number().positive().required(),
+          unitPrice: Joi.number().positive().required(),
+          vatRate: Joi.number().min(0).max(1).required(),
+        }),
+      )
+      .min(1)
+      .required(),
   }),
 };

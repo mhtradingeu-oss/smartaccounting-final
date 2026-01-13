@@ -1,4 +1,3 @@
-
 import api from './api';
 import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 
@@ -59,7 +58,26 @@ export const invoicesAPI = {
     return data;
   },
   create: async (invoiceData) => {
-    const response = await api.post('/invoices', invoiceData);
+    // Map frontend fields to backend-required fields
+    const mapped = {
+      invoiceNumber: invoiceData.invoiceNumber || invoiceData.number || undefined,
+      currency: invoiceData.currency || 'EUR',
+      date: invoiceData.date || invoiceData.invoiceDate || new Date().toISOString().split('T')[0],
+      dueDate: invoiceData.dueDate,
+      clientName: invoiceData.clientName || invoiceData.customerName,
+      items: Array.isArray(invoiceData.items)
+        ? invoiceData.items.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            vatRate: item.vatRate,
+          }))
+        : [],
+      // Optionally add attachments, notes, etc. if present
+      ...(invoiceData.attachments ? { attachments: invoiceData.attachments } : {}),
+      ...(invoiceData.notes ? { notes: invoiceData.notes } : {}),
+    };
+    const response = await api.post('/invoices', mapped);
     return extractPayload(response.data);
   },
   update: async (invoiceId, invoiceData) => {

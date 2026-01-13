@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-const { Model } = require("sequelize");
+const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class AIInsight extends Model {
@@ -12,8 +12,8 @@ module.exports = (sequelize, DataTypes) => {
         !this.associations?.decisions
       ) {
         this.hasMany(decisionsModel, {
-          foreignKey: "insightId",
-          as: "decisions",
+          foreignKey: 'insightId',
+          as: 'decisions',
         });
       }
     }
@@ -48,7 +48,7 @@ module.exports = (sequelize, DataTypes) => {
       summary: DataTypes.TEXT,
       why: DataTypes.TEXT,
       legalContext: DataTypes.TEXT,
-      evidence: sequelize.getDialect() === "postgres" ? DataTypes.JSONB : DataTypes.JSON,
+      evidence: sequelize.getDialect() === 'postgres' ? DataTypes.JSONB : DataTypes.JSON,
       ruleId: DataTypes.STRING,
       modelVersion: DataTypes.STRING,
       featureFlag: DataTypes.STRING,
@@ -56,8 +56,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: "AIInsight",
-      tableName: "ai_insights",
+      modelName: 'AIInsight',
+      tableName: 'ai_insights',
       timestamps: true,
     },
   );
