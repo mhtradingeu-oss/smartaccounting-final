@@ -56,6 +56,9 @@ const Invoices = lazy(() => import('./pages/Invoices'));
 const InvoiceCreate = lazy(() => import('./pages/InvoiceCreate'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 const InvoiceEdit = lazy(() => import('./pages/InvoiceEdit'));
+const InvoiceImport = lazy(() => import('./pages/InvoiceImport'));
+const Exports = lazy(() => import('./pages/Exports'));
+const DatevExport = lazy(() => import('./pages/DatevExport'));
 const Expenses = lazy(() => import('./pages/Expenses'));
 const ExpensesCreate = lazy(() => import('./pages/ExpensesCreate'));
 const BankStatements = lazy(() => import('./pages/BankStatements'));
@@ -205,6 +208,30 @@ export const ROUTE_DEFINITIONS = [
       </ProtectedRoute>,
     ),
     componentFile: 'client/src/App.jsx (profile redirect)',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/exports',
+    element: renderProtectedRoute(<Exports />),
+    componentFile: 'client/src/pages/Exports.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/exports/datev',
+    element: renderProtectedRoute(<DatevExport />),
+    componentFile: 'client/src/pages/DatevExport.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/invoices/import',
+    element: renderProtectedRoute(<InvoiceImport />),
+    componentFile: 'client/src/pages/InvoiceImport.jsx',
     authRequired: true,
     requiredRole: null,
     featureFlags: [],
