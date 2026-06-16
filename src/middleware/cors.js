@@ -26,8 +26,9 @@ const corsOptions = {
     }
 
     const requestOrigin = origin.toLowerCase();
-    const matchesAllowed = Array.from(allowedOrigins)
-      .some((allowed) => requestOrigin === allowed.toLowerCase());
+    const matchesAllowed = Array.from(allowedOrigins).some(
+      (allowed) => requestOrigin === allowed.toLowerCase(),
+    );
 
     if (matchesAllowed) {
       return callback(null, true);
@@ -45,6 +46,9 @@ const corsOptions = {
     'Content-Type',
     'Authorization',
     'x-company-id',
+    'X-Company-Id',
+    'x-ai-policy-version',
+    'X-AI-Policy-Version',
     'x-request-id',
     'x-requested-with',
     'Accept',
