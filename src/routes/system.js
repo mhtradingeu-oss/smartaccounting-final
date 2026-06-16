@@ -44,6 +44,121 @@ router.get('/version', (req, res) => {
 router.use(authenticate);
 router.use(requireSystemAdmin);
 
+// Allowlisted feature flags for admin control (no compliance/audit/VAT/lock flags)
+const ALLOWLISTED_FEATURE_FLAGS = [
+  'aiEnabled',
+  'ttsEnabled',
+  'datevExportEnabled',
+  'gobdExportEnabled',
+  'ustvaPrepEnabled',
+  'bankReconciliationEnabled',
+];
+
+// PATCH /companies/:companyId/subscription
+router.patch('/companies/:companyId/subscription', async (req, res, next) => {
+  try {
+    const company = await Company.findByPk(req.params.companyId);
+    if (!company) {
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
+    }
+    const allowed = ['subscriptionPlan', 'subscriptionStatus', 'planValidUntil', 'limits'];
+    const updates = {};
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        updates[key] = req.body[key];
+      }
+    }
+    if (!Object.keys(updates).length) {
+      return next(new ApiError(400, 'No subscription updates provided', 'NO_SUBSCRIPTION_UPDATES'));
+    }
+    const oldValues = {};
+    allowed.forEach((k) => {
+      oldValues[k] = company[k];
+    });
+    await company.update(updates);
+    // Audit log
+    await AuditLog.create({
+      action: 'company_subscription_updated',
+      resourceType: 'company',
+      resourceId: company.id,
+      companyId: company.id,
+      userId: req.user?.id,
+      requestId: req.requestId,
+      oldValues,
+      newValues: updates,
+      timestamp: new Date(),
+    });
+    res.json({ company });
+  } catch (error) {
+    logger.error('System company subscription update error:', error);
+    next(
+      new ApiError(
+        500,
+        'Failed to update company subscription',
+        'COMPANY_SUBSCRIPTION_UPDATE_ERROR',
+      ),
+    );
+  }
+});
+
+// GET /companies/:companyId/features
+router.get('/companies/:companyId/features', async (req, res, next) => {
+  try {
+    const company = await Company.findByPk(req.params.companyId);
+    if (!company) {
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
+    }
+    const features = {};
+    for (const key of ALLOWLISTED_FEATURE_FLAGS) {
+      features[key] = company[key];
+    }
+    res.json({ features });
+  } catch (error) {
+    logger.error('System company features get error:', error);
+    next(new ApiError(500, 'Failed to get company features', 'COMPANY_FEATURES_GET_ERROR'));
+  }
+});
+
+// PATCH /companies/:companyId/features
+router.patch('/companies/:companyId/features', async (req, res, next) => {
+  try {
+    const company = await Company.findByPk(req.params.companyId);
+    if (!company) {
+      return next(new ApiError(404, 'Company not found', 'COMPANY_NOT_FOUND'));
+    }
+    const updates = {};
+    for (const key of ALLOWLISTED_FEATURE_FLAGS) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        updates[key] = req.body[key];
+      }
+    }
+    if (!Object.keys(updates).length) {
+      return next(new ApiError(400, 'No feature flag updates provided', 'NO_FEATURE_FLAG_UPDATES'));
+    }
+    const oldValues = {};
+    ALLOWLISTED_FEATURE_FLAGS.forEach((k) => {
+      oldValues[k] = company[k];
+    });
+    await company.update(updates);
+    // Audit log
+    await AuditLog.create({
+      action: 'company_features_updated',
+      resourceType: 'company',
+      resourceId: company.id,
+      companyId: company.id,
+      userId: req.user?.id,
+      requestId: req.requestId,
+      oldValues,
+      newValues: updates,
+      timestamp: new Date(),
+    });
+    res.json({ company });
+  } catch (error) {
+    logger.error('System company features update error:', error);
+    next(new ApiError(500, 'Failed to update company features', 'COMPANY_FEATURES_UPDATE_ERROR'));
+  }
+});
+
 router.get('/info', (req, res) => {
   res.json({
     status: 'SmartAccounting System',
@@ -166,7 +281,18 @@ router.get('/db-test', async (req, res, next) => {
 
 router.get('/companies', async (req, res, next) => {
   try {
-    const companies = await Company.findAll({
+    // RBAC: Only system_admin can list all companies
+    if (!req.user || req.user.role !== 'admin' || req.user.companyId) {
+      return next(new ApiError(403, 'SYSTEM_ADMIN_REQUIRED', 'System admin access required'));
+    }
+    const { query = '', page = 1, pageSize = 30 } = req.query;
+    const where = {};
+    if (query && query.trim()) {
+      where.name = { [sequelize.Op.iLike]: `%${query.trim()}%` };
+    }
+    const offset = (parseInt(page, 10) - 1) * parseInt(pageSize, 10);
+    const { count, rows } = await Company.findAndCountAll({
+      where,
       attributes: [
         'id',
         'name',
@@ -179,8 +305,7 @@ router.get('/companies', async (req, res, next) => {
         'suspendedAt',
         'subscriptionPlan',
         'subscriptionStatus',
-        'stripeCustomerId',
-        'stripeSubscriptionId',
+        'planValidUntil',
         'createdAt',
         'updatedAt',
         [
@@ -191,9 +316,28 @@ router.get('/companies', async (req, res, next) => {
         ],
       ],
       order: [['createdAt', 'DESC']],
+      offset,
+      limit: parseInt(pageSize, 10),
     });
-
-    res.json({ companies });
+    // Stable, typed response
+    res.json({
+      companies: rows.map((c) => ({
+        id: c.id,
+        name: c.name,
+        status: c.isActive ? 'active' : 'suspended',
+        subscriptionPlan: c.subscriptionPlan,
+        subscriptionStatus: c.subscriptionStatus,
+        planValidUntil: c.planValidUntil,
+        aiEnabled: c.aiEnabled,
+        ttsEnabled: c.ttsEnabled,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        userCount: c.get('userCount'),
+      })),
+      total: count,
+      page: parseInt(page, 10),
+      pageSize: parseInt(pageSize, 10),
+    });
   } catch (error) {
     logger.error('System companies list error:', error);
     next(new ApiError(500, 'Failed to load companies', 'COMPANIES_LIST_ERROR'));
