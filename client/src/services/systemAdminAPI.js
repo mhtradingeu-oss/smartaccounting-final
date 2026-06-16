@@ -1,6 +1,21 @@
 import api from './api';
 
 export const systemAdminAPI = {
+  async updateCompanySubscription(companyId, payload) {
+    const res = await api.patch(`/system/companies/${companyId}/subscription`, payload);
+    return res.data?.company ?? res.data;
+  },
+
+  async getCompanyFeatureFlags(companyId) {
+    const res = await api.get(`/system/companies/${companyId}/features`);
+    return res.data;
+  },
+
+  async updateCompanyFeatureFlags(companyId, payload) {
+    const res = await api.patch(`/system/companies/${companyId}/features`, payload);
+    return res.data?.company ?? res.data;
+  },
+
   async getOverview() {
     const res = await api.get('/system/overview');
     return res.data;
