@@ -51,8 +51,12 @@ describe('InvoiceForm', () => {
 
     try {
       const { rerender } = render(<InvoiceForm initialValues={initialValues} />);
-      expect(screen.getByDisplayValue('INV-123')).toBeInTheDocument();
+      // Invoice number should not be editable or visible as a value
+      expect(screen.queryByLabelText(/invoice number/i)).toBeNull();
+      // Check only user-editable fields
       expect(screen.getByDisplayValue('Example Co')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('2024-01-01')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('2024-01-15')).toBeInTheDocument();
       expect(screen.getByDisplayValue('GBP')).toBeInTheDocument();
 
       const updatedValues = { ...initialValues, clientName: 'Example Co GmbH' };

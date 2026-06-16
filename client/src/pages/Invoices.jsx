@@ -176,6 +176,13 @@ const Invoices = () => {
               </Button>
             </Link>
           </PermissionGuard>
+          <PermissionGuard action="invoice.create" role={user?.role}>
+            <Link to="/invoices/import">
+              <Button variant="secondary" size="md">
+                Import Invoices
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
       {isReadOnlyRole(user?.role) && (

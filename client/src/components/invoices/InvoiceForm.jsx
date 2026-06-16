@@ -4,13 +4,11 @@ import FormField from '../ui/FormField';
 import Label from '../ui/Label';
 
 const INITIAL_FORM_STATE = {
-  invoiceNumber: '',
   clientName: '',
   date: '',
   dueDate: '',
   currency: 'EUR',
-  subtotal: '',
-  total: '',
+  // subtotal and total removed from form state
   notes: '',
   items: [
     {
@@ -18,9 +16,7 @@ const INITIAL_FORM_STATE = {
       quantity: 1,
       unitPrice: '',
       vatRate: '',
-      netAmount: '',
-      vatAmount: '',
-      grossAmount: '',
+      // netAmount, vatAmount, grossAmount removed from item state
     },
   ],
 };
@@ -173,24 +169,15 @@ const InvoiceForm = ({
     }
     const items = formState.items.map((item) => ({
       description: item.description,
-      quantity: parseFloat(item.quantity) || 0,
-      unitPrice: parseFloat(item.unitPrice) || 0,
-      vatRate: parseFloat(item.vatRate) || 0,
-      netAmount: parseFloat(item.netAmount) || 0,
-      vatAmount: parseFloat(item.vatAmount) || 0,
-      grossAmount: parseFloat(item.grossAmount) || 0,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      vatRate: Number(item.vatRate),
     }));
-    // Recompute subtotal/total from items
-    const subtotal = items.reduce((sum, i) => sum + (i.netAmount || 0), 0);
-    const total = items.reduce((sum, i) => sum + (i.grossAmount || 0), 0);
     const payload = {
-      invoiceNumber: formState.invoiceNumber.trim(),
       clientName: formState.clientName.trim(),
       date: formState.date,
       dueDate: formState.dueDate,
       currency: (formState.currency || 'EUR').toUpperCase(),
-      subtotal,
-      total,
       notes: formState.notes ? formState.notes.trim() : null,
       items,
     };
@@ -259,17 +246,7 @@ const InvoiceForm = ({
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField label={<Label required>Invoice Number</Label>} required>
-          <input
-            className={inputBaseClasses}
-            name="invoiceNumber"
-            value={formState.invoiceNumber}
-            onChange={handleChange}
-            disabled={effectiveDisabled}
-            required
-            placeholder="INV-2024-001"
-          />
-        </FormField>
+        {/* Invoice Number input removed: must not be entered or sent by client */}
         <FormField label={<Label required>Client Name</Label>} required>
           <input
             className={inputBaseClasses}
