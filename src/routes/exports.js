@@ -16,9 +16,52 @@ const demoSimulationService = require('../services/demoSimulationService');
 
 const router = express.Router();
 
+const { prepareVatReturn } = require('../services/vatReturnService');
+const { exportVatCsv } = require('../utils/vat/vatExportCsv');
+const { exportVatJson } = require('../utils/vat/vatExportJson');
+const { generateGobdExport } = require('../services/gobdExportService');
 router.use(authenticate);
 router.use(requireCompany);
 router.use(requirePlanFeature('exports'));
+
+// VAT Return Preparation Export Route (ELSTER / UStVA)
+router.get('/vat-return', async (req, res) => {
+  const { periodFrom, periodTo, format = 'json' } = req.query;
+
+  const vatReturn = await prepareVatReturn({
+    companyId: req.companyId,
+    periodFrom,
+    periodTo,
+  });
+
+  if (format === 'csv') {
+    res.type('text/csv').send(exportVatCsv(vatReturn));
+  } else {
+    res.json(exportVatJson(vatReturn));
+  }
+});
+
+// GoBD/IDEA Audit Export Route
+router.get('/gobd', requireRole(['admin', 'accountant', 'auditor']), async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const result = await generateGobdExport({
+      companyId: req.companyId,
+      userId: req.user.id,
+      requestId: req.requestId,
+      fromDate: from,
+      toDate: to,
+    });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="gobd-export.zip"');
+    res.send(result.zipBuffer);
+  } catch (error) {
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'Failed to export GoBD/IDEA audit data',
+    });
+  }
+});
 
 const { generateSimplePdf } = require('../utils/pdfGenerator');
 
@@ -264,7 +307,9 @@ router.get('/vat-summaries', requireRole(['auditor']), async (req, res) => {
         });
       }
       // For CSV/PDF, include demo marker
-      reports = [{ data: demoVatSummary, period: demoVatSummary.period, status: 'DEMO', _demo: true }];
+      reports = [
+        { data: demoVatSummary, period: demoVatSummary.period, status: 'DEMO', _demo: true },
+      ];
     }
 
     if (format === 'csv') {
@@ -325,6 +370,21 @@ router.get('/datev', requireRole(['admin', 'accountant', 'auditor']), async (req
       err.status = 400;
       throw err;
     }
+
+    // Audit log the export event (GoBD-compliant)
+    await AuditLogService.appendEntry({
+      action: 'EXPORT_DATEV',
+      userId: req.user.id,
+      reason: 'DATEV export generated',
+      context: {
+        companyId: req.companyId,
+        eventClass: 'ACCOUNTING',
+        fiscalYear: req.query.fiscalYear,
+        fromDate: from,
+        toDate: to,
+        requestId: req.requestId,
+      },
+    });
 
     const { rows, meta } = await buildDatevExport({
       companyId: req.companyId,
