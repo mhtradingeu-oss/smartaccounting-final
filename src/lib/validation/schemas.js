@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-export const userSchemas = {
+const userSchemas = {
   register: Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
@@ -23,7 +23,7 @@ export const userSchemas = {
   }),
 };
 
-export const companySchemas = {
+const companySchemas = {
   create: Joi.object({
     name: Joi.string().min(2).max(100).required(),
     taxId: Joi.string().min(5).max(20).required(),
@@ -41,7 +41,7 @@ export const companySchemas = {
   }),
 };
 
-export const invoiceSchemas = {
+const invoiceSchemas = {
   create: Joi.object({
     invoiceNumber: Joi.string().optional(),
     customerId: Joi.string().uuid().required(),
@@ -60,4 +60,10 @@ export const invoiceSchemas = {
       .min(1)
       .required(),
   }),
+};
+
+module.exports = {
+  userSchemas,
+  companySchemas,
+  invoiceSchemas,
 };
