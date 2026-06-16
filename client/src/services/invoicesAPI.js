@@ -59,21 +59,25 @@ export const invoicesAPI = {
   },
   create: async (invoiceData) => {
     // Map frontend fields to backend-required fields
+    const today = new Date().toISOString().split('T')[0];
     const mapped = {
-      invoiceNumber: invoiceData.invoiceNumber || invoiceData.number || undefined,
       currency: invoiceData.currency || 'EUR',
-      date: invoiceData.date || invoiceData.invoiceDate || new Date().toISOString().split('T')[0],
-      dueDate: invoiceData.dueDate,
+      date: invoiceData.date || invoiceData.invoiceDate || today,
+      dueDate: invoiceData.dueDate || invoiceData.dueDateDate || today,
       clientName: invoiceData.clientName || invoiceData.customerName,
       items: Array.isArray(invoiceData.items)
         ? invoiceData.items.map((item) => ({
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            vatRate: item.vatRate,
+            vatRate:
+              typeof item.vatRate === 'number'
+                ? item.vatRate > 1
+                  ? item.vatRate / 100
+                  : item.vatRate
+                : 0.19,
           }))
         : [],
-      // Optionally add attachments, notes, etc. if present
       ...(invoiceData.attachments ? { attachments: invoiceData.attachments } : {}),
       ...(invoiceData.notes ? { notes: invoiceData.notes } : {}),
     };
