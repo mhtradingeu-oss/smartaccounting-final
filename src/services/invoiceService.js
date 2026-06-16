@@ -275,7 +275,8 @@ const createInvoice = async (data, userId, companyId) => {
 
   // Transaction-safe invoiceNumber generation
   const createdInvoice = await sequelize.transaction(async (t) => {
-    let invoiceNumber = data.invoiceNumber;
+    // Always auto-generate invoiceNumber if not present or null from client
+    let invoiceNumber = data.invoiceNumber || null;
     if (!invoiceNumber) {
       // Find max increment for company/year
       const year = new Date().getFullYear();
