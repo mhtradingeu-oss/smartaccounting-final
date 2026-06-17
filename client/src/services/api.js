@@ -100,6 +100,12 @@ const logError = (...args) => {
   }
 };
 
+const isCanceledApiError = (error) =>
+  error?.code === 'ERR_CANCELED' ||
+  error?.name === 'CanceledError' ||
+  error?.message === 'canceled' ||
+  error?.__CANCEL__ === true;
+
 /* ================================
    API ERROR FORMATTER
 ================================ */
@@ -236,6 +242,13 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (isCanceledApiError(error)) {
+      if (isDev) {
+        console.debug('↪️ API request canceled:', error?.config?.url || error?.message);
+      }
+      return Promise.reject(error);
+    }
+
     // Also try to capture from error responses
     const reqId =
       error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['X-Request-Id'];
