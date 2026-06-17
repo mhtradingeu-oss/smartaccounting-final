@@ -23,6 +23,22 @@ services:
 
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: smartaccounting-redis-dev
+
+    ports:
+      - "6381:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -38,6 +54,8 @@ services:
 
       USE_SQLITE: "false"
       DATABASE_URL: postgres://smart:smartpass@db:5432/smartaccounting
+      REDIS_URL: redis://redis:6379
+      CACHE_TTL: "3600"
 
       DEMO_MODE: "true"
       ALLOW_DEMO_SEED: "true"
@@ -67,6 +85,8 @@ services:
 
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
     volumes:
