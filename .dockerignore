@@ -41,3 +41,9 @@ logs/
 *.tmp
 *.swp
 *.DS_Store
+
+# Local audit/generated reports
+reports
+
+# Prevent accidental nested repository copies
+smartaccounting-final
