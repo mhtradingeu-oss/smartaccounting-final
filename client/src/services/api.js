@@ -33,7 +33,7 @@ export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: import.meta.env.DEV ? 30000 : 15000,
   withCredentials: true, // required for cookies / auth
   headers: {
     Accept: 'application/json',
