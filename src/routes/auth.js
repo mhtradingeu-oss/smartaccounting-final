@@ -223,6 +223,56 @@ router.post('/logout', authenticate, async (req, res, next) => {
   }
 });
 
+
+router.get('/sessions', authenticate, async (req, res, next) => {
+  try {
+    const tokens = await activeTokenService.getTokensForUser(req.userId);
+    const sessions = tokens.map((token) => ({
+      id: token.id || token.jti,
+      jti: token.jti,
+      createdAt: token.createdAt,
+      expiresAt: token.expiresAt,
+      current: false,
+    }));
+
+    res.status(200).json({ sessions });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/sessions/:sessionId', authenticate, async (req, res, next) => {
+  try {
+    const tokens = await activeTokenService.getTokensForUser(req.userId);
+    const token = tokens.find(
+      (item) =>
+        String(item.id) === String(req.params.sessionId) ||
+        String(item.jti) === String(req.params.sessionId),
+    );
+
+    if (!token) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found',
+        code: 'SESSION_NOT_FOUND',
+      });
+    }
+
+    await revokedTokenService.revokeToken({
+      jti: token.jti,
+      expiresAt: token.expiresAt,
+    });
+    await activeTokenService.removeToken(token.jti);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Session revoked',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/me', authenticate, sanitizeInput, preventNoSqlInjection, async (req, res) => {
   if (req.user) {
     // Only return safe user fields

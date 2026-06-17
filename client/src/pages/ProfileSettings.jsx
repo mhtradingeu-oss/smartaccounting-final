@@ -27,8 +27,8 @@ const ProfileSettings = () => {
   useEffect(() => {
     setSessionsLoading(true);
     api
-      .get('/user/sessions')
-      .then((res) => setSessions(res.data))
+      .get('/auth/sessions')
+      .then((res) => setSessions(res.data?.sessions || []))
       .catch((err) => setSessionsError(formatApiError(err).message))
       .finally(() => setSessionsLoading(false));
   }, []);
@@ -69,7 +69,7 @@ const ProfileSettings = () => {
     }
   };
   const handleRevokeSession = async (id) => {
-    await api.delete(`/user/sessions/${id}`);
+    await api.delete(`/auth/sessions/${id}`);
     setSessions((s) => s.filter((sess) => sess.id !== id));
   };
 
