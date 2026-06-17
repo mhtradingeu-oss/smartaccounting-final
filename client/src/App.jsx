@@ -29,7 +29,7 @@ const withCompanyLayout = (element, requiredRole) => (
 );
 
 const withSystemAdminLayout = (element) => (
-  <ProtectedRoute requiredRole="admin">
+  <ProtectedRoute>
     <SystemAdminRoute>
       <Layout>{withSuspense(element)}</Layout>
     </SystemAdminRoute>
