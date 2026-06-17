@@ -296,15 +296,20 @@ function normalizeInvoicePayload(inputData, userId, companyId) {
     });
   }
 
-  // 2.5 Auto-generate invoiceNumber in DEMO mode if missing
-  if (!normalized.invoiceNumber) {
-    const generated = generateDemoInvoiceNumber(companyId);
-    normalized.invoiceNumber = generated;
-    demoFills.push({
-      field: 'invoiceNumber',
-      reason: 'AUTO_GENERATED_DEMO_NUMBER',
-      value: generated,
-    });
+  // 2.5 Auto-generate invoiceNumber in DEMO mode if missing, but do NOT require from client
+  if (!('invoiceNumber' in normalized) || normalized.invoiceNumber === null) {
+    if (DEMO_MODE_ENABLED) {
+      const generated = generateDemoInvoiceNumber(companyId);
+      normalized.invoiceNumber = generated;
+      demoFills.push({
+        field: 'invoiceNumber',
+        reason: 'AUTO_GENERATED_DEMO_NUMBER',
+        value: generated,
+      });
+    } else {
+      // In production, allow invoiceNumber to be null and let service layer handle it
+      normalized.invoiceNumber = null;
+    }
   }
 
   // 3. Auto-fill optional fields (do NOT auto-fill items - that's mandatory input)
