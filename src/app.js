@@ -111,7 +111,6 @@ const expenseRoutes = require('./routes/expenses');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
-const systemAdminRoutes = require('./routes/systemAdmin');
 const gdprRoutes = require('./routes/gdpr');
 const publicRoutes = require('./routes/public');
 
@@ -219,7 +218,6 @@ const readyHandler = async (req, res) => {
   }
 };
 
-app.use(`${API_PREFIX}/system`, systemAdminRoutes);
 app.use(`${API_PREFIX}/public`, publicRoutes);
 
 const metricsHandler = (req, res) => {
