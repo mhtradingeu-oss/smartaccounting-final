@@ -61,7 +61,6 @@ data/
 tessdata/
 *.traineddata
 
-
 # ========================================
 # Cache & Runtime Temp
 # ========================================
@@ -101,7 +100,6 @@ keys/
 Quality/
 Quality/**
 
-
 # ========================================
 # Operating System
 # ========================================
@@ -125,7 +123,6 @@ Thumbs.db
 .next/
 
 .svelte-kit/
-
 
 # ========================================
 # Uploads (GDPR / User Content)
@@ -198,24 +195,19 @@ coverage/
 
 # local scratch tests (if not intended to ship)
 tests/user.create.smoke.js
-cat > .dockerignore <<'EOF'
-node_modules
-**/node_modules
-.git
-.gitignore
-Dockerfile*
-docker-compose*.yml
-*.log
-temp
-uploads
-.data
-coverage
-dist
-build
-.cache
-.vscode
-.idea
-EOF
 client/node_modules/
 client/dist/
 dev-dryrun/
+
+# Local audit/generated reports
+reports/
+
+# Prevent accidental nested repository copies
+smartaccounting-final/
+
+# Local SQLite/database artifacts
+database/*.sqlite
+database/*.db
+*.sqlite
+*.db
+.DS_Store
