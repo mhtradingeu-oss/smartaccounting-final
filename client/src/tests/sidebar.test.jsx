@@ -10,6 +10,29 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key }),
 }));
 
+const companyContextMock = vi.hoisted(() => ({
+  value: {
+    activeCompany: {
+      id: 1,
+      name: 'Demo Company',
+      subscriptionPlan: 'pro',
+      aiEnabled: true,
+    },
+    activeCompanyId: 1,
+    companies: [],
+    setCompanies: vi.fn(),
+    switchCompany: vi.fn(),
+    companiesError: null,
+    setCompaniesError: vi.fn(),
+    reloadCompanies: vi.fn(),
+    reloadToken: 0,
+  },
+}));
+
+vi.mock('../context/CompanyContext', () => ({
+  useCompany: () => companyContextMock.value,
+}));
+
 const createAuthValue = (role, companyId = 1) => ({
   status: 'authenticated',
   isAuthenticated: true,
@@ -30,6 +53,35 @@ const createAuthValue = (role, companyId = 1) => ({
 
 const renderSidebar = (role, companyId) => {
   const authValue = createAuthValue(role, companyId);
+
+  companyContextMock.value = {
+    activeCompany: companyId
+      ? {
+          id: companyId,
+          name: 'Demo Company',
+          subscriptionPlan: 'pro',
+          aiEnabled: true,
+        }
+      : null,
+    activeCompanyId: companyId ?? null,
+    companies: companyId
+      ? [
+          {
+            id: companyId,
+            name: 'Demo Company',
+            subscriptionPlan: 'pro',
+            aiEnabled: true,
+          },
+        ]
+      : [],
+    setCompanies: vi.fn(),
+    switchCompany: vi.fn(),
+    companiesError: null,
+    setCompaniesError: vi.fn(),
+    reloadCompanies: vi.fn(),
+    reloadToken: 0,
+  };
+
   return render(
     <MemoryRouter>
       <AuthContext.Provider value={authValue}>

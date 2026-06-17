@@ -48,6 +48,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'DEBIT',
+      field: 'transaction_type',
     },
     reference: {
       type: DataTypes.STRING,

@@ -6,7 +6,7 @@ require('dotenv').config();
 
 const API_URL =
   (process.env.API_URL || 'http://localhost:5001/api').replace(/\/+$/, '');
-const EMAIL = process.env.DEMO_ACCOUNTANT_EMAIL || 'demo-accountant@demo.com';
+const EMAIL = process.env.DEMO_ADMIN_EMAIL || process.env.DEMO_EMAIL || 'demo-admin@demo.com';
 const PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
 
 const log = (label, status, details = '') => {
@@ -50,9 +50,9 @@ async function main() {
     if (!token || !companyId) {
       throw new Error('Login response missing token or companyId');
     }
-    pass('Login as demo-accountant', `status=${response.status}`);
+    pass('Login as demo-admin', `status=${response.status}`);
   } catch (error) {
-    fail('Login as demo-accountant', error);
+    fail('Login as demo-admin', error);
   }
 
   const headers = {

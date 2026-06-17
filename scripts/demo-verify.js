@@ -3,202 +3,116 @@
 
 /**
  * Demo verification script
- * - Logs in using seeded demo credentials
- * - Verifies core API endpoints return data
- * - Designed for local Docker demo + CI
+ * API-only smoke verifier for the running local/Docker stack.
  */
 
-const { EventEmitter } = require('events');
-const httpMocks = require('node-mocks-http');
-
+const axios = require('axios');
 require('dotenv').config();
 
-/* ------------------------------------------------------------------ */
-/* Environment defaults (SAFE for demo only)                           */
-/* ------------------------------------------------------------------ */
+const API_URL = (process.env.API_URL || 'http://localhost:5001/api').replace(/\/+$/, '');
+const EMAIL = process.env.DEMO_ADMIN_EMAIL || process.env.DEMO_EMAIL || 'demo-admin@demo.com';
+const PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
 
-process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'demo-jwt-secret';
+const client = axios.create({
+  baseURL: API_URL,
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-if (process.env.DATABASE_URL) {
-  process.env.USE_SQLITE = process.env.USE_SQLITE || 'false';
-} else {
-  process.env.USE_SQLITE = process.env.USE_SQLITE || 'true';
-}
+function extractCount(payload, preferredKeys = []) {
+  if (Array.isArray(payload)) {
+    return payload.length;
+  }
 
-/* ------------------------------------------------------------------ */
-/* App & services                                                      */
-/* ------------------------------------------------------------------ */
-
-const app = require('../src/app');
-const authService = require('../src/services/authService');
-
-/* ------------------------------------------------------------------ */
-/* Internal request helper (no HTTP server needed)                     */
-/* ------------------------------------------------------------------ */
-
-function requestApp({ method = 'GET', url = '/', headers = {}, body }) {
-  return new Promise((resolve, reject) => {
-    const req = httpMocks.createRequest({
-      method,
-      url,
-      headers,
-      body,
-    });
-
-    req.socket = req.socket || {
-      setTimeout: () => {},
-      setNoDelay: () => {},
-      setKeepAlive: () => {},
-    };
-
-    if (typeof req.setTimeout !== 'function') {
-      req.setTimeout = function setTimeoutCompat(timeout) {
-        if (this.socket && typeof this.socket.setTimeout === 'function') {
-          this.socket.setTimeout(timeout);
-        }
-      };
+  for (const key of preferredKeys) {
+    if (Array.isArray(payload?.[key])) {
+      return payload[key].length;
     }
+  }
 
-    const res = httpMocks.createResponse({
-      eventEmitter: EventEmitter,
-    });
+  if (Array.isArray(payload?.data)) {
+    return payload.data.length;
+  }
 
-    res.on('end', () => {
-      const raw = res._getData();
-      let parsed = raw;
+  if (Array.isArray(payload?.items)) {
+    return payload.items.length;
+  }
 
-      if (typeof raw === 'string') {
-        try {
-          parsed = JSON.parse(raw);
-        } catch (_) {
-          parsed = raw;
-        }
-      }
+  if (payload && typeof payload === 'object') {
+    return 1;
+  }
 
-      resolve({
-        status: res.statusCode,
-        body: parsed,
-        headers: typeof res.getHeaders === 'function' ? res.getHeaders() : {},
-        text: typeof raw === 'string' ? raw : undefined,
-      });
-    });
-
-    res.on('error', reject);
-
-    app.handle(req, res, (err) => {
-      if (err) {
-        reject(err);
-      }
-    });
-  });
+  return 0;
 }
 
-/* ------------------------------------------------------------------ */
-/* Demo verification logic                                             */
-/* ------------------------------------------------------------------ */
-
-async function verifySeededEndpoints() {
+async function main() {
+  console.log(`[DEMO VERIFY] API_URL=${API_URL}`);
   console.log('[DEMO VERIFY] Logging in as demo admin...');
 
-  const credentials = {
-    email: process.env.DEMO_EMAIL || 'demo-admin@demo.com',
-    password: process.env.DEMO_PASSWORD || 'Demo123!',
+  const login = await client.post('/auth/login', {
+    email: EMAIL,
+    password: PASSWORD,
+  });
+
+  const token = login.data?.token || login.data?.accessToken;
+  const companyId = login.data?.user?.companyId;
+
+  if (!token || !companyId) {
+    throw new Error('Login response missing token or companyId');
+  }
+
+  console.log('[DEMO VERIFY] Login OK');
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'X-Company-Id': companyId,
+    'x-company-id': companyId,
   };
 
-  const loginResult = await authService.login(credentials);
-
-  if (!loginResult || !loginResult.token) {
-    throw new Error('Demo login failed – no token returned');
-  }
-
-  const token = loginResult.token;
-  const companyId = loginResult.user?.companyId;
-  if (!companyId) {
-    throw new Error('Demo login failed – companyId missing');
-  }
-
-  const endpoints = [
-    { url: '/api/companies', key: 'companies' },
-    { url: '/api/invoices', key: 'invoices' },
-    { url: '/api/expenses', key: 'expenses' },
-    { url: '/api/bank-statements', key: 'statements' },
+  const checks = [
+    { path: '/companies', keys: ['companies', 'data'] },
+    { path: '/invoices', keys: ['invoices', 'data'] },
+    { path: '/expenses', keys: ['expenses', 'data'] },
+    { path: '/bank-statements', keys: ['statements', 'bankStatements', 'data'] },
     {
-      url: '/api/ai/insights',
-      key: 'data',
-      allowEmpty: true,
-      query: {
-        purpose: 'insights_read',
-        policyVersion: '10.0.0',
+      path: '/ai/insights',
+      keys: ['insights', 'data'],
+      headers: {
+        'x-ai-purpose': 'insights_read',
+        'x-ai-policy-version': '10.0.0',
       },
+      allowEmpty: true,
     },
   ];
 
-  for (const endpoint of endpoints) {
-    const query = endpoint.query ? `?${new URLSearchParams(endpoint.query).toString()}` : '';
-    const response = await requestApp({
-      method: 'GET',
-      url: `${endpoint.url}${query}`,
+  for (const check of checks) {
+    const response = await client.get(check.path, {
       headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Company-Id': companyId,
+        ...headers,
+        ...(check.headers || {}),
       },
     });
 
-    if (endpoint.url === '/api/ai/insights') {
-      const errorCode =
-        response.body?.errorCode ||
-        response.body?.error?.code ||
-        response.body?.code ||
-        (typeof response.body?.error === 'string' ? response.body.error : undefined);
-      if ([200, 204].includes(response.status)) {
-        console.log(`[DEMO VERIFY] ${endpoint.url} OK`);
-        continue;
-      }
-      if (response.status === 400 && errorCode === 'AI_INPUT_REQUIRED') {
-        console.log(`[DEMO VERIFY] ${endpoint.url} skipped (no analyzable data yet)`);
-        continue;
-      }
-      throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
+    if (![200, 201, 204].includes(response.status)) {
+      throw new Error(`${check.path} returned ${response.status}`);
     }
 
-    if (![200, 201].includes(response.status)) {
-      throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
+    const count = extractCount(response.data, check.keys);
+
+    if (!check.allowEmpty && count === 0) {
+      throw new Error(`${check.path} returned empty payload`);
     }
 
-    const payload = response.body?.[endpoint.key] ?? response.body?.data ?? [];
-
-    const count = Array.isArray(payload) ? payload.length : 0;
-
-    if (endpoint.url === '/api/bank-statements') {
-      if (response.status !== 200) {
-        throw new Error(`Unexpected status ${response.status} for ${endpoint.url}`);
-      }
-      const message = count === 0 ? '0 records' : `${count} records`;
-      console.log(`[DEMO VERIFY] ${endpoint.url} OK (${message})`);
-      continue;
-    }
-
-    if (!endpoint.allowEmpty && count === 0) {
-      throw new Error(`Endpoint ${endpoint.url} returned empty result set`);
-    }
-
-    console.log(`[DEMO VERIFY] ${endpoint.url} OK (${count} records)`);
+    console.log(`[DEMO VERIFY] ${check.path} OK (${count} records)`);
   }
+
+  console.log('[DEMO VERIFY] ✅ Demo verification PASSED');
 }
 
-/* ------------------------------------------------------------------ */
-/* Run                                                                 */
-/* ------------------------------------------------------------------ */
-
-(async () => {
-  try {
-    await verifySeededEndpoints();
-    console.log('[DEMO VERIFY] ✅ Demo verification PASSED');
-    process.exit(0);
-  } catch (error) {
-    console.error('[DEMO VERIFY] ❌ Demo verification FAILED');
-    console.error(error);
-    process.exit(1);
-  }
-})();
+main().catch((error) => {
+  console.error('[DEMO VERIFY] ❌ Demo verification FAILED');
+  console.error(error?.response?.data || error?.message || error);
+  process.exit(1);
+});
