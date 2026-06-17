@@ -52,6 +52,17 @@ const INTENT_OPTIONS = [
 
 const VOICE_CONSENT_KEY = 'ai_voice_consent_v1';
 const MAX_PROMPT_LENGTH = 8000;
+const STARTUP_TIMEOUT_MS = 10000;
+
+const withStartupTimeout = (promise, label) => {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out. Please try again.`));
+    }, STARTUP_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
+};
 
 const initialMessageText = (context) => {
   if (!context) {
@@ -294,14 +305,38 @@ const AIAssistant = () => {
     const loadAssistantData = async () => {
       setLoading(true);
       try {
-        const [sessionResp, contextResp] = await Promise.all([
-          aiAssistantAPI.startSession({ companyId: activeCompanyId }),
-          aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+        const [sessionResult, contextResult] = await Promise.allSettled([
+          withStartupTimeout(
+            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+            'AI assistant session',
+          ),
+          withStartupTimeout(
+            aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+            'AI assistant context',
+          ),
         ]);
-        if (!cancelled) {
-          setSessionId(sessionResp?.sessionId ?? null);
-          setContext(contextResp);
+
+        if (cancelled) {
+          return;
         }
+
+        if (sessionResult.status === 'rejected') {
+          setContextError(
+            formatApiError(sessionResult.reason, 'Unable to start the AI assistant session.'),
+          );
+          return;
+        }
+
+        if (contextResult.status === 'rejected') {
+          setSessionId(sessionResult.value?.sessionId ?? null);
+          setContextError(
+            formatApiError(contextResult.reason, 'Unable to load the AI assistant context.'),
+          );
+          return;
+        }
+
+        setSessionId(sessionResult.value?.sessionId ?? null);
+        setContext(contextResult.value || {});
       } catch (err) {
         if (!cancelled) {
           setContextError(formatApiError(err, 'Unable to load the AI assistant.'));

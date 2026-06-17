@@ -44,6 +44,20 @@ const extractPromptFromQuery = (req) =>
 
 const safePromptFromRequest = (prompt) => redactPII(prompt || '');
 
+
+const resolveAiGatewayContext = (req) => ({
+  purpose:
+    req.aiContext?.purpose ||
+    req.get('x-ai-purpose') ||
+    req.query?.purpose ||
+    req.body?.purpose,
+  policyVersion:
+    req.aiContext?.policyVersion ||
+    req.get('x-ai-policy-version') ||
+    req.query?.policyVersion ||
+    req.body?.policyVersion,
+});
+
 const buildGatewayPayload = ({
   req,
   prompt,
@@ -57,8 +71,8 @@ const buildGatewayPayload = ({
   user: req.user,
   companyId: req.companyId,
   requestId: req.requestId,
-  purpose: req.aiContext?.purpose,
-  policyVersion: req.aiContext?.policyVersion,
+purpose: resolveAiGatewayContext(req).purpose,
+  policyVersion: resolveAiGatewayContext(req).policyVersion,
   prompt,
   params,
   handler,

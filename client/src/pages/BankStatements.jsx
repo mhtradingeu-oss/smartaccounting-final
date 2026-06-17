@@ -12,6 +12,7 @@ import { AIBadge } from '../components/AIBadge';
 import { bankStatementsAPI } from '../services/bankStatementsAPI';
 import { formatApiError } from '../services/api';
 import { can, isReadOnlyRole } from '../lib/permissions';
+import { usePlanCatalog } from '../hooks/usePlanCatalog';
 import {
   PageLoadingState,
   PageEmptyState,
@@ -20,11 +21,27 @@ import {
 } from '../components/ui/PageStates';
 
 const BANK_STATEMENT_REFRESH_EVENT = 'bankStatements:refresh';
+const AI_ADVISOR_PLANS = new Set(['pro', 'professional', 'enterprise', 'business']);
+
+const normalizePlanId = (value) => String(value || '').trim().toLowerCase();
+
+const planIncludesAIAssistant = (planId, planMap) => {
+  const normalizedPlanId = normalizePlanId(planId);
+  if (!normalizedPlanId) {
+    return false;
+  }
+  const planFeatures = planMap?.[normalizedPlanId]?.features;
+  if (planFeatures) {
+    return Boolean(planFeatures.aiAssistant || planFeatures.aiRead);
+  }
+  return AI_ADVISOR_PLANS.has(normalizedPlanId);
+};
 
 export default function BankStatements() {
   const { activeCompany, activeCompanyId } = useCompany();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { planMap } = usePlanCatalog();
   const navigate = useNavigate();
   const [statements, setStatements] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,6 +50,23 @@ export default function BankStatements() {
 
   const isReadOnlyUser = isReadOnlyRole(user?.role);
   const hasBankWriteAccess = can('bank:write', user?.role);
+  const canUseAIAdvisorRole = user?.role === 'admin' || user?.role === 'accountant';
+  const companyAIEnabled = activeCompany?.aiEnabled !== false;
+  const activePlanId =
+    activeCompany?.subscriptionPlan || user?.company?.subscriptionPlan || user?.subscriptionPlan;
+  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+  const aiEnabled = Boolean(
+    activeCompany && companyAIEnabled && canUseAIAdvisorRole && planAllowsAIAdvisor,
+  );
+  const aiDisabledReason = !activeCompany
+    ? 'Select a company to use AI Advisor.'
+    : !companyAIEnabled
+      ? 'AI is disabled for this company.'
+      : !canUseAIAdvisorRole
+        ? 'AI Advisor is available to admin and accountant roles.'
+        : !planAllowsAIAdvisor
+          ? 'Your current plan does not include AI Advisor.'
+          : null;
 
   const loadStatements = useCallback(
     async (signal) => {
@@ -213,15 +247,6 @@ export default function BankStatements() {
       </div>
     );
   }
-
-  // --- AI UI audit additions ---
-  // AI entry point: visible but not intrusive
-  const aiEnabled = user?.features?.includes('ai-bank-statements');
-  const aiDisabledReason = !aiEnabled
-    ? user?.features?.includes('ai-bank-statements') === false
-      ? 'AI features are disabled by your administrator.'
-      : 'AI features are not available for your role or company.'
-    : null;
 
   return (
     <div className="space-y-6">

@@ -242,4 +242,11 @@ async function logRateLimited({
   });
 }
 
-module.exports = { logRequested, logResponded, logRejected, logRateLimited, logSuggestionEvent };
+module.exports = {
+  logRequested,
+  logResponded,
+  logRejected,
+  logRateLimited,
+  logSuggestionEvent,
+  logSessionEvent,
+};

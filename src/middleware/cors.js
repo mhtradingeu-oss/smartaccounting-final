@@ -41,6 +41,8 @@ const corsOptions = {
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
+    'X-AI-Purpose',
+    'x-ai-purpose',
     'authorization',
     'content-type',
     'Content-Type',
