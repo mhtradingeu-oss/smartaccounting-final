@@ -60,6 +60,7 @@ const Invoices = () => {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({ status: 'all', search: '' });
   const [page, setPage] = useState(1);
+  const canViewLegalData = user?.role === 'admin' || user?.role === 'accountant';
 
   const fetchInvoices = useCallback(async () => {
     if (!activeCompany) {
@@ -133,10 +134,10 @@ const Invoices = () => {
   return (
     <div className="space-y-6">
       {/* GDPR Retention Banner */}
-      <div className="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-2 text-xs text-blue-900">
+      <div className="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-2 text-xs text-blue-900 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-100">
         <strong>Retention period:</strong> {RETENTION_PERIOD_YEARS} years (GoBD, HGB, AO).
-        Accounting records cannot be deleted during this time, even for GDPR requests. Personal data
-        is masked unless required by law.
+        Locked accounting records cannot be edited or deleted. Personal data may be masked depending
+        on role.
       </div>
       {/* Contextual AI entry point */}
       <div className="flex justify-end mb-2">
@@ -155,7 +156,7 @@ const Invoices = () => {
           Ask AI
         </button>
       </div>
-      <div className="mb-2 text-xs text-gray-500">
+      <div className="mb-2 text-xs text-gray-500 dark:text-gray-300">
         <span className="font-semibold">What does AI see?</span> The assistant will only see your
         current company’s invoices, status, and visible details on this page. No generic
         questions—AI answers are always based on the invoices you see here.
@@ -163,8 +164,8 @@ const Invoices = () => {
       {/* Page header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Invoices</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-300">
             All invoices for <span className="font-semibold">{activeCompany.name}</span>
           </p>
         </div>
@@ -240,149 +241,157 @@ const Invoices = () => {
           ) : (
             <div className="space-y-4">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Invoice #
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Client
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Issue Date
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Due Date
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Amount
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Status
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                       >
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {paginatedInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="hover:bg-blue-50/60 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          {invoice.invoiceNumber}
-                        </td>
-                        {/* Mask client name unless strictly needed */}
-                        <td
-                          className="px-4 py-3 text-sm text-gray-600"
-                          title="Personal data masked for GDPR compliance"
+                  <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                    {paginatedInvoices.map((invoice) => {
+                      const isLocked = invoice.status !== 'draft';
+                      const clientName =
+                        !isLocked || canViewLegalData ? invoice.clientName : 'Masked';
+                      const clientTitle =
+                        !isLocked || canViewLegalData
+                          ? undefined
+                          : 'Personal data masked for GDPR compliance';
+
+                      return (
+                        <tr
+                          key={invoice.id}
+                          className="hover:bg-blue-50/60 dark:hover:bg-gray-800 transition-colors"
                         >
-                          {invoice.status === 'draft' ? invoice.clientName : 'Masked'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {formatDate(invoice.date)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {formatDate(invoice.dueDate)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(invoice.total, invoice.currency)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <InvoiceStatusBadge status={invoice.status} />
-                          <span className="ml-2 text-xs text-gray-500" title="Status meaning">
-                            {invoice.status === 'draft' &&
-                              'Draft: You can edit or issue this invoice.'}
-                            {invoice.status === 'issued' &&
-                              'Issued: This invoice is legally binding and cannot be edited.'}
-                            {invoice.status === 'paid' &&
-                              'Paid: This invoice is settled and locked.'}
-                            {invoice.status === 'cancelled' &&
-                              'Cancelled: This invoice is void and locked.'}
-                          </span>
-                          {invoice.status !== 'draft' && (
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                            {invoice.invoiceNumber}
+                          </td>
+                          <td
+                            className="px-4 py-3 text-sm text-gray-600 dark:text-gray-200"
+                            title={clientTitle}
+                          >
+                            {clientName}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                            {formatDate(invoice.date)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                            {formatDate(invoice.dueDate)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                            {formatCurrency(invoice.total, invoice.currency)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <InvoiceStatusBadge status={invoice.status} />
                             <span
-                              className="ml-2 inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
-                              title="GoBD Immutability"
+                              className="ml-2 text-xs text-gray-500 dark:text-gray-300"
+                              title="Status meaning"
                             >
-                              Legally locked (GoBD)
+                              {invoice.status === 'draft' &&
+                                'Draft: You can edit or issue this invoice.'}
+                              {invoice.status === 'issued' &&
+                                'Issued: This invoice is legally binding and cannot be edited.'}
+                              {invoice.status === 'paid' &&
+                                'Paid: This invoice is settled and locked.'}
+                              {invoice.status === 'cancelled' &&
+                                'Cancelled: This invoice is void and locked.'}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {invoice.status === 'draft' ? (
-                            <PermissionGuard action="invoice.edit" role={user?.role}>
-                              <Link
-                                to={`/invoices/${invoice.id}/edit`}
-                                className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                              >
-                                Edit
-                              </Link>
-                            </PermissionGuard>
-                          ) : (
-                            <div className="flex flex-col items-start gap-2">
-                              <Link
-                                to={`/invoices/${invoice.id}/edit`}
-                                className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                              >
-                                View
-                              </Link>
+                            {isLocked && (
                               <span
-                                className="inline-block px-3 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium cursor-not-allowed"
-                                title="GoBD Immutability"
+                                className="ml-2 inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
+                                title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
                               >
-                                Edits blocked
+                                Legally locked (GoBD)
                               </span>
-                              <span className="mt-1 text-xs text-red-700 font-semibold">
-                                This record is legally locked (GoBD). Edits and deletions are
-                                prohibited by German accounting law.
-                                <br />
-                                <span className="text-blue-900">
-                                  GDPR requests for deletion cannot be fulfilled for accounting
-                                  records due to mandatory retention.
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                            {invoice.status === 'draft' ? (
+                              <PermissionGuard action="invoice.edit" role={user?.role}>
+                                <Link
+                                  to={`/invoices/${invoice.id}/edit`}
+                                  className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                                >
+                                  Edit
+                                </Link>
+                              </PermissionGuard>
+                            ) : (
+                              <div className="flex flex-col items-start gap-2">
+                                <Link
+                                  to={`/invoices/${invoice.id}/edit`}
+                                  className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                >
+                                  View
+                                </Link>
+                                <span
+                                  className="inline-block px-3 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium cursor-not-allowed dark:bg-gray-800 dark:text-gray-200"
+                                  title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
+                                >
+                                  Edits blocked
                                 </span>
-                              </span>
-                              <span className="mt-1 text-xs text-gray-500">
-                                Status:{' '}
-                                {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}.{' '}
-                                {invoice.status === 'issued' &&
-                                  'You cannot revert to draft or paid directly.'}
-                                {invoice.status === 'paid' &&
-                                  'You cannot revert to issued or draft.'}
-                                {invoice.status === 'cancelled' &&
-                                  'You cannot revert to any other status.'}
-                              </span>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                                <span className="mt-1 text-xs text-gray-500 dark:text-gray-300">
+                                  Status:{' '}
+                                  {invoice.status.charAt(0).toUpperCase() +
+                                    invoice.status.slice(1)}
+                                  .{' '}
+                                  {invoice.status === 'issued' &&
+                                    'You cannot revert to draft or paid directly.'}
+                                  {invoice.status === 'paid' &&
+                                    'You cannot revert to issued or draft.'}
+                                  {invoice.status === 'cancelled' &&
+                                    'You cannot revert to any other status.'}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
               {/* Pagination */}
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
                 <p>
                   Showing {showingStart} - {showingEnd} of {filteredInvoices.length} invoices
                 </p>
@@ -395,7 +404,7 @@ const Invoices = () => {
                   >
                     Previous
                   </Button>
-                  <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-300">
                     Page {page} of {totalPages}
                   </span>
                   <Button

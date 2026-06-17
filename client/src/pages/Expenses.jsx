@@ -48,6 +48,7 @@ const Expenses = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const companyId = activeCompany?.id ?? null;
+  const canViewLegalData = user?.role === 'admin' || user?.role === 'accountant';
 
   const fetchExpenses = useCallback(async () => {
     if (!companyId) {
@@ -113,10 +114,10 @@ const Expenses = () => {
   return (
     <div className="space-y-6">
       {/* GDPR Retention Banner */}
-      <div className="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-2 text-xs text-blue-900">
+      <div className="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-2 text-xs text-blue-900 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-100">
         <strong>Retention period:</strong> {RETENTION_PERIOD_YEARS} years (GoBD, HGB, AO).
-        Accounting records cannot be deleted during this time, even for GDPR requests. Personal data
-        is masked unless required by law.
+        Locked accounting records cannot be edited or deleted. Personal data may be masked depending
+        on role.
       </div>
       {/* Contextual AI entry point */}
       <div className="flex justify-end mb-2">
@@ -135,16 +136,16 @@ const Expenses = () => {
           Ask AI
         </button>
       </div>
-      <div className="mb-2 text-xs text-gray-500">
+      <div className="mb-2 text-xs text-gray-500 dark:text-gray-300">
         <span className="font-semibold">What does AI see?</span> The assistant will only see your
         current company’s expenses, amounts, and visible details on this page. No generic
         questions—AI answers are always based on the expenses you see here.
       </div>
       <div className="mb-6">
         {/* h1 matches sidebar label exactly */}
-        <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
         {/* Subtitle for first-time user clarity */}
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           This page shows all company expenses in one place. You can review spending, see details
           for each expense, and keep track of costs over time.
         </p>
@@ -154,106 +155,120 @@ const Expenses = () => {
         <ReadOnlyBanner mode="Read-only" message={t('states.read_only.expenses_notice')} />
       )}
       <Card>
-        <div className="flex justify-between items-center mb-4">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
+        <div className="mb-4 overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   Date
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   Description
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   Amount
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   Vendor
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <td>{formatDate(expense.date)}</td>
-                  {/* Mask description if it contains personal data */}
-                  <td title="Personal data masked for GDPR compliance">
-                    {expense.status === 'draft' ? expense.description : 'Masked'}
-                  </td>
-                  <td>{formatCurrency(expense.amount, expense.currency)}</td>
-                  {/* Mask vendor name unless strictly needed */}
-                  <td title="Personal data masked for GDPR compliance">
-                    {expense.status === 'draft' ? expense.vendor : 'Masked'}
-                  </td>
-                  <td>
-                    <span className="text-xs text-gray-500" title="Status meaning">
-                      {expense.status === 'draft' && 'Draft: You can edit or post this expense.'}
-                      {expense.status === 'posted' &&
-                        'Posted: This expense is finalized and cannot be edited.'}
-                      {expense.status === 'reimbursed' &&
-                        'Reimbursed: This expense is settled and locked.'}
-                      {expense.status === 'cancelled' &&
-                        'Cancelled: This expense is void and locked.'}
-                    </span>
-                    {expense.status !== 'draft' ? (
-                      <div className="flex flex-col items-start">
-                        <span
-                          className="inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
-                          title="GoBD Immutability"
-                        >
-                          Legally locked (GoBD)
-                        </span>
-                        <span className="mt-1 text-xs text-red-700 font-semibold">
-                          This record is legally locked (GoBD). Edits and deletions are prohibited
-                          by German accounting law.
-                          <br />
-                          <span className="text-blue-900">
-                            GDPR requests for deletion cannot be fulfilled for accounting records
-                            due to mandatory retention.
-                          </span>
-                        </span>
-                        <span className="mt-1 text-xs text-gray-500">
-                          Status: {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}
-                          .{' '}
-                          {expense.status === 'posted' &&
-                            'You cannot revert to draft or reimbursed directly.'}
-                          {expense.status === 'reimbursed' &&
-                            'You cannot revert to posted or draft.'}
-                          {expense.status === 'cancelled' &&
-                            'You cannot revert to any other status.'}
-                        </span>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled
-                        title="Expense detail view is coming soon."
-                        className="cursor-not-allowed"
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+              {expenses.map((expense) => {
+                const isLocked = expense.status !== 'draft';
+                const description =
+                  !isLocked || canViewLegalData ? expense.description : 'Masked';
+                const vendor =
+                  !isLocked || canViewLegalData ? expense.vendor || expense.vendorName : 'Masked';
+                const maskedTitle =
+                  !isLocked || canViewLegalData
+                    ? undefined
+                    : 'Personal data masked for GDPR compliance';
+
+                return (
+                  <tr key={expense.id} className="hover:bg-blue-50/60 dark:hover:bg-gray-800">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {formatDate(expense.date)}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"
+                      title={maskedTitle}
+                    >
+                      {description}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      {formatCurrency(expense.amount, expense.currency)}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"
+                      title={maskedTitle}
+                    >
+                      {vendor}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      <span
+                        className="text-xs text-gray-500 dark:text-gray-300"
+                        title="Status meaning"
                       >
-                        View
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        {expense.status === 'draft' && 'Draft: You can edit or post this expense.'}
+                        {expense.status === 'posted' &&
+                          'Posted: This expense is finalized and cannot be edited.'}
+                        {expense.status === 'reimbursed' &&
+                          'Reimbursed: This expense is settled and locked.'}
+                        {expense.status === 'cancelled' &&
+                          'Cancelled: This expense is void and locked.'}
+                      </span>
+                      {isLocked ? (
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className="inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
+                            title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
+                          >
+                            Legally locked (GoBD)
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-300">
+                            Status:{' '}
+                            {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}.{' '}
+                            {expense.status === 'posted' &&
+                              'You cannot revert to draft or reimbursed directly.'}
+                            {expense.status === 'reimbursed' &&
+                              'You cannot revert to posted or draft.'}
+                            {expense.status === 'cancelled' &&
+                              'You cannot revert to any other status.'}
+                          </span>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled
+                          title="Expense detail view is coming soon."
+                          className="cursor-not-allowed"
+                        >
+                          View
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
