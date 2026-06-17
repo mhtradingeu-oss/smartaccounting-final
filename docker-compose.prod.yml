@@ -1,7 +1,3 @@
-# ========================================
-# SmartAccounting – Production Compose
-# ========================================
-
 services:
   db:
     image: postgres:16
@@ -9,14 +5,14 @@ services:
 
     environment:
       POSTGRES_DB: smartaccounting_prod
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: smartaccounting
+      POSTGRES_PASSWORD: CHANGE_ME_STRONG_PASSWORD
 
     volumes:
       - pgdata:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U smartaccounting"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,7 +27,7 @@ services:
       dockerfile: Dockerfile.backend
 
     env_file:
-      - .env.prod
+      - .env.production
 
     environment:
       NODE_ENV: production
@@ -40,21 +36,17 @@ services:
       db:
         condition: service_healthy
 
-    # ❌ لا expose في production (nginx فقط)
-    # ports:
-    #   - "5050:5000"
+    restart: unless-stopped
 
     volumes:
       - ./uploads:/usr/src/app/uploads
       - ./logs:/usr/src/app/logs
       - ./temp:/usr/src/app/temp
 
-    restart: unless-stopped
-
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
 
   frontend:
@@ -70,10 +62,12 @@ services:
       backend:
         condition: service_healthy
 
-    ports:
-      - "8080:80"
-
     restart: unless-stopped
+
+    # ❌ DO NOT expose directly in real production
+    # Use nginx or reverse proxy instead
+    # ports:
+    #   - "8080:80"
 
 volumes:
   pgdata:

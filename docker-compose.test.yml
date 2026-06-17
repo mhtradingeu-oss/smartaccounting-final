@@ -2,16 +2,21 @@ services:
   db:
     image: postgres:16
     container_name: smartaccounting-db-test
+
     environment:
       POSTGRES_DB: smartaccounting_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5442:5432"
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+
     volumes:
       - pgdata_test:/var/lib/postgresql/data
 
@@ -19,15 +24,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+
     container_name: smartaccounting-backend-test
+
     depends_on:
       db:
         condition: service_healthy
+
     environment:
       NODE_ENV: test
+      PORT: 5000
       USE_SQLITE: "false"
+
       DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting_test
+
       API_BASE_URL: /api
+
+      # IMPORTANT FOR TEST STABILITY
+      LOG_LEVEL: error
+      REQUEST_LOGGING: "false"
+
+      # Disable external systems in tests
+      AI_ASSISTANT_ENABLED: "false"
+      BANK_IMPORT_ENABLED: "false"
+      EXPORTS_ENABLED: "false"
 
 volumes:
   pgdata_test:

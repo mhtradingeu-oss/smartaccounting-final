@@ -1,0 +1,121 @@
+#!/bin/bash
+
+set -e
+
+echo ""
+echo "======================================"
+echo "🚀 SMARTACCOUNTING ENTERPRISE CENTER"
+echo "======================================"
+echo ""
+
+# -----------------------------
+# 1. VERIFY DOCKER
+# -----------------------------
+echo "🐳 Checking Docker..."
+
+if ! docker ps >/dev/null 2>&1; then
+  echo "❌ Docker is not running. Start Docker Desktop first."
+  exit 1
+fi
+
+echo "✔ Docker is running"
+
+# -----------------------------
+# 2. CLEAN ONLY LOCAL FRONTEND PORT
+# -----------------------------
+echo ""
+echo "🧹 Cleaning frontend port..."
+
+pid=$(lsof -ti:5173 || true)
+
+if [ -n "$pid" ]; then
+  echo "   killing frontend port 5173 (PID $pid)"
+  kill -9 $pid 2>/dev/null || true
+else
+  echo "   port 5173 already free"
+fi
+
+pkill -f "vite" >/dev/null 2>&1 || true
+
+echo "✔ Frontend environment cleaned"
+
+# -----------------------------
+# 3. RESTART PROJECT DOCKER SERVICES SAFELY
+# -----------------------------
+echo ""
+echo "🐳 Restarting SmartAccounting Docker Stack..."
+
+docker compose down
+docker compose up -d db backend
+
+# -----------------------------
+# 4. WAIT FOR BACKEND HEALTH
+# -----------------------------
+echo ""
+echo "⏳ Waiting for backend health..."
+
+READY=false
+
+for i in {1..30}
+do
+  if curl -s http://localhost:5001/api/docs >/dev/null 2>&1; then
+    echo "✔ Backend is READY"
+    READY=true
+    break
+  fi
+
+  echo "   ...waiting ($i/30)"
+  sleep 2
+done
+
+if [ "$READY" = false ]; then
+  echo ""
+  echo "❌ Backend failed to start within timeout"
+  echo ""
+  echo "🔎 Backend status:"
+  docker compose ps
+  echo ""
+  echo "🔎 Backend logs:"
+  docker compose logs --tail=120 backend
+  exit 1
+fi
+
+# -----------------------------
+# 5. START FRONTEND
+# -----------------------------
+echo ""
+echo "🌐 Starting Frontend (Vite)..."
+
+mkdir -p logs
+
+cd client
+npm run dev -- --port 5173 > ../logs/frontend.log 2>&1 &
+FRONTEND_PID=$!
+cd ..
+
+# -----------------------------
+# 6. SYSTEM DASHBOARD
+# -----------------------------
+echo ""
+echo "======================================"
+echo "📊 ENTERPRISE CONTROL CENTER STATUS"
+echo "======================================"
+echo ""
+echo "🟢 Frontend:"
+echo "   http://localhost:5173"
+echo ""
+echo "🟢 Backend:"
+echo "   http://localhost:5001"
+echo "   http://localhost:5001/api/docs"
+echo ""
+echo "🟢 Database:"
+echo "   localhost:5441"
+echo ""
+echo "🟡 Logs:"
+echo "   logs/frontend.log"
+echo ""
+echo "======================================"
+echo "✅ SYSTEM FULLY OPERATIONAL"
+echo "======================================"
+
+wait $FRONTEND_PID

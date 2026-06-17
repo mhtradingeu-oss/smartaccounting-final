@@ -2,9 +2,12 @@ FROM node:20-bullseye-slim
 
 WORKDIR /usr/src/app
 
-ENV NODE_ENV=production
+# Default environment (can be overridden by docker-compose)
+ENV NODE_ENV=development
 
-# Install build/runtime tools required for native modules and scripts.
+# =====================
+# SYSTEM DEPENDENCIES
+# =====================
 RUN apt-get update && apt-get install -y \
   python3 \
   make \
@@ -12,11 +15,15 @@ RUN apt-get update && apt-get install -y \
   curl \
   && rm -rf /var/lib/apt/lists/*
 
-# Install production dependencies.
+# =====================
+# INSTALL DEPENDENCIES
+# =====================
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
-# Copy application files required at runtime.
+# =====================
+# SOURCE CODE
+# =====================
 COPY index.js ./
 COPY .sequelizerc ./
 COPY src ./src
@@ -26,10 +33,17 @@ COPY scripts ./scripts
 COPY shared ./shared
 COPY docs ./docs
 
-# Runtime directories expected by containers and host mounts.
+# =====================
+# RUNTIME DIRECTORIES
+# =====================
 RUN mkdir -p logs uploads temp
 
-
+# =====================
+# PORT
+# =====================
 EXPOSE 5000
 
+# =====================
+# START COMMAND
+# =====================
 CMD ["node", "index.js"]
