@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Layout from '../components/Layout';
 import Card from '../components/Card';
 import { PageEmptyState } from '../components/ui/PageStates';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -176,19 +175,17 @@ const GermanTaxReports = () => {
 
   if (!activeCompany) {
     return (
-      <Layout>
-        <div className="py-24">
-          <PageEmptyState
-            title="Select a company"
-            description="German tax reporting is scoped to an active company. Choose or create one before returning to this page."
-            action={
-              <Button as={Link} to="/companies" variant="primary">
-                Pick a company
-              </Button>
-            }
-          />
-        </div>
-      </Layout>
+      <div className="py-24">
+        <PageEmptyState
+          title="Select a company"
+          description="German tax reporting is scoped to an active company. Choose or create one before returning to this page."
+          action={
+            <Button as={Link} to="/companies" variant="primary">
+              Pick a company
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
@@ -210,41 +207,40 @@ const GermanTaxReports = () => {
                 : undefined;
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        {isReadOnly && (
-          <ReadOnlyBanner mode="Read-only" message={t('states.read_only.dashboard_notice')} />
-        )}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tax Reports</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Generate and review German tax reports for your company. No data is sent or stored until
-            the service is enabled.
-          </p>
-          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs text-blue-900">
-            No DATEV / ELSTER / Finanzamt certification or submission is implied.
+    <div className="space-y-6">
+      {isReadOnly && (
+        <ReadOnlyBanner mode="Read-only" message={t('states.read_only.dashboard_notice')} />
+      )}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tax Reports</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          Generate and review German tax reports for your company. No data is sent or stored until
+          the service is enabled.
+        </p>
+        <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs text-blue-900">
+          No DATEV / ELSTER / Finanzamt certification or submission is implied.
+        </div>
+      </div>
+
+      {/* Locked Period Banner */}
+      {(availability.status === 'submitted' || availability.status === 'accepted') && (
+        <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 mb-4">
+          <span className="inline-block px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-semibold mr-2">
+            Locked Period
+          </span>
+          <span className="font-medium text-yellow-900">
+            {availability.status === 'submitted'
+              ? 'This tax period is locked. Changes are prohibited by law after submission.'
+              : 'This tax period is closed and legally finalized. No changes allowed.'}
+          </span>
+          <div className="mt-2 text-xs text-yellow-800">
+            If reopening is legally permitted, you must follow the official process and provide
+            justification. Contact your tax advisor for details.
           </div>
         </div>
+      )}
 
-        {/* Locked Period Banner */}
-        {(availability.status === 'submitted' || availability.status === 'accepted') && (
-          <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 mb-4">
-            <span className="inline-block px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-semibold mr-2">
-              Locked Period
-            </span>
-            <span className="font-medium text-yellow-900">
-              {availability.status === 'submitted'
-                ? 'This tax period is locked. Changes are prohibited by law after submission.'
-                : 'This tax period is closed and legally finalized. No changes allowed.'}
-            </span>
-            <div className="mt-2 text-xs text-yellow-800">
-              If reopening is legally permitted, you must follow the official process and provide
-              justification. Contact your tax advisor for details.
-            </div>
-          </div>
-        )}
-
-        {renderStatusCallout()}
+      {renderStatusCallout()}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
@@ -381,35 +377,34 @@ const GermanTaxReports = () => {
           </Card>
         </div>
 
-        <Card>
-          <div className="p-6 space-y-3">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-              {t('recentReports')}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Tax reports will populate here once German tax reporting is live. Nothing is stored or
-              sent until the service is enabled.
-            </p>
-          </div>
-        </Card>
+      <Card>
+        <div className="p-6 space-y-3">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            {t('recentReports')}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Tax reports will populate here once German tax reporting is live. Nothing is stored or
+            sent until the service is enabled.
+          </p>
+        </div>
+      </Card>
 
-        <Card>
-          <div className="p-6">
-            <div className="flex items-start">
-              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500 mr-3 mt-1" />
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                  {t('complianceNotice')}
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('complianceNoticeText')}
-                </p>
-              </div>
+      <Card>
+        <div className="p-6">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500 mr-3 mt-1" />
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                {t('complianceNotice')}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {t('complianceNoticeText')}
+              </p>
             </div>
           </div>
-        </Card>
-      </div>
-    </Layout>
+        </div>
+      </Card>
+    </div>
   );
 };
 

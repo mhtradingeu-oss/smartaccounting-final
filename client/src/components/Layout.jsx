@@ -101,7 +101,7 @@ const Layout = ({ children }) => {
         />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto pt-16 main-content">
+        <main className="flex-1 overflow-y-auto pt-16 pb-24 main-content">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
               {/* DevHealthCheck is only shown in development mode. Remove for production. */}
@@ -111,7 +111,7 @@ const Layout = ({ children }) => {
           </div>
         </main>
         {/* Global Footer */}
-        <div className="w-full border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className="w-full shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <Footer />
         </div>
       </div>

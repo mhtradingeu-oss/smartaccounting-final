@@ -60,6 +60,29 @@ const MOCK_SEARCH_RESULTS = [
   },
 ];
 
+const PLAN_LABEL_FALLBACKS = {
+  pro: 'Professional',
+  professional: 'Professional',
+  basic: 'Starter',
+  starter: 'Starter',
+  free: 'Demo',
+  demo: 'Demo',
+  enterprise: 'Business',
+  business: 'Business',
+};
+
+const resolveDisplayPlanLabel = (planId, planMap) => {
+  if (!planId) {
+    return null;
+  }
+  const normalizedPlanId = String(planId).trim().toLowerCase();
+  return (
+    planMap?.[normalizedPlanId]?.name ||
+    PLAN_LABEL_FALLBACKS[normalizedPlanId] ||
+    resolvePlanLabel(planId, planMap)
+  );
+};
+
 const TopBar = ({
   isDarkMode,
   onToggleDarkMode,
@@ -71,9 +94,11 @@ const TopBar = ({
   const isSystemAdminUser = isSystemAdmin(user);
   const isReadOnlySession = isReadOnlyRole(user?.role);
   const { planMap } = usePlanCatalog();
-  const planLabel = resolvePlanLabel(user?.subscriptionPlan, planMap);
   useLoadCompanies();
-  const { companies } = useCompany();
+  const { companies, activeCompany } = useCompany();
+  const planId =
+    activeCompany?.subscriptionPlan || user?.company?.subscriptionPlan || user?.subscriptionPlan;
+  const planLabel = resolveDisplayPlanLabel(planId, planMap);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useRole } from '../context/RoleContext';
+import { useCompany } from '../context/CompanyContext';
 
 import { AIBadge } from './AIBadge';
 import {
@@ -30,13 +31,39 @@ import { resolvePlanLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 const NAV_LINK_BASE_CLASSES =
   'relative group flex items-center px-3 py-2.5 text-sm font-medium min-h-[44px] rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
 
+const PLAN_LABEL_FALLBACKS = {
+  pro: 'Professional',
+  professional: 'Professional',
+  basic: 'Starter',
+  starter: 'Starter',
+  free: 'Demo',
+  demo: 'Demo',
+  enterprise: 'Business',
+  business: 'Business',
+};
+
+const resolveDisplayPlanLabel = (planId, planMap) => {
+  if (!planId) {
+    return null;
+  }
+  const normalizedPlanId = String(planId).trim().toLowerCase();
+  return (
+    planMap?.[normalizedPlanId]?.name ||
+    PLAN_LABEL_FALLBACKS[normalizedPlanId] ||
+    resolvePlanLabel(planId, planMap)
+  );
+};
+
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { role } = useRole();
+  const { activeCompany } = useCompany();
   const location = useLocation();
   const { planMap } = usePlanCatalog();
-  const planLabel = resolvePlanLabel(user?.subscriptionPlan, planMap);
+  const planId =
+    activeCompany?.subscriptionPlan || user?.company?.subscriptionPlan || user?.subscriptionPlan;
+  const planLabel = resolveDisplayPlanLabel(planId, planMap);
   const [, setHoveredItem] = React.useState(null);
   const [isCompact, setIsCompact] = React.useState(false);
   const navRef = React.useRef(null);
