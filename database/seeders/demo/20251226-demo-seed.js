@@ -902,6 +902,7 @@ module.exports = {
       throw new Error('[DEMO SEED] Invalid queryInterface passed to seeder');
     }
     const now = new Date();
+    const dialect = queryInterface.sequelize.getDialect();
     // ...existing code...
     let companyId;
     let companyCreated = false;
@@ -1309,6 +1310,441 @@ module.exports = {
         category: template.category,
         userId: ownerId,
       });
+    }
+
+    // === DEMO BANK STATEMENTS + TRANSACTIONS ===
+    const selectedBankTransactionSpecs = BANK_TRANSACTION_SPECS.filter((spec) =>
+      [
+        'SA-INV-2026-001',
+        'SA-INV-2026-004',
+        'SA-INV-2026-006',
+        'SA-INV-2026-009',
+        'SA-INV-2026-002',
+        'Berlin HQ rent February',
+        'CloudPort analytics subscription',
+        'Workstation upgrade',
+        'Quarterly compliance scans',
+        'Portable projectors',
+      ].includes(spec.matchReference),
+    );
+
+    const bankStatementPayload = {
+      companyId,
+      userId: userMap.accountant || userMap.admin,
+      bankName: BANK_STATEMENT_TEMPLATE.bankName,
+      accountNumber: BANK_STATEMENT_TEMPLATE.accountNumber,
+      iban: BANK_STATEMENT_TEMPLATE.iban,
+      fileName: BANK_STATEMENT_TEMPLATE.fileName,
+      fileFormat: 'csv',
+      filePath: BANK_STATEMENT_TEMPLATE.filePath,
+      statementDate: BANK_STATEMENT_TEMPLATE.statementDate,
+      statementPeriodStart: BANK_STATEMENT_TEMPLATE.statementPeriodStart,
+      statementPeriodEnd: BANK_STATEMENT_TEMPLATE.statementPeriodEnd,
+      openingBalance: BANK_STATEMENT_TEMPLATE.openingBalance,
+      closingBalance: BANK_STATEMENT_TEMPLATE.closingBalance,
+      currency: 'EUR',
+      totalTransactions: selectedBankTransactionSpecs.length,
+      processedTransactions: selectedBankTransactionSpecs.length,
+      status: 'PROCESSED',
+      importDate: BANK_STATEMENT_TEMPLATE.importDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    assertKeysMatch(
+      bankStatementPayload,
+      [
+        'companyId',
+        'userId',
+        'bankName',
+        'accountNumber',
+        'iban',
+        'fileName',
+        'fileFormat',
+        'filePath',
+        'statementDate',
+        'statementPeriodStart',
+        'statementPeriodEnd',
+        'openingBalance',
+        'closingBalance',
+        'currency',
+        'totalTransactions',
+        'processedTransactions',
+        'status',
+        'importDate',
+        'createdAt',
+        'updatedAt',
+      ],
+      'bank_statements',
+    );
+
+    const [existingBankStatements] = await queryInterface.sequelize.query(
+      'SELECT id FROM bank_statements WHERE "companyId" = :companyId AND "fileName" = :fileName LIMIT 1;',
+      { replacements: { companyId, fileName: bankStatementPayload.fileName } },
+    );
+    let bankStatementId;
+    if (existingBankStatements.length === 0) {
+      bankStatementId = await insertRecordAndReturnId(
+        queryInterface,
+        'bank_statements',
+        bankStatementPayload,
+        'SELECT id FROM bank_statements WHERE "companyId" = :companyId AND "fileName" = :fileName LIMIT 1;',
+        { companyId, fileName: bankStatementPayload.fileName },
+      );
+      await logAuditEntry({
+        action: 'bank_statement_created',
+        resourceType: 'bank_statement',
+        resourceId: bankStatementPayload.fileName,
+        userId: bankStatementPayload.userId,
+        newValues: {
+          statementDate: bankStatementPayload.statementDate,
+          totalTransactions: bankStatementPayload.totalTransactions,
+        },
+        reason: AUDIT_LOG_REASONS.bankStatement,
+      });
+      console.log(`[DEMO SEED] Bank statement seeded: ${bankStatementPayload.fileName}`);
+    } else {
+      bankStatementId = existingBankStatements[0].id;
+      console.log(`[DEMO SEED] Bank statement already exists: ${bankStatementPayload.fileName}`);
+    }
+
+    const bankTransactionIdByReference = {};
+    for (const spec of selectedBankTransactionSpecs) {
+      const reference = spec.matchReference || spec.label;
+      const matchedInvoice = invoiceSummaries.find(
+        (invoice) => invoice.invoiceNumber === spec.matchReference,
+      );
+      const matchedExpense = expenseSummaries.find(
+        (expense) => expense.description === spec.matchReference,
+      );
+      const rawAmount =
+        spec.amountOverride ||
+        (matchedInvoice
+          ? Number(matchedInvoice.total) * Number(spec.matchFraction || 1)
+          : matchedExpense?.amount);
+      const amount =
+        spec.transactionType === 'DEBIT'
+          ? -Math.abs(formatMoney(rawAmount))
+          : Math.abs(formatMoney(rawAmount));
+
+      const [existingBankTransactions] = await queryInterface.sequelize.query(
+        'SELECT id FROM bank_transactions WHERE "companyId" = :companyId AND "bankStatementId" = :bankStatementId AND reference = :reference LIMIT 1;',
+        { replacements: { companyId, bankStatementId, reference } },
+      );
+
+      let bankTransactionId;
+      if (existingBankTransactions.length === 0) {
+        const bankTransactionPayload = {
+          companyId,
+          bankStatementId,
+          date: spec.transactionDate,
+          value_date: spec.valueDate || spec.transactionDate,
+          description: spec.description,
+          amount,
+          currency: 'EUR',
+          transaction_type: spec.transactionType,
+          reference,
+          category: spec.category || null,
+          vat_category: spec.vatCategory || null,
+          counterparty_name: spec.counterpartyName || null,
+          is_reconciled: false,
+          reconciled_with: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        assertKeysMatch(
+          bankTransactionPayload,
+          [
+            'companyId',
+            'bankStatementId',
+            'date',
+            'value_date',
+            'description',
+            'amount',
+            'currency',
+            'transaction_type',
+            'reference',
+            'category',
+            'vat_category',
+            'counterparty_name',
+            'is_reconciled',
+            'reconciled_with',
+            'createdAt',
+            'updatedAt',
+          ],
+          'bank_transactions',
+        );
+        bankTransactionId = await insertRecordAndReturnId(
+          queryInterface,
+          'bank_transactions',
+          bankTransactionPayload,
+          'SELECT id FROM bank_transactions WHERE "companyId" = :companyId AND "bankStatementId" = :bankStatementId AND reference = :reference LIMIT 1;',
+          { companyId, bankStatementId, reference },
+        );
+        await logAuditEntry({
+          action: 'bank_transaction_created',
+          resourceType: 'bank_transaction',
+          resourceId: reference,
+          userId: bankStatementPayload.userId,
+          newValues: {
+            amount,
+            transactionType: spec.transactionType,
+            matchedInvoiceId: matchedInvoice?.id || null,
+            matchedExpenseId: matchedExpense?.id || null,
+          },
+          reason: AUDIT_LOG_REASONS.bankTransaction,
+        });
+        console.log(`[DEMO SEED] Bank transaction seeded: ${reference}`);
+      } else {
+        bankTransactionId = existingBankTransactions[0].id;
+        console.log(`[DEMO SEED] Bank transaction already exists: ${reference}`);
+      }
+      bankTransactionIdByReference[reference] = bankTransactionId;
+    }
+
+    // === DEMO TAX REPORTS ===
+    const q1Invoices = invoiceSummaries.filter((invoice) => getQuarterKey(invoice.date) === '2026-Q1');
+    const q2Invoices = invoiceSummaries.filter((invoice) => getQuarterKey(invoice.date) === '2026-Q2');
+    const q1Expenses = expenseSummaries.filter(
+      (expense) => getQuarterKey(expense.expenseDate) === '2026-Q1',
+    );
+    const q2Expenses = expenseSummaries.filter(
+      (expense) => getQuarterKey(expense.expenseDate) === '2026-Q2',
+    );
+    const buildTaxData = (invoiceRows, expenseRows) => {
+      const outputVat = formatMoney(invoiceRows.reduce((total, invoice) => total + invoice.vatTotal, 0));
+      const inputVat = formatMoney(expenseRows.reduce((total, expense) => total + expense.vatAmount, 0));
+      return {
+        outputVat,
+        inputVat,
+        vatPayable: formatMoney(outputVat - inputVat),
+        taxableRevenue: formatMoney(invoiceRows.reduce((total, invoice) => total + invoice.total, 0)),
+        deductibleExpenses: formatMoney(expenseRows.reduce((total, expense) => total + expense.amount, 0)),
+        source: 'demo-seed',
+      };
+    };
+    const taxReportSpecs = [
+      {
+        period: { year: 2026, quarter: 1 },
+        status: 'draft',
+        elsterStatus: 'pending',
+        ticket: 'DEMO-ELSTER-Q1',
+        data: buildTaxData(q1Invoices, q1Expenses),
+      },
+      {
+        period: { year: 2026, quarter: 2 },
+        status: 'submitted',
+        elsterStatus: 'submitted',
+        ticket: 'DEMO-ELSTER-Q2',
+        data: buildTaxData(q2Invoices, q2Expenses),
+      },
+    ];
+
+    const taxReportIdByPeriod = {};
+    for (const spec of taxReportSpecs) {
+      const period = JSON.stringify(spec.period);
+      const [existingTaxReports] = await queryInterface.sequelize.query(
+        'SELECT id FROM tax_reports WHERE "companyId" = :companyId AND "reportType" = :reportType AND period = :period LIMIT 1;',
+        { replacements: { companyId, reportType: 'USt', period } },
+      );
+      let taxReportId;
+      if (existingTaxReports.length === 0) {
+        const taxReportPayload = {
+          ...(dialect === 'sqlite' ? {} : { id: uuidv4() }),
+          companyId,
+          reportType: 'USt',
+          period,
+          year: spec.period.year,
+          data: JSON.stringify(spec.data),
+          status: spec.status,
+          generatedAt: now,
+          submittedAt: spec.status === 'submitted' ? now : null,
+          submittedBy: spec.status === 'submitted' ? userMap.accountant || userMap.admin : null,
+          elsterStatus: spec.elsterStatus,
+          elsterTransferTicket: spec.ticket,
+          createdAt: now,
+          updatedAt: now,
+        };
+        assertKeysMatch(
+          taxReportPayload,
+          [
+            'id',
+            'companyId',
+            'reportType',
+            'period',
+            'year',
+            'data',
+            'status',
+            'generatedAt',
+            'submittedAt',
+            'submittedBy',
+            'elsterStatus',
+            'elsterTransferTicket',
+            'createdAt',
+            'updatedAt',
+          ],
+          'tax_reports',
+        );
+        taxReportId = await insertRecordAndReturnId(
+          queryInterface,
+          'tax_reports',
+          taxReportPayload,
+          'SELECT id FROM tax_reports WHERE "companyId" = :companyId AND "reportType" = :reportType AND period = :period LIMIT 1;',
+          { companyId, reportType: 'USt', period },
+        );
+        await logAuditEntry({
+          action: 'tax_report_created',
+          resourceType: 'tax_report',
+          resourceId: period,
+          userId: userMap.accountant || userMap.admin,
+          newValues: { reportType: 'USt', status: spec.status, data: spec.data },
+          reason: AUDIT_LOG_REASONS.taxReport,
+        });
+        console.log(`[DEMO SEED] Tax report seeded: ${period}`);
+      } else {
+        taxReportId = existingTaxReports[0].id;
+        console.log(`[DEMO SEED] Tax report already exists: ${period}`);
+      }
+      taxReportIdByPeriod[period] = taxReportId;
+    }
+
+    // === DEMO AI INSIGHTS ===
+    const aiInsightSpecs = [
+      {
+        entityType: 'invoice',
+        entityId: invoiceIdByNumber['SA-INV-2026-002'],
+        type: 'late_payment_risk',
+        severity: 'medium',
+        confidenceScore: 0.86,
+        summary: 'Partial payment pattern indicates follow-up risk for SA-INV-2026-002.',
+        why: 'The invoice is only partially paid while the due date has passed in the demo period.',
+        legalContext: 'Supports documented receivables monitoring under GoBD audit expectations.',
+        evidence: { invoiceNumber: 'SA-INV-2026-002', status: 'PARTIALLY_PAID' },
+        ruleId: AI_INSIGHT_RULES.latePayment,
+      },
+      {
+        entityType: 'expense',
+        entityId: expenseIdByDescription['Document automation suite'],
+        type: 'vat_review_needed',
+        severity: 'low',
+        confidenceScore: 0.78,
+        summary: 'Draft upload expense should be reviewed before VAT reporting.',
+        why: 'The expense originates from upload and is still pending approval in the demo workflow.',
+        legalContext: 'Input VAT should be supported by reviewed source documentation.',
+        evidence: { expense: 'Document automation suite', source: 'upload' },
+        ruleId: AI_INSIGHT_RULES.vatAnomaly,
+      },
+      {
+        entityType: 'invoice',
+        entityId: invoiceIdByNumber['SA-INV-2026-005'],
+        type: 'duplicate_counterparty_review',
+        severity: 'medium',
+        confidenceScore: 0.81,
+        summary: 'Repeated Märkisches Ventures invoices should be checked for duplicate billing.',
+        why: 'The same counterparty appears across multiple open or partially paid invoices.',
+        legalContext: 'Duplicate invoice checks support reliable revenue recognition controls.',
+        evidence: { counterparty: 'Märkisches Ventures GmbH', invoices: ['SA-INV-2026-005', 'SA-INV-2026-011'] },
+        ruleId: AI_INSIGHT_RULES.duplicateInvoice,
+      },
+      {
+        entityType: 'bankTransaction',
+        entityId: String(bankTransactionIdByReference['SA-INV-2026-002']),
+        type: 'bank_reconciliation_gap',
+        severity: 'high',
+        confidenceScore: 0.89,
+        summary: 'Partial payment needs reconciliation against the related invoice.',
+        why: 'The bank transaction is connected to a partially paid invoice and remains unreconciled.',
+        legalContext: 'Bank reconciliation evidence is required for traceable payment matching.',
+        evidence: { reference: 'SA-INV-2026-002', isReconciled: false },
+        ruleId: AI_INSIGHT_RULES.latePayment,
+      },
+      {
+        entityType: 'taxReport',
+        entityId: taxReportIdByPeriod[JSON.stringify({ year: 2026, quarter: 1 })],
+        type: 'tax_report_review',
+        severity: 'low',
+        confidenceScore: 0.74,
+        summary: 'Q1 VAT report is ready for review before submission.',
+        why: 'The report has calculated output and input VAT values but remains in draft status.',
+        legalContext: 'VAT filings should be reviewed and approved before ELSTER submission.',
+        evidence: { period: { year: 2026, quarter: 1 }, status: 'draft' },
+        ruleId: AI_INSIGHT_RULES.vatAnomaly,
+      },
+    ].filter((spec) => spec.entityId !== undefined && spec.entityId !== null);
+
+    for (const spec of aiInsightSpecs) {
+      const [existingInsights] = await queryInterface.sequelize.query(
+        'SELECT id FROM ai_insights WHERE "companyId" = :companyId AND "ruleId" = :ruleId AND "entityType" = :entityType AND "entityId" = :entityId LIMIT 1;',
+        {
+          replacements: {
+            companyId,
+            ruleId: spec.ruleId,
+            entityType: spec.entityType,
+            entityId: String(spec.entityId),
+          },
+        },
+      );
+      if (existingInsights.length > 0) {
+        console.log(`[DEMO SEED] AI insight already exists: ${spec.ruleId}`);
+        continue;
+      }
+      const aiInsightPayload = {
+        id: uuidv4(),
+        companyId,
+        entityType: spec.entityType,
+        entityId: String(spec.entityId),
+        type: spec.type,
+        purpose: 'insights_read',
+        severity: spec.severity,
+        confidenceScore: spec.confidenceScore,
+        summary: spec.summary,
+        why: spec.why,
+        legalContext: spec.legalContext,
+        evidence: prepareEvidenceValue(spec.evidence),
+        ruleId: spec.ruleId,
+        modelVersion: 'demo-seed-v1',
+        featureFlag: 'aiInsights',
+        disclaimer: 'Demo insight only. Review source records before making accounting decisions.',
+        createdAt: now,
+        updatedAt: now,
+      };
+      assertKeysMatch(
+        aiInsightPayload,
+        [
+          'id',
+          'companyId',
+          'entityType',
+          'entityId',
+          'type',
+          'purpose',
+          'severity',
+          'confidenceScore',
+          'summary',
+          'why',
+          'legalContext',
+          'evidence',
+          'ruleId',
+          'modelVersion',
+          'featureFlag',
+          'disclaimer',
+          'createdAt',
+          'updatedAt',
+        ],
+        'ai_insights',
+      );
+      await qi.bulkInsert('ai_insights', [aiInsightPayload], {});
+      await logAuditEntry({
+        action: 'ai_insight_created',
+        resourceType: 'ai_insight',
+        resourceId: spec.ruleId,
+        userId: userMap.accountant || userMap.admin,
+        newValues: {
+          entityType: spec.entityType,
+          entityId: String(spec.entityId),
+          severity: spec.severity,
+        },
+        reason: AUDIT_LOG_REASONS.aiInsight,
+      });
+      console.log(`[DEMO SEED] AI insight seeded: ${spec.ruleId}`);
     }
   },
 
