@@ -68,20 +68,20 @@ const ProfileSettings = () => {
   }, []);
 
   const handleEdit = () => {
-    setEditing(true);
-    setError(null);
     setSuccess(null);
+    setError(null);
+    setEditing(true);
   };
 
   const handleCancel = () => {
+    setSuccess(null);
+    setError(null);
     setEditing(false);
     setForm({
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
       email: user?.email || '',
     });
-    setError(null);
-    setSuccess(null);
   };
 
   const handleChange = (event) => {
@@ -167,7 +167,7 @@ const ProfileSettings = () => {
         </p>
       </div>
 
-      {success && (
+      {success && !editing && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">
           {success}
         </div>
