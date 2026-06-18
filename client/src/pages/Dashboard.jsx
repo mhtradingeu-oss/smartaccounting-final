@@ -57,6 +57,29 @@ const formatMetricValue = (metric) => {
   return formatNumber(numericValue, { maximumFractionDigits: 2 });
 };
 
+const QUICK_ACTIONS = [
+  {
+    title: 'Create invoice',
+    description: 'Issue a new invoice and keep revenue tracking up to date.',
+    to: '/invoices/create',
+  },
+  {
+    title: 'Add expense',
+    description: 'Record costs and keep profit metrics accurate.',
+    to: '/expenses/create',
+  },
+  {
+    title: 'Import bank statement',
+    description: 'Upload transactions for reconciliation and audit readiness.',
+    to: '/bank-statements/import',
+  },
+  {
+    title: 'Ask AI Assistant',
+    description: 'Use AI to understand financial activity and next actions.',
+    to: '/ai-assistant',
+  },
+];
+
 const DashboardSkeleton = () => (
   <div className="space-y-10">
     <div className="space-y-3">
@@ -186,13 +209,10 @@ const Dashboard = () => {
   );
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
-
-  useEffect(() => {
     if (!activeCompany?.id) {
       return;
     }
+
     dashboardAPI.clearCache(activeCompany.id);
     fetchDashboardData({ force: true });
   }, [fetchDashboardData, activeCompany?.id]);
@@ -292,7 +312,7 @@ const Dashboard = () => {
   }
 
   if (error) {
-    return <PageErrorState onRetry={fetchDashboardData} />;
+    return <PageErrorState message={error?.message} onRetry={() => fetchDashboardData({ force: true })} />;
   }
 
   if (rateLimitMessage) {
@@ -343,11 +363,25 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('navigation.dashboard')}</h1>
-        <p className="text-sm text-gray-500">
-          Executive view of cash flow, invoices, and operational activity for {activeCompany.name}.
-        </p>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-300">
+              Executive Command Center
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+              {t('navigation.dashboard')}
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300">
+              Live financial overview for {activeCompany.name}: revenue, expenses, invoice status,
+              bank activity, and operational signals in one place.
+            </p>
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
+            <div className="font-semibold">Company scope</div>
+            <div>{activeCompany.name}</div>
+          </div>
+        </div>
       </div>
 
       {isDemoMode && user?.role === 'admin' && (
@@ -436,8 +470,34 @@ const Dashboard = () => {
           </Card>
         )}
 
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Quick actions</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Continue the most important accounting workflows from the dashboard.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {QUICK_ACTIONS.map((action) => (
+              <Link
+                key={action.to}
+                to={action.to}
+                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-950 dark:hover:border-blue-700"
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {action.title}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                  {action.description}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         <section>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Executive KPIs</h2>
+          <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Executive KPIs</h2>
           {displayMetrics.length ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {displayMetrics.map((metric) => {
@@ -445,14 +505,14 @@ const Dashboard = () => {
                 return (
                   <div
                     key={metric.id}
-                    className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm"
+                    className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-base font-medium text-gray-700">
+                      <span className="text-base font-medium text-gray-600 dark:text-gray-300">
                         {metric.label}
                       </span>
                       <span
-                        className="text-2xl font-bold text-primary-700"
+                        className="text-2xl font-bold text-blue-700 dark:text-blue-300"
                         data-raw={metric.value}
                         data-format={metric.format || 'number'}
                         data-currency={metric.currency || undefined}
@@ -461,7 +521,7 @@ const Dashboard = () => {
                       </span>
                     </div>
                     {metric.description && (
-                      <span className="block text-xs text-gray-500 mt-2">
+                      <span className="mt-2 block text-xs text-gray-500 dark:text-gray-400">
                         {metric.description}
                       </span>
                     )}
@@ -470,17 +530,17 @@ const Dashboard = () => {
               })}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No KPI data available yet.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">No KPI data available yet.</p>
           )}
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Trends</h2>
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Trends</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-700">Revenue trend</h3>
-                <span className="text-xs text-gray-500">Last 6 months</span>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Revenue trend</h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</span>
               </div>
               {hasTrends ? (
                 <div className="space-y-4">
@@ -512,10 +572,10 @@ const Dashboard = () => {
               )}
             </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-700">Invoice volume</h3>
-                <span className="text-xs text-gray-500">Last 6 months</span>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Invoice volume</h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</span>
               </div>
               {hasTrends ? (
                 <div className="space-y-4">
@@ -550,37 +610,37 @@ const Dashboard = () => {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Details</h2>
+          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Details</h2>
           <div
             className={`grid grid-cols-1 ${
               secondaryMetrics.length ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
             } gap-6`}
           >
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Invoice status mix</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Invoice status mix</h3>
               {statusEntries.length ? (
                 <div className="space-y-3">
                   {statusEntries.map(([status, count]) => (
                     <div key={status} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">{statusLabel(status)}</span>
-                      <span className="font-semibold text-gray-900">{formatNumber(count)}</span>
+                      <span className="text-gray-600 dark:text-gray-300">{statusLabel(status)}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{formatNumber(count)}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No invoice status data yet.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No invoice status data yet.</p>
               )}
             </div>
 
             {secondaryMetrics.length > 0 && (
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">Operational signals</h3>
+              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+                <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Operational signals</h3>
                 <div className="space-y-3">
                   {secondaryMetrics.map((metric) => (
                     <div key={metric.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">{metric.label}</span>
+                      <span className="text-gray-600 dark:text-gray-300">{metric.label}</span>
                       <span
-                        className="font-semibold text-gray-900"
+                        className="font-semibold text-gray-900 dark:text-white"
                         data-raw={metric.value}
                         data-format={metric.format || 'number'}
                         data-currency={metric.currency || undefined}
@@ -593,25 +653,25 @@ const Dashboard = () => {
               </div>
             )}
 
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Latest invoice</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Latest invoice</h3>
               {latestInvoice ? (
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center justify-between">
                     <span>Invoice</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {latestInvoice.invoiceNumber || latestInvoice.id}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Status</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {statusLabel(latestInvoice.status)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Amount</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {Number.isFinite(Number(latestInvoice.amount))
                         ? latestInvoice.currency
                           ? formatCurrency(latestInvoice.amount, latestInvoice.currency)
@@ -622,14 +682,14 @@ const Dashboard = () => {
                   {latestInvoice.createdAt && (
                     <div className="flex items-center justify-between">
                       <span>Created</span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-gray-900 dark:text-white">
                         {formatDate(latestInvoice.createdAt)}
                       </span>
                     </div>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No invoice activity yet.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No invoice activity yet.</p>
               )}
             </div>
           </div>
