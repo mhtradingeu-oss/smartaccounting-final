@@ -14,9 +14,14 @@ module.exports = {
       'GET /api/companies',
 
       'GET /api/invoices',
+      'GET /api/invoices/:id',
+      'GET /api/invoices/:id/audit-log',
+      'GET /api/invoices/:id/payments',
       'POST /api/invoices',
       'PUT /api/invoices/:id',
       'PATCH /api/invoices/:id/status',
+      'POST /api/invoices/:id/payments',
+      'POST /api/invoices/:id/credit-note',
 
       'GET /api/expenses',
       'POST /api/expenses',
@@ -48,6 +53,9 @@ module.exports = {
       'GET /api/companies',
 
       'GET /api/invoices',
+      'GET /api/invoices/:id',
+      'GET /api/invoices/:id/audit-log',
+      'GET /api/invoices/:id/payments',
       'GET /api/expenses',
       'GET /api/bank-statements',
 
@@ -68,6 +76,12 @@ module.exports = {
       'GET /ready',
       'GET /api/auth/me',
       'POST /api/auth/logout',
+
+      'GET /api/companies',
+      'GET /api/invoices',
+      'GET /api/invoices/:id',
+      'GET /api/invoices/:id/audit-log',
+      'GET /api/invoices/:id/payments',
 
       'GET /api/telemetry/client-error',
       'GET /api/ai/insights',

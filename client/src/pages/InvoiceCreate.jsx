@@ -9,7 +9,7 @@ import { invoicesAPI } from '../services/invoicesAPI';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
-import { isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 
 const InvoiceCreate = () => {
@@ -18,9 +18,14 @@ const InvoiceCreate = () => {
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const canCreateInvoices = canEditInvoices(user?.role);
 
   const handleSubmit = async (formValues) => {
     if (!activeCompany) {
+      return;
+    }
+    if (!canCreateInvoices) {
+      setError({ message: 'You do not have permission to create invoices.' });
       return;
     }
 
@@ -83,16 +88,24 @@ const InvoiceCreate = () => {
         </div>
       )}
 
-      <Card>
-        <PermissionGuard action="invoice.create" role={user?.role}>
-          <InvoiceForm
-            submitLabel="Create invoice"
-            loading={submitting}
-            onSubmit={handleSubmit}
-            disabled={submitting}
-          />
-        </PermissionGuard>
-      </Card>
+      {canCreateInvoices ? (
+        <Card>
+          <PermissionGuard action="invoice.create" role={user?.role}>
+            <InvoiceForm
+              submitLabel="Create invoice"
+              loading={submitting}
+              onSubmit={handleSubmit}
+              disabled={submitting}
+            />
+          </PermissionGuard>
+        </Card>
+      ) : (
+        <Card>
+          <p className="text-sm text-gray-600">
+            Your role can view invoices, but invoice creation is restricted to admins and accountants.
+          </p>
+        </Card>
+      )}
     </div>
   );
 };

@@ -34,8 +34,9 @@ const InvoiceForm = ({
   onSubmit = () => {},
 }) => {
   // Immutability: lock form if status is immutable
-  const immutableStatuses = ['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
-  const isImmutable = immutableStatuses.includes((initialValues.status || '').toUpperCase());
+  const immutableStatuses = ['sent', 'issued', 'paid', 'overdue', 'cancelled', 'partially_paid'];
+  const normalizedStatus = String(initialValues.status || '').toLowerCase();
+  const isImmutable = immutableStatuses.includes(normalizedStatus);
   const effectiveDisabled = disabled || isImmutable;
   const normalizedInitial = useMemo(
     () => ({
@@ -480,7 +481,7 @@ const InvoiceForm = ({
         />
       </FormField>
       <div className="flex justify-end">
-        <Button type="submit" loading={loading} disabled={disabled} variant="primary">
+        <Button type="submit" loading={loading} disabled={effectiveDisabled} variant="primary">
           {submitLabel}
         </Button>
       </div>

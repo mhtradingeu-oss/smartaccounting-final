@@ -1,5 +1,5 @@
 const { app } = require('../../src/server');
-const { Invoice } = require('../../src/models');
+const { Invoice, InvoiceItem } = require('../../src/models');
 let mockCurrentUser = { id: 1, role: 'admin', companyId: null };
 describe('POST /api/invoices/:id/payments', () => {
   // Helper: always create a valid invoice using the same pattern as the passing POST /api/invoices test
@@ -173,6 +173,72 @@ describe('POST /api/invoices/:id/payments', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('invoices');
       expect(Array.isArray(response.body.invoices)).toBe(true);
+    });
+
+    test('allows viewer to list and get invoices but rejects writes', async () => {
+      const testHelpers = require('../utils/testHelpers');
+      const { token: viewerToken } = await testHelpers.createTestUserAndLogin({
+        role: 'viewer',
+        companyId: testCompany.id,
+      });
+      const createRes = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: {
+          currency: 'EUR',
+          status: 'DRAFT',
+          date: new Date().toISOString().slice(0, 10),
+          dueDate: new Date().toISOString().slice(0, 10),
+          clientName: 'Viewer Read Client',
+          items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+        },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
+      expect(invoice).toBeDefined();
+
+      const listRes = await global.requestApp({
+        app,
+        method: 'GET',
+        url: '/api/invoices',
+        headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(listRes.status).toBe(200);
+      expect(Array.isArray(listRes.body.invoices)).toBe(true);
+
+      const getRes = await global.requestApp({
+        app,
+        method: 'GET',
+        url: `/api/invoices/${invoice.id}`,
+        headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.invoice.id).toBe(invoice.id);
+
+      const blockedCreateRes = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: {
+          currency: 'EUR',
+          date: new Date().toISOString().slice(0, 10),
+          dueDate: new Date().toISOString().slice(0, 10),
+          clientName: 'Blocked Viewer',
+          items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+        },
+        headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(blockedCreateRes.status).toBe(403);
+
+      const blockedUpdateRes = await global.requestApp({
+        app,
+        method: 'PUT',
+        url: `/api/invoices/${invoice.id}`,
+        body: { notes: 'viewer edit attempt' },
+        headers: { Authorization: `Bearer ${viewerToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(blockedUpdateRes.status).toBe(403);
     });
   });
 
@@ -376,6 +442,45 @@ describe('POST /api/invoices/:id/payments', () => {
           expect(auditEntry.metadata.userAgent).toBeDefined();
         }
       }
+    });
+
+    test('updates draft invoice line items and recalculates totals', async () => {
+      const createRes = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: buildInvoicePayload(),
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
+      expect(invoice).toBeDefined();
+
+      const updateRes = await global.requestApp({
+        app,
+        method: 'PUT',
+        url: `/api/invoices/${invoice.id}`,
+        body: {
+          clientName: 'Updated Draft Client',
+          currency: 'EUR',
+          date: invoice.date,
+          dueDate: invoice.dueDate,
+          items: [
+            { description: 'Updated Service', quantity: 2, unitPrice: 150, vatRate: 0.19 },
+          ],
+        },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.invoice.clientName).toBe('Updated Draft Client');
+      expect(Number(updateRes.body.invoice.subtotal)).toBeCloseTo(300, 2);
+      expect(Number(updateRes.body.invoice.total)).toBeCloseTo(357, 2);
+      expect(updateRes.body.invoice.items).toHaveLength(1);
+      expect(updateRes.body.invoice.items[0].description).toBe('Updated Service');
+
+      const persistedItems = await InvoiceItem.findAll({ where: { invoiceId: invoice.id } });
+      expect(persistedItems).toHaveLength(1);
+      expect(persistedItems[0].description).toBe('Updated Service');
     });
 
     test('rejects edits after the invoice has been finalized', async () => {

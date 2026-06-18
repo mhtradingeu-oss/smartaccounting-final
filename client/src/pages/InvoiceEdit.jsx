@@ -15,11 +15,20 @@ import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac
 import PermissionGuard from '../components/PermissionGuard';
 
 const STATUS_TRANSITIONS = {
-  draft: [
-    { label: 'Issue invoice', nextStatus: 'issued', variant: 'primary' },
-  ],
+  draft: [{ label: 'Issue invoice', nextStatus: 'issued', variant: 'primary' }],
   issued: [
-    { label: 'Mark as paid', nextStatus: 'paid', variant: 'success' },
+    { label: 'Mark as partially paid', nextStatus: 'partially_paid', variant: 'secondary' },
+    { label: 'Mark as overdue', nextStatus: 'overdue', variant: 'secondary' },
+    { label: 'Mark as paid', nextStatus: 'paid', variant: 'primary' },
+    { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
+  ],
+  partially_paid: [
+    { label: 'Mark as overdue', nextStatus: 'overdue', variant: 'secondary' },
+    { label: 'Mark as paid', nextStatus: 'paid', variant: 'primary' },
+    { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
+  ],
+  overdue: [
+    { label: 'Mark as paid', nextStatus: 'paid', variant: 'primary' },
     { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
   ],
   paid: [],
@@ -47,15 +56,13 @@ const InvoiceEdit = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await invoicesAPI.list({ companyId: activeCompany.id });
-      const list = Array.isArray(data) ? data : [];
-      const found = list.find((item) => String(item.id) === String(invoiceId));
-      if (!found) {
+      const found = await invoicesAPI.get(invoiceId, { companyId: activeCompany.id });
+      if (!found?.id) {
         setError({ message: 'Invoice not found.', status: 404 });
         setInvoice(null);
-      } else {
-        setInvoice(found);
+        return;
       }
+      setInvoice(found);
     } catch (fetchError) {
       setError(formatApiError(fetchError, 'Unable to load invoice.'));
       setInvoice(null);
@@ -70,13 +77,17 @@ const InvoiceEdit = () => {
 
   const handleUpdate = async (formValues) => {
     if (!invoice || invoice.status !== 'draft') {
+      setActionError({ message: 'Only draft invoices can be edited.' });
       return;
     }
 
     setFormSubmitting(true);
     setActionError(null);
     try {
-      const updated = await invoicesAPI.update(invoiceId, formValues);
+      const updated = await invoicesAPI.update(invoiceId, {
+        ...formValues,
+        companyId: activeCompany.id,
+      });
       setInvoice(updated);
     } catch (updateError) {
       setActionError(formatApiError(updateError, 'Unable to save changes.'));
@@ -93,7 +104,10 @@ const InvoiceEdit = () => {
     setStatusUpdating(nextStatus);
     setActionError(null);
     try {
-      const updated = await invoicesAPI.update(invoiceId, { status: nextStatus });
+      const updated = await invoicesAPI.update(invoiceId, {
+        status: nextStatus,
+        companyId: activeCompany.id,
+      });
       setInvoice(updated);
     } catch (transitionError) {
       setActionError(formatApiError(transitionError, 'Unable to update status.'));
@@ -124,6 +138,10 @@ const InvoiceEdit = () => {
       subtotal: invoice.subtotal,
       total: invoice.total,
       notes: invoice.notes || '',
+      status: invoice.status,
+      items: invoice.items || [],
+      vatSummary: invoice.vatSummary,
+      createdAt: invoice.createdAt,
     };
   }, [invoice]);
 

@@ -1006,6 +1006,19 @@ module.exports = {
         await qi.bulkInsert('users', [userPayload], {});
         console.log(`[DEMO SEED] Created user ${template.email}`);
       } else {
+        await qi.bulkUpdate(
+          'users',
+          {
+            firstName: template.firstName,
+            lastName: template.lastName,
+            role: template.role,
+            password: passwordHash,
+            companyId,
+            isActive: true,
+            updatedAt: now,
+          },
+          { email: template.email },
+        );
         console.log(`[DEMO SEED] User already exists ${template.email}`);
       }
       const [rows] = await queryInterface.sequelize.query(

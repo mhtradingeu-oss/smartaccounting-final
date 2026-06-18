@@ -74,6 +74,7 @@ const {
   InvoiceItem,
   FileAttachment,
   sequelize,
+  Sequelize,
   InvoicePayment,
   // User,
 } = require('../models');
@@ -245,28 +246,7 @@ const createInvoice = async (data, userId, companyId) => {
     throw err;
   }
 
-  let invoiceSubtotal = 0;
-  let invoiceGross = 0;
-  const items = data.items.map((item) => {
-    const quantity = parseFloat(item.quantity);
-    const unitPrice = parseFloat(item.unitPrice ?? item.price);
-    const vatRate = parseFloat(item.vatRate);
-    const lineNet = +(quantity * unitPrice).toFixed(2);
-    const lineVat = +(lineNet * vatRate).toFixed(2);
-    const lineGross = +(lineNet + lineVat).toFixed(2);
-    invoiceSubtotal += lineNet;
-    invoiceGross += lineGross;
-    ensureVatTotalsMatch({ net: lineNet, vat: lineVat, gross: lineGross, vatRate, currency });
-    return {
-      description: item.description,
-      quantity,
-      unitPrice,
-      vatRate,
-      lineNet,
-      lineVat,
-      lineGross,
-    };
-  });
+  const { items, invoiceSubtotal, invoiceGross } = buildInvoiceItems(data.items, currency);
 
   const status = normalizeStatus(data.status, 'DRAFT');
   assertProvidedMatches(data.subtotal, invoiceSubtotal, 'subtotal');
@@ -280,41 +260,41 @@ const createInvoice = async (data, userId, companyId) => {
     if (!invoiceNumber) {
       // Find max increment for company/year
       const year = new Date().getFullYear();
-      const result = await Invoice.findOne({
+      if (sequelize.getDialect() === 'postgres') {
+        await sequelize.query('SELECT pg_advisory_xact_lock(:lockKey)', {
+          replacements: { lockKey: Number(`${companyId}${year}`) },
+          transaction: t,
+        });
+      }
+      const existingInvoices = await Invoice.findAll({
+        attributes: ['invoiceNumber'],
         where: {
           companyId,
-          invoiceNumber: { [sequelize.Op.like]: `SA-${companyId}-${year}-%` },
+          invoiceNumber: { [Sequelize.Op.like]: `SA-${companyId}-${year}-%` },
         },
-        order: [
-          [
-            sequelize.literal(
-              "CAST(SUBSTRING(invoiceNumber, LENGTH('SA-') + LENGTH(CAST(companyId AS TEXT)) + 2 + LENGTH(CAST(year AS TEXT)) + 2) AS INTEGER)",
-            ),
-            'DESC',
-          ],
-        ],
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
-      let increment = 1;
-      if (result && result.invoiceNumber) {
-        const parts = result.invoiceNumber.split('-');
-        increment = parseInt(parts[3], 10) + 1;
-      }
+      const increment =
+        existingInvoices.reduce((max, existingInvoice) => {
+          const parts = String(existingInvoice.invoiceNumber || '').split('-');
+          const parsed = Number(parts[parts.length - 1]);
+          return Number.isInteger(parsed) && parsed > max ? parsed : max;
+        }, 0) + 1;
       invoiceNumber = `SA-${companyId}-${year}-${increment}`;
       // Audit log: invoiceNumber auto-generated
-      await AuditLogService.create(
+      await AuditLogService.appendEntry(
         {
           action: 'invoiceNumber_auto_generated',
           resourceType: 'Invoice',
           resourceId: null,
+          oldValues: null,
           companyId,
           userId,
           newValues: { invoiceNumber },
           reason: 'Auto-generated invoiceNumber (canonical, transaction-safe)',
-          timestamp: new Date(),
+          transaction: t,
         },
-        { transaction: t },
       );
     }
     const invoicePayload = {
@@ -359,6 +339,32 @@ const createInvoice = async (data, userId, companyId) => {
   return fallback;
 };
 
+const buildInvoiceItems = (rawItems, currency) => {
+  let invoiceSubtotal = 0;
+  let invoiceGross = 0;
+  const items = rawItems.map((item) => {
+    const quantity = parseFloat(item.quantity);
+    const unitPrice = parseFloat(item.unitPrice ?? item.price);
+    const vatRate = parseFloat(item.vatRate);
+    const lineNet = +(quantity * unitPrice).toFixed(2);
+    const lineVat = +(lineNet * vatRate).toFixed(2);
+    const lineGross = +(lineNet + lineVat).toFixed(2);
+    invoiceSubtotal += lineNet;
+    invoiceGross += lineGross;
+    ensureVatTotalsMatch({ net: lineNet, vat: lineVat, gross: lineGross, vatRate, currency });
+    return {
+      description: item.description,
+      quantity,
+      unitPrice,
+      vatRate,
+      lineNet,
+      lineVat,
+      lineGross,
+    };
+  });
+  return { items, invoiceSubtotal, invoiceGross };
+};
+
 const updateInvoice = async (invoiceId, changes, companyId) => {
   const forbiddenFields = Object.keys(changes || {}).filter((field) =>
     PROHIBITED_DERIVED_FIELDS.has(field),
@@ -386,7 +392,37 @@ const updateInvoice = async (invoiceId, changes, companyId) => {
     // TODO: Audit-log blocked attempt here
     throw err;
   }
-  await invoice.update(changes);
+
+  const updatePayload = {};
+  const allowedInvoiceFields = ['currency', 'date', 'dueDate', 'clientName', 'notes', 'status'];
+  for (const field of allowedInvoiceFields) {
+    if (Object.prototype.hasOwnProperty.call(changes, field)) {
+      updatePayload[field] = changes[field];
+    }
+  }
+  if (updatePayload.status) {
+    updatePayload.status = normalizeStatus(updatePayload.status, invoice.status);
+  }
+
+  await sequelize.transaction(async (transaction) => {
+    if (Array.isArray(changes.items)) {
+      if (changes.items.length === 0) {
+        const err = new Error('At least one invoice item is required');
+        err.status = 400;
+        throw err;
+      }
+      const currency = updatePayload.currency || invoice.currency;
+      const { items, invoiceSubtotal, invoiceGross } = buildInvoiceItems(changes.items, currency);
+      updatePayload.subtotal = invoiceSubtotal;
+      updatePayload.total = invoiceGross;
+      updatePayload.amount = invoiceGross;
+      await InvoiceItem.destroy({ where: { invoiceId: invoice.id }, transaction });
+      for (const item of items) {
+        await InvoiceItem.create({ ...item, invoiceId: invoice.id }, { transaction });
+      }
+    }
+    await invoice.update(updatePayload, { transaction });
+  });
   return await getInvoiceById(invoiceId, companyId);
 };
 

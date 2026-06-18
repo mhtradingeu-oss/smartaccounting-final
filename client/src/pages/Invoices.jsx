@@ -15,13 +15,15 @@ import { invoicesAPI } from '../services/invoicesAPI';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
-import { isReadOnlyRole } from '../lib/rbac';
+import { canEditInvoices, isReadOnlyRole } from '../lib/rbac';
 import PermissionGuard from '../components/PermissionGuard';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All statuses' },
   { value: 'draft', label: 'Draft' },
   { value: 'issued', label: 'Issued' },
+  { value: 'partially_paid', label: 'Partially paid' },
+  { value: 'overdue', label: 'Overdue' },
   { value: 'paid', label: 'Paid' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
@@ -49,6 +51,20 @@ const formatCurrency = (value, currency = 'EUR') => {
   }).format(value);
 };
 
+const STATUS_HELP = {
+  draft: 'Draft: You can edit or issue this invoice.',
+  issued: 'Issued: This invoice is legally binding and cannot be edited.',
+  partially_paid: 'Partially paid: A payment has been recorded and the invoice remains locked.',
+  overdue: 'Overdue: Payment is past due and the invoice remains locked.',
+  paid: 'Paid: This invoice is settled and locked.',
+  cancelled: 'Cancelled: This invoice is void and locked.',
+};
+
+const formatStatusLabel = (status) =>
+  String(status || 'unknown')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
 const Invoices = () => {
   // GDPR retention period (Germany: 10 years)
   const RETENTION_PERIOD_YEARS = 10;
@@ -61,6 +77,7 @@ const Invoices = () => {
   const [filters, setFilters] = useState({ status: 'all', search: '' });
   const [page, setPage] = useState(1);
   const canViewLegalData = user?.role === 'admin' || user?.role === 'accountant';
+  const canWriteInvoices = canEditInvoices(user?.role);
 
   const fetchInvoices = useCallback(async () => {
     if (!activeCompany) {
@@ -169,22 +186,24 @@ const Invoices = () => {
             All invoices for <span className="font-semibold">{activeCompany.name}</span>
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <PermissionGuard action="invoice.create" role={user?.role}>
-            <Link to="/invoices/create">
-              <Button variant="primary" size="md">
-                New Invoice
-              </Button>
-            </Link>
-          </PermissionGuard>
-          <PermissionGuard action="invoice.create" role={user?.role}>
-            <Link to="/invoices/import">
-              <Button variant="secondary" size="md">
-                Import Invoices
-              </Button>
-            </Link>
-          </PermissionGuard>
-        </div>
+        {canWriteInvoices && (
+          <div className="flex flex-wrap gap-2">
+            <PermissionGuard action="invoice.create" role={user?.role}>
+              <Link to="/invoices/create">
+                <Button variant="primary" size="md">
+                  New Invoice
+                </Button>
+              </Link>
+            </PermissionGuard>
+            <PermissionGuard action="invoice.create" role={user?.role}>
+              <Link to="/invoices/import">
+                <Button variant="secondary" size="md">
+                  Import Invoices
+                </Button>
+              </Link>
+            </PermissionGuard>
+          </div>
+        )}
       </div>
       {isReadOnlyRole(user?.role) && (
         <ReadOnlyBanner mode="Read-only" message={t('states.read_only.invoices_notice')} />
@@ -229,13 +248,15 @@ const Invoices = () => {
           ) : filteredInvoices.length === 0 ? (
             <PageEmptyState
               action={
-                <PermissionGuard action="invoice.create" role={user?.role}>
-                  <Link to="/invoices/create">
-                    <Button variant="primary" size="md">
-                      {t('states.empty.action')}
-                    </Button>
-                  </Link>
-                </PermissionGuard>
+                canWriteInvoices ? (
+                  <PermissionGuard action="invoice.create" role={user?.role}>
+                    <Link to="/invoices/create">
+                      <Button variant="primary" size="md">
+                        {t('states.empty.action')}
+                      </Button>
+                    </Link>
+                  </PermissionGuard>
+                ) : null
               }
             />
           ) : (
@@ -327,14 +348,7 @@ const Invoices = () => {
                               className="ml-2 text-xs text-gray-500 dark:text-gray-300"
                               title="Status meaning"
                             >
-                              {invoice.status === 'draft' &&
-                                'Draft: You can edit or issue this invoice.'}
-                              {invoice.status === 'issued' &&
-                                'Issued: This invoice is legally binding and cannot be edited.'}
-                              {invoice.status === 'paid' &&
-                                'Paid: This invoice is settled and locked.'}
-                              {invoice.status === 'cancelled' &&
-                                'Cancelled: This invoice is void and locked.'}
+                              {STATUS_HELP[invoice.status] || ''}
                             </span>
                             {isLocked && (
                               <span
@@ -371,11 +385,14 @@ const Invoices = () => {
                                 </span>
                                 <span className="mt-1 text-xs text-gray-500 dark:text-gray-300">
                                   Status:{' '}
-                                  {invoice.status.charAt(0).toUpperCase() +
-                                    invoice.status.slice(1)}
+                                  {formatStatusLabel(invoice.status)}
                                   .{' '}
                                   {invoice.status === 'issued' &&
                                     'You cannot revert to draft or paid directly.'}
+                                  {invoice.status === 'partially_paid' &&
+                                    'Only payment, overdue, or cancellation transitions are allowed.'}
+                                  {invoice.status === 'overdue' &&
+                                    'Only payment or cancellation transitions are allowed.'}
                                   {invoice.status === 'paid' &&
                                     'You cannot revert to issued or draft.'}
                                   {invoice.status === 'cancelled' &&
