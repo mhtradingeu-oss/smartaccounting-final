@@ -1,9 +1,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const authService = require('../services/authService');
 const activeTokenService = require('../services/activeTokenService');
 const revokedTokenService = require('../services/revokedTokenService');
+const { User } = require('../models');
 const { sanitizeInput, preventNoSqlInjection } = require('../middleware/validation');
 const { loginLimiter, registerLimiter, resetAuthRateLimit } = require('../middleware/rateLimiter');
 const { authenticate, requireRole } = require('../middleware/authMiddleware');
@@ -223,6 +225,115 @@ router.post('/logout', authenticate, async (req, res, next) => {
   }
 });
 
+
+
+router.put('/profile', authenticate, sanitizeInput, preventNoSqlInjection, async (req, res, next) => {
+  try {
+    const firstName = String(req.body?.firstName || '').trim();
+    const lastName = String(req.body?.lastName || '').trim();
+
+    if (firstName.length < 2 || firstName.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'First name must be between 2 and 50 characters.',
+        code: 'INVALID_FIRST_NAME',
+      });
+    }
+
+    if (lastName.length < 2 || lastName.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Last name must be between 2 and 50 characters.',
+        code: 'INVALID_LAST_NAME',
+      });
+    }
+
+    const user = await User.findByPk(req.userId);
+    if (!user || !user.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    await user.update({ firstName, lastName });
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        companyId: user.companyId,
+        isActive: user.isActive,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/change-password', authenticate, sanitizeInput, preventNoSqlInjection, async (req, res, next) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+
+    if (!currentPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is required.',
+        code: 'CURRENT_PASSWORD_REQUIRED',
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 8 characters.',
+        code: 'PASSWORD_TOO_SHORT',
+      });
+    }
+
+    const user = await User.unscoped().findByPk(req.userId);
+    if (!user || !user.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.password) {
+      return res.status(500).json({
+        success: false,
+        message: 'Password hash is not available for this account.',
+        code: 'PASSWORD_HASH_MISSING',
+      });
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password);
+    if (!matches) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect.',
+        code: 'CURRENT_PASSWORD_INVALID',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await user.update({ password: hashedPassword });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password changed successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get('/sessions', authenticate, async (req, res, next) => {
   try {

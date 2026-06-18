@@ -185,6 +185,28 @@ export const AuthProvider = ({ children }) => {
     }
   }, [applyUnauthenticated]);
 
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      applyUnauthenticated();
+      return null;
+    }
+
+    try {
+      const response = await authAPI.me();
+      const payload = response?.data ?? response;
+      if (payload?.user) {
+        applyAuthenticated(payload.user, token);
+        return payload.user;
+      }
+    } catch (error) {
+      logger.warn('User refresh failed:', getSafeErrorMeta(error));
+    }
+
+    return null;
+  }, [applyAuthenticated, applyUnauthenticated]);
+
+
   const value = {
     user: authState.user,
     status: authState.status,
@@ -195,6 +217,7 @@ export const AuthProvider = ({ children }) => {
     rateLimitMessage: authState.rateLimitMessage,
     login,
     logout,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

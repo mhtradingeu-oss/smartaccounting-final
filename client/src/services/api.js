@@ -125,7 +125,17 @@ export const formatApiError = (error, fallbackMessage = 'An error occurred. Plea
     const { status, data } = error.response;
     formatted.status = status;
 
-    // Keep fallback message or type-specific overrides only
+    // Prefer safe backend-provided messages for validation/auth errors.
+    const backendMessage =
+      typeof data?.message === 'string'
+        ? data.message
+        : typeof data?.error === 'string'
+          ? data.error
+          : null;
+
+    if (backendMessage) {
+      formatted.message = backendMessage;
+    }
 
     const errorCode = data?.code || data?.errorCode;
     if (errorCode === 'PLAN_RESTRICTED') {
@@ -179,9 +189,11 @@ api.interceptors.request.use(
     const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
     const pathWithoutQuery = normalizedPath.split('?')[0];
 
-    // Don't send Authorization header for auth endpoints (login, register, etc.)
-    // to avoid sending expired/invalid tokens during authentication
-    if (!pathWithoutQuery.startsWith('/auth')) {
+    // Do not send Authorization only for public auth entrypoints.
+    // Authenticated auth routes such as /auth/me, /auth/logout and /auth/sessions
+    // must still receive the Bearer token when it exists.
+    const authRoutesWithoutBearer = ['/auth/login', '/auth/register', '/auth/refresh'];
+    if (!authRoutesWithoutBearer.includes(pathWithoutQuery)) {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -263,13 +275,21 @@ api.interceptors.response.use(
     const isAuthRegisterRoute = pathWithoutQuery === '/auth/register';
     if (error.response) {
       const { status } = error.response;
-      logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
       const skipForceLogout = Boolean(
         error?.config?.[SKIP_FORCE_LOGOUT_ON_401_FLAG] ??
         error?.config?.skipForceLogoutOn401 ??
         false,
       );
       const isAuthRoute = isAuthLoginRoute || isAuthRefreshRoute || isAuthRegisterRoute;
+
+      if (status === 401 && skipForceLogout) {
+        if (isDev) {
+          console.debug('↪️ Expected authenticated validation error:', getSafeErrorMeta(error));
+        }
+      } else {
+        logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
+      }
+
       if (status === 401 && !skipForceLogout && !isAuthRoute) {
         emitForceLogout();
       }
