@@ -258,6 +258,12 @@ const Invoices = () => {
                   </PermissionGuard>
                 ) : null
               }
+              title={filters.search || filters.status !== 'all' ? 'No invoices match your filters' : 'No invoices yet'}
+              description={
+                filters.search || filters.status !== 'all'
+                  ? 'Adjust the search or status filter to widen the result set.'
+                  : 'Create a draft invoice or import a batch to start tracking receivables.'
+              }
             />
           ) : (
             <div className="space-y-4">
@@ -343,24 +349,23 @@ const Invoices = () => {
                             {formatCurrency(invoice.total, invoice.currency)}
                           </td>
                           <td className="px-4 py-3">
-                            <InvoiceStatusBadge status={invoice.status} />
-                            <span
-                              className="ml-2 text-xs text-gray-500 dark:text-gray-300"
-                              title="Status meaning"
-                            >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <InvoiceStatusBadge status={invoice.status} />
+                              {isLocked && (
+                                <span
+                                  className="inline-block rounded bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800"
+                                  title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
+                                >
+                                  Locked
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">
                               {STATUS_HELP[invoice.status] || ''}
-                            </span>
-                            {isLocked && (
-                              <span
-                                className="ml-2 inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
-                                title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
-                              >
-                                Legally locked (GoBD)
-                              </span>
-                            )}
+                            </p>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                            {invoice.status === 'draft' ? (
+                            {invoice.status === 'draft' && canWriteInvoices ? (
                               <PermissionGuard action="invoice.edit" role={user?.role}>
                                 <Link
                                   to={`/invoices/${invoice.id}/edit`}
@@ -377,26 +382,10 @@ const Invoices = () => {
                                 >
                                   View
                                 </Link>
-                                <span
-                                  className="inline-block px-3 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium cursor-not-allowed dark:bg-gray-800 dark:text-gray-200"
-                                  title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
-                                >
-                                  Edits blocked
-                                </span>
-                                <span className="mt-1 text-xs text-gray-500 dark:text-gray-300">
-                                  Status:{' '}
-                                  {formatStatusLabel(invoice.status)}
-                                  .{' '}
-                                  {invoice.status === 'issued' &&
-                                    'You cannot revert to draft or paid directly.'}
-                                  {invoice.status === 'partially_paid' &&
-                                    'Only payment, overdue, or cancellation transitions are allowed.'}
-                                  {invoice.status === 'overdue' &&
-                                    'Only payment or cancellation transitions are allowed.'}
-                                  {invoice.status === 'paid' &&
-                                    'You cannot revert to issued or draft.'}
-                                  {invoice.status === 'cancelled' &&
-                                    'You cannot revert to any other status.'}
+                                <span className="text-xs text-gray-500 dark:text-gray-300">
+                                  {invoice.status === 'draft'
+                                    ? 'Read-only for your role.'
+                                    : `${formatStatusLabel(invoice.status)} invoices are locked for editing.`}
                                 </span>
                               </div>
                             )}

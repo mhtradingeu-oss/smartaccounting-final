@@ -512,4 +512,84 @@ describe('POST /api/invoices/:id/payments', () => {
       expect(finalUpdateRes.body.message).toMatch(/immutable after SENT/i);
     });
   });
+
+  describe('PATCH /api/invoices/:id/status', () => {
+    const buildInvoicePayload = () => ({
+      currency: 'EUR',
+      status: 'DRAFT',
+      date: new Date().toISOString().slice(0, 10),
+      dueDate: new Date().toISOString().slice(0, 10),
+      clientName: 'Status Client',
+      items: [{ description: 'Service A', quantity: 1, unitPrice: 100, vatRate: 0.19 }],
+    });
+
+    test('allows draft cancellation and rejects draft to paid', async () => {
+      const createRes = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: buildInvoicePayload(),
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
+
+      const invalidRes = await global.requestApp({
+        app,
+        method: 'PATCH',
+        url: `/api/invoices/${invoice.id}/status`,
+        body: { status: 'paid' },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(invalidRes.status).toBe(409);
+      expect(invalidRes.body.message).toMatch(/invalid invoice status transition/i);
+
+      const cancelRes = await global.requestApp({
+        app,
+        method: 'PATCH',
+        url: `/api/invoices/${invoice.id}/status`,
+        body: { status: 'cancelled' },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(cancelRes.status).toBe(200);
+      expect(cancelRes.body.invoice.status).toBe('CANCELLED');
+    });
+
+    test('rejects partially paid cancellation', async () => {
+      const createRes = await global.requestApp({
+        app,
+        method: 'POST',
+        url: '/api/invoices',
+        body: buildInvoicePayload(),
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      const invoice = createRes.body.invoice ?? createRes.body.data?.invoice;
+
+      const issueRes = await global.requestApp({
+        app,
+        method: 'PATCH',
+        url: `/api/invoices/${invoice.id}/status`,
+        body: { status: 'issued' },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(issueRes.status).toBe(200);
+
+      const partialRes = await global.requestApp({
+        app,
+        method: 'PATCH',
+        url: `/api/invoices/${invoice.id}/status`,
+        body: { status: 'partially_paid' },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(partialRes.status).toBe(200);
+
+      const cancelRes = await global.requestApp({
+        app,
+        method: 'PATCH',
+        url: `/api/invoices/${invoice.id}/status`,
+        body: { status: 'cancelled' },
+        headers: { Authorization: `Bearer ${authToken}`, 'x-company-id': testCompany.id },
+      });
+      expect(cancelRes.status).toBe(409);
+    });
+  });
 });

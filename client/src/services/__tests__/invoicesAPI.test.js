@@ -115,6 +115,21 @@ describe('invoicesAPI', () => {
     expect(result.status).toBe('issued');
   });
 
+  it('normalizes legacy and canonical issued statuses from the backend', async () => {
+    api.get.mockResolvedValueOnce({
+      data: {
+        invoices: [
+          { id: 1, status: 'SENT', currency: 'EUR', items: [] },
+          { id: 2, status: 'ISSUED', currency: 'EUR', items: [] },
+        ],
+      },
+    });
+
+    const result = await invoicesAPI.list({ companyId: 7 });
+
+    expect(result.map((invoice) => invoice.status)).toEqual(['issued', 'issued']);
+  });
+
   it('does not send derived totals in draft update payloads', async () => {
     api.put.mockResolvedValueOnce({
       data: { success: true, invoice: { id: 4, status: 'DRAFT', currency: 'EUR', items: [] } },
@@ -134,5 +149,43 @@ describe('invoicesAPI', () => {
     expect(payload).not.toHaveProperty('total');
     expect(payload).not.toHaveProperty('amount');
     expect(payload.items[0].vatRate).toBe(0.19);
+  });
+
+  it('loads invoice audit logs with company scope', async () => {
+    api.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        auditLog: [{ id: 9, action: 'invoice_status_change', userId: 4 }],
+      },
+    });
+
+    const result = await invoicesAPI.auditLog(3, { companyId: 7 });
+
+    expect(api.get).toHaveBeenCalledWith('/invoices/3/audit-log', {
+      headers: { 'X-Company-Id': 7 },
+    });
+    expect(result[0]).toMatchObject({ action: 'invoice_status_change', user: 4 });
+  });
+
+  it('uses multipart import endpoints with company scope', async () => {
+    const file = new File(['[]'], 'invoices.json', { type: 'application/json' });
+    api.post.mockResolvedValueOnce({ data: { success: true, preview: [] } });
+    api.post.mockResolvedValueOnce({ data: { success: true, importedCount: 0 } });
+
+    await invoicesAPI.previewImport({ file, companyId: 7 });
+    await invoicesAPI.commitImport({ file, companyId: 7 });
+
+    expect(api.post).toHaveBeenNthCalledWith(
+      1,
+      '/invoice-import/preview',
+      expect.any(FormData),
+      expect.objectContaining({ headers: expect.objectContaining({ 'X-Company-Id': 7 }) }),
+    );
+    expect(api.post).toHaveBeenNthCalledWith(
+      2,
+      '/invoice-import/commit',
+      expect.any(FormData),
+      expect.objectContaining({ headers: expect.objectContaining({ 'X-Company-Id': 7 }) }),
+    );
   });
 });

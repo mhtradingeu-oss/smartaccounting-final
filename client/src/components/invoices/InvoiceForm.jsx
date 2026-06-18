@@ -24,6 +24,20 @@ const INITIAL_FORM_STATE = {
 const normalizeNumericField = (value) =>
   value === undefined || value === null ? '' : String(value);
 
+const calculateItemAmounts = (item) => {
+  const qty = parseFloat(item.quantity) || 0;
+  const unit = parseFloat(item.unitPrice) || 0;
+  const vatR = parseFloat(item.vatRate) || 0;
+  const net = qty * unit;
+  const vat = (net * vatR) / 100;
+  return {
+    ...item,
+    netAmount: net.toFixed(2),
+    vatAmount: vat.toFixed(2),
+    grossAmount: (net + vat).toFixed(2),
+  };
+};
+
 const EMPTY_INITIAL_VALUES = {};
 
 const InvoiceForm = ({
@@ -31,13 +45,13 @@ const InvoiceForm = ({
   disabled = false,
   loading = false,
   submitLabel = 'Save invoice',
+  showAudit = false,
   onSubmit = () => {},
 }) => {
-  // Immutability: lock form if status is immutable
-  const immutableStatuses = ['sent', 'issued', 'paid', 'overdue', 'cancelled', 'partially_paid'];
+  const immutableStatuses = ['issued', 'paid', 'overdue', 'cancelled', 'partially_paid'];
   const normalizedStatus = String(initialValues.status || '').toLowerCase();
   const isImmutable = immutableStatuses.includes(normalizedStatus);
-  const effectiveDisabled = disabled || isImmutable;
+  const effectiveDisabled = disabled || loading || isImmutable;
   const normalizedInitial = useMemo(
     () => ({
       ...INITIAL_FORM_STATE,
@@ -45,6 +59,9 @@ const InvoiceForm = ({
       currency: (initialValues.currency || 'EUR').toUpperCase(),
       subtotal: normalizeNumericField(initialValues.subtotal),
       total: normalizeNumericField(initialValues.total),
+      items: (initialValues.items || INITIAL_FORM_STATE.items).map((item) =>
+        item.netAmount && item.vatAmount && item.grossAmount ? item : calculateItemAmounts(item),
+      ),
     }),
     [initialValues],
   );
@@ -81,15 +98,7 @@ const InvoiceForm = ({
         if (i !== idx) {
           return item;
         }
-        const updated = { ...item, [field]: value };
-        // Auto-calc net/vat/gross if relevant fields change
-        const qty = parseFloat(updated.quantity) || 0;
-        const unit = parseFloat(updated.unitPrice) || 0;
-        const vatR = parseFloat(updated.vatRate) || 0;
-        updated.netAmount = (qty * unit).toFixed(2);
-        updated.vatAmount = ((qty * unit * vatR) / 100).toFixed(2);
-        updated.grossAmount = (qty * unit + (qty * unit * vatR) / 100).toFixed(2);
-        return updated;
+        return calculateItemAmounts({ ...item, [field]: value });
       });
       return { ...prev, items };
     });
@@ -165,6 +174,9 @@ const InvoiceForm = ({
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (effectiveDisabled) {
+      return;
+    }
     if (!validateVAT()) {
       return;
     }
@@ -198,44 +210,42 @@ const InvoiceForm = ({
     <form onSubmit={handleSubmit} className="space-y-6">
       {isImmutable && (
         <div className="bg-yellow-50 border border-yellow-300 text-yellow-900 rounded p-3 mb-2 text-sm font-semibold">
-          <span role="img" aria-label="lock" className="mr-2">
-            🔒
-          </span>
-          This invoice is immutable after being sent. No edits are allowed except status transitions
-          or credit notes. (GoBD §146)
+          This invoice is locked after issue. Draft fields are read-only; use allowed status actions
+          where available.
         </div>
       )}
-      {/* Audit Trail Section */}
-      <div className="border border-gray-200 bg-gray-50 rounded-lg p-4 mb-4">
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Audit Trail</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-          <div>
-            <span className="font-medium text-gray-600">Created by:</span> {createdBy}
+      {showAudit && (
+        <div className="border border-gray-200 bg-gray-50 rounded-lg p-4 mb-4">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">Audit Trail</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="font-medium text-gray-600">Created by:</span> {createdBy}
+            </div>
+            <div>
+              <span className="font-medium text-gray-600">Created at:</span>{' '}
+              {createdAt ? new Date(createdAt).toLocaleString() : 'Unknown'}
+            </div>
           </div>
-          <div>
-            <span className="font-medium text-gray-600">Created at:</span>{' '}
-            {createdAt ? new Date(createdAt).toLocaleString() : 'Unknown'}
+          <div className="mt-2">
+            <span className="font-medium text-gray-600">Status changes:</span>
+            <ul className="list-disc ml-5 mt-1 text-xs">
+              {Array.isArray(statusHistory) && statusHistory.length > 0 ? (
+                statusHistory.map((entry, idx) => (
+                  <li key={idx} className="mb-1">
+                    {entry.status} by {entry.user || 'Unknown'} at{' '}
+                    {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown'}
+                  </li>
+                ))
+              ) : (
+                <li>No status changes recorded.</li>
+              )}
+            </ul>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            Audit information is read-only and cannot be changed.
           </div>
         </div>
-        <div className="mt-2">
-          <span className="font-medium text-gray-600">Status changes:</span>
-          <ul className="list-disc ml-5 mt-1 text-xs">
-            {Array.isArray(statusHistory) && statusHistory.length > 0 ? (
-              statusHistory.map((entry, idx) => (
-                <li key={idx} className="mb-1">
-                  {entry.status} by {entry.user || 'Unknown'} at{' '}
-                  {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown'}
-                </li>
-              ))
-            ) : (
-              <li>No status changes recorded.</li>
-            )}
-          </ul>
-        </div>
-        <div className="mt-2 text-xs text-gray-500">
-          Audit information is read-only and cannot be changed.
-        </div>
-      </div>
+      )}
       {vatErrors.length > 0 && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-2 text-sm">
           <strong>VAT validation errors:</strong>

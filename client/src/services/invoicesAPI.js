@@ -4,6 +4,7 @@ import { isDemoMode, DEMO_DATA } from '../lib/demoMode';
 const BACKEND_TO_UI_STATUS = {
   DRAFT: 'draft',
   SENT: 'issued',
+  ISSUED: 'issued',
   PAID: 'paid',
   OVERDUE: 'overdue',
   CANCELLED: 'cancelled',
@@ -58,6 +59,15 @@ const normalizeInvoiceItem = (item = {}) => ({
   netAmount: item.netAmount ?? item.lineNet ?? '',
   vatAmount: item.vatAmount ?? item.lineVat ?? '',
   grossAmount: item.grossAmount ?? item.lineGross ?? '',
+});
+
+const normalizeAuditEntry = (entry = {}) => ({
+  ...entry,
+  action: entry.action || 'invoice_update',
+  timestamp: entry.timestamp || entry.createdAt || null,
+  oldValues: entry.oldValues || null,
+  newValues: entry.newValues || null,
+  user: entry.user || entry.userName || entry.userId || 'System',
 });
 
 const normalizeInvoice = (invoice = {}) => ({
@@ -213,6 +223,39 @@ export const invoicesAPI = {
       { headers },
     );
     return normalizeInvoice(extractPayload(response.data));
+  },
+
+  auditLog: async (invoiceId, params = {}) => {
+    const { companyId } = params;
+    const response = await api.get(`/invoices/${invoiceId}/audit-log`, {
+      headers: buildHeaders(companyId),
+    });
+    const data = response.data?.auditLog || response.data?.logs || response.data?.data || [];
+    return Array.isArray(data) ? data.map(normalizeAuditEntry) : [];
+  },
+
+  previewImport: async ({ file, companyId }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/invoice-import/preview', formData, {
+      headers: {
+        ...buildHeaders(companyId),
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  commitImport: async ({ file, companyId }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/invoice-import/commit', formData, {
+      headers: {
+        ...buildHeaders(companyId),
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   },
 };
 

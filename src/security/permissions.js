@@ -22,6 +22,8 @@ module.exports = {
       'PATCH /api/invoices/:id/status',
       'POST /api/invoices/:id/payments',
       'POST /api/invoices/:id/credit-note',
+      'POST /api/invoice-import/preview',
+      'POST /api/invoice-import/commit',
 
       'GET /api/expenses',
       'POST /api/expenses',

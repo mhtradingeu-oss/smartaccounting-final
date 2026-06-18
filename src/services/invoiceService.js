@@ -1,13 +1,15 @@
 const AuditLogService = require('./auditLogService');
 // Fetch audit log for a specific invoice
 const getInvoiceAuditLog = async (invoiceId, companyId) => {
-  // Only logs for this invoice and company
-  return await AuditLogService.exportLogs({
+  const logs = await AuditLogService.exportLogs({
     format: 'json',
     companyId,
-    resourceId: invoiceId,
-    resourceType: 'Invoice',
   });
+  return logs.filter(
+    (log) =>
+      log.resourceType === 'Invoice' &&
+      String(log.resourceId || '') === String(invoiceId || ''),
+  );
 };
 // Create a credit note for an invoice (Korrekturrechnung)
 const createCreditNoteForInvoice = async (invoiceId, data, userId, companyId) => {
@@ -164,9 +166,9 @@ const { buildCompanyFilter } = require('../utils/companyFilter');
 
 const VALID_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'];
 const STATUS_TRANSITIONS = {
-  DRAFT: ['SENT'],
+  DRAFT: ['SENT', 'CANCELLED'],
   SENT: ['PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID'],
-  PARTIALLY_PAID: ['PAID', 'OVERDUE', 'CANCELLED'],
+  PARTIALLY_PAID: ['PAID', 'OVERDUE'],
   OVERDUE: ['PAID', 'CANCELLED'],
   PAID: [],
   CANCELLED: [],
@@ -187,6 +189,9 @@ const normalizeStatus = (value, fallback = '') => {
   }
   if (normalized === 'PENDING') {
     return 'DRAFT';
+  }
+  if (normalized === 'ISSUED') {
+    return 'SENT';
   }
   return VALID_STATUS.includes(normalized) ? normalized : fallback;
 };
@@ -435,7 +440,9 @@ const updateInvoiceStatus = async (invoiceId, newStatus, companyId) => {
   const current = normalizeStatus(invoice.status);
   const next = normalizeStatus(newStatus);
   if (!next || !STATUS_TRANSITIONS[current]?.includes(next)) {
-    return null;
+    const err = new Error(`Invalid invoice status transition from ${current} to ${next || newStatus}.`);
+    err.status = 409;
+    throw err;
   }
   invoice.status = next;
   await invoice.save();
