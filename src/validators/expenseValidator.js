@@ -17,9 +17,9 @@ const expenseSchema = Joi.object({
     'any.required': 'currency is required',
     'string.length': 'currency must be a 3-letter code',
   }),
-  status: Joi.string().valid('draft', 'booked', 'archived').required().messages({
+  status: Joi.string().valid('pending', 'booked', 'archived').required().messages({
     'any.required': 'status is required',
-    'any.only': 'status must be one of draft, booked, archived',
+    'any.only': 'status must be one of pending, booked, archived',
   }),
   source: Joi.string().required().messages({
     'any.required': 'source is required',

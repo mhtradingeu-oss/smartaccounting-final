@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
@@ -9,13 +9,13 @@ import {
   PageErrorState,
   PageNoAccessState,
 } from '../components/ui/PageStates';
-import { expensesAPI } from '../services/expensesAPI';
+import { expensesAPI, normalizeExpenseStatus } from '../services/expensesAPI';
 import { formatApiError } from '../services/api';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthContext';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import PermissionGuard from '../components/PermissionGuard';
-import { isReadOnlyRole } from '../lib/permissions';
+import { can, isReadOnlyRole } from '../lib/permissions';
 
 const formatDate = (value) => {
   if (!value) {
@@ -38,6 +38,18 @@ const formatCurrency = (value, currency = 'EUR') => {
   }).format(value);
 };
 
+const STATUS_LABELS = {
+  pending: 'Pending',
+  booked: 'Booked',
+  archived: 'Archived',
+};
+
+const STATUS_STYLES = {
+  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-100',
+  booked: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-100',
+  archived: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200',
+};
+
 const Expenses = () => {
   // GDPR retention period (Germany: 10 years)
   const RETENTION_PERIOD_YEARS = 10;
@@ -47,8 +59,11 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [expandedExpenseId, setExpandedExpenseId] = useState(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const companyId = activeCompany?.id ?? null;
   const canViewLegalData = user?.role === 'admin' || user?.role === 'accountant';
+  const canChangeStatus = can('expense.create', user?.role);
 
   const fetchExpenses = useCallback(async () => {
     if (!companyId) {
@@ -72,6 +87,26 @@ const Expenses = () => {
       setLoading(false);
     }
   }, [companyId]);
+
+  const handleStatusChange = async (expenseId, status) => {
+    if (!companyId) {
+      return;
+    }
+    setStatusUpdatingId(expenseId);
+    setError(null);
+    try {
+      const response = await expensesAPI.updateStatus(expenseId, status, { companyId });
+      const updatedExpense = response?.expense;
+      setExpenses((current) =>
+        current.map((expense) => (expense.id === expenseId && updatedExpense ? updatedExpense : expense)),
+      );
+      await fetchExpenses();
+    } catch (statusError) {
+      setError(formatApiError(statusError, 'Unable to update expense status.'));
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!companyId) {
@@ -187,13 +222,20 @@ const Expenses = () => {
                   scope="col"
                   className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+                >
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
               {expenses.map((expense) => {
-                const isLocked = expense.status !== 'draft';
+                const status = normalizeExpenseStatus(expense.status);
+                const isLocked = status !== 'pending';
                 const description =
                   !isLocked || canViewLegalData ? expense.description : 'Masked';
                 const vendor =
@@ -202,71 +244,110 @@ const Expenses = () => {
                   !isLocked || canViewLegalData
                     ? undefined
                     : 'Personal data masked for GDPR compliance';
+                const isExpanded = expandedExpenseId === expense.id;
+                const isUpdating = statusUpdatingId === expense.id;
+                const actions = [];
+                if (canChangeStatus && status === 'pending') {
+                  actions.push({ label: 'Book', status: 'booked', variant: 'primary' });
+                  actions.push({ label: 'Archive', status: 'archived', variant: 'secondary' });
+                } else if (canChangeStatus && status === 'booked') {
+                  actions.push({ label: 'Archive', status: 'archived', variant: 'secondary' });
+                }
 
                 return (
-                  <tr key={expense.id} className="hover:bg-blue-50/60 dark:hover:bg-gray-800">
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {formatDate(expense.date)}
-                    </td>
-                    <td
-                      className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"
-                      title={maskedTitle}
-                    >
-                      {description}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                      {formatCurrency(expense.amount, expense.currency)}
-                    </td>
-                    <td
-                      className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"
-                      title={maskedTitle}
-                    >
-                      {vendor}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      <span
-                        className="text-xs text-gray-500 dark:text-gray-300"
-                        title="Status meaning"
+                  <Fragment key={expense.id}>
+                    <tr className="hover:bg-blue-50/60 dark:hover:bg-gray-800">
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                        {formatDate(expense.date || expense.expenseDate)}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"
+                        title={maskedTitle}
                       >
-                        {expense.status === 'draft' && 'Draft: You can edit or post this expense.'}
-                        {expense.status === 'posted' &&
-                          'Posted: This expense is finalized and cannot be edited.'}
-                        {expense.status === 'reimbursed' &&
-                          'Reimbursed: This expense is settled and locked.'}
-                        {expense.status === 'cancelled' &&
-                          'Cancelled: This expense is void and locked.'}
-                      </span>
-                      {isLocked ? (
-                        <div className="flex flex-col items-start gap-1">
-                          <span
-                            className="inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
-                            title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
-                          >
-                            Legally locked (GoBD)
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-300">
-                            Status:{' '}
-                            {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}.{' '}
-                            {expense.status === 'posted' &&
-                              'You cannot revert to draft or reimbursed directly.'}
-                            {expense.status === 'reimbursed' &&
-                              'You cannot revert to posted or draft.'}
-                            {expense.status === 'cancelled' &&
-                              'You cannot revert to any other status.'}
-                          </span>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          disabled
-                          title="Expense detail view is coming soon."
-                          className="cursor-not-allowed"
+                        {description}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(expense.amount || expense.grossAmount, expense.currency)}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"
+                        title={maskedTitle}
+                      >
+                        {vendor}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                        <span
+                          className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}
                         >
-                          View
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
+                          {STATUS_LABELS[status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setExpandedExpenseId(isExpanded ? null : expense.id)}
+                          >
+                            {isExpanded ? 'Hide' : 'View'}
+                          </Button>
+                          {actions.map((action) => (
+                            <Button
+                              key={action.status}
+                              size="sm"
+                              variant={action.variant}
+                              disabled={isUpdating}
+                              onClick={() => handleStatusChange(expense.id, action.status)}
+                            >
+                              {action.label}
+                            </Button>
+                          ))}
+                          {!actions.length && (
+                            <span className="self-center text-xs text-gray-500 dark:text-gray-300">
+                              {status === 'archived' ? 'No further actions' : 'Read-only'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-gray-50 dark:bg-gray-800/70">
+                        <td colSpan={6} className="px-4 py-4">
+                          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                            <div>
+                              <dt className="font-semibold text-gray-600 dark:text-gray-300">Net</dt>
+                              <dd className="text-gray-900 dark:text-white">
+                                {formatCurrency(expense.netAmount, expense.currency)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-semibold text-gray-600 dark:text-gray-300">VAT</dt>
+                              <dd className="text-gray-900 dark:text-white">
+                                {formatCurrency(expense.vatAmount, expense.currency)} (
+                                {Number(expense.vatRate || 0) * 100}%)
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-semibold text-gray-600 dark:text-gray-300">
+                                Gross
+                              </dt>
+                              <dd className="text-gray-900 dark:text-white">
+                                {formatCurrency(expense.grossAmount || expense.amount, expense.currency)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-semibold text-gray-600 dark:text-gray-300">
+                                Source
+                              </dt>
+                              <dd className="text-gray-900 dark:text-white">
+                                {expense.source || 'manual'}
+                              </dd>
+                            </div>
+                          </dl>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>

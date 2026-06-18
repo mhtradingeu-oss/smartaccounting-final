@@ -13,6 +13,33 @@ const {
 
 const expenseIncludes = [{ model: FileAttachment, as: 'attachments' }];
 
+const normalizeExpenseStatus = (status) => {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'pending' || normalized === 'draft') {
+    return 'pending';
+  }
+  if (normalized === 'booked' || normalized === 'posted') {
+    return 'booked';
+  }
+  if (normalized === 'archived') {
+    return 'archived';
+  }
+  return null;
+};
+
+const normalizeExpenseForResponse = (expense) => {
+  if (!expense) {
+    return expense;
+  }
+  const status = normalizeExpenseStatus(expense.status) || 'pending';
+  if (typeof expense.setDataValue === 'function') {
+    expense.setDataValue('status', status);
+  } else {
+    expense.status = status;
+  }
+  return expense;
+};
+
 const listExpenses = async (companyId) => {
   const where = buildCompanyFilter(companyId);
   const supportsAttachments = await resolveExpenseAttachmentSupport();
@@ -24,7 +51,7 @@ const listExpenses = async (companyId) => {
   if (!supportsAttachments) {
     applyEmptyExpenseAttachments(expenses);
   }
-  return expenses;
+  return expenses.map(normalizeExpenseForResponse);
 };
 
 const getExpenseById = async (expenseId, companyId) => {
@@ -37,7 +64,7 @@ const getExpenseById = async (expenseId, companyId) => {
   if (expense && !supportsAttachments) {
     applyEmptyExpenseAttachment(expense);
   }
-  return expense;
+  return normalizeExpenseForResponse(expense);
 };
 
 const { withAuditLog } = require('./withAuditLog');
@@ -86,7 +113,7 @@ async function createExpense(data, userId, companyId, context = {}) {
     grossAmount: gross,
     amount: gross,
     vatRate,
-    status: data.status ?? 'draft',
+    status: normalizeExpenseStatus(data.status) || 'pending',
     expenseDate,
     date: expenseDate,
     createdByUserId: userId,
@@ -159,9 +186,9 @@ async function createExpense(data, userId, companyId, context = {}) {
   return fallback;
 }
 
-const VALID_STATUS = ['draft', 'booked', 'archived'];
+const VALID_STATUS = ['pending', 'booked', 'archived'];
 const STATUS_TRANSITIONS = {
-  draft: ['booked', 'archived'],
+  pending: ['booked', 'archived'],
   booked: ['archived'],
   archived: [],
 };
@@ -176,8 +203,9 @@ async function updateExpenseStatus(expenseId, newStatus, companyId, context = {}
     err.code = 'EXPENSE_NOT_FOUND';
     throw err;
   }
-  const current = expense.status;
-  if (!VALID_STATUS.includes(newStatus) || !STATUS_TRANSITIONS[current]?.includes(newStatus)) {
+  const current = normalizeExpenseStatus(expense.status);
+  const next = normalizeExpenseStatus(newStatus);
+  if (!VALID_STATUS.includes(next) || !STATUS_TRANSITIONS[current]?.includes(next)) {
     await withAuditLog(
       {
         action: 'EXPENSE_STATUS_CHANGE_DENIED',
@@ -195,12 +223,12 @@ async function updateExpenseStatus(expenseId, newStatus, companyId, context = {}
       async () => Promise.resolve(),
     );
     const err = new Error('Illegal status transition');
-    err.status = 400;
+    err.status = 409;
     err.code = 'INVALID_STATUS_TRANSITION';
     throw err;
   }
   const oldStatus = expense.status;
-  expense.status = newStatus;
+  expense.status = next;
   await expense.save();
   await withAuditLog(
     {

@@ -26,6 +26,7 @@ module.exports = {
       'POST /api/invoice-import/commit',
 
       'GET /api/expenses',
+      'GET /api/expenses/:id',
       'POST /api/expenses',
       'PATCH /api/expenses/:id/status',
 
@@ -59,6 +60,7 @@ module.exports = {
       'GET /api/invoices/:id/audit-log',
       'GET /api/invoices/:id/payments',
       'GET /api/expenses',
+      'GET /api/expenses/:id',
       'GET /api/bank-statements',
 
       'GET /api/ai/insights',
@@ -84,6 +86,8 @@ module.exports = {
       'GET /api/invoices/:id',
       'GET /api/invoices/:id/audit-log',
       'GET /api/invoices/:id/payments',
+      'GET /api/expenses',
+      'GET /api/expenses/:id',
 
       'GET /api/telemetry/client-error',
       'GET /api/ai/insights',

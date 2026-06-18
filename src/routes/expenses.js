@@ -74,14 +74,19 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
 
   try {
     const { systemContext, reason } = normalizedData;
-    const expense = await expenseService.createExpense(value, req.userId, req.companyId, {
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      userId: req.userId,
-      ...(systemContext ? { ...systemContext } : {}),
-      ...(reason ? { reason } : {}),
-      demoFills: demoFills.length > 0 ? demoFills : undefined,
-    });
+    const expense = await expenseService.createExpense(
+      { ...value, vendorName: normalizedData.vendorName },
+      req.userId,
+      req.companyId,
+      {
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        userId: req.userId,
+        ...(systemContext ? { ...systemContext } : {}),
+        ...(reason ? { reason } : {}),
+        demoFills: demoFills.length > 0 ? demoFills : undefined,
+      },
+    );
     res.status(201).json({
       success: true,
       expense,

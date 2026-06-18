@@ -14,7 +14,6 @@ const INITIAL_FORM = {
   date: '',
   description: '',
   amount: '',
-  currency: 'EUR',
   vendor: '',
   category: 'materials',
 };
@@ -39,11 +38,15 @@ const ExpensesCreate = () => {
       date: demo.date || new Date().toISOString().split('T')[0],
       description: demo.number ? `Demo expense ${demo.number}` : 'Demo expense',
       amount: demo.amount?.toString() ?? '0',
-      currency: 'EUR',
       vendor: demo.vendor || 'Demo Vendor',
       category: 'materials',
     });
   };
+
+  const netAmount = Number(form.amount) || 0;
+  const vatRate = 0.19;
+  const vatAmount = +(netAmount * vatRate).toFixed(2);
+  const grossAmount = +(netAmount + vatAmount).toFixed(2);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,21 +57,14 @@ const ExpensesCreate = () => {
     setLoading(true);
     setError('');
 
-    // حساب VAT
-    const netAmount = Number(form.amount) || 0;
-    const vatRate = 0.19;
-    const vatAmount = +(netAmount * vatRate).toFixed(2);
-    const grossAmount = +(netAmount + vatAmount).toFixed(2);
-
-    // استخراج userId من سياق المستخدم
     const createdByUserId = user?.id || 1;
 
     const payload = {
       companyId: activeCompany.id,
       createdByUserId,
       expenseDate: form.date || new Date().toISOString().split('T')[0],
-      currency: form.currency,
-      status: 'draft',
+      currency: 'EUR',
+      status: 'pending',
       source: 'manual',
       category: form.category || 'Office Supplies',
       description: form.description,
@@ -144,27 +140,21 @@ const ExpensesCreate = () => {
           />
         </div>
         <div>
-          <label>Amount</label>
+          <label>Net amount (EUR)</label>
           <input
             type="number"
             name="amount"
             value={form.amount}
             onChange={handleChange}
             required
+            min="0"
+            step="0.01"
             className="input w-full"
           />
         </div>
         <div>
           <label>Currency</label>
-          <select
-            name="currency"
-            value={form.currency}
-            onChange={handleChange}
-            className="input w-full"
-          >
-            <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
-          </select>
+          <input type="text" value="EUR" disabled className="input w-full bg-gray-100" />
         </div>
         <div>
           <label>Vendor</label>
@@ -196,6 +186,20 @@ const ExpensesCreate = () => {
           <Button type="button" variant="secondary" onClick={handleUseDemoExpense}>
             Use demo expense
           </Button>
+        </div>
+        <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+          <div className="flex justify-between">
+            <span>Net amount</span>
+            <span>{netAmount.toFixed(2)} EUR</span>
+          </div>
+          <div className="flex justify-between">
+            <span>VAT 19%</span>
+            <span>{vatAmount.toFixed(2)} EUR</span>
+          </div>
+          <div className="flex justify-between font-semibold text-gray-900">
+            <span>Gross amount</span>
+            <span>{grossAmount.toFixed(2)} EUR</span>
+          </div>
         </div>
         {error && <div className="text-red-500">{error}</div>}
         <Button type="submit" variant="primary" disabled={loading}>
