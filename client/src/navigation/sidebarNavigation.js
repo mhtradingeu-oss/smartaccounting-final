@@ -137,16 +137,6 @@ export const ADMINISTRATION_NAVIGATION_ITEMS = [
     disabledReason: 'Only administrators can edit users.',
   },
   {
-    nameKey: 'navigation.role_management',
-    href: '/rbac',
-    icon: DocumentMagnifyingGlassIcon,
-    iconSolid: DocumentMagnifyingGlassIconSolid,
-    badge: null,
-    description: 'Role Management',
-    enabled: ({ role }) => isAdminRole(role),
-    disabledReason: 'Role management is restricted to admins.',
-  },
-  {
     nameKey: 'navigation.billing',
     href: '/billing',
     icon: CreditCardIcon,

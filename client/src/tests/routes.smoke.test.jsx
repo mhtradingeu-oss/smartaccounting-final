@@ -79,10 +79,6 @@ vi.mock('../pages/OnboardingWizard', () => ({
   __esModule: true,
   default: () => <div>Onboarding wizard page</div>,
 }));
-vi.mock('../pages/RBACManagement', () => ({
-  __esModule: true,
-  default: () => <div>RBAC management page</div>,
-}));
 vi.mock('../pages/InvestorDashboard', () => ({
   __esModule: true,
   default: () => <div>Investor dashboard page</div>,
@@ -170,7 +166,7 @@ const routeTestCases = [
     expectedText: 'Erzählen Sie uns kurz von Ihrem Team – wir reservieren Ihren Platz.',
   },
   { path: '/onboarding', expectedText: 'Onboarding wizard page' },
-  { path: '/rbac', expectedText: 'RBAC management page' },
+  { path: '/rbac', expectedText: 'Users page' },
   { path: '/investor-dashboard', expectedText: 'Investor dashboard page' },
   { path: '/analytics', expectedText: 'Analytics page' },
   { path: '/ai-advisor', expectedText: 'AI insights page' },

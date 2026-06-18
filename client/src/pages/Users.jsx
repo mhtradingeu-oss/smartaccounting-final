@@ -138,9 +138,9 @@ const Users = () => {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="text-2xl font-bold text-gray-900">User & Role Management</h1>
         <p className="text-sm text-gray-500">
-          Manage your team members, roles, and access for this company.
+          Manage team members, roles, access, and account status for this company.
         </p>
       </div>
       {isReadOnlyRole(currentUser?.role) && (
@@ -151,7 +151,7 @@ const Users = () => {
           <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">
             User Management
           </p>
-          <h2 className="text-xl font-bold text-gray-900">Team Members</h2>
+          <h2 className="text-xl font-bold text-gray-900">Team Members & Roles</h2>
           <p className="text-sm text-gray-500">Company: {activeCompany.name}</p>
         </div>
 

@@ -46,7 +46,6 @@ const Login = lazy(() => import('./pages/Login'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const RequestAccess = lazy(() => import('./pages/RequestAccess'));
 const OnboardingWizard = lazy(() => import('./pages/OnboardingWizard'));
-const RBACManagement = lazy(() => import('./pages/RBACManagement'));
 const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard'));
 const ComplianceDashboard = lazy(() => import('./pages/ComplianceDashboard'));
 const AuditLogs = lazy(() => import('./pages/AuditLogs'));
@@ -238,8 +237,12 @@ export const ROUTE_DEFINITIONS = [
   },
   {
     path: '/rbac',
-    element: renderProtectedRoute(<RBACManagement />, 'admin'),
-    componentFile: 'client/src/pages/RBACManagement.jsx',
+    element: wrapRoute(
+      <ProtectedRoute requiredRole="admin">
+        <Navigate to="/users" replace />
+      </ProtectedRoute>,
+    ),
+    componentFile: 'client/src/App.jsx (rbac redirect)',
     authRequired: true,
     requiredRole: 'admin',
     featureFlags: [],
@@ -248,10 +251,10 @@ export const ROUTE_DEFINITIONS = [
     path: '/role-management',
     element: wrapRoute(
       <ProtectedRoute requiredRole="admin">
-        <Navigate to="/rbac" replace />
+        <Navigate to="/users" replace />
       </ProtectedRoute>,
     ),
-    componentFile: 'client/src/App.jsx (role management redirect)',
+    componentFile: 'client/src/App.jsx (role management redirect to users)',
     authRequired: true,
     requiredRole: 'admin',
     featureFlags: [],
