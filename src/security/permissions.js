@@ -31,8 +31,15 @@ module.exports = {
       'PATCH /api/expenses/:id/status',
 
       'GET /api/bank-statements',
+      'GET /api/bank-statements/:id',
+      'GET /api/bank-statements/:id/transactions',
+      'GET /api/bank-statements/:id/audit-logs',
       'POST /api/bank-statements/import',
+      'POST /api/bank-statements/import/confirm',
       'POST /api/bank-statements/reconcile',
+      'POST /api/bank-statements/transactions/:id/reconcile',
+      'POST /api/bank-statements/transactions/:id/reconcile/undo',
+      'PUT /api/bank-statements/transactions/:id/categorize',
 
       'GET /api/ai/read/*',
       'POST /api/ai/read/*',
@@ -62,6 +69,9 @@ module.exports = {
       'GET /api/expenses',
       'GET /api/expenses/:id',
       'GET /api/bank-statements',
+      'GET /api/bank-statements/:id',
+      'GET /api/bank-statements/:id/transactions',
+      'GET /api/bank-statements/:id/audit-logs',
 
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',

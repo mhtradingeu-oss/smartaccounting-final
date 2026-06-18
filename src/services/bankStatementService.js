@@ -28,10 +28,30 @@ const DRY_RUN_STATUS = {
 };
 
 class BankStatementService {
-  async getDryRunById({ dryRunId, companyId, transaction }) {
+  async getDryRunById({ dryRunId, companyId, transaction, lock }) {
     return BankStatementImportDryRun.findOne({
       where: { id: dryRunId, companyId },
       transaction,
+      ...(lock ? { lock } : {}),
+    });
+  }
+
+  async getDryRunByIdentifier({ dryRunId, confirmationToken, companyId, transaction, lock }) {
+    const identifiers = [dryRunId, confirmationToken].filter(Boolean);
+    if (!identifiers.length) {
+      return null;
+    }
+
+    return BankStatementImportDryRun.findOne({
+      where: {
+        companyId,
+        [Op.or]: [
+          { id: { [Op.in]: identifiers } },
+          { confirmationToken: { [Op.in]: identifiers } },
+        ],
+      },
+      transaction,
+      ...(lock ? { lock } : {}),
     });
   }
   constructor() {
@@ -325,32 +345,29 @@ class BankStatementService {
     });
   }
 
-  async confirmDryRunImport({ dryRunId, companyId, transaction }) {
+  async confirmDryRunImport({ dryRunId, confirmationToken, companyId, transaction }) {
     if (!transaction) {
       throw new Error('Confirming an import requires an active transaction');
     }
 
-    const findOptions = {
-      where: {
-        id: dryRunId,
-        companyId,
-      },
+    const dryRun = await this.getDryRunByIdentifier({
+      dryRunId,
+      confirmationToken,
+      companyId,
       transaction,
-    };
-    if (transaction.LOCK) {
-      findOptions.lock = transaction.LOCK.UPDATE;
-    }
-
-    const dryRun = await BankStatementImportDryRun.findOne(findOptions);
+      lock: transaction.LOCK?.UPDATE,
+    });
     if (!dryRun) {
       const error = new Error('Dry run not found');
-      error.status = 404;
+      error.status = 400;
+      error.code = 'DRY_RUN_NOT_FOUND';
       throw error;
     }
 
     if (dryRun.status !== DRY_RUN_STATUS.PENDING) {
       const error = new Error('Dry run already consumed');
       error.status = 409;
+      error.code = 'DRY_RUN_ALREADY_CONSUMED';
       throw error;
     }
 
@@ -362,6 +379,7 @@ class BankStatementService {
         filePath: dryRun.filePath,
         fileName: dryRun.fileName,
         format: dryRun.fileFormat,
+        context: { userId: dryRun.userId },
         transaction,
       });
 

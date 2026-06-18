@@ -350,8 +350,8 @@ router.post(
   ensureBankImportEnabled,
   async (req, res) => {
     const { dryRunId, confirmationToken } = req.body || {};
-    const resolvedDryRunId = dryRunId || confirmationToken;
-    if (!resolvedDryRunId) {
+    const resolvedIdentifier = dryRunId || confirmationToken;
+    if (!resolvedIdentifier) {
       await logBankImportRejection({
         action: 'bank_import_confirm_rejected',
         reason: 'dryRunId is required',
@@ -367,8 +367,9 @@ router.post(
 
     const transaction = await BankStatement.sequelize.transaction();
     try {
-      const dryRunRecord = await bankStatementService.getDryRunById({
-        dryRunId: resolvedDryRunId,
+      const dryRunRecord = await bankStatementService.getDryRunByIdentifier({
+        dryRunId,
+        confirmationToken,
         companyId: req.companyId,
         transaction,
       });
@@ -379,17 +380,18 @@ router.post(
           reason: 'Dry run not found',
           companyId: req.companyId,
           userId: req.user?.id,
-          newValues: { dryRunId: resolvedDryRunId },
+          newValues: { dryRunId: resolvedIdentifier },
         });
-        return res.status(404).json({
+        return res.status(400).json({
           success: false,
           code: 'DRY_RUN_NOT_FOUND',
           message: 'Dry run not found',
-          dryRunId: resolvedDryRunId,
+          dryRunId: resolvedIdentifier,
         });
       }
       const { summary, bankStatement } = await bankStatementService.confirmDryRunImport({
-        dryRunId: resolvedDryRunId,
+        dryRunId,
+        confirmationToken,
         companyId: req.companyId,
         transaction,
       });
@@ -401,7 +403,7 @@ router.post(
         userId: req.user?.id,
         oldValues: null,
         newValues: {
-          dryRunId: resolvedDryRunId,
+          dryRunId: dryRunRecord.id,
           bankStatementId: bankStatement.id,
           counts: summary,
         },
@@ -417,7 +419,7 @@ router.post(
         success: true,
         message: 'Bank statement import confirmed',
         data: {
-          dryRunId: resolvedDryRunId,
+          dryRunId: dryRunRecord.id,
           bankStatementId: bankStatement.id,
           summary,
         },
@@ -430,13 +432,13 @@ router.post(
         reason: error.message || 'Failed to confirm bank statement import',
         companyId: req.companyId,
         userId: req.user?.id,
-        newValues: { dryRunId: resolvedDryRunId },
+        newValues: { dryRunId: resolvedIdentifier },
       });
       return res.status(status).json({
         success: false,
-        code: 'BANK_STATEMENT_CONFIRM_FAILED',
+        code: error.code || 'BANK_STATEMENT_CONFIRM_FAILED',
         message: error.message || 'Failed to confirm bank statement import',
-        dryRunId: resolvedDryRunId,
+        dryRunId: resolvedIdentifier,
       });
     }
   },
@@ -447,7 +449,7 @@ router.post(
  * List Bank Statements
  * ─────────────────────────────────────────────────────────
  */
-router.get('/', async (req, res) => {
+router.get('/', requireRole(['auditor']), async (req, res) => {
   try {
     const statements = await BankStatement.findAll({
       where: { companyId: req.companyId },
@@ -468,10 +470,43 @@ router.get('/', async (req, res) => {
 
 /**
  * ─────────────────────────────────────────────────────────
+ * Get Bank Statement Detail
+ * ─────────────────────────────────────────────────────────
+ */
+router.get('/:id', requireRole(['auditor']), async (req, res) => {
+  try {
+    const statement = await BankStatement.findOne({
+      where: {
+        id: req.params.id,
+        companyId: req.companyId,
+      },
+    });
+
+    if (!statement) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bank statement not found',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: statement,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch bank statement',
+    });
+  }
+});
+
+/**
+ * ─────────────────────────────────────────────────────────
  * List Transactions for a Statement
  * ─────────────────────────────────────────────────────────
  */
-router.get('/:id/transactions', async (req, res) => {
+router.get('/:id/transactions', requireRole(['auditor']), async (req, res) => {
   try {
     const transactions = await BankTransaction.findAll({
       where: {
@@ -493,7 +528,7 @@ router.get('/:id/transactions', async (req, res) => {
   }
 });
 
-router.get('/:id/audit-logs', async (req, res) => {
+router.get('/:id/audit-logs', requireRole(['auditor']), async (req, res) => {
   try {
     const logs = await bankStatementService.getAuditLogEntriesForStatement({
       statementId: Number(req.params.id),
