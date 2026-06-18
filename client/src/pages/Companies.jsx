@@ -47,7 +47,6 @@ export default function Companies() {
       const maxRetries = 2;
       let attempt = 0;
 
-      setCompanies(null);
       setLoadError(null);
 
       if (retryTimeoutRef.current) {

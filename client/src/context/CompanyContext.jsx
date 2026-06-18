@@ -70,6 +70,13 @@ export const CompanyProvider = ({ children }) => {
       return;
     }
 
+    // Do not clear the active company while the company list is still loading.
+    // Otherwise page-level refreshes that temporarily set companies to null can
+    // make the whole shell show "No company" / "Plan unavailable".
+    if (companies === null) {
+      return;
+    }
+
     const hasActiveCompany =
       Array.isArray(companies) &&
       companies.some((company) => companyIdsMatch(company.id, activeCompany.id));
