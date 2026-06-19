@@ -45,7 +45,7 @@ describe('GlobalAICompanion in authenticated layout', () => {
 
   const renderLayout = () =>
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/invoices/123/edit']}>
         <Layout>
           <main>Authenticated content</main>
         </Layout>
@@ -68,6 +68,7 @@ describe('GlobalAICompanion in authenticated layout', () => {
 
     expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument();
     expect(screen.getByText('Read-only, audited, company-scoped')).toBeInTheDocument();
+    expect(screen.getByText('Current page: Invoice edit')).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close AI Manager' }));
@@ -97,6 +98,28 @@ describe('GlobalAICompanion in authenticated layout', () => {
     expect(
       await screen.findByText('Review overdue invoices and unreconciled transactions.'),
     ).toBeInTheDocument();
+  });
+
+
+  it('adds safe page context to explain-page prompts only', async () => {
+    renderLayout();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open AI Manager' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Explain this page/i }));
+    });
+
+    await waitFor(() => {
+      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+        intent: 'explain_page',
+        prompt:
+          'Explain the current accounting page and what I should pay attention to. Safe page context: module=invoices, routeName=invoice_edit, entityType=invoice, entityId=123.',
+        sessionId: null,
+        companyId: 10,
+      });
+    });
   });
 
   it('does not render write or action controls', async () => {

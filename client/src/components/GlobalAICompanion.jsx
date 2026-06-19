@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ChatBubbleLeftRightIcon,
   PaperAirplaneIcon,
@@ -11,6 +11,7 @@ import { Button } from './ui/Button';
 import { useCompany } from '../context/CompanyContext';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
 import { formatApiError } from '../services/api';
+import { formatAIPageContextForPrompt, getAIPageContext } from '../lib/aiPageContext';
 
 const QUICK_PROMPTS = [
   {
@@ -38,6 +39,8 @@ const getAnswerText = (response) =>
 
 export default function GlobalAICompanion() {
   const { activeCompany } = useCompany();
+  const location = useLocation();
+  const pageContext = getAIPageContext(location.pathname);
   const activeCompanyId = activeCompany?.id;
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -47,7 +50,9 @@ export default function GlobalAICompanion() {
   const [error, setError] = useState(null);
 
   const sendPrompt = async ({ intent = 'review', prompt }) => {
-    const trimmedPrompt = prompt.trim();
+    const contextNote = formatAIPageContextForPrompt(pageContext);
+    const basePrompt = intent === 'explain_page' ? `${prompt} ${contextNote}` : prompt;
+    const trimmedPrompt = basePrompt.trim();
     if (!trimmedPrompt || isSending) {
       return;
     }
@@ -97,6 +102,9 @@ export default function GlobalAICompanion() {
               </div>
               <p className="mt-1 text-xs font-medium text-blue-700 dark:text-blue-300">
                 Read-only, audited, company-scoped
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Current page: {pageContext.label}
               </p>
             </div>
             <button
