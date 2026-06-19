@@ -77,6 +77,7 @@ const SystemAdminDashboard = lazy(() => import('./pages/SystemAdminDashboard'));
 
 const AIInsights = lazy(() => import('./pages/AIInsights'));
 const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+const AIManager = lazy(() => import('./pages/AIManager'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 
@@ -287,6 +288,14 @@ export const ROUTE_DEFINITIONS = [
     path: '/ai-assistant',
     element: renderProtectedRoute(<AIAssistant />),
     componentFile: 'client/src/pages/AIAssistant.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: ['AI_ASSISTANT_ENABLED'],
+  },
+  {
+    path: '/ai-manager',
+    element: renderProtectedRoute(<AIManager />),
+    componentFile: 'client/src/pages/AIManager.jsx',
     authRequired: true,
     requiredRole: null,
     featureFlags: ['AI_ASSISTANT_ENABLED'],

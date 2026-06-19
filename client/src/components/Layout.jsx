@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import GlobalAICompanion from './GlobalAICompanion';
 
 import Footer from './Footer';
 // import DevHealthCheck from './DevHealthCheck';
@@ -123,6 +124,8 @@ const Layout = ({ children }) => {
           onClick={toggleSidebar}
         />
       )}
+
+      {status === 'authenticated' && <GlobalAICompanion />}
     </div>
   );
 };
