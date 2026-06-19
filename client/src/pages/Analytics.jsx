@@ -177,7 +177,7 @@ const Analytics = () => {
         description={t('analytics_page.select_company_description')}
         action={
           <Button variant="primary" onClick={() => navigate('/companies')}>
-            Select Company
+            {t('analytics_page.select_company_action')}
           </Button>
         }
       />
@@ -257,7 +257,7 @@ const Analytics = () => {
       <div className="surface-card-ai flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700 dark:border-primary-900/40 dark:bg-slate-950/50 dark:text-primary-200">
-            Analytics workspace
+            {t('analytics_page.badge')}
           </div>
           <h1 className="page-title">{t('analytics_page.title')}</h1>
           <p className="page-subtitle">{t('analytics_page.subtitle', { companyName: activeCompany.name })}</p>
@@ -281,7 +281,7 @@ const Analytics = () => {
         <Card className="space-y-3 border-blue-200 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/20">
           <div className="flex items-center gap-2">
             <span className="inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-900 dark:bg-blue-900/50 dark:text-blue-100">
-              Export snapshot
+              {t('analytics_page.export_snapshot')}
             </span>
             <span className="inline-flex rounded-full bg-white/70 px-2 py-0.5 text-xs text-gray-700 dark:bg-slate-950/60 dark:text-gray-300">
               Read-only
@@ -370,7 +370,7 @@ const Analytics = () => {
                   to={`/invoices/${latestInvoice.id}/edit`}
                   className="btn-ghost text-sm px-3 py-1 border rounded-lg inline-flex items-center gap-2"
                 >
-                  View invoice
+                  {t('analytics_page.view_invoice')}
                 </Link>
               </div>
             ) : (
