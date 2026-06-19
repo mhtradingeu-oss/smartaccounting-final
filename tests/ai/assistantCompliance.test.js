@@ -155,6 +155,11 @@ describe('AI Assistant compliance wrapper', () => {
     expect(response.risks.join(' ')).toMatch(/Evidence\/reference/i);
     expect(response.requiredActions.join(' ')).toMatch(/Reconcile unreconciled bank transactions/i);
     expect(JSON.stringify(response)).not.toContain('DE123456789');
+    expect(response.summary).toMatch(/\n- Top risk/);
+    expect(response.summary).not.toMatch(/invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i);
+    expect(response.risks.join(' ')).not.toMatch(
+      /invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i,
+    );
   });
 
   it('orders risk intent output by severity and includes source evidence', () => {

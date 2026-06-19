@@ -96,12 +96,45 @@ function truncateText(value, maxLength) {
   return `${text.slice(0, maxLength - 3)}...`;
 }
 
-function sanitizeText(value, maxLength) {
-  return truncateText(redactPII(String(value || '')), maxLength).trim();
+function repairJoinedTokens(value) {
+  return String(value || '')
+    .replace(/\briskto\b/gi, 'risk to')
+    .replace(/\bnotprovided\b/gi, 'not provided')
+    .replace(/\b(invoice|transaction|risk|review|bank|overdue|pending|unreconciled)focus\b/gi, '$1 focus')
+    .replace(/\bon(\d)/gi, 'on $1')
+    .replace(/\bfor(\d)/gi, 'for $1')
+    .replace(/([€$£])\.-\s*/g, '$1.\n- ')
+    .replace(/\.-\s*/g, '.\n- ')
+    .replace(/([.!?])-\s+/g, '$1\n- ')
+    .trim();
 }
 
-function sanitizeAccountingLine(value, maxLength = MAX_ITEM_CHARS) {
-  return truncateText(String(value || ''), maxLength).trim();
+function normalizeWhitespace(value, { preserveLineBreaks = false } = {}) {
+  const text = repairJoinedTokens(value);
+  if (!preserveLineBreaks) {
+    return text.replace(/\s+/g, ' ').trim();
+  }
+  return text
+    .split(/\n+/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function sanitizeText(value, maxLength, options) {
+  return normalizeWhitespace(truncateText(redactPII(String(value || '')), maxLength), options);
+}
+
+function sanitizeAccountingLine(value, maxLength = MAX_ITEM_CHARS, options) {
+  return normalizeWhitespace(truncateText(String(value || ''), maxLength), options);
+}
+
+function formatSentence(value) {
+  const text = sanitizeAccountingLine(value, MAX_ITEM_CHARS);
+  if (!text) {
+    return '';
+  }
+  return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 function sanitizeList(items, maxLength = MAX_ITEM_CHARS, maxItems = MAX_LIST_ITEMS) {
@@ -468,9 +501,9 @@ function formatInsightLine(insight, fallbackSeverity) {
   const entityType = sanitizeText(insight?.entityType || 'entity', 80);
   const entityId = sanitizeText(insight?.entityId || 'unknown', 80);
   const summary = sanitizeText(insight?.summary || insight?.why || 'Summary data not available', 160);
-  const evidence = formatEvidence(insight?.evidence);
+  const evidence = formatSentence(formatEvidence(insight?.evidence));
   const rule = insight?.ruleId ? ` Rule: ${sanitizeText(insight.ruleId, 80)}.` : '';
-  return `${severity.toUpperCase()} risk: ${summary} Source: ${source}; entity: ${entityType} ${entityId}; evidence: ${evidence}.${rule}`;
+  return `${severity.toUpperCase()} risk: ${summary} Source: ${source}; entity: ${entityType} ${entityId}; evidence: ${evidence}${rule}`;
 }
 
 function buildAccountingSnapshot(context) {
@@ -664,13 +697,14 @@ function buildExplainResponse(insight) {
 
   const legalContext = sanitizeText(insight.legalContext || 'Legal context data not available', MAX_ITEM_CHARS);
   const why = sanitizeText(insight.why || 'Reason data not available', MAX_ITEM_CHARS);
+  const evidenceSentence = formatSentence(evidence);
   const message = `Transaction context: ${sanitizeText(insight.entityType, 80)} ${sanitizeText(
     insight.entityId,
     80,
   )} flagged as ${sanitizeText(insight.type, 80)}. Summary: ${sanitizeText(
     insight.summary || 'Summary data not available',
     MAX_ITEM_CHARS,
-  )}. Why it matters: ${why}. Source/evidence: ${evidence}. Legal/context note: ${legalContext}.`;
+  )}. Why it matters: ${why}. Source/evidence: ${evidenceSentence} Legal/context note: ${legalContext}.`;
 
   return {
     message,
@@ -699,10 +733,11 @@ function buildWhyFlaggedResponse(insight) {
 
   const why = sanitizeText(insight.why || insight.summary || 'Reason data not available', MAX_ITEM_CHARS);
   const legalContext = sanitizeText(insight.legalContext || 'Legal context data not available', MAX_ITEM_CHARS);
+  const evidenceSentence = formatSentence(evidence);
   const message = `This transaction was flagged because ${why}. Why it matters: review the referenced accounting source before relying on the record. The governing rule is ${sanitizeText(
     insight.ruleId || 'rule data not available',
     80,
-  )}, with context ${legalContext}. Source/evidence: ${evidence}.`;
+  )}, with context ${legalContext}. Source/evidence: ${evidenceSentence}`;
 
   const confidenceScore = Number(insight.confidenceScore);
   const confidence = Number.isFinite(confidenceScore) ? Math.round(confidenceScore * 100) : null;
@@ -786,7 +821,9 @@ function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
     MAX_LIST_ITEMS,
   );
   const requiredActions = buildNextBestActions(normalizedContext, intent);
-  const summaryBase = sanitizeAccountingLine(baseMessage || '', MAX_SUMMARY_CHARS);
+  const summaryBase = sanitizeAccountingLine(baseMessage || '', MAX_SUMMARY_CHARS, {
+    preserveLineBreaks: true,
+  });
   const summary =
     dataGaps.length > 0
       ? sanitizeAccountingLine(
@@ -794,6 +831,7 @@ function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
             .map((gap) => gap.replace(' data not available', ''))
             .join(', ')}.`,
           MAX_SUMMARY_CHARS,
+          { preserveLineBreaks: true },
         )
       : summaryBase;
   const response = {
