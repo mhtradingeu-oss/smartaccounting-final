@@ -250,16 +250,21 @@ const Analytics = () => {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="page-shell animate-fade-in">
       {isReadOnlyRole(user?.role) && (
         <ReadOnlyBanner mode="Read-only" message={t('states.read_only.dashboard_notice')} />
       )}
-      <>
-        <div className="flex flex-col gap-2">
+
+      <div className="surface-card-ai flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700 dark:border-primary-900/40 dark:bg-slate-950/50 dark:text-primary-200">
+            Analytics workspace
+          </div>
           <h1 className="page-title">Business Analytics</h1>
           <p className="page-subtitle">Live insights for {activeCompany.name}</p>
         </div>
-        <div className="flex gap-4 mb-4">
+
+        <div className="page-actions">
           <PermissionGuard action="analytics:export" role={user?.role} showDisabled>
             <button className="btn-primary" onClick={() => window.print()} disabled>
               Export PDF
@@ -271,63 +276,65 @@ const Analytics = () => {
             </button>
           </PermissionGuard>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Export Metadata Section */}
-          <div className="card-elevated p-6 space-y-3 border border-blue-200 bg-blue-50">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-900 text-xs font-semibold">
-                Export snapshot
-              </span>
-              <span className="inline-block px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">
-                Read-only
-              </span>
-            </div>
-            <div className="text-xs text-gray-700 mb-1">
-              Purpose: Prepared for advisor review (no submission)
-            </div>
-            <div className="text-xs text-gray-700 mb-1">
-              Exported at: {new Date().toLocaleString()}
-            </div>
-            <div className="text-xs text-gray-700 mb-1">Version: v1.0</div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card className="space-y-3 border-blue-200 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/20">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-900 dark:bg-blue-900/50 dark:text-blue-100">
+              Export snapshot
+            </span>
+            <span className="inline-flex rounded-full bg-white/70 px-2 py-0.5 text-xs text-gray-700 dark:bg-slate-950/60 dark:text-gray-300">
+              Read-only
+            </span>
           </div>
+          <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+            <div>Purpose: Prepared for advisor review (no submission)</div>
+            <div>Exported at: {new Date().toLocaleString()}</div>
+            <div>Version: v1.0</div>
+          </div>
+        </Card>
+
+        <Card className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Revenue</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Revenue</p>
             <CurrencyEuroIcon className="h-5 w-5 text-emerald-500" />
           </div>
           <p className="stat-value">{formatCurrency(data.totalRevenue || 0)}</p>
-          <p className="text-sm text-gray-500">{totalInvoicesLabel(invoiceCount)}</p>
-        </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{totalInvoicesLabel(invoiceCount)}</p>
+        </Card>
 
-        <div className="card-elevated p-6 space-y-3">
+        <Card className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Invoices</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Invoices</p>
             <DocumentTextIcon className="h-5 w-5 text-primary-500" />
           </div>
           <p className="stat-value">{invoiceCount || 0}</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {paidPercentage}% paid • {unpaidCount} unpaid
           </p>
-        </div>
+        </Card>
 
-        <div className="card-elevated p-6 space-y-3">
-          <p className="text-sm font-medium text-gray-500">Paid invoice ratio</p>
+        <Card className="space-y-3 md:col-span-3 lg:col-span-1">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Paid invoice ratio</p>
           <p className="stat-value">{paidPercentage}%</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {invoiceCount > 0
               ? `${paidCount} of ${invoiceCount} invoices marked as paid.`
               : 'No invoices recorded yet.'}
           </p>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="card p-6 space-y-4">
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className="space-y-4">
             <h3 className="section-title mb-2">Invoice Status</h3>
             <div className="space-y-3">
               {statusEntries.length ? (
                 statusEntries.map(([status, count]) => (
                   <div
                     key={status}
-                    className="flex items-center justify-between border border-dashed border-gray-200 rounded-xl px-4 py-3"
+                    className="flex items-center justify-between rounded-2xl border border-dashed border-gray-200 px-4 py-3 dark:border-slate-700"
                   >
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -339,19 +346,19 @@ const Analytics = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   No invoice statuses are available for this period.
                 </p>
               )}
             </div>
-          </div>
+          </Card>
 
-          <div className="card p-6 space-y-4">
+          <Card className="space-y-4">
             <h3 className="section-title mb-2">Latest Invoice</h3>
             {latestInvoice ? (
               <div className="space-y-2 text-sm">
-                <div className="text-gray-500">Invoice #{latestInvoice.invoiceNumber}</div>
-                <div className="text-2xl font-semibold">
+                <div className="text-gray-500 dark:text-gray-400">Invoice #{latestInvoice.invoiceNumber}</div>
+                <div className="text-2xl font-semibold text-gray-950 dark:text-white">
                   {formatCurrency(latestInvoice.amount || 0)}
                 </div>
                 <p className="text-gray-500">
@@ -368,13 +375,13 @@ const Analytics = () => {
                 </Link>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No invoices exist yet for this company.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No invoices exist yet for this company.</p>
             )}
-          </div>
+          </Card>
 
-          <div className="card p-6 space-y-4">
+          <Card className="space-y-4">
             <h3 className="section-title mb-2">Unavailable metrics</h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               The following analytics panels depend on backend endpoints that are not implemented
               yet.
             </p>
@@ -382,21 +389,20 @@ const Analytics = () => {
               {disabledWidgets.map((widget) => (
                 <div
                   key={widget.title}
-                  className="flex items-center gap-3 border border-gray-100 rounded-xl p-3 bg-gray-50 dark:bg-gray-900/40"
+                  className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-slate-800 dark:bg-slate-950/60"
                 >
-                  <widget.icon className="h-5 w-5 text-gray-500" />
+                  <widget.icon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                   <div>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       {widget.title}
                     </p>
-                    <p className="text-xs text-gray-500">{widget.body}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{widget.body}</p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
-      </>
     </div>
   );
 };
