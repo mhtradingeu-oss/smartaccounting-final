@@ -1,7 +1,7 @@
 const { answerIntentCompliance } = require('../../src/services/ai/aiAssistantService');
 
 const brokenFormattingPattern =
-  /Evidencenot|invoiceand|paymentneeds|itmatters|Source\/evidence:Evidence|contextBank|;entity|;evidence|invoice\.\.|unreconciled\.\.|matching\.\.|invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i;
+  /Pendinginvoice|missingapproval|overdue\.Expenses|\b(?:14|15)\.Apr\.|Evidencenot|invoiceand|paymentneeds|itmatters|Source\/evidence:Evidence|contextBank|;entity|;evidence|invoice\.\.|unreconciled\.\.|matching\.\.|invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i;
 
 describe('AI Assistant compliance wrapper', () => {
   it('reports data gaps instead of inventing values', () => {
@@ -139,7 +139,7 @@ describe('AI Assistant compliance wrapper', () => {
             entityId: 17,
             type: 'collection_risk',
             severity: 'high',
-            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved..',
+            summary: 'Pendinginvoice focus has missingapproval and overdue.Expenses on 15.Apr. 2026 for invoiceand remains unresolved..',
             why: 'Payment matching.. needs review',
             ruleId: 'INV_OVERDUE',
             dataSource: 'contextBank reconciliation',
@@ -193,8 +193,8 @@ describe('AI Assistant compliance wrapper', () => {
             entityId: 9,
             type: 'reconciliation_risk',
             severity: 'high',
-            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved..',
-            why: 'Why itmatters: payment matching.. is incomplete',
+            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved on 15.Apr. 2026..',
+            why: 'Why itmatters: payment matching.. is incomplete after 14.Apr. 2026',
             evidence: ['Source/evidence:Evidencenot from bank', 'Invoices;entity invoice 17', 'expense 8;evidence missing'],
             legalContext: 'Bank reconciliation context',
             ruleId: 'BANK_MATCH',
@@ -236,7 +236,7 @@ describe('AI Assistant compliance wrapper', () => {
             entityId: 9,
             type: 'reconciliation_risk',
             severity: 'high',
-            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved..',
+            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved on 15.Apr. 2026..',
             why: 'Payment matching.. needs review',
             evidence: ['Invoices;entity invoice 17'],
             legalContext: 'contextBank reconciliation..',
