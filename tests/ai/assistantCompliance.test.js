@@ -1,5 +1,8 @@
 const { answerIntentCompliance } = require('../../src/services/ai/aiAssistantService');
 
+const brokenFormattingPattern =
+  /Evidencenot|invoiceand|paymentneeds|itmatters|Source\/evidence:Evidence|contextBank|;entity|;evidence|invoice\.\.|unreconciled\.\.|matching\.\.|invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i;
+
 describe('AI Assistant compliance wrapper', () => {
   it('reports data gaps instead of inventing values', () => {
     const context = {
@@ -106,7 +109,7 @@ describe('AI Assistant compliance wrapper', () => {
           {
             id: 17,
             status: 'OVERDUE',
-            total: 2570.4,
+            total: 4998,
             currency: 'EUR',
             dueDate: '2026-05-17',
           },
@@ -123,9 +126,9 @@ describe('AI Assistant compliance wrapper', () => {
           {
             id: 9,
             description: 'Unmatched incoming payment',
-            amount: 2570.4,
+            amount: 4998,
             currency: 'EUR',
-            transactionDate: '2026-05-20',
+            transactionDate: '2026-04-15',
             isReconciled: false,
           },
         ],
@@ -136,9 +139,8 @@ describe('AI Assistant compliance wrapper', () => {
             entityId: 17,
             type: 'collection_risk',
             severity: 'high',
-            summary: 'Partial paymentneeds reconciliation for invoice..',
+            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved..',
             why: 'Payment matching.. needs review',
-            evidence: ['Invoices;entity invoice 17', 'expense 8;evidence missing'],
             ruleId: 'INV_OVERDUE',
             dataSource: 'contextBank reconciliation',
             confidenceScore: 0.92,
@@ -150,20 +152,111 @@ describe('AI Assistant compliance wrapper', () => {
     });
 
     expect(response.summary).toMatch(/Prioritized accounting review/i);
-    expect(response.summary).toMatch(/Top risk/i);
+    expect(response.summary).toMatch(/Top risk to review first/i);
+    expect(response.summary).toMatch(/Evidence not provided/i);
+    expect(response.summary).toMatch(/transaction on 15/i);
+    expect(response.summary).toMatch(/for 4/);
     expect(response.summary).toMatch(/Overdue invoice focus/i);
     expect(response.summary).toMatch(/Unreconciled bank transaction focus/i);
     expect(response.risks.join(' ')).toMatch(/Evidence\/reference/i);
     expect(response.requiredActions.join(' ')).toMatch(/Reconcile unreconciled bank transactions/i);
     expect(JSON.stringify(response)).not.toContain('DE123456789');
     expect(response.summary).toMatch(/\n- Top risk/);
-    const brokenFormattingPattern =
-      /paymentneeds|contextBank|;entity|;evidence|invoice\.\.|unreconciled\.\.|matching\.\.|invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i;
     expect(response.summary).not.toMatch(brokenFormattingPattern);
     expect(response.risks.join(' ')).not.toMatch(
       brokenFormattingPattern,
     );
     expect(response.references.join(' ')).not.toMatch(brokenFormattingPattern);
+  });
+
+  it('normalizes final explain transaction response formatting', () => {
+    const response = answerIntentCompliance({
+      intent: 'explain_transaction',
+      context: {
+        company: { id: 1, name: 'Example GmbH' },
+        invoices: [{ id: 17, status: 'OVERDUE', total: 4998, currency: 'EUR' }],
+        expenses: [{ id: 8, status: 'pending', grossAmount: 125, currency: 'EUR' }],
+        bankTransactions: [
+          {
+            id: 9,
+            description: 'Partial paymentneeds reconciliation',
+            amount: 4998,
+            currency: 'EUR',
+            transactionDate: '2026-04-15',
+            isReconciled: false,
+          },
+        ],
+        insights: [
+          {
+            id: 9,
+            entityType: 'bankTransaction',
+            entityId: 9,
+            type: 'reconciliation_risk',
+            severity: 'high',
+            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved..',
+            why: 'Why itmatters: payment matching.. is incomplete',
+            evidence: ['Source/evidence:Evidencenot from bank', 'Invoices;entity invoice 17', 'expense 8;evidence missing'],
+            legalContext: 'Bank reconciliation context',
+            ruleId: 'BANK_MATCH',
+            dataSource: 'Bank transactions',
+            confidenceScore: 0.88,
+          },
+        ],
+      },
+      targetInsightId: 9,
+      prompt: 'Explain transaction',
+    });
+
+    expect(response.summary).not.toMatch(brokenFormattingPattern);
+    expect(response.risks.join(' ')).not.toMatch(brokenFormattingPattern);
+    expect(response.references.join(' ')).not.toMatch(brokenFormattingPattern);
+  });
+
+  it('normalizes final why flagged response formatting', () => {
+    const response = answerIntentCompliance({
+      intent: 'why_flagged',
+      context: {
+        company: { id: 1, name: 'Example GmbH' },
+        invoices: [{ id: 17, status: 'OVERDUE', total: 4998, currency: 'EUR' }],
+        expenses: [{ id: 8, status: 'pending', grossAmount: 125, currency: 'EUR' }],
+        bankTransactions: [
+          {
+            id: 9,
+            description: 'Partial paymentneeds reconciliation',
+            amount: 4998,
+            currency: 'EUR',
+            transactionDate: '2026-04-15',
+            isReconciled: false,
+          },
+        ],
+        insights: [
+          {
+            id: 10,
+            entityType: 'bankTransaction',
+            entityId: 9,
+            type: 'reconciliation_risk',
+            severity: 'high',
+            summary: 'Partial paymentneeds reconciliation for invoiceand remains unresolved..',
+            why: 'Payment matching.. needs review',
+            evidence: ['Invoices;entity invoice 17'],
+            legalContext: 'contextBank reconciliation..',
+            ruleId: 'demo:late-payment-risk',
+            dataSource: 'contextBank reconciliation',
+            confidenceScore: 0.88,
+          },
+        ],
+      },
+      targetInsightId: 10,
+      prompt: 'Why flagged?',
+    });
+
+    expect(response.summary).not.toMatch(brokenFormattingPattern);
+    expect(response.risks.join(' ')).not.toMatch(brokenFormattingPattern);
+    expect(response.references.join(' ')).not.toMatch(brokenFormattingPattern);
+    expect(JSON.stringify(response)).toContain('bankTransaction');
+    expect(JSON.stringify(response)).toContain('demo:late-payment-risk');
+    expect(JSON.stringify(response)).not.toContain('bank Transaction');
+    expect(JSON.stringify(response)).not.toContain('demo: late-payment-risk');
   });
 
   it('orders risk intent output by severity and includes source evidence', () => {

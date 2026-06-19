@@ -100,8 +100,12 @@ function repairJoinedTokens(value) {
   return String(value || '')
     .replace(/\briskto\b/gi, 'risk to')
     .replace(/\bnotprovided\b/gi, 'not provided')
+    .replace(/\bevidencenot\b/gi, 'Evidence not')
+    .replace(/\bitmatters\b/gi, 'it matters')
+    .replace(/(Source\/evidence:)(?=\S)/gi, '$1 ')
+    .replace(/\bcontext(?=Bank\b)/g, 'context ')
+    .replace(/\binvoiceand\b/gi, 'invoice and')
     .replace(/\b([A-Za-zÄÖÜäöüß]+)needs\b/g, '$1 needs')
-    .replace(/\bcontext([A-ZÄÖÜ])/g, 'context $1')
     .replace(/\b(invoice|transaction|risk|review|bank|overdue|pending|unreconciled)focus\b/gi, '$1 focus')
     .replace(/\bon(\d)/gi, 'on $1')
     .replace(/\bfor(\d)/gi, 'for $1')
@@ -504,7 +508,7 @@ function formatInsightLine(insight, fallbackSeverity) {
   const source = sanitizeText(insight?.dataSource || resolveDataSource(insight?.entityType), 80);
   const entityType = sanitizeText(insight?.entityType || 'entity', 80);
   const entityId = sanitizeText(insight?.entityId || 'unknown', 80);
-  const summary = sanitizeText(insight?.summary || insight?.why || 'Summary data not available', 160);
+  const summary = formatSentence(insight?.summary || insight?.why || 'Summary data not available');
   const evidence = formatSentence(formatEvidence(insight?.evidence));
   const rule = insight?.ruleId ? ` Rule: ${sanitizeText(insight.ruleId, 80)}.` : '';
   return `${severity.toUpperCase()} risk: ${summary} Source: ${source}; entity: ${entityType} ${entityId}; evidence: ${evidence}${rule}`;
@@ -866,14 +870,14 @@ function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
 
 function answerIntentCompliance({ intent, context, targetInsightId, prompt }) {
   const compliance = applyComplianceWrapper({ intent, context, targetInsightId, prompt });
-  return {
+  return normalizeAssistantResponsePayload({
     message: compliance.summary,
     highlights: compliance.risks,
     references: compliance.evidenceReferences?.length
       ? compliance.evidenceReferences
       : compliance.dataGaps,
     ...compliance,
-  };
+  });
 }
 
 function sanitizeProviderErrorCode(error) {
@@ -906,6 +910,34 @@ function omitProviderUnsafeFields(response) {
   return safeResponse;
 }
 
+function normalizeAssistantResponsePayload(response = {}) {
+  const normalized = { ...response };
+
+  if (typeof normalized.summary === 'string') {
+    normalized.summary = sanitizeAccountingLine(normalized.summary, MAX_SUMMARY_CHARS, {
+      preserveLineBreaks: true,
+    });
+  }
+  if (typeof normalized.message === 'string') {
+    normalized.message = sanitizeAccountingLine(normalized.message, MAX_SUMMARY_CHARS, {
+      preserveLineBreaks: true,
+    });
+  }
+  if (typeof normalized.contextSummary === 'string') {
+    normalized.contextSummary = sanitizeAccountingLine(normalized.contextSummary, MAX_SUMMARY_CHARS);
+  }
+
+  ['risks', 'requiredActions', 'dataGaps', 'references', 'highlights', 'evidenceReferences'].forEach(
+    (field) => {
+      if (Array.isArray(normalized[field])) {
+        normalized[field] = sanitizeAccountingList(normalized[field], MAX_ITEM_CHARS, MAX_LIST_ITEMS);
+      }
+    },
+  );
+
+  return normalized;
+}
+
 async function answerIntentComplianceWithProvider({
   intent,
   context,
@@ -926,10 +958,10 @@ async function answerIntentComplianceWithProvider({
   const budget = checkProviderBudget({ config });
 
   if (!budget.allowed) {
-    return {
+    return normalizeAssistantResponsePayload({
       ...omitProviderUnsafeFields(deterministic),
       ...providerMeta(true, 'AI_PROVIDER_BUDGET_DENIED'),
-    };
+    });
   }
 
   try {
@@ -953,24 +985,24 @@ async function answerIntentComplianceWithProvider({
     });
     const validation = validateAssistantResponse(providerResponse);
     if (!validation.success) {
-      return {
+      return normalizeAssistantResponsePayload({
         ...omitProviderUnsafeFields(deterministic),
         ...providerMeta(true, 'AI_PROVIDER_SCHEMA_INVALID'),
-      };
+      });
     }
     const compliance = pickAssistantSchemaFields(validation.data);
-    return {
+    return normalizeAssistantResponsePayload({
       message: compliance.summary,
       highlights: compliance.risks,
       references: compliance.dataGaps,
       ...compliance,
       ...providerMeta(false),
-    };
+    });
   } catch (error) {
-    return {
+    return normalizeAssistantResponsePayload({
       ...omitProviderUnsafeFields(deterministic),
       ...providerMeta(true, sanitizeProviderErrorCode(error)),
-    };
+    });
   }
 }
 
