@@ -293,11 +293,12 @@ const AIAssistant = () => {
       return;
     }
 
-    if (lastLoadedCompanyIdRef.current === activeCompanyId) {
+    if (lastLoadedCompanyIdRef.current === activeCompanyId && context) {
+      setLoading(false);
       return;
     }
 
-    lastLoadedCompanyIdRef.current = activeCompanyId;
+    const requestedCompanyId = activeCompanyId;
     prepareForLoad();
 
     let cancelled = false;
@@ -337,6 +338,7 @@ const AIAssistant = () => {
 
         setSessionId(sessionResult.value?.sessionId ?? null);
         setContext(contextResult.value || {});
+        lastLoadedCompanyIdRef.current = requestedCompanyId;
       } catch (err) {
         if (!cancelled) {
           setContextError(formatApiError(err, 'Unable to load the AI assistant.'));
@@ -352,7 +354,7 @@ const AIAssistant = () => {
     return () => {
       cancelled = true;
     };
-  }, [aiAssistantEnabled, activeCompanyId, isReadOnly, isSystemAdmin]);
+  }, [aiAssistantEnabled, activeCompanyId, isReadOnly, isSystemAdmin, context]);
 
   useEffect(() => {
     if (!aiVoiceEnabled || typeof window === 'undefined') {
