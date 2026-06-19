@@ -10,10 +10,17 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    @apply bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-gray-100;
     font-feature-settings: 'cv11', 'ss01';
     font-variation-settings: 'opsz' 32;
     letter-spacing: -0.02em;
+  }
+
+  .dark body {
+    background:
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 28rem),
+      radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.08), transparent 30rem),
+      rgb(2 6 23);
   }
 
   * {
@@ -47,11 +54,11 @@
   }
 
   .btn-primary {
-    @apply btn bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 focus:ring-primary-500 dark:from-primary-500 dark:to-primary-600 dark:hover:from-primary-600 dark:hover:to-primary-700 shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 transform hover:-translate-y-0.5;
+    @apply btn bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 focus:ring-primary-500 dark:from-primary-500 dark:to-primary-600 dark:hover:from-primary-400 dark:hover:to-primary-500 shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 transform hover:-translate-y-0.5 active:translate-y-0;
   }
 
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-500 shadow-sm hover:shadow-md;
+    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:ring-gray-500 dark:bg-slate-900 dark:text-gray-100 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:border-slate-600 shadow-sm hover:shadow-md;
   }
 
   .btn-danger {
@@ -68,15 +75,27 @@
 
   /* Enhanced Card System */
   .card {
-    @apply bg-white rounded-xl shadow-soft border border-gray-200 dark:bg-gray-800 dark:border-gray-700 transition-all duration-300 hover:shadow-medium;
+    @apply bg-white rounded-2xl shadow-soft border border-gray-200 dark:bg-slate-900/80 dark:border-slate-800 transition-all duration-300 hover:shadow-medium;
   }
 
   .card-elevated {
-    @apply card shadow-medium hover:shadow-large transform hover:-translate-y-1;
+    @apply card shadow-medium hover:shadow-large transform hover:-translate-y-0.5 dark:shadow-none;
   }
 
   .card-interactive {
-    @apply card cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-large transform hover:-translate-y-1 active:translate-y-0;
+    @apply card cursor-pointer hover:border-gray-300 dark:hover:border-slate-700 hover:shadow-large transform hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .surface-card {
+    @apply rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none;
+  }
+
+  .surface-card-muted {
+    @apply rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950/70 dark:shadow-none;
+  }
+
+  .surface-card-ai {
+    @apply rounded-3xl border border-primary-200 bg-gradient-to-br from-primary-50 to-blue-50 p-6 shadow-sm dark:border-primary-900/40 dark:from-primary-950/30 dark:to-slate-900 dark:shadow-none;
   }
 
   /* Enhanced Input System */
@@ -210,16 +229,24 @@
 
   /* Enhanced Page Layout */
   .page-header {
-    @apply mb-8 pb-4 border-b border-gray-200 dark:border-gray-700;
+    @apply mb-8 pb-5 border-b border-gray-200 dark:border-slate-800;
   }
 
   .page-title {
-    @apply text-3xl font-bold text-gray-900 dark:text-white;
-    letter-spacing: -0.04em;
+    @apply text-3xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-4xl;
+    letter-spacing: -0.045em;
   }
 
   .page-subtitle {
-    @apply mt-2 text-lg text-gray-600 dark:text-gray-400;
+    @apply mt-2 max-w-3xl text-base leading-7 text-gray-600 dark:text-gray-400 sm:text-lg;
+  }
+
+  .page-shell {
+    @apply mx-auto max-w-7xl space-y-8;
+  }
+
+  .page-actions {
+    @apply flex flex-wrap items-center gap-3;
   }
 
   .section-header {
@@ -359,6 +386,10 @@
 
   .main-expanded {
     margin-left: 16rem;
+  }
+
+  .main-content {
+    @apply bg-transparent;
   }
 
   /* Animation Utilities */
