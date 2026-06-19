@@ -47,11 +47,11 @@ const disabledWidgets = [
   },
 ];
 
-const totalInvoicesLabel = (count) => {
+const totalInvoicesLabel = (count, t) => {
   if (!count) {
-    return 'No invoices processed yet.';
+    return t('analytics_page.total_invoices_none');
   }
-  return `${count} invoices processed to date.`;
+  return t('analytics_page.total_invoices_count', { count });
 };
 
 const statusLabel = (status) => {
@@ -173,8 +173,8 @@ const Analytics = () => {
   if (!activeCompany) {
     return (
       <EmptyState
-        title="No company selected"
-        description="Analytics data is scoped to the active company. Select one from the company menu before viewing dashboards."
+        title={t('analytics_page.select_company_title')}
+        description={t('analytics_page.select_company_description')}
         action={
           <Button variant="primary" onClick={() => navigate('/companies')}>
             Select Company
@@ -188,12 +188,12 @@ const Analytics = () => {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-2">
-          <h1 className="page-title">Business Analytics</h1>
-          <p className="page-subtitle">Live insights for {activeCompany.name}</p>
+          <h1 className="page-title">{t('analytics_page.title')}</h1>
+          <p className="page-subtitle">{t('analytics_page.subtitle', { companyName: activeCompany.name })}</p>
         </div>
         <div className="flex flex-col items-center justify-center h-64">
           <LoadingSpinner size="lg" />
-          <p className="text-gray-500 mt-3">Loading analytics data…</p>
+          <p className="text-gray-500 mt-3">{t('analytics_page.loading')}</p>
         </div>
       </div>
     );
@@ -204,11 +204,10 @@ const Analytics = () => {
       <Card className="p-8 text-center my-8">
         <ExclamationTriangleIcon className="h-12 w-12 text-amber-500 mx-auto mb-4" />
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Data not available yet
+          {t('analytics_page.disabled_title')}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          The analytics endpoint is currently disabled on the backend. Check back later once the
-          feature is enabled.
+          {t('analytics_page.disabled_description')}
         </p>
       </Card>
     );
@@ -223,8 +222,8 @@ const Analytics = () => {
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {error.retryable
-            ? 'Try again or refresh later.'
-            : 'This action cannot be retried automatically.'}
+            ? t('analytics_page.retry_hint_retryable')
+            : t('analytics_page.retry_hint_static')}
         </p>
         {error.retryable && (
           <button className="btn-primary" onClick={fetchAnalytics}>
@@ -238,8 +237,8 @@ const Analytics = () => {
   if (!data) {
     return (
       <EmptyState
-        title="No analytics data"
-        description="There is no analytics data to display yet. Invoice data will appear here once documents are processed for this company."
+        title={t('analytics_page.no_data_title')}
+        description={t('analytics_page.no_data_description')}
         action={
           <Button variant="primary" onClick={fetchAnalytics}>
             Refresh
@@ -260,8 +259,8 @@ const Analytics = () => {
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700 dark:border-primary-900/40 dark:bg-slate-950/50 dark:text-primary-200">
             Analytics workspace
           </div>
-          <h1 className="page-title">Business Analytics</h1>
-          <p className="page-subtitle">Live insights for {activeCompany.name}</p>
+          <h1 className="page-title">{t('analytics_page.title')}</h1>
+          <p className="page-subtitle">{t('analytics_page.subtitle', { companyName: activeCompany.name })}</p>
         </div>
 
         <div className="page-actions">
@@ -289,46 +288,46 @@ const Analytics = () => {
             </span>
           </div>
           <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-            <div>Purpose: Prepared for advisor review (no submission)</div>
-            <div>Exported at: {new Date().toLocaleString()}</div>
-            <div>Version: v1.0</div>
+            <div>{t('analytics_page.export_purpose')}</div>
+            <div>{t('analytics_page.exported_at', { timestamp: new Date().toLocaleString() })}</div>
+            <div>{t('analytics_page.version')}</div>
           </div>
         </Card>
 
         <Card className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Revenue</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.revenue')}</p>
             <CurrencyEuroIcon className="h-5 w-5 text-emerald-500" />
           </div>
           <p className="stat-value">{formatCurrency(data.totalRevenue || 0)}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{totalInvoicesLabel(invoiceCount)}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{totalInvoicesLabel(invoiceCount, t)}</p>
         </Card>
 
         <Card className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Invoices</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.invoices')}</p>
             <DocumentTextIcon className="h-5 w-5 text-primary-500" />
           </div>
           <p className="stat-value">{invoiceCount || 0}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {paidPercentage}% paid • {unpaidCount} unpaid
+            {t('analytics_page.paid_unpaid', { paidPercentage, unpaidCount })}
           </p>
         </Card>
 
         <Card className="space-y-3 md:col-span-3 lg:col-span-1">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Paid invoice ratio</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.paid_invoice_ratio')}</p>
           <p className="stat-value">{paidPercentage}%</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {invoiceCount > 0
-              ? `${paidCount} of ${invoiceCount} invoices marked as paid.`
-              : 'No invoices recorded yet.'}
+              ? t('analytics_page.paid_ratio_summary', { paidCount, invoiceCount })
+              : t('analytics_page.no_invoices_recorded')}
           </p>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="space-y-4">
-            <h3 className="section-title mb-2">Invoice Status</h3>
+            <h3 className="section-title mb-2">{t('analytics_page.invoice_status')}</h3>
             <div className="space-y-3">
               {statusEntries.length ? (
                 statusEntries.map(([status, count]) => (
@@ -347,22 +346,22 @@ const Analytics = () => {
                 ))
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No invoice statuses are available for this period.
+                  {t('analytics_page.no_invoice_statuses')}
                 </p>
               )}
             </div>
           </Card>
 
           <Card className="space-y-4">
-            <h3 className="section-title mb-2">Latest Invoice</h3>
+            <h3 className="section-title mb-2">{t('analytics_page.latest_invoice')}</h3>
             {latestInvoice ? (
               <div className="space-y-2 text-sm">
-                <div className="text-gray-500 dark:text-gray-400">Invoice #{latestInvoice.invoiceNumber}</div>
+                <div className="text-gray-500 dark:text-gray-400">{t('analytics_page.invoice_number', { invoiceNumber: latestInvoice.invoiceNumber })}</div>
                 <div className="text-2xl font-semibold text-gray-950 dark:text-white">
                   {formatCurrency(latestInvoice.amount || 0)}
                 </div>
                 <p className="text-gray-500">
-                  Status:{' '}
+                  {t('analytics_page.status')}{' '}
                   <strong className="text-gray-900 dark:text-white">
                     {statusLabel(latestInvoice.status || 'unknown')}
                   </strong>
@@ -375,15 +374,14 @@ const Analytics = () => {
                 </Link>
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No invoices exist yet for this company.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('analytics_page.no_latest_invoice')}</p>
             )}
           </Card>
 
           <Card className="space-y-4">
-            <h3 className="section-title mb-2">Unavailable metrics</h3>
+            <h3 className="section-title mb-2">{t('analytics_page.unavailable_metrics')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              The following analytics panels depend on backend endpoints that are not implemented
-              yet.
+              {t('analytics_page.unavailable_metrics_description')}
             </p>
             <div className="space-y-3">
               {disabledWidgets.map((widget) => (
