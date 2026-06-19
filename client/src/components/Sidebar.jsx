@@ -31,6 +31,8 @@ import { resolvePlanLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 const NAV_LINK_BASE_CLASSES =
   'relative group flex items-center px-3 py-2.5 text-sm font-medium min-h-[44px] rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900';
 
+const SIDEBAR_SCROLL_STORAGE_KEY = 'smartaccounting.sidebar.scrollTop';
+
 const PLAN_LABEL_FALLBACKS = {
   pro: 'Professional',
   professional: 'Professional',
@@ -80,6 +82,54 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   }, []);
 
   const isCondensed = isCollapsed || isCompact;
+
+  React.useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof window === 'undefined') {
+      return;
+    }
+
+    const savedScrollTop = Number(window.localStorage.getItem(SIDEBAR_SCROLL_STORAGE_KEY));
+    if (Number.isFinite(savedScrollTop) && savedScrollTop >= 0) {
+      window.requestAnimationFrame(() => {
+        nav.scrollTop = savedScrollTop;
+      });
+    }
+  }, [isCondensed]);
+
+  React.useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof window === 'undefined') {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const activeItem = nav.querySelector('[data-sidebar-active="true"]');
+      if (!activeItem) {
+        return;
+      }
+
+      const navRect = nav.getBoundingClientRect();
+      const activeRect = activeItem.getBoundingClientRect();
+      const isFullyVisible =
+        activeRect.top >= navRect.top &&
+        activeRect.bottom <= navRect.bottom;
+
+      if (!isFullyVisible) {
+        activeItem.scrollIntoView({ block: 'center', inline: 'nearest' });
+      }
+    });
+  }, [location.pathname, isCondensed]);
+
+  const handleSidebarScroll = () => {
+    if (!navRef.current || typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(
+      SIDEBAR_SCROLL_STORAGE_KEY,
+      String(navRef.current.scrollTop),
+    );
+  };
 
   const evaluateEnabled = (item) => {
     if (typeof item.enabled === 'function') {
@@ -181,6 +231,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
           onMouseEnter={() => setHoveredItem(`${sectionKey}-${item.href}-${index}`)}
           onMouseLeave={() => setHoveredItem(null)}
           data-sidebar-item="true"
+          data-sidebar-active={isActive ? 'true' : undefined}
         >
           <div className="flex items-center w-full">
             <div
@@ -375,9 +426,10 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       {/* Enhanced Navigation */}
       <nav
         ref={navRef}
-        className="flex-1 min-h-0 px-2 py-4 space-y-4 overflow-y-auto scrollbar-thin"
+        className="flex-1 min-h-0 scroll-smooth overscroll-contain px-2 py-4 space-y-4 overflow-y-auto scrollbar-thin"
         aria-label={t('navigation.sidebar')}
         onKeyDown={handleNavKeyDown}
+        onScroll={handleSidebarScroll}
       >
         {shouldRenderSection(coreNavigation) &&
           renderSection(t('navigation.core'), coreNavigation, 'core', HomeIcon)}
