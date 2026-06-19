@@ -12,7 +12,7 @@ const { AuditLog } = require('../../models');
  * @param {string} params.aiVersion
  * @param {string} [params.reason] - Optional rejection/override reason
  */
-async function logAIEvent({ entityType, entityId, action, aiOutput, userId, aiVersion, reason }) {
+async function logAIEvent({ entityType, entityId, action, aiOutput, userId, aiVersion, reason, companyId }) {
   await AuditLog.create({
     resourceType: entityType || 'ai_suggestion',
     resourceId: entityId ? String(entityId) : null,
@@ -24,6 +24,7 @@ async function logAIEvent({ entityType, entityId, action, aiOutput, userId, aiVe
     immutable: true,
     timestamp: new Date(),
     reason: reason || action,
+    companyId,
   });
 }
 

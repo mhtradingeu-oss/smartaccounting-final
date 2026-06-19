@@ -8,14 +8,17 @@ describe('aiInsightsService', () => {
   beforeEach(async () => {
     company = await createTestCompany();
     // Create a system user with id 0 for AI/system actions
-    await User.create({
-      id: 0,
-      email: 'system@ai.com',
-      password: 'x',
-      firstName: 'System',
-      lastName: 'AI',
-      role: 'admin',
-      companyId: company.id,
+    await User.findOrCreate({
+      where: { id: 0 },
+      defaults: {
+        id: 0,
+        email: 'system@ai.com',
+        password: 'x',
+        firstName: 'System',
+        lastName: 'AI',
+        role: 'admin',
+        companyId: company.id,
+      },
     });
     admin = await User.create({
       email: 'admin@serviceco.com',

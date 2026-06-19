@@ -123,6 +123,7 @@ async function generateInsightsForCompany(companyId, context = {}) {
         aiOutput: insight,
         userId: 0,
         aiVersion: 'v1',
+        companyId,
       });
       insights.push(insight);
     }

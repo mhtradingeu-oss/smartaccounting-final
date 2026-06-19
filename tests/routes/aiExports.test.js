@@ -95,7 +95,7 @@ describe('AI Exports API', () => {
   it('should enforce companyId scoping', async () => {
     const otherCompany = await createTestCompany({
       name: 'OtherExportCo',
-      taxId: 'DE000000000',
+      taxId: `DE${Date.now()}999`,
       address: 'Test Address 3',
     });
     const otherAdmin = await testUtils.createTestUser({

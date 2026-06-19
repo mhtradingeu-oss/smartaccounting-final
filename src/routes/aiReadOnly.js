@@ -23,7 +23,7 @@ router.use(requirePlanFeature('aiRead'));
 router.use(rateLimit);
 
 const normalizeFlag = (value) => String(value ?? '').toLowerCase() === 'true';
-const isAssistantFeatureEnabled = normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
+const isAssistantFeatureEnabled = () => normalizeFlag(process.env.AI_ASSISTANT_ENABLED ?? 'true');
 const MAX_PROMPT_LENGTH = 8000;
 
 // Error helpers using ApiError only
@@ -255,8 +255,8 @@ router.get('/reconciliation-summary', async (req, res, next) => {
 });
 
 router.get('/assistant/context', requireAssistantPlan, async (req, res, next) => {
-  if (!isAssistantFeatureEnabled) {
-    return respondAssistantDisabled(req, res);
+  if (!isAssistantFeatureEnabled()) {
+    return respondAssistantDisabled(req, res, next);
   }
   try {
     const prompt = extractPromptFromQuery(req);
@@ -296,7 +296,7 @@ router.post(
   requireAssistantPlan,
   aiRouteGuard({ allowedMethods: ['POST'] }),
   async (req, res, next) => {
-    if (!isAssistantFeatureEnabled) {
+    if (!isAssistantFeatureEnabled()) {
       return respondAssistantDisabled(req, res, next);
     }
     try {
@@ -377,17 +377,17 @@ router.post(
   requireAssistantPlan,
   aiRouteGuard({ allowedMethods: ['POST'] }),
   async (req, res, next) => {
-    if (!isAssistantFeatureEnabled) {
-      return respondAssistantDisabled(req, res);
+    if (!isAssistantFeatureEnabled()) {
+      return respondAssistantDisabled(req, res, next);
     }
     try {
       if (typeof req.query.prompt === 'string' && req.query.prompt.length > 0) {
-        return respondPromptInUrl(req, res);
+        return respondPromptInUrl(req, res, next);
       }
       const { intent, targetInsightId, sessionId } = req.body || {};
       const rawPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt : '';
       if (rawPrompt && rawPrompt.length > MAX_PROMPT_LENGTH) {
-        return respondInputTooLarge(req, res);
+        return respondInputTooLarge(req, res, next);
       }
       const fallbackPrompt = rawPrompt || aiAssistantService.INTENT_LABELS[intent] || intent || '';
       const prompt = fallbackPrompt;
@@ -410,7 +410,7 @@ router.post(
             console.error('[ai/read] Audit log failure', logError.message || logError);
           }
         }
-        return respondAssistantRoleDenied(req, res);
+        return respondAssistantRoleDenied(req, res, next);
       }
       if (!intent) {
         return next(new ApiError(400, 'BAD_REQUEST', 'intent is required'));
@@ -513,8 +513,8 @@ router.post(
 );
 
 router.get('/session', requireAssistantPlan, async (req, res, next) => {
-  if (!isAssistantFeatureEnabled) {
-    return respondAssistantDisabled(req, res);
+  if (!isAssistantFeatureEnabled()) {
+    return respondAssistantDisabled(req, res, next);
   }
   try {
     const prompt = extractPromptFromQuery(req);
