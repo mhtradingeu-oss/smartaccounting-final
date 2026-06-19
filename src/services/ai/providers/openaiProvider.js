@@ -5,6 +5,7 @@ const { withProviderTimeout } = require('../providerTimeout');
 const { assertProviderReady, getProviderConfig, buildProviderReadinessError } = require('./providerConfig');
 
 function buildOpenAIInput({ intent, prompt, context, registryEntry }) {
+  const accountingBrief = context?.accountingBrief || null;
   return [
     {
       role: 'system',
@@ -17,6 +18,16 @@ function buildOpenAIInput({ intent, prompt, context, registryEntry }) {
       content: JSON.stringify({
         intent,
         prompt,
+        instructions: [
+          'Use only supplied data in accountingBrief and context.',
+          'Do not infer missing amounts, dates, tax positions, counterparties, or legal conclusions.',
+          'Keep the assistant read-only and auditable.',
+          'For review intent, prioritize top risk, overdue/pending invoices, unreconciled bank transactions, evidence references, safe next actions, and data gaps.',
+          'For risks intent, rank high, medium, and low risks and cite entity/source/evidence in each risk line.',
+          'For explain_transaction and why_flagged, explain why it matters, source/evidence, legal/context note when available, confidence when available, and data gaps.',
+          'Return JSON only with the required schema fields.',
+        ],
+        accountingBrief,
         context,
         responseSchema: {
           summary: 'string',

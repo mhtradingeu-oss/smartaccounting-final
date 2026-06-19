@@ -97,6 +97,138 @@ describe('AI Assistant compliance wrapper', () => {
     expect(response.contextSummary).toContain('Insights: 5 total (high 1, medium 2, low 2).');
   });
 
+  it('prioritizes review focus across overdue invoices, unreconciled transactions, and high insights', () => {
+    const response = answerIntentCompliance({
+      intent: 'review',
+      context: {
+        company: { id: 1, name: 'Example GmbH', taxId: 'DE123456789' },
+        invoices: [
+          {
+            id: 17,
+            status: 'OVERDUE',
+            total: 2570.4,
+            currency: 'EUR',
+            dueDate: '2026-05-17',
+          },
+          {
+            id: 18,
+            status: 'SENT',
+            total: 3998,
+            currency: 'EUR',
+            dueDate: '2026-06-17',
+          },
+        ],
+        expenses: [{ id: 2, status: 'pending', grossAmount: 42, currency: 'EUR' }],
+        bankTransactions: [
+          {
+            id: 9,
+            description: 'Unmatched incoming payment',
+            amount: 2570.4,
+            currency: 'EUR',
+            transactionDate: '2026-05-20',
+            isReconciled: false,
+          },
+        ],
+        insights: [
+          {
+            id: 4,
+            entityType: 'invoice',
+            entityId: 17,
+            type: 'collection_risk',
+            severity: 'high',
+            summary: 'Overdue receivable needs review',
+            why: 'Payment is overdue and bank matching is incomplete',
+            ruleId: 'INV_OVERDUE',
+            dataSource: 'Invoices',
+            confidenceScore: 0.92,
+          },
+        ],
+      },
+      targetInsightId: null,
+      prompt: 'What should I review?',
+    });
+
+    expect(response.summary).toMatch(/Prioritized accounting review/i);
+    expect(response.summary).toMatch(/Top risk/i);
+    expect(response.summary).toMatch(/Overdue invoice focus/i);
+    expect(response.summary).toMatch(/Unreconciled bank transaction focus/i);
+    expect(response.risks.join(' ')).toMatch(/Evidence\/reference/i);
+    expect(response.requiredActions.join(' ')).toMatch(/Reconcile unreconciled bank transactions/i);
+    expect(JSON.stringify(response)).not.toContain('DE123456789');
+  });
+
+  it('orders risk intent output by severity and includes source evidence', () => {
+    const response = answerIntentCompliance({
+      intent: 'risks',
+      context: {
+        company: { id: 1, name: 'Example GmbH' },
+        invoices: [{ id: 1, status: 'PAID', total: 100, currency: 'EUR' }],
+        expenses: [{ id: 2, status: 'approved', grossAmount: 42, currency: 'EUR' }],
+        bankTransactions: [{ id: 3, amount: 100, currency: 'EUR', isReconciled: true }],
+        insights: [
+          {
+            id: 1,
+            entityType: 'expense',
+            entityId: 2,
+            severity: 'low',
+            summary: 'Receipt metadata incomplete',
+            dataSource: 'Expenses',
+          },
+          {
+            id: 2,
+            entityType: 'invoice',
+            entityId: 1,
+            severity: 'high',
+            summary: 'Possible VAT mismatch',
+            dataSource: 'Invoices',
+          },
+          {
+            id: 3,
+            entityType: 'bank_transaction',
+            entityId: 3,
+            severity: 'medium',
+            summary: 'Bank reference needs review',
+            dataSource: 'Bank transactions',
+          },
+        ],
+      },
+      targetInsightId: null,
+      prompt: 'Show risks',
+    });
+
+    expect(response.risks[0]).toMatch(/^HIGH risk/i);
+    expect(response.risks[1]).toMatch(/^MEDIUM risk/i);
+    expect(response.risks[2]).toMatch(/^LOW risk/i);
+    expect(response.risks.join(' ')).toMatch(/Source: Invoices/i);
+    expect(response.risks.join(' ')).toMatch(/evidence/i);
+  });
+
+  it('explains missing flagged data as data gaps without hallucinated facts', () => {
+    const response = answerIntentCompliance({
+      intent: 'explain_transaction',
+      context: {
+        company: { id: 1, name: 'Example GmbH' },
+        invoices: [],
+        expenses: [],
+        bankTransactions: [],
+        insights: [],
+      },
+      targetInsightId: null,
+      prompt: 'Explain transaction 999',
+    });
+
+    expect(response.summary).toMatch(/data not available/i);
+    expect(response.summary).toMatch(/no supplied insight/i);
+    expect(response.dataGaps).toEqual(
+      expect.arrayContaining([
+        'Invoices data not available',
+        'Bank transactions data not available',
+        'AI insights data not available',
+      ]),
+    );
+    expect(response.summary).not.toMatch(/999.*€|EUR 999/i);
+  });
+
   it('still redacts obviously sensitive free-text prompt input', () => {
     const response = answerIntentCompliance({
       intent: 'review',

@@ -393,27 +393,176 @@ function selectInsight(insights = [], insightId) {
       return matched;
     }
   }
-  const sorted = [...insights].sort(
-    (a, b) => (SEVERITY_ORDER[b.severity] || 0) - (SEVERITY_ORDER[a.severity] || 0),
+  return sortInsightsBySeverity(insights)[0];
+}
+
+function normalizeSeverity(severity) {
+  const normalized = String(severity || 'low').toLowerCase();
+  return SEVERITY_ORDER[normalized] ? normalized : 'low';
+}
+
+function sortInsightsBySeverity(insights = []) {
+  return [...insights].sort((a, b) => {
+    const severityDiff =
+      (SEVERITY_ORDER[normalizeSeverity(b.severity)] || 0) -
+      (SEVERITY_ORDER[normalizeSeverity(a.severity)] || 0);
+    if (severityDiff !== 0) {
+      return severityDiff;
+    }
+    return new Date(b.lastEvaluated || b.updatedAt || b.createdAt || 0) -
+      new Date(a.lastEvaluated || a.updatedAt || a.createdAt || 0);
+  });
+}
+
+function buildEvidenceReferences({ insights = [], invoices = [], bankTransactions = [] } = {}) {
+  const references = [];
+
+  sortInsightsBySeverity(insights)
+    .slice(0, 3)
+    .forEach((insight) => {
+      const parts = [
+        `Insight #${sanitizeText(insight.id || 'unknown', 40)}`,
+        `source ${sanitizeText(insight.dataSource || resolveDataSource(insight.entityType), 80)}`,
+        `entity ${sanitizeText(insight.entityType || 'unknown', 80)} ${sanitizeText(
+          insight.entityId || 'unknown',
+          80,
+        )}`,
+      ];
+      if (insight.ruleId) {
+        parts.push(`rule ${sanitizeText(insight.ruleId, 80)}`);
+      }
+      references.push(parts.join('; '));
+    });
+
+  invoices
+    .filter((invoice) => String(invoice.status).toUpperCase() === 'OVERDUE')
+    .slice(0, 2)
+    .forEach((invoice) => {
+      references.push(
+        `Invoice ${formatRecordLabel('invoice', invoice, 'invoiceNumber')}; status ${sanitizeText(
+          invoice.status,
+          40,
+        )}; due ${formatDate(invoice.dueDate) || 'date not available'}; amount ${
+          formatCurrency(invoice.total, invoice.currency) || 'amount not available'
+        }`,
+      );
+    });
+
+  bankTransactions
+    .filter((tx) => !tx.isReconciled)
+    .slice(0, 2)
+    .forEach((tx) => {
+      references.push(
+        `Bank transaction #${sanitizeText(tx.id || 'unknown', 40)}; unreconciled; date ${
+          formatDate(tx.transactionDate) || 'date not available'
+        }; amount ${formatCurrency(tx.amount, tx.currency) || 'amount not available'}`,
+      );
+    });
+
+  return sanitizeAccountingList(references, MAX_ITEM_CHARS, MAX_LIST_ITEMS);
+}
+
+function formatInsightLine(insight, fallbackSeverity) {
+  const severity = normalizeSeverity(insight?.severity || fallbackSeverity);
+  const source = sanitizeText(insight?.dataSource || resolveDataSource(insight?.entityType), 80);
+  const entityType = sanitizeText(insight?.entityType || 'entity', 80);
+  const entityId = sanitizeText(insight?.entityId || 'unknown', 80);
+  const summary = sanitizeText(insight?.summary || insight?.why || 'Summary data not available', 160);
+  const evidence = formatEvidence(insight?.evidence);
+  const rule = insight?.ruleId ? ` Rule: ${sanitizeText(insight.ruleId, 80)}.` : '';
+  return `${severity.toUpperCase()} risk: ${summary} Source: ${source}; entity: ${entityType} ${entityId}; evidence: ${evidence}.${rule}`;
+}
+
+function buildAccountingSnapshot(context) {
+  const normalizedContext = normalizeContext(context);
+  const overdueInvoices = normalizedContext.invoices.filter(
+    (invoice) => String(invoice.status).toUpperCase() === 'OVERDUE',
   );
-  return sorted[0];
+  const pendingInvoices = normalizedContext.invoices.filter((invoice) =>
+    ['SENT', 'DRAFT', 'PENDING'].includes(String(invoice.status).toUpperCase()),
+  );
+  const unreconciledTransactions = normalizedContext.bankTransactions.filter((tx) => !tx.isReconciled);
+  const rankedInsights = sortInsightsBySeverity(normalizedContext.insights);
+
+  return {
+    counts: {
+      invoices: normalizedContext.invoices.length,
+      overdueInvoices: overdueInvoices.length,
+      pendingInvoices: pendingInvoices.length,
+      expenses: normalizedContext.expenses.length,
+      bankTransactions: normalizedContext.bankTransactions.length,
+      unreconciledBankTransactions: unreconciledTransactions.length,
+      insights: normalizedContext.insights.length,
+    },
+    topRisk: rankedInsights[0] ? formatInsightLine(rankedInsights[0]) : 'Top risk data not available',
+    overdueInvoices: overdueInvoices
+      .slice(0, MAX_LIST_ITEMS)
+      .map(
+        (invoice) =>
+          `Invoice ${formatRecordLabel('invoice', invoice, 'invoiceNumber')} overdue; due ${
+            formatDate(invoice.dueDate) || 'date not available'
+          }; amount ${formatCurrency(invoice.total, invoice.currency) || 'amount not available'}`,
+      ),
+    pendingInvoices: pendingInvoices
+      .slice(0, MAX_LIST_ITEMS)
+      .map(
+        (invoice) =>
+          `Invoice ${formatRecordLabel('invoice', invoice, 'invoiceNumber')} pending; status ${sanitizeText(
+            invoice.status || 'pending',
+            40,
+          )}; amount ${formatCurrency(invoice.total, invoice.currency) || 'amount not available'}`,
+      ),
+    unreconciledBankTransactions: unreconciledTransactions
+      .slice(0, MAX_LIST_ITEMS)
+      .map(
+        (tx) =>
+          `Transaction #${sanitizeText(tx.id || 'unknown', 40)} unreconciled; date ${
+            formatDate(tx.transactionDate) || 'date not available'
+          }; amount ${formatCurrency(tx.amount, tx.currency) || 'amount not available'}; description ${sanitizeText(
+            tx.description || 'description not available',
+            120,
+          )}`,
+      ),
+    rankedRisks: rankedInsights.slice(0, MAX_LIST_ITEMS).map(formatInsightLine),
+    evidenceReferences: buildEvidenceReferences(normalizedContext),
+    dataGaps: resolveDataGaps(normalizedContext),
+  };
+}
+
+function buildNextBestActions(context, intent) {
+  const normalizedContext = normalizeContext(context);
+  const actions = [];
+  const snapshot = buildAccountingSnapshot(normalizedContext);
+
+  if (snapshot.counts.overdueInvoices > 0) {
+    actions.push('Review overdue invoice source documents, due dates, payment status, and customer correspondence.');
+  }
+  if (snapshot.counts.pendingInvoices > 0) {
+    actions.push('Check pending or draft invoices for missing approval, dispatch status, and supporting evidence.');
+  }
+  if (snapshot.counts.unreconciledBankTransactions > 0) {
+    actions.push('Reconcile unreconciled bank transactions against invoices, expenses, and bank statement evidence.');
+  }
+  if (normalizedContext.insights.length > 0) {
+    actions.push('Inspect the referenced AI insight, rule, evidence, and legal context before making accounting decisions.');
+  }
+  if (['explain_transaction', 'why_flagged'].includes(intent)) {
+    actions.push('Confirm the transaction period, document type, counterparty, and original evidence before relying on this explanation.');
+  }
+
+  actions.push('Keep the assistant read-only; make any record changes only through the normal reviewed accounting workflow.');
+
+  return sanitizeList(actions, MAX_ITEM_CHARS, MAX_LIST_ITEMS);
 }
 
 function buildReviewResponse(context) {
   const { invoices, bankTransactions, insights } = context;
+  const snapshot = buildAccountingSnapshot(context);
   const lines = [];
+  const rankedInsights = sortInsightsBySeverity(insights);
 
-  if (insights.length) {
-    const topInsight = selectInsight(insights);
-    lines.push(
-      `AI insight (${sanitizeText(topInsight.type, 80)}) on ${sanitizeText(
-        topInsight.entityType,
-        80,
-      )} ${sanitizeText(topInsight.entityId, 80)}: ${sanitizeText(
-        topInsight.summary,
-        MAX_ITEM_CHARS,
-      )}`,
-    );
+  if (rankedInsights.length) {
+    lines.push(`Top risk to review first: ${formatInsightLine(rankedInsights[0])}`);
   }
 
   const overdueInvoice = invoices.find(
@@ -421,7 +570,7 @@ function buildReviewResponse(context) {
   );
   if (overdueInvoice) {
     const invoiceLabel = formatRecordLabel('invoice', overdueInvoice, 'invoiceNumber');
-    const text = `Invoice ${invoiceLabel} is OVERDUE (due ${formatDate(
+    const text = `Overdue invoice focus: Invoice ${invoiceLabel} is OVERDUE (due ${formatDate(
       overdueInvoice.dueDate,
     )}) with ${formatCurrency(overdueInvoice.total, overdueInvoice.currency)} outstanding.`;
     lines.push(text);
@@ -440,7 +589,7 @@ function buildReviewResponse(context) {
       'invoiceNumber',
     );
     lines.push(
-      `Pending invoice ${pendingLabel} (status: ${sanitizeText(pending.status || 'pending', 40)}) for ${formatCurrency(
+      `Pending invoice focus: ${pendingLabel} (status: ${sanitizeText(pending.status || 'pending', 40)}) for ${formatCurrency(
         pending.total,
         pending.currency,
       )}.`,
@@ -451,7 +600,7 @@ function buildReviewResponse(context) {
   if (unreconciled.length) {
     const topUnreconciled = unreconciled[0];
     lines.push(
-      `Unreconciled bank transaction on ${formatDate(topUnreconciled.transactionDate)} (${sanitizeText(
+      `Unreconciled bank transaction focus: transaction on ${formatDate(topUnreconciled.transactionDate)} (${sanitizeText(
         topUnreconciled.description || `transaction #${topUnreconciled.id}`,
         MAX_ITEM_CHARS,
       )}) for ${formatCurrency(
@@ -463,16 +612,13 @@ function buildReviewResponse(context) {
 
   const message =
     lines.length > 0
-      ? `Focus your review on the following items:\n- ${lines.join('\n- ')}`
-      : 'No immediate review points were detected. Keep monitoring the dashboard for new insights.';
+      ? `Prioritized accounting review:\n- ${lines.join('\n- ')}`
+      : 'No immediate review points were detected from supplied records. Data not available for any missing source areas listed below.';
 
   return {
     message,
     highlights: lines,
-    references: [
-      `Insights known: ${insights.length}`,
-      `Invoices surfaced: ${invoices.length}`,
-    ],
+    references: snapshot.evidenceReferences,
   };
 }
 
@@ -480,36 +626,20 @@ function buildRiskResponse(context) {
   const { insights } = context;
   const breakdown = insights.reduce(
     (acc, insight) => {
-      const severity = insight.severity || 'low';
+      const severity = normalizeSeverity(insight.severity);
       acc[severity] = (acc[severity] || 0) + 1;
       return acc;
     },
     { high: 0, medium: 0, low: 0 },
   );
 
-  const highSeverityInsight = insights.find((insight) => insight.severity === 'high');
+  const rankedInsights = sortInsightsBySeverity(insights);
+  const highSeverityInsight = rankedInsights.find((insight) => normalizeSeverity(insight.severity) === 'high');
   const message = highSeverityInsight
-    ? `High-severity risk detected (${sanitizeText(
-        highSeverityInsight.type,
-        80,
-      )}) on ${sanitizeText(highSeverityInsight.entityType, 80)} ${sanitizeText(
-        highSeverityInsight.entityId,
-        80,
-      )}: ${sanitizeText(highSeverityInsight.summary, MAX_ITEM_CHARS)}`
+    ? `Highest ranked risk: ${formatInsightLine(highSeverityInsight)}`
     : `No high-severity AI flags right now. Medium severity alerts: ${breakdown.medium}, low severity alerts: ${breakdown.low}.`;
 
-  const highlights = insights
-    .slice(0, 2)
-    .map(
-      (insight) =>
-        `${sanitizeText(insight.type, 80)} (${sanitizeText(
-          insight.severity,
-          40,
-        )}) on ${sanitizeText(insight.entityType, 80)} ${sanitizeText(
-          insight.entityId,
-          80,
-        )}: ${sanitizeText(insight.summary, MAX_ITEM_CHARS)}`,
-    );
+  const highlights = rankedInsights.slice(0, MAX_LIST_ITEMS).map(formatInsightLine);
 
   return {
     message,
@@ -522,9 +652,9 @@ function buildExplainResponse(insight) {
   if (!insight) {
     return {
       message:
-        'There are no flagged transactions yet. The assistant is monitoring new data for insights.',
+        'Flagged transaction data not available. There is no supplied insight to explain.',
       highlights: [],
-      references: [],
+      references: ['AI insight data not available', 'Transaction evidence not available'],
     };
   }
 
@@ -532,19 +662,21 @@ function buildExplainResponse(insight) {
   const confidence = Number.isFinite(confidenceScore) ? Math.round(confidenceScore * 100) : null;
   const evidence = formatEvidence(insight.evidence);
 
+  const legalContext = sanitizeText(insight.legalContext || 'Legal context data not available', MAX_ITEM_CHARS);
+  const why = sanitizeText(insight.why || 'Reason data not available', MAX_ITEM_CHARS);
   const message = `Transaction context: ${sanitizeText(insight.entityType, 80)} ${sanitizeText(
     insight.entityId,
     80,
   )} flagged as ${sanitizeText(insight.type, 80)}. Summary: ${sanitizeText(
-    insight.summary,
+    insight.summary || 'Summary data not available',
     MAX_ITEM_CHARS,
-  )}. Why: ${sanitizeText(insight.why, MAX_ITEM_CHARS)}. Evidence: ${evidence}.`;
+  )}. Why it matters: ${why}. Source/evidence: ${evidence}. Legal/context note: ${legalContext}.`;
 
   return {
     message,
     highlights: [
       confidence !== null ? `Confidence: ${confidence}%` : 'Confidence: not available',
-      `Legal context: ${sanitizeText(insight.legalContext || 'Not available', MAX_ITEM_CHARS)}`,
+      `Legal context: ${legalContext}`,
       `Rule: ${sanitizeText(insight.ruleId || 'Not available', 80)}`,
     ],
     references: [
@@ -557,21 +689,20 @@ function buildWhyFlaggedResponse(insight) {
   if (!insight) {
     return {
       message:
-        'No flag data is available yet. Create more transactions or wait for the next AI cycle.',
+        'Flag data not available. There is no supplied insight, rule, or evidence explaining why this was flagged.',
       highlights: [],
-      references: [],
+      references: ['AI insight data not available', 'Rule evidence not available'],
     };
   }
 
   const evidence = formatEvidence(insight.evidence);
 
-  const message = `This transaction was flagged because ${sanitizeText(
-    insight.why,
-    MAX_ITEM_CHARS,
-  )}. The governing rule is ${sanitizeText(insight.ruleId, 80)}, which references ${sanitizeText(
-    insight.legalContext,
-    MAX_ITEM_CHARS,
-  )}. Evidence: ${evidence}.`;
+  const why = sanitizeText(insight.why || insight.summary || 'Reason data not available', MAX_ITEM_CHARS);
+  const legalContext = sanitizeText(insight.legalContext || 'Legal context data not available', MAX_ITEM_CHARS);
+  const message = `This transaction was flagged because ${why}. Why it matters: review the referenced accounting source before relying on the record. The governing rule is ${sanitizeText(
+    insight.ruleId || 'rule data not available',
+    80,
+  )}, with context ${legalContext}. Source/evidence: ${evidence}.`;
 
   const confidenceScore = Number(insight.confidenceScore);
   const confidence = Number.isFinite(confidenceScore) ? Math.round(confidenceScore * 100) : null;
@@ -580,13 +711,30 @@ function buildWhyFlaggedResponse(insight) {
     message,
     highlights: [
       `Rule: ${sanitizeText(insight.ruleId || 'Not available', 80)}`,
-      `Legal context: ${sanitizeText(insight.legalContext || 'Not available', MAX_ITEM_CHARS)}`,
-      confidence !== null ? `Statistic: confidence ${confidence}%` : 'Statistic: confidence not available',
+      `Legal context: ${legalContext}`,
+      confidence !== null ? `Confidence: ${confidence}%` : 'Confidence: not available',
     ],
     references: [
       `Entity: ${sanitizeText(insight.entityType, 80)} ${sanitizeText(insight.entityId, 80)}`,
+      `Source: ${sanitizeText(insight.dataSource || resolveDataSource(insight.entityType), 80)}`,
     ],
   };
+}
+
+function appendReferenceLines(highlights, references) {
+  const lines = [...(highlights || [])];
+  (references || []).slice(0, 2).forEach((reference) => {
+    lines.push(`Evidence/reference: ${reference}`);
+  });
+  return lines;
+}
+
+function buildDataGaps(context, baseReferences = []) {
+  const gaps = [...resolveDataGaps(context)];
+  if (!baseReferences.length) {
+    gaps.push('Evidence references data not available');
+  }
+  return gaps;
 }
 
 function answerIntent({ intent, context, targetInsightId }) {
@@ -625,12 +773,19 @@ function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
     companyName && typeof base.message === 'string'
       ? base.message.split(companyName).join('your company')
       : base.message;
-  const dataGaps = sanitizeList(resolveDataGaps(normalizedContext), MAX_ITEM_CHARS, MAX_LIST_ITEMS);
+  const evidenceReferences = sanitizeAccountingList(base.references, MAX_ITEM_CHARS, MAX_LIST_ITEMS);
+  const dataGaps = sanitizeList(
+    buildDataGaps(normalizedContext, evidenceReferences),
+    MAX_ITEM_CHARS,
+    MAX_LIST_ITEMS,
+  );
   const contextSummary = buildSafeContextSummary(normalizedContext);
-  const clarifyingQuestion =
-    'Please confirm the tax period, document type, and evidence before compliance guidance.';
-  const risks = sanitizeAccountingList(base.highlights, MAX_ITEM_CHARS, MAX_LIST_ITEMS);
-  const requiredActions = sanitizeList([clarifyingQuestion], MAX_ITEM_CHARS, 3);
+  const risks = sanitizeAccountingList(
+    appendReferenceLines(base.highlights, evidenceReferences),
+    MAX_ITEM_CHARS,
+    MAX_LIST_ITEMS,
+  );
+  const requiredActions = buildNextBestActions(normalizedContext, intent);
   const summaryBase = sanitizeAccountingLine(baseMessage || '', MAX_SUMMARY_CHARS);
   const summary =
     dataGaps.length > 0
@@ -648,6 +803,7 @@ function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
     dataGaps,
     confidence: estimateConfidenceLabel(normalizedContext),
     contextSummary,
+    evidenceReferences,
     sanitizedPrompt: safePrompt,
   };
   const validation = validateAssistantResponse(response);
@@ -659,6 +815,7 @@ function applyComplianceWrapper({ intent, context, targetInsightId, prompt }) {
       dataGaps,
       confidence: null,
       contextSummary,
+      evidenceReferences,
       sanitizedPrompt: safePrompt,
     };
   }
@@ -670,7 +827,9 @@ function answerIntentCompliance({ intent, context, targetInsightId, prompt }) {
   return {
     message: compliance.summary,
     highlights: compliance.risks,
-    references: compliance.dataGaps,
+    references: compliance.evidenceReferences?.length
+      ? compliance.evidenceReferences
+      : compliance.dataGaps,
     ...compliance,
   };
 }
@@ -735,7 +894,11 @@ async function answerIntentComplianceWithProvider({
     const provider = getAIProvider();
     const safePrompt = sanitizeText(prompt || '', MAX_PROMPT_CHARS);
     const normalizedContext = normalizeContext(context);
-    const safeContext = sanitizeContext(redactContextValue(normalizedContext));
+    const accountingBrief = redactContextValue(buildAccountingSnapshot(normalizedContext));
+    const safeContext = {
+      ...sanitizeContext(redactContextValue(normalizedContext)),
+      accountingBrief,
+    };
     const registryEntry = promptRegistry.getPromptMeta
       ? promptRegistry.getPromptMeta('assistant_general')
       : undefined;
