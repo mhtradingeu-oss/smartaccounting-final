@@ -896,15 +896,15 @@ const AIAssistant = () => {
   if (isReadOnly) {
     return (
       <FeatureGate {...aiFeatureGateProps}>
-        <div className="space-y-6">
+        <div className="page-shell">
           <div className="flex items-start gap-3">
             <AIBadge label="AI" />
             <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
               Advisory only
             </span>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-4xl">AI Accounting Assistant</h1>
+              <p className="text-sm leading-6 text-gray-600 dark:text-gray-300">
                 A read-only advisor that highlights issues and links to explainable insights.
               </p>
             </div>
@@ -931,27 +931,27 @@ const AIAssistant = () => {
 
   return (
     <FeatureGate {...aiFeatureGateProps}>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="page-shell">
+        <div className="surface-card-ai flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <AIBadge label="AI" />
             <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
               Advisory only
             </span>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">AI Accounting Assistant</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-4xl">AI Accounting Assistant</h1>
+              <p className="text-sm leading-6 text-gray-600 dark:text-gray-300">
                 A conversational advisor that highlights issues and connects to explainable
                 insights.
-                <span className="block mt-1 text-xs text-gray-400">
+                <span className="block mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Role access: {ROLE_LIMITATIONS[userRole]?.label || 'User'}
                 </span>
               </p>
             </div>
           </div>
-          <div className="text-right text-xs text-gray-500">
-            <div className="font-semibold text-gray-700">Session ID</div>
-            <span className="font-mono text-gray-700">
+          <div className="rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-right text-xs text-gray-500 shadow-sm dark:border-slate-800 dark:bg-slate-950/60 dark:text-gray-400">
+            <div className="font-semibold text-gray-700 dark:text-gray-200">Session ID</div>
+            <span className="font-mono text-gray-700 dark:text-gray-200">
               {sessionId ? sessionId.slice(0, 8) : 'pending...'}
             </span>
           </div>
@@ -961,10 +961,10 @@ const AIAssistant = () => {
         <div className="grid gap-4 lg:grid-cols-3">
           <Card>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-gray-900">Company context</span>
+              <span className="font-semibold text-gray-950 dark:text-white">Company context</span>
               <span className="text-xs text-gray-500">Read-only</span>
             </div>
-            <p className="text-sm text-gray-600">{context?.company?.name}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{context?.company?.name}</p>
             <p className="text-xs text-gray-500 mt-1">
               {context?.company?.city}, {context?.company?.country}
             </p>
@@ -975,13 +975,13 @@ const AIAssistant = () => {
 
           <Card>
             <div className="mb-3 flex items-center justify-between">
-              <span className="font-semibold text-gray-900">Invoices</span>
+              <span className="font-semibold text-gray-950 dark:text-white">Invoices</span>
               <span className="text-xs text-gray-500">
                 {context?.invoices?.length ?? 0} records
               </span>
             </div>
             {Object.keys(invoiceStatusBreakdown).length ? (
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 {Object.entries(invoiceStatusBreakdown).map(([status, count]) => (
                   <li key={status} className="flex justify-between">
                     <span className="capitalize">{status}</span>
@@ -996,13 +996,13 @@ const AIAssistant = () => {
 
           <Card>
             <div className="mb-3 flex items-center justify-between">
-              <span className="font-semibold text-gray-900">Expenses</span>
+              <span className="font-semibold text-gray-950 dark:text-white">Expenses</span>
               <span className="text-xs text-gray-500">
                 {context?.expenses?.length ?? 0} records
               </span>
             </div>
             {Object.keys(expenseStatusBreakdown).length ? (
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 {Object.entries(expenseStatusBreakdown).map(([status, count]) => (
                   <li key={status} className="flex justify-between">
                     <span className="capitalize">{status}</span>
@@ -1019,10 +1019,10 @@ const AIAssistant = () => {
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-1">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-gray-900">Bank statements</span>
+              <span className="font-semibold text-gray-950 dark:text-white">Bank statements</span>
               <span className="text-xs text-gray-500">{unreconciledCount} unreconciled</span>
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               Transactions monitored: {context?.bankTransactions?.length ?? 0}
             </p>
             {context?.bankTransactions?.length ? (
@@ -1043,7 +1043,7 @@ const AIAssistant = () => {
 
           <Card className="lg:col-span-2">
             <div className="flex items-center justify-between mb-3">
-              <span className="font-semibold text-gray-900">AI insights</span>
+              <span className="font-semibold text-gray-950 dark:text-white">AI insights</span>
               <span className="text-xs text-blue-600">Explainable + auditable</span>
             </div>
             {context?.insights?.length ? (
@@ -1051,10 +1051,10 @@ const AIAssistant = () => {
                 {context.insights.map((insight) => (
                   <div
                     key={insight.id}
-                    className="rounded-lg border border-gray-100 p-3 bg-gray-50"
+                    className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-sm text-gray-900 flex items-center">
+                      <span className="flex items-center text-sm font-semibold text-gray-950 dark:text-white">
                         {insight.type}
                         <InfoTooltip
                           text={`Why am I seeing this?\n\nThis insight was generated because: ${insight.why || 'AI detected a pattern or anomaly based on your accounting data.'}\n\nData source: ${insight.dataSource || 'Relevant invoices, transactions, or expenses.'}`}
@@ -1062,7 +1062,7 @@ const AIAssistant = () => {
                       </span>
                       <AISeverityPill severity={insight.severity} />
                     </div>
-                    <p className="mt-2 text-sm text-gray-700">{insight.summary}</p>
+                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{insight.summary}</p>
                     <AIMetadataLine
                       whyMatters={truncateText(
                         insight.why || insight.summary || 'Review this insight for next steps.',
@@ -1072,7 +1072,7 @@ const AIAssistant = () => {
                       lastEvaluated={insight.lastEvaluated || insight.updatedAt || insight.timestamp}
                       className="mt-1"
                     />
-                    <div className="text-xs text-gray-500 mt-2">
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Confidence:{' '}
                       {Number.isFinite(Number(insight.confidenceScore))
                         ? formatPercent(insight.confidenceScore ?? 0, 0)
@@ -1131,7 +1131,7 @@ const AIAssistant = () => {
           <Card className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Assistant chat</h2>
+                <h2 className="text-xl font-bold text-gray-950 dark:text-white">Assistant chat</h2>
                 <p className="text-xs text-gray-500 mt-1">
                   The assistant references invoices, expenses, bank statements, and AI insights.
                   Every answer is grounded and audit logged.
@@ -1145,7 +1145,7 @@ const AIAssistant = () => {
                 : 'The assistant is ready for your request.'}
             </div>
             {/* Chat area redesign: grouped messages, empty state, typing indicator, error in-chat */}
-            <div className="min-h-[220px] max-h-[340px] overflow-y-auto px-1 py-2 bg-gray-50 rounded-lg border border-gray-100 transition-all duration-300 ease-in-out">
+            <div className="min-h-[260px] max-h-[380px] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 transition-all duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-950/60">
             {messages.length === 0 ? (
               <ChatEmptyState />
             ) : (
@@ -1156,8 +1156,8 @@ const AIAssistant = () => {
               {isAsking && <ChatTypingIndicator isAssistant />}
               {userTyping && !isAsking && <ChatTypingIndicator isAssistant={false} />}
             </div>
-            <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-              <div className="font-semibold text-gray-700">System hints</div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-gray-300">
+              <div className="font-semibold text-gray-700 dark:text-gray-200">System hints</div>
               <div className="mt-1">
                 Allowed: explain insights, summarize risks, highlight overdue or unreconciled items.
               </div>
@@ -1189,7 +1189,7 @@ const AIAssistant = () => {
             <div className="mt-2 flex items-center gap-2">
               <input
                 type="text"
-                className="flex-1 rounded border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 transition-shadow duration-200"
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-shadow duration-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-300 dark:border-slate-700 dark:bg-slate-950 dark:text-gray-100 dark:placeholder:text-gray-500"
                 placeholder="Ask a question or describe your focus..."
                 value={draftMessage}
                 onChange={handleUserInput}
@@ -1313,8 +1313,8 @@ const AIAssistant = () => {
           </Card>
 
           <Card className="space-y-3">
-            <h3 className="text-lg font-semibold text-gray-900">Session tracking</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-bold text-gray-950 dark:text-white">Session tracking</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               Use this session ID when reviewing audit logs or contacting support.
             </p>
             <p className="text-xs text-gray-500">
