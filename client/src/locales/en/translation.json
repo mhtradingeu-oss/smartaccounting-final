@@ -106,7 +106,8 @@
     "ai_assistant": "AI Assistant",
     "profile_settings": "Profile Settings",
     "billing": "Billing",
-    "system_admin_dashboard": "System Dashboard"
+    "system_admin_dashboard": "System Dashboard",
+    "ai_manager": "AI Manager"
   },
   "auth": {
     "logout": "Logout"

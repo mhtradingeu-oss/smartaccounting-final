@@ -10,6 +10,9 @@ import {
   ArrowDownTrayIcon,
   UserCircleIcon,
   DocumentMagnifyingGlassIcon,
+  SparklesIcon,
+  LightBulbIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -23,6 +26,9 @@ import {
   ArrowDownTrayIcon as ArrowDownTrayIconSolid,
   UserCircleIcon as UserCircleIconSolid,
   DocumentMagnifyingGlassIcon as DocumentMagnifyingGlassIconSolid,
+  SparklesIcon as SparklesIconSolid,
+  LightBulbIcon as LightBulbIconSolid,
+  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
 } from '@heroicons/react/24/solid';
 import { FEATURE_FLAGS } from '../lib/constants';
 import { isOCRPreviewEnabled } from '../lib/featureFlags';
@@ -97,21 +103,40 @@ export const ACCOUNTING_NAVIGATION_ITEMS = [
 
 export const INTELLIGENCE_NAVIGATION_ITEMS = [
   {
+    nameKey: 'navigation.ai_manager',
+    href: '/ai-manager',
+    icon: SparklesIcon,
+    iconSolid: SparklesIconSolid,
+    badge: 'AI',
+    description: 'AI Accounting Manager command center',
+    highlight: true,
+    enabled: true,
+  },
+  {
+    nameKey: 'navigation.ai_insights',
+    href: '/ai-advisor',
+    icon: LightBulbIcon,
+    iconSolid: LightBulbIconSolid,
+    badge: 'AI',
+    description: 'AI insights and accounting risks',
+    enabled: true,
+  },
+  {
+    nameKey: 'navigation.ai_assistant',
+    href: '/ai-assistant',
+    icon: ChatBubbleLeftRightIcon,
+    iconSolid: ChatBubbleLeftRightIconSolid,
+    badge: 'AI',
+    description: 'AI Assistant',
+    enabled: true,
+  },
+  {
     nameKey: 'navigation.analytics',
     href: '/analytics',
     icon: DocumentChartBarIcon,
     iconSolid: DocumentChartBarIconSolid,
     badge: null,
     description: 'Business analytics & KPIs',
-    enabled: true,
-  },
-  {
-    nameKey: 'navigation.ai_assistant',
-    href: '/ai-assistant',
-    icon: ShieldCheckIcon,
-    iconSolid: ShieldCheckIconSolid,
-    badge: 'AI', // Will be rendered as a badge
-    description: 'AI Assistant',
     enabled: true,
   },
 ];

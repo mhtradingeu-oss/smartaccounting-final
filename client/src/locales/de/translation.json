@@ -83,10 +83,9 @@
     "compliance_audit": "Compliance & Audit",
     "administration": "Administration",
     "main": "Hauptbereich",
-    "management": "Verwaltung",
+    "management": "Management",
     "operations": "Operationen",
     "compliance": "Compliance",
-    "management": "Management",
     "dashboard": "Dashboard",
     "expenses": "Expenses",
     "analytics": "Analytics",
@@ -105,7 +104,8 @@
     "investor_dashboard": "Investor-Dashboard",
     "rbac": "RBAC-Konsole",
     "ai_assistant": "AI Assistant",
-    "system_admin_dashboard": "System-Dashboard"
+    "system_admin_dashboard": "System-Dashboard",
+    "ai_manager": "AI Manager"
   },
   "auth": {
     "logout": "Abmelden"

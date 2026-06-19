@@ -161,7 +161,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       const isAIFeature = item.badge === 'AI';
       let badgeNode = null;
       if (isAIFeature && !isCondensed) {
-        badgeNode = <AIBadge className="ml-auto" />;
+        badgeNode = <AIBadge className={item.highlight ? 'ml-auto ring-1 ring-primary-200' : 'ml-auto'} />;
       }
       return (
         <NavLink
@@ -171,7 +171,9 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
             NAV_LINK_BASE_CLASSES,
             isActive
               ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold shadow-lg shadow-primary-500/25 before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-white/80 before:content-[\'\']'
-              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800',
+              : item.highlight
+                ? 'border border-primary-100 bg-gradient-to-r from-primary-50 to-blue-50 text-primary-800 shadow-sm hover:from-primary-100 hover:to-blue-100 dark:border-primary-900/40 dark:from-primary-950/30 dark:to-blue-950/20 dark:text-primary-200 dark:hover:from-primary-900/40 dark:hover:to-blue-900/30'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800',
           )}
           aria-current={isActive ? 'page' : undefined}
           aria-label={isCondensed ? item.name : undefined}
@@ -182,7 +184,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
         >
           <div className="flex items-center w-full">
             <div
-              className={`flex-shrink-0 ${isActive ? 'transform scale-110' : ''} transition-transform duration-200`}
+              className={`flex-shrink-0 ${isActive ? 'transform scale-110' : ''} ${item.highlight && !isActive ? 'text-primary-600 dark:text-primary-300' : ''} transition-transform duration-200`}
             >
               <IconComponent className="h-5 w-5" />
             </div>
