@@ -100,12 +100,16 @@ function repairJoinedTokens(value) {
   return String(value || '')
     .replace(/\briskto\b/gi, 'risk to')
     .replace(/\bnotprovided\b/gi, 'not provided')
+    .replace(/\b([A-Za-zÄÖÜäöüß]+)needs\b/g, '$1 needs')
+    .replace(/\bcontext([A-ZÄÖÜ])/g, 'context $1')
     .replace(/\b(invoice|transaction|risk|review|bank|overdue|pending|unreconciled)focus\b/gi, '$1 focus')
     .replace(/\bon(\d)/gi, 'on $1')
     .replace(/\bfor(\d)/gi, 'for $1')
+    .replace(/;(?=\S)/g, '; ')
     .replace(/([€$£])\.-\s*/g, '$1.\n- ')
     .replace(/\.-\s*/g, '.\n- ')
     .replace(/([.!?])-\s+/g, '$1\n- ')
+    .replace(/\.{2,}/g, '.')
     .trim();
 }
 

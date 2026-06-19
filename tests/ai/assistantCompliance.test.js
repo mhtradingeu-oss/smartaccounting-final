@@ -136,10 +136,11 @@ describe('AI Assistant compliance wrapper', () => {
             entityId: 17,
             type: 'collection_risk',
             severity: 'high',
-            summary: 'Overdue receivable needs review',
-            why: 'Payment is overdue and bank matching is incomplete',
+            summary: 'Partial paymentneeds reconciliation for invoice..',
+            why: 'Payment matching.. needs review',
+            evidence: ['Invoices;entity invoice 17', 'expense 8;evidence missing'],
             ruleId: 'INV_OVERDUE',
-            dataSource: 'Invoices',
+            dataSource: 'contextBank reconciliation',
             confidenceScore: 0.92,
           },
         ],
@@ -156,10 +157,13 @@ describe('AI Assistant compliance wrapper', () => {
     expect(response.requiredActions.join(' ')).toMatch(/Reconcile unreconciled bank transactions/i);
     expect(JSON.stringify(response)).not.toContain('DE123456789');
     expect(response.summary).toMatch(/\n- Top risk/);
-    expect(response.summary).not.toMatch(/invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i);
+    const brokenFormattingPattern =
+      /paymentneeds|contextBank|;entity|;evidence|invoice\.\.|unreconciled\.\.|matching\.\.|invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i;
+    expect(response.summary).not.toMatch(brokenFormattingPattern);
     expect(response.risks.join(' ')).not.toMatch(
-      /invoicefocus|on15|for4|€\.-|\.-\s|riskto|notprovided|provided\.\./i,
+      brokenFormattingPattern,
     );
+    expect(response.references.join(' ')).not.toMatch(brokenFormattingPattern);
   });
 
   it('orders risk intent output by severity and includes source evidence', () => {
