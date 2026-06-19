@@ -27,6 +27,7 @@ const observabilityEnvHints = {
 };
 
 const allowedNodeEnvs = ['development', 'production', 'test'];
+const allowedAiProviders = ['mock', 'openai'];
 
 function validateUrl(varName, value) {
   try {
@@ -135,6 +136,38 @@ function validateEnvironment() {
     if (!allowedLevels.includes(process.env.LOG_LEVEL.toLowerCase())) {
       warnings.push('LOG_LEVEL is set to an unexpected level and will fall back to defaults');
     }
+  }
+
+  if (process.env.AI_PROVIDER) {
+    const provider = process.env.AI_PROVIDER.toLowerCase();
+    if (!allowedAiProviders.includes(provider)) {
+      warnings.push(`AI_PROVIDER should be one of: ${allowedAiProviders.join(', ')}`);
+    }
+  }
+
+  if (process.env.AI_PROVIDER_ENABLED && !booleanFlag(process.env.AI_PROVIDER_ENABLED)) {
+    warnings.push('AI_PROVIDER_ENABLED must be true or false');
+  }
+
+  ['AI_PROVIDER_TIMEOUT_MS', 'AI_PROVIDER_MAX_OUTPUT_TOKENS', 'AI_PROVIDER_DAILY_BUDGET_CENTS'].forEach(
+    (varName) => {
+      if (process.env[varName]) {
+        const value = Number(process.env[varName]);
+        if (!Number.isInteger(value) || value <= 0) {
+          warnings.push(`${varName} must be a positive integer`);
+        }
+      }
+    },
+  );
+
+  const aiProvider = (process.env.AI_PROVIDER || 'mock').toLowerCase();
+  const aiProviderEnabled =
+    process.env.AI_PROVIDER_ENABLED &&
+    process.env.AI_PROVIDER_ENABLED.toString().toLowerCase() === 'true';
+  if (aiProvider === 'openai' && aiProviderEnabled && !process.env.OPENAI_API_KEY) {
+    warnings.push(
+      'OPENAI_API_KEY is missing while OpenAI provider is enabled; provider calls will return a controlled readiness error',
+    );
   }
 
   if (errors.length > 0) {
