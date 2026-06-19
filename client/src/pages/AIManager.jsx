@@ -13,7 +13,7 @@ import { aiAssistantAPI } from '../services/aiAssistantAPI';
 import { aiInsightsAPI } from '../services/aiInsightsAPI';
 import { formatApiError } from '../services/api';
 
-const ExplainWhy = ({ why }) => <p className="text-sm text-gray-600">{why}</p>;
+const ExplainWhy = ({ why }) => <p className="text-sm text-gray-600 dark:text-gray-300">{why}</p>;
 
 const countItems = (items) => (Array.isArray(items) ? items.length : 0);
 
@@ -230,11 +230,11 @@ export default function AIManager() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <header className="space-y-4">
+    <div className="mx-auto max-w-6xl space-y-6 text-gray-900 dark:text-gray-100">
+      <header className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white/90 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900/70 dark:shadow-none">
         <div className="flex flex-wrap items-center gap-3">
           <AIBadge label="AI Manager" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
             Read-only advisory workspace
           </span>
           {viewerLimited ? (
@@ -246,14 +246,14 @@ export default function AIManager() {
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">AI Accounting Manager</h1>
-            <p className="mt-2 max-w-3xl text-sm text-gray-600">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-950 dark:text-white">AI Accounting Manager</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300">
               A company-scoped briefing surface for reviewing accounting context, risks, and
               explanations without changing records.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 lg:justify-end">
             <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
               Refresh
             </Button>
@@ -284,12 +284,12 @@ export default function AIManager() {
       </header>
 
       <section className="grid gap-4 lg:grid-cols-3" aria-label="AI Manager briefing summary">
-        <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <ShieldCheckIcon className="h-5 w-5 text-blue-700" aria-hidden="true" />
-            <h2 className="text-lg font-bold text-gray-900">Today’s Accounting Briefing</h2>
+            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Today’s Accounting Briefing</h2>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Live read-only context from the assistant and AI insights feed for the active company.
           </p>
 
@@ -300,22 +300,22 @@ export default function AIManager() {
               ['Bank activity', briefingCounts.bankTransactions],
               ['AI insights', briefingCounts.insights],
             ].map(([label, value]) => (
-              <div key={label} className="rounded border border-gray-200 bg-gray-50 px-3 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <div key={label} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-800 dark:bg-gray-950/70">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   {label}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+                <p className="mt-1 text-2xl font-bold text-gray-950 dark:text-white">{value}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <section className="rounded-lg border border-red-100 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-red-900/40 dark:bg-gray-900/80 dark:shadow-none">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-gray-900">Critical Alerts</h2>
+            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Critical Alerts</h2>
             <AISeverityPill severity={criticalAlerts.length ? 'high' : 'low'} />
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             {criticalAlerts.length
               ? `${criticalAlerts.length} high-severity AI insight${criticalAlerts.length === 1 ? '' : 's'} need review.`
               : 'No high-severity AI insights are visible right now.'}
@@ -335,20 +335,20 @@ export default function AIManager() {
           ExplainWhy={ExplainWhy}
         />
 
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-gray-900">Review Queue</h2>
+            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Review Queue</h2>
             <AIBadge label="Review" />
           </div>
 
           {reviewQueue.length ? (
             <ul className="space-y-2 text-sm text-gray-700">
               {reviewQueue.map((item) => (
-                <li key={item.id} className="rounded border border-gray-200 bg-gray-50 px-3 py-2">
+                <li key={item.id} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-950/70">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-gray-900">{item.label}</p>
-                      <p className="text-xs text-gray-500">{item.meta}</p>
+                      <p className="font-medium text-gray-950 dark:text-white">{item.label}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.meta}</p>
                     </div>
                     <AISeverityPill severity={item.severity} />
                   </div>
@@ -356,16 +356,16 @@ export default function AIManager() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               No review queue items are visible in the current read-only context.
             </p>
           )}
         </section>
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold text-gray-900">Ask AI Manager</h2>
-        <p className="mt-2 text-sm text-gray-600">
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none">
+        <h2 className="text-lg font-bold text-gray-950 dark:text-white">Ask AI Manager</h2>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
           Use the floating AI Manager companion for quick read-only prompts, or open the existing AI
           Assistant for the full conversational workspace.
         </p>

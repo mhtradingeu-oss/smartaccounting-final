@@ -102,7 +102,7 @@ const Layout = ({ children }) => {
         />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto pt-16 pb-24 main-content">
+        <main className="flex-1 overflow-y-auto pt-16 pb-32 main-content">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
               {/* DevHealthCheck is only shown in development mode. Remove for production. */}

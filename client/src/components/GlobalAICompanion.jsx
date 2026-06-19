@@ -91,7 +91,7 @@ export default function GlobalAICompanion() {
       aria-label="AI Accounting Manager companion"
     >
       {isOpen ? (
-        <section className="w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+        <section className="w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
           <header className="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
             <div>
               <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export default function GlobalAICompanion() {
                   key={item.label}
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-left"
+                  className="w-full justify-start text-left dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
                   disabled={isSending}
                   onClick={() => sendPrompt(item)}
                 >
@@ -135,7 +135,7 @@ export default function GlobalAICompanion() {
             </div>
 
             <div
-              className="max-h-44 space-y-3 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-950"
+              className="max-h-44 space-y-3 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-800 dark:bg-gray-950"
               aria-live="polite"
             >
               {messages.length ? (
@@ -203,7 +203,7 @@ export default function GlobalAICompanion() {
 
       <button
         type="button"
-        className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-2xl shadow-primary-600/30 transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:bg-primary-500 dark:hover:bg-primary-400"
         onClick={() => setIsOpen((current) => !current)}
         aria-expanded={isOpen}
         aria-label="Open AI Manager"

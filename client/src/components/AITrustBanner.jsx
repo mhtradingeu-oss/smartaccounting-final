@@ -19,16 +19,16 @@ export default function AITrustBanner({
   return (
     <section
       className={clsx(
-        'rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-blue-900',
+        'rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-blue-900 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-100',
         className,
       )}
       role="status"
       aria-label="AI advisory notice"
     >
-      <div className="text-sm font-semibold">{title}</div>
-      <p className="text-xs text-blue-800 mt-1">{summary}</p>
-      <details className="mt-2 text-xs text-blue-700">
-        <summary className="cursor-pointer font-semibold text-blue-700 hover:text-blue-900">
+      <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">{title}</div>
+      <p className="text-xs text-blue-800 mt-1 dark:text-blue-200">{summary}</p>
+      <details className="mt-2 text-xs text-blue-700 dark:text-blue-200">
+        <summary className="cursor-pointer font-semibold text-blue-700 hover:text-blue-900 dark:text-blue-200 dark:hover:text-blue-100">
           Learn more
         </summary>
         <ul className="mt-2 list-disc pl-5 space-y-1">
@@ -42,7 +42,7 @@ export default function AITrustBanner({
               href={policyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline text-blue-800"
+              className="underline text-blue-800 dark:text-blue-200"
             >
               Policy and responsibility boundaries
             </a>
