@@ -8,7 +8,6 @@ describe('DATEV export preparation', () => {
   let invoice;
   let expense;
   let invoiceAttachment;
-  let expenseAttachment;
   let companyId;
 
   beforeAll(async () => {
@@ -72,27 +71,11 @@ describe('DATEV export preparation', () => {
       uploadedBy: admin.id,
       invoiceId: invoice.id,
     });
-
-    expenseAttachment = await FileAttachment.create({
-      fileName: 'expense-datev.pdf',
-      originalName: 'expense-datev.pdf',
-      filePath: '/tmp/expense-datev.pdf',
-      fileSize: 900,
-      mimeType: 'application/pdf',
-      documentType: 'expense',
-      userId: admin.id,
-      companyId,
-      uploadedBy: admin.id,
-      expenseId: expense.id,
-    });
   });
 
   afterAll(async () => {
     if (invoiceAttachment) {
       await invoiceAttachment.destroy({ force: true });
-    }
-    if (expenseAttachment) {
-      await expenseAttachment.destroy({ force: true });
     }
     if (invoice) {
       await invoice.destroy({ force: true });

@@ -372,17 +372,28 @@ router.get('/datev', requireRole(['admin', 'accountant', 'auditor']), async (req
     }
 
     // Audit log the export event (GoBD-compliant)
+    const exportReason = (req.query.reason || 'DATEV export generated').toString().trim();
+
     await AuditLogService.appendEntry({
       action: 'EXPORT_DATEV',
+      resourceType: 'Export',
+      resourceId: 'datev',
       userId: req.user.id,
-      reason: 'DATEV export generated',
+      reason: exportReason,
       context: {
-        companyId: req.companyId,
+        reason: exportReason,
+        status: 'SUCCESS',
+        actorType: 'USER',
+        actorId: req.user.id,
         eventClass: 'ACCOUNTING',
-        fiscalYear: req.query.fiscalYear,
+        scopeType: 'COMPANY',
+        companyId: req.companyId,
+        fiscalYear: req.query.fiscalYear || null,
         fromDate: from,
         toDate: to,
-        requestId: req.requestId,
+        requestId: req.requestId || null,
+        ipAddress: req.ip || null,
+        userAgent: req.get?.('user-agent') || null,
       },
     });
 

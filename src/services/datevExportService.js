@@ -66,7 +66,7 @@ class DatevExportService {
   }
 }
 
-module.exports = new DatevExportService();
+const datevPaymentExportService = new DatevExportService();
 
 const buildDateWhere = (field, from, to) => {
   const range = {};
@@ -245,3 +245,7 @@ async function buildDatevExport({ companyId, from, to, kontenrahmen }) {
     },
   };
 }
+
+module.exports = datevPaymentExportService;
+module.exports.buildDatevExport = buildDatevExport;
+module.exports.DatevExportService = DatevExportService;
