@@ -180,11 +180,12 @@ router.post('/assistant', async (req, res, next) => {
             return buildSafeVoiceSummary();
           }
           const context = await aiAssistantService.getContext(scopedCompanyId);
-          return aiAssistantService.answerIntentCompliance({
+          return aiAssistantService.answerIntentComplianceWithProvider({
             intent,
             context,
             targetInsightId,
             prompt,
+            requestId: req.requestId,
           });
         },
         responseMeta: { sessionId, targetInsightId, voiceFallback },

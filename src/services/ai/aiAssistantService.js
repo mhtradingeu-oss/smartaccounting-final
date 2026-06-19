@@ -1,6 +1,10 @@
 const { sanitizeContext } = require('./contextContract');
 const { redactPII } = require('./governance');
 const { validateAssistantResponse } = require('./assistantResponseSchema');
+const { checkProviderBudget } = require('./providerBudgetGuard');
+const { getProviderConfig, isProviderEnabled } = require('./providers/providerConfig');
+const { getAIProvider, getProviderMetadata } = require('./providers');
+const promptRegistry = require('./promptRegistry');
 const { Company, Invoice, Expense, BankTransaction, AIInsight } = require('../../models');
 
 const MAX_ITEMS = 5;
@@ -101,6 +105,22 @@ function sanitizeList(items, maxLength = MAX_ITEM_CHARS, maxItems = MAX_LIST_ITE
     .slice(0, maxItems)
     .map((item) => sanitizeText(item, maxLength))
     .filter(Boolean);
+}
+
+function redactContextValue(value) {
+  if (typeof value === 'string') {
+    return sanitizeText(value, MAX_ITEM_CHARS);
+  }
+  if (Array.isArray(value)) {
+    return value.map(redactContextValue);
+  }
+  if (value && typeof value === 'object') {
+    return Object.entries(value).reduce((acc, [key, item]) => {
+      acc[key] = redactContextValue(item);
+      return acc;
+    }, {});
+  }
+  return value;
 }
 
 function normalizeContext(context) {
@@ -582,9 +602,104 @@ function answerIntentCompliance({ intent, context, targetInsightId, prompt }) {
   };
 }
 
+function sanitizeProviderErrorCode(error) {
+  const code = error?.errorCode || error?.code || 'AI_PROVIDER_ERROR';
+  return String(code).replace(/[^A-Z0-9_]/gi, '_').toUpperCase().slice(0, 80);
+}
+
+function buildSafeProviderMetadata({ providerMetadata, fallback, errorCode }) {
+  return {
+    provider: providerMetadata.provider,
+    providerEnabled: Boolean(providerMetadata.enabled),
+    providerFallback: Boolean(fallback),
+    ...(errorCode ? { providerErrorCode: sanitizeProviderErrorCode({ errorCode }) } : {}),
+  };
+}
+
+function pickAssistantSchemaFields(response) {
+  return {
+    summary: response.summary,
+    risks: Array.isArray(response.risks) ? response.risks : [],
+    requiredActions: Array.isArray(response.requiredActions) ? response.requiredActions : [],
+    dataGaps: Array.isArray(response.dataGaps) ? response.dataGaps : [],
+    confidence: response.confidence ?? null,
+    ...(response.contextSummary ? { contextSummary: response.contextSummary } : {}),
+  };
+}
+
+function omitProviderUnsafeFields(response) {
+  const { sanitizedPrompt, prompt, rawPrompt, stack, error, ...safeResponse } = response;
+  return safeResponse;
+}
+
+async function answerIntentComplianceWithProvider({
+  intent,
+  context,
+  targetInsightId,
+  prompt,
+  requestId,
+}) {
+  const deterministic = answerIntentCompliance({ intent, context, targetInsightId, prompt });
+
+  if (!isProviderEnabled()) {
+    return deterministic;
+  }
+
+  const providerMetadata = getProviderMetadata();
+  const providerMeta = (fallback, errorCode) =>
+    buildSafeProviderMetadata({ providerMetadata, fallback, errorCode });
+  const config = getProviderConfig();
+  const budget = checkProviderBudget({ config });
+
+  if (!budget.allowed) {
+    return {
+      ...omitProviderUnsafeFields(deterministic),
+      ...providerMeta(true, 'AI_PROVIDER_BUDGET_DENIED'),
+    };
+  }
+
+  try {
+    const provider = getAIProvider();
+    const safePrompt = sanitizeText(prompt || '', MAX_PROMPT_CHARS);
+    const normalizedContext = normalizeContext(context);
+    const safeContext = sanitizeContext(redactContextValue(normalizedContext));
+    const registryEntry = promptRegistry.getPromptMeta
+      ? promptRegistry.getPromptMeta('assistant_general')
+      : undefined;
+    const providerResponse = await provider.generateAssistantResponse({
+      intent,
+      prompt: safePrompt,
+      context: safeContext,
+      registryEntry,
+      requestId,
+    });
+    const validation = validateAssistantResponse(providerResponse);
+    if (!validation.success) {
+      return {
+        ...omitProviderUnsafeFields(deterministic),
+        ...providerMeta(true, 'AI_PROVIDER_SCHEMA_INVALID'),
+      };
+    }
+    const compliance = pickAssistantSchemaFields(validation.data);
+    return {
+      message: compliance.summary,
+      highlights: compliance.risks,
+      references: compliance.dataGaps,
+      ...compliance,
+      ...providerMeta(false),
+    };
+  } catch (error) {
+    return {
+      ...omitProviderUnsafeFields(deterministic),
+      ...providerMeta(true, sanitizeProviderErrorCode(error)),
+    };
+  }
+}
+
 module.exports = {
   getContext,
   answerIntent,
   answerIntentCompliance,
+  answerIntentComplianceWithProvider,
   INTENT_LABELS,
 };

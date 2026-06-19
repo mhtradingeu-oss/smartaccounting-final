@@ -345,11 +345,12 @@ router.post(
           params: { intent, targetInsightId, prompt },
           handler: async ({ companyId: scopedCompanyId }) => {
             const context = await aiAssistantService.getContext(scopedCompanyId);
-            return aiAssistantService.answerIntentCompliance({
+            return aiAssistantService.answerIntentComplianceWithProvider({
               intent,
               context,
               targetInsightId,
               prompt,
+              requestId: req.requestId,
             });
           },
           responseMeta: { sessionId, targetInsightId },
@@ -449,11 +450,12 @@ router.post(
           params: { intent, targetInsightId, prompt },
           handler: async ({ companyId: scopedCompanyId }) => {
             const context = await aiAssistantService.getContext(scopedCompanyId);
-            return aiAssistantService.answerIntentCompliance({
+            return aiAssistantService.answerIntentComplianceWithProvider({
               intent,
               context,
               targetInsightId,
               prompt,
+              requestId: req.requestId,
             });
           },
           responseMeta: { sessionId, targetInsightId, stream: true },
