@@ -255,4 +255,85 @@ describe('documentIntakeAssistantService', () => {
       }),
     ]);
   });
+  it('validates manual override requirements before restricted draft creation', () => {
+    expect(
+      documentIntakeAssistantService.validateManualOverride({
+        shortDescription: '',
+        reason: '',
+        riskLevel: 'unknown',
+        restrictedTaxTreatmentAcknowledged: false,
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        valid: false,
+        errors: expect.arrayContaining([
+          expect.stringMatching(/shortDescription/i),
+          expect.stringMatching(/reason/i),
+          expect.stringMatching(/riskLevel/i),
+          expect.stringMatching(/acknowledgement/i),
+        ]),
+      }),
+    );
+
+    expect(
+      documentIntakeAssistantService.validateManualOverride({
+        shortDescription: 'Taxi ride to client meeting',
+        reason: 'Receipt is incomplete but documents a business expense',
+        riskLevel: 'medium',
+        restrictedTaxTreatmentAcknowledged: true,
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        valid: true,
+        manualOverride: expect.objectContaining({
+          shortDescription: 'Taxi ride to client meeting',
+          reason: 'Receipt is incomplete but documents a business expense',
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        }),
+      }),
+    );
+  });
+
+  it('forces restricted VAT treatment for valid manual override reviewed values', () => {
+    const restricted = documentIntakeAssistantService.buildRestrictedManualOverrideReviewedValues({
+      reviewedValues: {
+        documentType: 'receipt',
+        vendorName: 'Taxi Berlin GmbH',
+        businessPurpose: 'Client meeting travel',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        currency: 'EUR',
+        accountingCategory: 'travel',
+      },
+      manualOverride: {
+        shortDescription: 'Taxi ride to client meeting',
+        reason: 'Receipt is partially incomplete but documents a business expense',
+        riskLevel: 'medium',
+        restrictedTaxTreatmentAcknowledged: true,
+      },
+    });
+
+    expect(restricted).toEqual(
+      expect.objectContaining({
+        vendorName: 'Taxi Berlin GmbH',
+        businessPurpose: 'Client meeting travel',
+        netAmount: 119,
+        vatRate: 0,
+        vatAmount: 0,
+        grossAmount: 119,
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+        manualOverride: expect.objectContaining({
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        }),
+      }),
+    );
+  });
+
+
 });

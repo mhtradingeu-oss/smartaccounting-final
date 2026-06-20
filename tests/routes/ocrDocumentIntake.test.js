@@ -505,7 +505,7 @@ describe('OCR document intake analyze route', () => {
     expect(response.body.message).toMatch(/reviewedValues must be a non-empty object/i);
   });
 
-  it('rejects manual override during Phase A2 recheck', async () => {
+  it('rejects incomplete manual override during recheck', async () => {
     await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
     const analyzeResponse = await uploadFile(
       accountant.token,
@@ -519,12 +519,97 @@ describe('OCR document intake analyze route', () => {
       analyzeResponse.body.document.id,
       {
         reviewedValues: { documentType: 'receipt', vendorName: 'DB Vertrieb GmbH' },
-        manualOverride: { reason: 'Not available in this phase' },
+        manualOverride: { reason: 'Missing short description and acknowledgement' },
       },
     );
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toMatch(/Manual override is not implemented in Phase A2/i);
+    expect(response.body.message).toMatch(/Manual override is incomplete/i);
+  });
+
+
+  it('records valid manual override during recheck without creating invoices or expenses', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const response = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          businessDirection: 'incoming',
+          vendorName: 'Taxi Berlin GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 19,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client meeting travel',
+        },
+        changeReason: 'Reviewed incomplete receipt with restricted tax treatment',
+        manualOverride: {
+          shortDescription: 'Taxi ride to client meeting',
+          reason: 'Receipt is partially incomplete but documents a business expense',
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.reviewState.status).toBe('rechecked');
+    expect(response.body.editablePayload.reviewedValues).toEqual(
+      expect.objectContaining({
+        vendorName: 'Taxi Berlin GmbH',
+        vatRate: 0,
+        vatAmount: 0,
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+      }),
+    );
+    expect(response.body.editablePayload.manualOverride).toEqual(
+      expect.objectContaining({
+        shortDescription: 'Taxi ride to client meeting',
+        reason: 'Receipt is partially incomplete but documents a business expense',
+        riskLevel: 'medium',
+        restrictedTaxTreatmentAcknowledged: true,
+      }),
+    );
+    expect(response.body.draftEligibility.restrictedTaxTreatment).toEqual(
+      expect.objectContaining({
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+      }),
+    );
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+
+    const document = await FileAttachment.findByPk(analyzeResponse.body.document.id);
+    expect(document.extractedData.reviewedValues).toEqual(
+      expect.objectContaining({
+        vatRate: 0,
+        vatAmount: 0,
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+      }),
+    );
+    expect(document.extractedData.intake.editablePayload.manualOverride).toEqual(
+      expect.objectContaining({
+        riskLevel: 'medium',
+        restrictedTaxTreatmentAcknowledged: true,
+      }),
+    );
   });
 
   it('rechecks invalid VAT math as correction needed without creating invoices or expenses', async () => {
@@ -749,6 +834,165 @@ describe('OCR document intake analyze route', () => {
     expect(response.status).toBe(422);
     expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
     expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+
+  it('creates an expense draft after valid manual override using restricted VAT values only', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          businessDirection: 'incoming',
+          vendorName: 'Taxi Berlin GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 19,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client meeting travel',
+        },
+        changeReason: 'Reviewed incomplete receipt with restricted tax treatment',
+        manualOverride: {
+          shortDescription: 'Taxi ride to client meeting',
+          reason: 'Receipt is partially incomplete but documents a business expense',
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        },
+      },
+    );
+
+    expect(recheckResponse.status).toBe(200);
+    expect(recheckResponse.body.editablePayload.reviewedValues).toEqual(
+      expect.objectContaining({
+        vatRate: 0,
+        vatAmount: 0,
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+      }),
+    );
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create restricted expense draft from manual override',
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.body.draft).toEqual(
+      expect.objectContaining({
+        type: 'expense',
+        status: 'pending',
+        summary: 'Taxi Berlin GmbH',
+      }),
+    );
+
+    const expense = await Expense.findOne({ where: { companyId: accountant.user.companyId } });
+    expect(expense).toEqual(
+      expect.objectContaining({
+        vendorName: 'Taxi Berlin GmbH',
+        category: 'travel',
+        source: 'ai_document_intake_reviewed',
+      }),
+    );
+    expect(Number(expense.netAmount)).toBe(119);
+    expect(Number(expense.vatRate)).toBe(0);
+    expect(Number(expense.vatAmount)).toBe(0);
+    expect(Number(expense.grossAmount)).toBe(119);
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+
+    const auditLog = await AuditLog.findOne({
+      where: { action: 'DOCUMENT_DRAFT_CREATED_FROM_REVIEWED_VALUES' },
+      order: [['createdAt', 'DESC']],
+    });
+    expect(auditLog?.newValues).toEqual(
+      expect.objectContaining({
+        manualOverride: expect.objectContaining({
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        }),
+        restrictedTaxTreatment: expect.objectContaining({
+          taxTreatment: 'no_vorsteuer_allowed',
+          inputVatAllowed: false,
+          accountantReviewRequired: true,
+        }),
+      }),
+    );
+  });
+
+  it('rejects manual override create-draft when restricted VAT values were tampered with', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          businessDirection: 'incoming',
+          vendorName: 'Taxi Berlin GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 19,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client meeting travel',
+        },
+        manualOverride: {
+          shortDescription: 'Taxi ride to client meeting',
+          reason: 'Receipt is partially incomplete but documents a business expense',
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        },
+      },
+    );
+
+    const document = await FileAttachment.findByPk(analyzeResponse.body.document.id);
+    const tamperedData = JSON.parse(JSON.stringify(document.extractedData));
+    tamperedData.intake.editablePayload.reviewedValues.vatAmount = 19;
+    tamperedData.intake.editablePayload.reviewedValues.vatRate = 0.19;
+    await document.update({ extractedData: tamperedData });
+    await document.reload();
+    expect(Number(document.extractedData.intake.editablePayload.reviewedValues.vatAmount)).toBe(19);
+    expect(Number(document.extractedData.intake.editablePayload.reviewedValues.vatRate)).toBe(0.19);
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Attempt tampered manual override draft',
+      },
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toMatch(/restricted VAT treatment/i);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
   });
 
   it('creates an expense draft from reviewed receipt values only and links the source document', async () => {

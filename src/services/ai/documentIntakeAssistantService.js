@@ -174,6 +174,84 @@ const resolveReviewedDraftType = ({ intake = {}, reviewedValues = {} } = {}) => 
   return null;
 };
 
+
+const MANUAL_OVERRIDE_RISK_LEVELS = new Set(['low', 'medium', 'high']);
+
+const normalizeManualOverrideText = (value, maxLength = 500) =>
+  String(value || '').trim().slice(0, maxLength);
+
+const validateManualOverride = (manualOverride = {}) => {
+  const normalized = {
+    shortDescription: normalizeManualOverrideText(manualOverride.shortDescription, 300),
+    reason: normalizeManualOverrideText(manualOverride.reason, 800),
+    riskLevel: String(manualOverride.riskLevel || '').trim().toLowerCase(),
+    restrictedTaxTreatmentAcknowledged:
+      manualOverride.restrictedTaxTreatmentAcknowledged === true,
+  };
+
+  const errors = [];
+  if (!normalized.shortDescription) {
+    errors.push('Manual override shortDescription is required.');
+  }
+  if (!normalized.reason) {
+    errors.push('Manual override reason is required.');
+  }
+  if (!MANUAL_OVERRIDE_RISK_LEVELS.has(normalized.riskLevel)) {
+    errors.push('Manual override riskLevel must be low, medium, or high.');
+  }
+  if (normalized.restrictedTaxTreatmentAcknowledged !== true) {
+    errors.push('Manual override restricted tax treatment acknowledgement is required.');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    manualOverride: normalized,
+  };
+};
+
+const hasValidManualOverride = (manualOverride = {}) =>
+  validateManualOverride(manualOverride).valid;
+
+const buildRestrictedManualOverrideReviewedValues = ({
+  reviewedValues = {},
+  manualOverride = {},
+} = {}) => {
+  const validation = validateManualOverride(manualOverride);
+  if (!validation.valid) {
+    const error = new Error(validation.errors.join(' '));
+    error.status = 400;
+    error.code = 'INVALID_MANUAL_OVERRIDE';
+    error.errors = validation.errors;
+    throw error;
+  }
+
+  const originalGrossAmount = toFiniteNumber(
+    reviewedValues.grossAmount ?? reviewedValues.totalAmount ?? reviewedValues.amount,
+    toFiniteNumber(reviewedValues.netAmount),
+  );
+
+  return {
+    ...clonePlainObject(reviewedValues),
+    shortDescription:
+      reviewedValues.shortDescription ||
+      reviewedValues.businessPurpose ||
+      validation.manualOverride.shortDescription,
+    businessPurpose:
+      reviewedValues.businessPurpose ||
+      reviewedValues.shortDescription ||
+      validation.manualOverride.shortDescription,
+    netAmount: originalGrossAmount,
+    vatRate: 0,
+    vatAmount: 0,
+    grossAmount: originalGrossAmount,
+    taxTreatment: 'no_vorsteuer_allowed',
+    inputVatAllowed: false,
+    accountantReviewRequired: true,
+    manualOverride: validation.manualOverride,
+  };
+};
+
 const buildReviewedExpenseDraftPayload = ({ reviewedValues = {}, documentId, systemContext = {} } = {}) => {
   const netAmount = toFiniteNumber(reviewedValues.netAmount);
   const vatRate = toFiniteNumber(reviewedValues.vatRate);
@@ -664,6 +742,9 @@ module.exports = {
   resolveReviewedDraftType,
   buildReviewedExpenseDraftPayload,
   buildReviewedInvoiceDraftPayload,
+  validateManualOverride,
+  hasValidManualOverride,
+  buildRestrictedManualOverrideReviewedValues,
   compareReviewedFields,
   applyRecheckReviewGate,
 };

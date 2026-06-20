@@ -613,8 +613,18 @@ router.post('/intake/:documentId/recheck', requireRole(['accountant']), async (r
   const changeReason = String(req.body?.changeReason || '').trim();
   const manualOverride = req.body?.manualOverride;
 
+  let validatedManualOverride = null;
   if (manualOverride !== null && manualOverride !== undefined) {
-    return sendError(res, 'Manual override is not implemented in Phase A2.', 400);
+    const manualOverrideValidation = documentIntakeAssistantService.validateManualOverride(manualOverride);
+    if (!manualOverrideValidation.valid) {
+      return sendError(
+        res,
+        'Manual override is incomplete.',
+        400,
+        manualOverrideValidation.errors,
+      );
+    }
+    validatedManualOverride = manualOverrideValidation.manualOverride;
   }
 
   if (!isNonEmptyPlainObject(reviewedValues)) {
@@ -654,14 +664,22 @@ router.post('/intake/:documentId/recheck', requireRole(['accountant']), async (r
         documentId: documentRecord.id,
         reviewedFields: Object.keys(reviewedValues),
         fieldChanges,
+        manualOverride: validatedManualOverride,
       },
       ipAddress: req.ip,
       userAgent: req.get('User-Agent') || null,
     });
 
-    const extractedData = documentIntakeAssistantService.mapReviewedValuesToExtractedData(reviewedValues);
+    const effectiveReviewedValues = validatedManualOverride
+      ? documentIntakeAssistantService.buildRestrictedManualOverrideReviewedValues({
+          reviewedValues,
+          manualOverride: validatedManualOverride,
+        })
+      : reviewedValues;
+
+    const extractedData = documentIntakeAssistantService.mapReviewedValuesToExtractedData(effectiveReviewedValues);
     const documentType = documentIntakeAssistantService.mapReviewedDocumentType(
-      reviewedValues.documentType ||
+      effectiveReviewedValues.documentType ||
         existingIntake.classification?.documentType ||
         documentRecord.documentType ||
         'auto',
@@ -674,18 +692,38 @@ router.post('/intake/:documentId/recheck', requireRole(['accountant']), async (r
         documentId: documentRecord.id,
       }),
       aiExtractedValues,
-      reviewedValues,
+      reviewedValues: effectiveReviewedValues,
       fieldChanges,
       userId: req.userId,
       reviewedAt,
     });
+
+    if (validatedManualOverride) {
+      recheckedIntake.editablePayload.manualOverride = validatedManualOverride;
+      recheckedIntake.manualOverride = validatedManualOverride;
+      recheckedIntake.lifecycle.editablePayload = {
+        ...recheckedIntake.lifecycle.editablePayload,
+        manualOverride: validatedManualOverride,
+      };
+      recheckedIntake.lifecycle.manualOverride = validatedManualOverride;
+      recheckedIntake.draftEligibility = {
+        ...recheckedIntake.draftEligibility,
+        manualOverrideRequired: false,
+        restrictedTaxTreatment: {
+          taxTreatment: 'no_vorsteuer_allowed',
+          inputVatAllowed: false,
+          accountantReviewRequired: true,
+        },
+      };
+      recheckedIntake.lifecycle.draftEligibility = recheckedIntake.draftEligibility;
+    }
 
     await documentRecord.update({
       processingStatus: recheckedIntake.validation.status,
       documentType: recheckedIntake.classification.documentType,
       extractedData: {
         ...existingData,
-        reviewedValues,
+        reviewedValues: effectiveReviewedValues,
         intake: recheckedIntake,
       },
     });
@@ -737,6 +775,10 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
     const reviewState = getJsonObject(intake.reviewState);
     const editablePayload = getJsonObject(intake.editablePayload);
     const reviewedValues = getJsonObject(editablePayload.reviewedValues);
+    const storedManualOverride = getJsonObject(
+      editablePayload.manualOverride || intake.manualOverride || intake.lifecycle?.manualOverride,
+    );
+    const hasManualOverride = isNonEmptyPlainObject(storedManualOverride);
     const currentFingerprint = intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null;
 
     if (reviewState.status !== 'rechecked' || reviewState.criticalFieldsReviewed !== true) {
@@ -767,6 +809,36 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
       return sendError(res, 'Unsupported reviewed document type for draft creation.', 422);
     }
 
+    if (hasManualOverride && draftType !== 'expense') {
+      return sendError(res, 'Manual override can only create an expense draft with restricted VAT treatment.', 422);
+    }
+
+    if (hasManualOverride) {
+      const manualOverrideValidation =
+        documentIntakeAssistantService.validateManualOverride(storedManualOverride);
+      if (!manualOverrideValidation.valid) {
+        return sendError(
+          res,
+          'Manual override with reason is required before draft creation.',
+          409,
+          manualOverrideValidation.errors,
+        );
+      }
+      if (
+        Number(reviewedValues.vatRate) !== 0 ||
+        Number(reviewedValues.vatAmount) !== 0 ||
+        reviewedValues.taxTreatment !== 'no_vorsteuer_allowed' ||
+        reviewedValues.inputVatAllowed !== false ||
+        reviewedValues.accountantReviewRequired !== true
+      ) {
+        return sendError(
+          res,
+          'Manual override draft requires restricted VAT treatment. Re-check document first.',
+          409,
+        );
+      }
+    }
+
     if (!intake.draftEligibility?.eligible) {
       return sendError(res, 'Reviewed document is not eligible for draft creation.', 422);
     }
@@ -778,6 +850,14 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
       decisionFingerprint: currentFingerprint,
       reviewState,
       fieldChanges: editablePayload.fieldChanges || [],
+      manualOverride: hasManualOverride ? storedManualOverride : null,
+      restrictedTaxTreatment: hasManualOverride
+        ? {
+            taxTreatment: 'no_vorsteuer_allowed',
+            inputVatAllowed: false,
+            accountantReviewRequired: true,
+          }
+        : null,
       reason,
     };
 
@@ -836,6 +916,14 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
         decisionFingerprint: currentFingerprint,
         reviewState,
         fieldChanges: editablePayload.fieldChanges || [],
+        manualOverride: hasManualOverride ? storedManualOverride : null,
+        restrictedTaxTreatment: hasManualOverride
+          ? {
+              taxTreatment: 'no_vorsteuer_allowed',
+              inputVatAllowed: false,
+              accountantReviewRequired: true,
+            }
+          : null,
       },
       ipAddress: req.ip,
       userAgent: req.get('User-Agent') || null,
