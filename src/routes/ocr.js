@@ -129,6 +129,47 @@ const validateOcrUpload = (req, res) => {
   return fileCheck;
 };
 
+const getJsonObject = (value) => {
+  if (!value) {
+    return {};
+  }
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value || '{}');
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === 'object' && !Array.isArray(value) ? value : {};
+};
+
+const isNonEmptyPlainObject = (value) =>
+  !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
+
+const buildIntakeResponse = ({ req, documentRecord, intake }) => ({
+  requestId: req.requestId || null,
+  document: {
+    id: documentRecord.id,
+    originalName: documentRecord.originalName,
+    mimeType: documentRecord.mimeType,
+    fileSize: documentRecord.fileSize,
+    fileHash: documentRecord.fileHash,
+    documentType: documentRecord.documentType,
+    processingStatus: documentRecord.processingStatus,
+    ocrConfidence: documentRecord.ocrConfidence,
+  },
+  classification: intake.classification,
+  extracted: intake.extracted,
+  reviewState: intake.reviewState,
+  editablePayload: intake.editablePayload,
+  draftEligibility: intake.draftEligibility,
+  decisionFingerprint: intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null,
+  lifecycle: intake.lifecycle,
+  validation: intake.validation,
+  draft: intake.draft,
+  audit: intake.audit,
+});
+
 const previewHandler = async (req, res) => {
   if (handleValidation(req, res)) {
     return;
@@ -564,6 +605,117 @@ router.post(
     }
   },
 );
+
+router.post('/intake/:documentId/recheck', requireRole(['accountant']), async (req, res) => {
+  const reviewedValues = req.body?.reviewedValues;
+  const changeReason = String(req.body?.changeReason || '').trim();
+  const manualOverride = req.body?.manualOverride;
+
+  if (manualOverride !== null && manualOverride !== undefined) {
+    return sendError(res, 'Manual override is not implemented in Phase A2.', 400);
+  }
+
+  if (!isNonEmptyPlainObject(reviewedValues)) {
+    return sendError(res, 'reviewedValues must be a non-empty object.', 400);
+  }
+
+  try {
+    const documentRecord = await FileAttachment.findOne({
+      where: { id: req.params.documentId, companyId: req.companyId },
+    });
+
+    if (!documentRecord) {
+      return sendError(res, 'Document not found.', 404);
+    }
+
+    const existingData = getJsonObject(documentRecord.extractedData);
+    const existingIntake = getJsonObject(existingData.intake);
+    const aiExtractedValues =
+      existingIntake.editablePayload?.aiExtractedValues || existingIntake.extracted || {};
+    const reviewedAt = new Date().toISOString();
+    const fieldChanges = documentIntakeAssistantService.compareReviewedFields({
+      aiExtractedValues,
+      reviewedValues,
+      userId: req.userId,
+      timestamp: reviewedAt,
+      reason: changeReason || null,
+    });
+
+    await AuditLogService.appendEntry({
+      action: 'DOCUMENT_RECHECK_REQUESTED',
+      resourceType: 'FileAttachment',
+      resourceId: String(documentRecord.id),
+      userId: req.userId,
+      reason: changeReason || 'Document recheck requested',
+      newValues: {
+        companyId: req.companyId,
+        documentId: documentRecord.id,
+        reviewedFields: Object.keys(reviewedValues),
+        fieldChanges,
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent') || null,
+    });
+
+    const extractedData = documentIntakeAssistantService.mapReviewedValuesToExtractedData(reviewedValues);
+    const documentType = documentIntakeAssistantService.mapReviewedDocumentType(
+      reviewedValues.documentType ||
+        existingIntake.classification?.documentType ||
+        documentRecord.documentType ||
+        'auto',
+    );
+    const recheckedIntake = documentIntakeAssistantService.applyRecheckReviewGate({
+      intake: documentIntakeAssistantService.analyzeIntake({
+        text: documentRecord.ocrText || '',
+        extractedData,
+        documentType,
+        documentId: documentRecord.id,
+      }),
+      aiExtractedValues,
+      reviewedValues,
+      fieldChanges,
+      userId: req.userId,
+      reviewedAt,
+    });
+
+    await documentRecord.update({
+      processingStatus: recheckedIntake.validation.status,
+      documentType: recheckedIntake.classification.documentType,
+      extractedData: {
+        ...existingData,
+        reviewedValues,
+        intake: recheckedIntake,
+      },
+    });
+
+    await AuditLogService.appendEntry({
+      action: 'DOCUMENT_RECHECK_COMPLETED',
+      resourceType: 'FileAttachment',
+      resourceId: String(documentRecord.id),
+      userId: req.userId,
+      reason: changeReason || 'Document recheck completed',
+      newValues: {
+        companyId: req.companyId,
+        documentId: documentRecord.id,
+        reviewState: recheckedIntake.reviewState,
+        fieldChanges,
+        validationStatus: recheckedIntake.validation.status,
+        decisionFingerprint: recheckedIntake.decisionFingerprint,
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent') || null,
+    });
+
+    return sendSuccess(res, 'Document rechecked', buildIntakeResponse({
+      req,
+      documentRecord,
+      intake: recheckedIntake,
+    }));
+  } catch (error) {
+    logger.error('OCR intake recheck failed', { error: error.message });
+    return sendError(res, 'Unable to recheck document intake', 500);
+  }
+});
 
 router.post(
   '/process',

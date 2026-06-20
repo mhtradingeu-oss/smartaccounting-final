@@ -110,4 +110,74 @@ describe('documentIntakeAssistantService', () => {
     expect(result.classification.suggestedAction).toBe('needs_correction');
     expect(result.validation.errors.join(' ')).toMatch(/Net \+ VAT/i);
   });
+
+  it('applies rechecked review state while preserving the AI extracted snapshot', () => {
+    const reviewedValues = {
+      documentType: 'receipt',
+      vendorName: 'DB Fernverkehr AG',
+      documentDate: '2026-06-18',
+      netAmount: 10,
+      vatRate: 0.19,
+      vatAmount: 1.9,
+      grossAmount: 11.9,
+      currency: 'EUR',
+      accountingCategory: 'travel',
+    };
+    const aiExtractedValues = {
+      documentType: 'receipt',
+      vendorName: 'DB Vertrieb GmbH',
+      grossAmount: 11.9,
+      currency: 'EUR',
+    };
+    const reviewedAt = '2026-06-20T10:00:00.000Z';
+    const fieldChanges = documentIntakeAssistantService.compareReviewedFields({
+      aiExtractedValues,
+      reviewedValues,
+      userId: 123,
+      timestamp: reviewedAt,
+      reason: 'Corrected OCR fields before draft',
+    });
+    const intake = documentIntakeAssistantService.analyzeIntake({
+      text: 'Quittung DB Fernverkehr AG Gesamt 11,90 EUR MwSt 1,90',
+      documentType: 'receipt',
+      documentId: 'doc-1',
+      extractedData: documentIntakeAssistantService.mapReviewedValuesToExtractedData(reviewedValues),
+    });
+
+    const result = documentIntakeAssistantService.applyRecheckReviewGate({
+      intake,
+      aiExtractedValues,
+      reviewedValues,
+      fieldChanges,
+      userId: 123,
+      reviewedAt,
+    });
+
+    expect(fieldChanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'vendorName',
+          aiValue: 'DB Vertrieb GmbH',
+          correctedValue: 'DB Fernverkehr AG',
+          userId: 123,
+          timestamp: reviewedAt,
+          reason: 'Corrected OCR fields before draft',
+        }),
+      ]),
+    );
+    expect(result.reviewState).toEqual({
+      status: 'rechecked',
+      reviewRequired: true,
+      reviewedByUserId: 123,
+      reviewedAt,
+      hasUserCorrections: true,
+      criticalFieldsReviewed: true,
+    });
+    expect(result.editablePayload.aiExtractedValues).toEqual(aiExtractedValues);
+    expect(result.editablePayload.reviewedValues).toEqual(reviewedValues);
+    expect(result.editablePayload.fieldChanges).toEqual(fieldChanges);
+    expect(result.draftEligibility.eligible).toBe(false);
+    expect(result.decisionFingerprint).toEqual(expect.any(String));
+    expect(result.classification.category).toBe('travel');
+  });
 });

@@ -88,6 +88,38 @@ const uploadFile = async (token, companyId, filePath, fields = {}) => {
   });
 };
 
+const recheckDocument = async (token, companyId, documentId, body = {}) =>
+  new Promise((resolve) => {
+    const req = httpMocks.createRequest({
+      method: 'POST',
+      url: `/api/ocr/intake/${documentId}/recheck`,
+      params: { documentId },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-company-id': String(companyId),
+        'content-type': 'application/json',
+      },
+      body,
+    });
+    req.socket = req.socket || { setTimeout: () => {} };
+    req.setTimeout = () => {};
+
+    const res = httpMocks.createResponse({ eventEmitter: EventEmitter });
+    res.on('end', () => {
+      const raw = res._getData();
+      let parsed = raw;
+      if (typeof raw === 'string') {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          parsed = raw;
+        }
+      }
+      resolve({ req, res, status: res.statusCode, body: parsed, headers: res._getHeaders() });
+    });
+    app(req, res);
+  });
+
 describe('OCR document intake analyze route', () => {
   const fixturePath = path.join('/tmp', 'ocr-intake-test.png');
   let admin;
@@ -316,6 +348,181 @@ describe('OCR document intake analyze route', () => {
     if (fs.existsSync(pdfPath)) {
       fs.unlinkSync(pdfPath);
     }
+  });
+
+  it('rechecks reviewed values, records field changes, and creates no invoices or expenses', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const aiSnapshot = analyzeResponse.body.editablePayload.aiExtractedValues;
+    const reviewedValues = {
+      documentType: 'receipt',
+      businessDirection: 'incoming',
+      vendorName: 'DB Fernverkehr AG',
+      documentDate: '2026-06-18',
+      netAmount: 10,
+      vatRate: 0.19,
+      vatAmount: 1.9,
+      grossAmount: 11.9,
+      currency: 'EUR',
+      accountingCategory: 'travel',
+      businessPurpose: 'Train ticket to client meeting',
+      paymentMethod: 'card',
+    };
+
+    const response = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues,
+        changeReason: 'Corrected OCR fields before draft',
+        manualOverride: null,
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.reviewState).toEqual(
+      expect.objectContaining({
+        status: 'rechecked',
+        reviewRequired: true,
+        reviewedByUserId: accountant.user.id,
+        hasUserCorrections: true,
+        criticalFieldsReviewed: true,
+      }),
+    );
+    expect(new Date(response.body.reviewState.reviewedAt).toString()).not.toBe('Invalid Date');
+    expect(response.body.editablePayload.aiExtractedValues).toEqual(aiSnapshot);
+    expect(response.body.editablePayload.reviewedValues).toEqual(reviewedValues);
+    expect(response.body.editablePayload.fieldChanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'vendorName',
+          aiValue: 'DB Vertrieb GmbH',
+          correctedValue: 'DB Fernverkehr AG',
+          userId: accountant.user.id,
+          reason: 'Corrected OCR fields before draft',
+        }),
+      ]),
+    );
+    expect(new Date(response.body.editablePayload.fieldChanges[0].timestamp).toString()).not.toBe(
+      'Invalid Date',
+    );
+    expect(response.body.draftEligibility.eligible).toBe(false);
+    expect(response.body.decisionFingerprint).toEqual(expect.any(String));
+
+    const document = await FileAttachment.findByPk(analyzeResponse.body.document.id);
+    expect(document.extractedData.intake.reviewState.status).toBe('rechecked');
+    expect(document.extractedData.intake.editablePayload.aiExtractedValues).toEqual(aiSnapshot);
+    expect(document.extractedData.intake.editablePayload.reviewedValues).toEqual(reviewedValues);
+    expect(document.extractedData.intake.editablePayload.fieldChanges).toEqual(
+      response.body.editablePayload.fieldChanges,
+    );
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('keeps recheck scoped to the active company', async () => {
+    await mockReceiptOcr({ user: admin.user, companyId: admin.user.companyId });
+    const analyzeResponse = await uploadFile(admin.token, admin.user.companyId, fixturePath);
+
+    const response = await recheckDocument(
+      otherAdmin.token,
+      otherAdmin.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          vendorName: 'Other Company Vendor',
+          grossAmount: 11.9,
+          currency: 'EUR',
+        },
+        changeReason: 'Review extracted fields',
+      },
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it('rejects empty reviewed values for recheck', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const response = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      { reviewedValues: {} },
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/reviewedValues must be a non-empty object/i);
+  });
+
+  it('rejects manual override during Phase A2 recheck', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const response = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: { documentType: 'receipt', vendorName: 'DB Vertrieb GmbH' },
+        manualOverride: { reason: 'Not available in this phase' },
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/Manual override is not implemented in Phase A2/i);
+  });
+
+  it('rechecks invalid VAT math as correction needed without creating invoices or expenses', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const response = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'invoice',
+          vendorName: 'Supplier GmbH',
+          documentNumber: 'R-1',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 10,
+          grossAmount: 119,
+          currency: 'EUR',
+        },
+        changeReason: 'Re-check document after field review',
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.reviewState.status).toBe('rechecked');
+    expect(response.body.validation.status).toBe('needs_correction');
+    expect(response.body.validation.errors.join(' ')).toMatch(/Net \+ VAT/i);
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
   });
 
   it('rejects viewer role for persistent intake analysis', async () => {

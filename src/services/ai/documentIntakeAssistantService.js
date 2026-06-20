@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+const stableStringify = require('json-stable-stringify');
+
 const SUPPORTED_ACTIONS = new Set([
   'create_expense_draft',
   'create_invoice_draft',
@@ -83,6 +86,133 @@ const buildReviewGate = ({ aiExtractedValues = {} } = {}) => {
   };
 };
 
+const buildDecisionFingerprint = (decision = {}) =>
+  crypto.createHash('sha256').update(stableStringify(decision) || '{}').digest('hex');
+
+const mapReviewedDocumentType = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (['supplier_invoice', 'customer_invoice', 'incoming_supplier_invoice'].includes(normalized)) {
+    return 'invoice';
+  }
+  if (['receipt', 'bank_statement', 'tax_document', 'invoice'].includes(normalized)) {
+    return normalized;
+  }
+  if (normalized === 'credit_note') {
+    return 'invoice';
+  }
+  return normalized || 'auto';
+};
+
+const mapReviewedValuesToExtractedData = (reviewedValues = {}) => {
+  const documentType = mapReviewedDocumentType(reviewedValues.documentType);
+  return {
+    ...reviewedValues,
+    type: documentType === 'auto' ? reviewedValues.type : documentType,
+    vendor: reviewedValues.vendorName ?? reviewedValues.vendor,
+    vendorName: reviewedValues.vendorName ?? reviewedValues.vendor,
+    clientName: reviewedValues.customerName ?? reviewedValues.clientName,
+    customerName: reviewedValues.customerName ?? reviewedValues.clientName,
+    invoiceNumber: reviewedValues.documentNumber ?? reviewedValues.invoiceNumber,
+    documentNumber: reviewedValues.documentNumber ?? reviewedValues.invoiceNumber,
+    date: reviewedValues.documentDate ?? reviewedValues.date,
+    invoiceDate: reviewedValues.documentDate ?? reviewedValues.invoiceDate,
+    expenseDate: reviewedValues.documentDate ?? reviewedValues.expenseDate,
+    totalAmount: reviewedValues.grossAmount ?? reviewedValues.totalAmount,
+    amount: reviewedValues.grossAmount ?? reviewedValues.amount,
+    category: reviewedValues.accountingCategory ?? reviewedValues.category,
+    accountingCategory: reviewedValues.accountingCategory ?? reviewedValues.category,
+  };
+};
+
+const normalizeComparisonValue = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Number(value.toFixed(6)) : null;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (Array.isArray(value) || typeof value === 'object') {
+    return stableStringify(value);
+  }
+  const stringValue = String(value).trim();
+  const numeric = Number(stringValue.replace(',', '.'));
+  if (stringValue !== '' && Number.isFinite(numeric)) {
+    return Number(numeric.toFixed(6));
+  }
+  return stringValue;
+};
+
+const compareReviewedFields = ({
+  aiExtractedValues = {},
+  reviewedValues = {},
+  userId,
+  timestamp,
+  reason,
+} = {}) =>
+  Object.keys(reviewedValues)
+    .filter((field) => field !== 'raw')
+    .filter(
+      (field) =>
+        normalizeComparisonValue(aiExtractedValues[field]) !==
+        normalizeComparisonValue(reviewedValues[field]),
+    )
+    .map((field) => ({
+      field,
+      aiValue: aiExtractedValues[field],
+      correctedValue: reviewedValues[field],
+      userId,
+      timestamp,
+      reason: reason || null,
+    }));
+
+const applyRecheckReviewGate = ({
+  intake,
+  aiExtractedValues,
+  reviewedValues,
+  fieldChanges,
+  userId,
+  reviewedAt,
+} = {}) => {
+  const reviewState = {
+    status: 'rechecked',
+    reviewRequired: true,
+    reviewedByUserId: userId,
+    reviewedAt,
+    hasUserCorrections: fieldChanges.length > 0,
+    criticalFieldsReviewed: true,
+  };
+  const editablePayload = {
+    aiExtractedValues: clonePlainObject(aiExtractedValues),
+    reviewedValues: clonePlainObject(reviewedValues),
+    fieldChanges: clonePlainObject(fieldChanges),
+  };
+  const draftEligibility = buildDraftEligibility();
+  const decisionBase = {
+    schemaVersion: 'document_lifecycle_decision.v1',
+    classification: intake.classification,
+    extracted: intake.extracted,
+    validation: intake.validation,
+    reviewState,
+    editablePayload,
+    draftEligibility,
+  };
+  const decisionFingerprint = buildDecisionFingerprint(decisionBase);
+  return {
+    ...intake,
+    reviewState,
+    editablePayload,
+    draftEligibility,
+    decisionFingerprint,
+    lifecycle: {
+      ...decisionBase,
+      decisionFingerprint,
+    },
+  };
+};
+
 const inferDocumentType = ({ text = '', requestedType = 'auto', extracted = {} } = {}) => {
   if (requestedType && requestedType !== 'auto') {
     return requestedType;
@@ -153,6 +283,11 @@ const normalizeExtractedFields = ({ text = '', extracted = {}, documentType }) =
     openingBalance: toNumber(extracted.openingBalance),
     closingBalance: toNumber(extracted.closingBalance),
     lineItems: Array.isArray(extracted.items) ? extracted.items : [],
+    category: extracted.category || null,
+    accountingCategory: extracted.accountingCategory || extracted.category || null,
+    businessPurpose: extracted.businessPurpose || null,
+    paymentMethod: extracted.paymentMethod || null,
+    taxTreatment: extracted.taxTreatment || null,
     raw: extracted,
   };
 };
@@ -244,6 +379,12 @@ const validateGermanReadiness = ({ documentType, direction, extracted }) => {
 };
 
 const deriveCategory = ({ text = '', extracted = {} } = {}) => {
+  if (extracted.accountingCategory || extracted.category) {
+    return {
+      category: extracted.accountingCategory || extracted.category,
+      confidence: 1,
+    };
+  }
   const normalized = normalizeText(`${text} ${extracted.vendorName || ''}`);
   const rules = [
     ['travel', /hotel|bahn|flight|taxi|uber|reise|fahrt/],
@@ -393,4 +534,9 @@ module.exports = {
   inferDocumentType,
   validateGermanReadiness,
   buildReviewGate,
+  buildDecisionFingerprint,
+  mapReviewedDocumentType,
+  mapReviewedValuesToExtractedData,
+  compareReviewedFields,
+  applyRecheckReviewGate,
 };
