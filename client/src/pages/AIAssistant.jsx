@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import {
+  ArrowUpIcon,
+  CameraIcon,
+  MicrophoneIcon,
+  PaperClipIcon,
+  StopIcon,
+  TrashIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
-import { Modal } from '../components/ui/Modal';
 import FeatureGate from '../components/FeatureGate';
 import AITrustBanner from '../components/AITrustBanner';
 import { AIBadge } from '../components/AIBadge';
@@ -17,13 +25,21 @@ import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent, truncateText } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
-import { isAIAssistantEnabled, isAIVoiceEnabled } from '../lib/featureFlags';
+import { isAIAssistantEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
-import ChatMessageGroup from '../components/ChatMessageGroup';
 import ChatEmptyState from '../components/ChatEmptyState';
 import ChatTypingIndicator from '../components/ChatTypingIndicator';
 import MutationIntentGuard, { detectMutationIntent } from '../components/MutationIntentGuard';
 import PlanRestrictedState from '../components/PlanRestrictedState';
+import {
+  buildLocalGreetingAnswer,
+  buildPromptForIntent,
+  formatAssistantAnswer,
+  inferAssistantIntent,
+  isGeneralSmallTalk,
+  isGreetingMessage,
+} from '../lib/aiChatIntent';
+import { buildAttachmentChip, formatAttachmentSize } from '../lib/aiChatAttachments';
 
 const INTENT_OPTIONS = [
   {
@@ -50,7 +66,6 @@ const INTENT_OPTIONS = [
   },
 ];
 
-const VOICE_CONSENT_KEY = 'ai_voice_consent_v1';
 const MAX_PROMPT_LENGTH = 8000;
 const STARTUP_TIMEOUT_MS = 10000;
 
@@ -66,12 +81,12 @@ const withStartupTimeout = (promise, label) => {
 
 const initialMessageText = (context) => {
   if (!context) {
-    return 'Welcome. I continuously monitor your accounting environment for you. Select a focus area to begin.';
+    return 'مرحبًا، أنا مساعدك المحاسبي. اسألني عن الفواتير، المخاطر، المعاملات البنكية، أو سبب ظهور تنبيه. إجاباتي استشارية فقط ولا أغير أي بيانات.';
   }
   const insightCount = context.insights?.length ?? 0;
   const invoiceCount = context.invoices?.length ?? 0;
   const transactionCount = context.bankTransactions?.length ?? 0;
-  return `Monitoring ${context.company?.name ?? 'your company'}: ${insightCount} insights, ${invoiceCount} invoices, ${transactionCount} transactions. How can I assist you today?`;
+  return `مرحبًا، كيف أقدر أساعدك اليوم؟ أراقب ${context.company?.name ?? 'شركتك'} بشكل استشاري فقط: ${insightCount} insights, ${invoiceCount} invoices, ${transactionCount} transactions.`;
 };
 
 const ROLE_LIMITATIONS = {
@@ -113,21 +128,22 @@ const AIAssistant = () => {
   const [userTyping, setUserTyping] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
   const [inputError, setInputError] = useState(null);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [voiceTranscriptDraft, setVoiceTranscriptDraft] = useState('');
-  const [voiceIntent, setVoiceIntent] = useState('review');
-  const [voiceError, setVoiceError] = useState(null);
-  const [isListening, setIsListening] = useState(false);
-  const [voiceConsentAccepted, setVoiceConsentAccepted] = useState(false);
-  const [showVoiceConsent, setShowVoiceConsent] = useState(false);
   const [showRequestIds, setShowRequestIds] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordingError, setRecordingError] = useState(null);
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
-  const recognitionRef = useRef(null);
   const streamAbortRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
   const aiAssistantEnabled = isAIAssistantEnabled();
-  const aiVoiceEnabled = isAIVoiceEnabled();
   const userRole = user?.role || 'viewer';
   const isSystemAdmin =
     userRole === 'admin' && (user?.companyId === null || user?.companyId === undefined);
@@ -144,12 +160,10 @@ const AIAssistant = () => {
     ctaPath: '/dashboard',
   };
 
-  const speechSupported = useMemo(() => {
-    if (!aiVoiceEnabled || typeof window === 'undefined') {
-      return false;
-    }
-    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  }, [aiVoiceEnabled]);
+  const mediaRecorderSupported = useMemo(
+    () => typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined',
+    [],
+  );
 
   const trustItems = useMemo(() => {
     const items = [
@@ -157,11 +171,9 @@ const AIAssistant = () => {
       'All interactions are logged to the audit trail.',
       'Access and visibility depend on role and feature flags.',
     ];
-    if (aiVoiceEnabled) {
-      items.push('Voice input is transcript-only; raw audio is not stored without consent.');
-    }
+    items.push('Voice recordings stay local as advisory attachments unless a transcript path is connected.');
     return items;
-  }, [aiVoiceEnabled]);
+  }, []);
 
   const contextSources = useMemo(() => {
     if (!context) {
@@ -271,12 +283,12 @@ const AIAssistant = () => {
 
     setContextError(null);
     setIsAsking(false);
-    setVoiceTranscript('');
-    setVoiceTranscriptDraft('');
-    setVoiceError(null);
-    setIsListening(false);
     setDraftMessage('');
     setInputError(null);
+    setAttachments([]);
+    setIsRecording(false);
+    setRecordingSeconds(0);
+    setRecordingError(null);
   };
 
   useEffect(() => {
@@ -357,19 +369,11 @@ const AIAssistant = () => {
   }, [aiAssistantEnabled, activeCompanyId, isReadOnly, isSystemAdmin, context]);
 
   useEffect(() => {
-    if (!aiVoiceEnabled || typeof window === 'undefined') {
-      setVoiceConsentAccepted(false);
-      return;
-    }
-    const stored = localStorage.getItem(VOICE_CONSENT_KEY);
-    setVoiceConsentAccepted(stored === 'true');
-  }, [aiVoiceEnabled]);
-
-  useEffect(() => {
     return () => {
-      if (recognitionRef.current && typeof recognitionRef.current.abort === 'function') {
-        recognitionRef.current.abort();
+      if (recordingTimerRef.current) {
+        window.clearInterval(recordingTimerRef.current);
       }
+      mediaStreamRef.current?.getTracks?.().forEach((track) => track.stop());
     };
   }, []);
 
@@ -456,28 +460,6 @@ const AIAssistant = () => {
     );
   }
 
-  // Group consecutive messages by speaker for better UX
-  function groupMessages(msgs) {
-    if (!msgs.length) {
-      return [];
-    }
-    const groups = [];
-    let lastSpeaker = msgs[0].speaker;
-    let group = { speaker: lastSpeaker, messages: [msgs[0]] };
-    for (let i = 1; i < msgs.length; i++) {
-      const msg = msgs[i];
-      if (msg.speaker === lastSpeaker) {
-        group.messages.push(msg);
-      } else {
-        groups.push(group);
-        lastSpeaker = msg.speaker;
-        group = { speaker: lastSpeaker, messages: [msg] };
-      }
-    }
-    groups.push(group);
-    return groups;
-  }
-
   // Handle user input for typing indicator
   const handleUserInput = (e) => {
     const nextValue = e.target.value;
@@ -488,53 +470,124 @@ const AIAssistant = () => {
     }
   };
 
-  const ensureVoiceConsent = () => {
-    if (voiceConsentAccepted) {
-      return true;
+  const addFiles = (fileList, kind = 'file') => {
+    const nextFiles = Array.from(fileList || []).map((file) => buildAttachmentChip(file, kind));
+    if (!nextFiles.length) {
+      return;
     }
-    setShowVoiceConsent(true);
-    return false;
+    setAttachments((prev) => [...prev, ...nextFiles]);
+    setRecordingError(null);
   };
 
-  const stopVoiceCapture = () => {
-    if (recognitionRef.current && typeof recognitionRef.current.stop === 'function') {
-      recognitionRef.current.stop();
+  const removeAttachment = (attachmentId) => {
+    setAttachments((prev) => prev.filter((item) => item.id !== attachmentId));
+  };
+
+  const stopLocalRecording = () => {
+    if (recordingTimerRef.current) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    mediaStreamRef.current?.getTracks?.().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+    setIsRecording(false);
+  };
+
+  const cancelLocalRecording = () => {
+    recordingChunksRef.current = [];
+    stopLocalRecording();
+    setRecordingSeconds(0);
+  };
+
+  const startLocalRecording = async () => {
+    if (!mediaRecorderSupported) {
+      setRecordingError('Voice recording is not available in this browser.');
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setRecordingError('Microphone access is not available in this browser.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new window.MediaRecorder(stream);
+      recordingChunksRef.current = [];
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = () => {
+        const chunks = recordingChunksRef.current;
+        if (chunks.length) {
+          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          const file = new File([blob], `voice-recording-${Date.now()}.webm`, {
+            type: blob.type || 'audio/webm',
+          });
+          setAttachments((prev) => [...prev, buildAttachmentChip(file, 'audio')]);
+        }
+        recordingChunksRef.current = [];
+      };
+      recorder.start();
+      setRecordingError(null);
+      setRecordingSeconds(0);
+      setIsRecording(true);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      setRecordingError(
+        err?.name === 'NotAllowedError'
+          ? 'Microphone permission was denied.'
+          : 'Unable to start voice recording.',
+      );
+      setIsRecording(false);
     }
   };
 
-  const startVoiceCapture = () => {
-    if (!ensureVoiceConsent()) {
-      return;
-    }
-    if (!speechSupported || typeof window === 'undefined') {
-      setVoiceError('Speech-to-text is not available in this browser.');
-      return;
-    }
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setVoiceError('Speech-to-text is not available in this browser.');
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    recognition.lang = navigator.language || 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || '';
-      setVoiceTranscript(transcript);
-      setVoiceTranscriptDraft(transcript);
-      setVoiceError(null);
-    };
-    recognition.onerror = (event) => {
-      setVoiceError(event?.error ? `Speech-to-text error: ${event.error}` : 'Speech-to-text failed.');
-    };
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-    setVoiceError(null);
-    setIsListening(true);
-    recognition.start();
+  const addLocalAssistantMessage = (answer, options = {}) => {
+    const formatted = formatAssistantAnswer(answer);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `assistant-${Date.now()}`,
+        speaker: 'assistant',
+        role: 'assistant',
+        text: formatted.message,
+        highlights: formatted.highlights,
+        risks: formatted.risks,
+        requiredActions: formatted.requiredActions,
+        references: formatted.references,
+        evidenceReferences: formatted.evidenceReferences,
+        confidence: formatted.confidence,
+        contextSummary: formatted.contextSummary,
+        requestId: options.requestId ?? null,
+        createdAt: new Date().toISOString(),
+        timestamp: new Date().toLocaleTimeString(),
+        meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
+      },
+    ]);
+  };
+
+  const addUserMessage = (text, messageAttachments = []) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        speaker: 'user',
+        role: 'user',
+        text,
+        attachments: messageAttachments,
+        createdAt: new Date().toISOString(),
+        requestId: null,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
   };
 
   const handleIntent = async (intentId, options = {}) => {
@@ -598,49 +651,53 @@ const AIAssistant = () => {
       return;
     }
     const intentMeta = INTENT_OPTIONS.find((intent) => intent.id === intentId);
-    const prompt = options.prompt || intentMeta?.label || intentId;
+    const rawPrompt = options.prompt || intentMeta?.label || intentId;
+    const messageAttachments = options.attachments || [];
+    const routedIntent = inferAssistantIntent(rawPrompt, options.selectedQuickAction ? intentId : null);
+    const prompt = buildPromptForIntent({
+      text: rawPrompt,
+      intent: routedIntent,
+      pageContext: context,
+      attachments: messageAttachments,
+    });
+
+    if (routedIntent === 'general_chat') {
+      addUserMessage(rawPrompt, messageAttachments);
+      setUserTyping(false);
+      const localAnswer =
+        isGreetingMessage(rawPrompt) || isGeneralSmallTalk(rawPrompt)
+          ? buildLocalGreetingAnswer()
+          : {
+              message:
+                'I can help conversationally and keep the advice read-only. Ask me about invoices, accounting risks, bank transactions, or why an insight was flagged.',
+              highlights: messageAttachments.length
+                ? ['File analysis is not connected yet; I can still help based on your text.']
+                : ['No accounting records are changed from this chat.'],
+              references: ['Read-only assistant guidance'],
+              confidence: 'High',
+            };
+      addLocalAssistantMessage(localAnswer, { targetInsightId: options.targetInsightId });
+      return;
+    }
 
     const sendNonStreaming = async ({ includeUserMessage = true } = {}) => {
       setIsAsking(true);
       if (includeUserMessage) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `user-${Date.now()}`,
-            speaker: 'user',
-            role: 'user',
-            text: prompt,
-            createdAt: new Date().toISOString(),
-            requestId: null,
-            timestamp: new Date().toLocaleTimeString(),
-          },
-        ]);
+        addUserMessage(rawPrompt, messageAttachments);
       }
       setUserTyping(false);
       try {
         const response = await aiAssistantAPI.askIntent({
-          intent: intentId,
+          intent: routedIntent,
           prompt,
           targetInsightId: options.targetInsightId,
           sessionId,
           companyId: activeCompanyId,
         });
-        const answer = response?.answer ?? {};
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `assistant-${Date.now()}`,
-            speaker: 'assistant',
-            role: 'assistant',
-            text: answer.message || 'The assistant has no data yet.',
-            highlights: answer.highlights,
-            references: answer.references,
-            requestId: response?.requestId ?? null,
-            createdAt: new Date().toISOString(),
-            timestamp: new Date().toLocaleTimeString(),
-            meta: buildAssistantMeta({ targetInsightId: options.targetInsightId }),
-          },
-        ]);
+        addLocalAssistantMessage(response?.answer ?? {}, {
+          requestId: response?.requestId ?? null,
+          targetInsightId: options.targetInsightId,
+        });
       } catch (err) {
         const errorRequestId = err?.response?.data?.requestId ?? null;
         setMessages((prev) => [
@@ -670,7 +727,8 @@ const AIAssistant = () => {
       id: `user-${Date.now()}`,
       speaker: 'user',
       role: 'user',
-      text: prompt,
+      text: rawPrompt,
+      attachments: messageAttachments,
       createdAt: new Date().toISOString(),
       requestId: null,
       timestamp: new Date().toLocaleTimeString(),
@@ -718,7 +776,7 @@ const AIAssistant = () => {
 
     try {
       await aiAssistantAPI.askIntentStream({
-        intent: intentId,
+        intent: routedIntent,
         prompt,
         targetInsightId: options.targetInsightId,
         sessionId,
@@ -760,96 +818,129 @@ const AIAssistant = () => {
     }
   };
 
-  const handleVoiceSend = async () => {
-    if (!ensureVoiceConsent()) {
+  const renderList = (title, items) => {
+    if (!items?.length) {
+      return null;
+    }
+    return (
+      <div className="mt-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          {title}
+        </div>
+        <ul className="mt-2 space-y-1 text-sm leading-6 text-gray-700 dark:text-gray-200">
+          {items.map((item, index) => (
+            <li key={`${title}-${index}`} className="flex gap-2">
+              <span className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-primary-500" />
+              <span>{typeof item === 'string' ? item : item?.label || item?.summary || String(item)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  const renderMessage = (message) => {
+    const isAssistant = message.speaker === 'assistant';
+    const references = [
+      ...(message.references || []),
+      ...(message.evidenceReferences || []),
+    ].filter(Boolean);
+    return (
+      <div
+        key={message.id}
+        className={`flex w-full ${isAssistant ? 'justify-start' : 'justify-end'}`}
+      >
+        <article
+          className={
+            isAssistant
+              ? 'max-w-[min(760px,92%)] rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/80'
+              : 'max-w-[min(680px,86%)] rounded-2xl bg-primary-600 px-4 py-3 text-white shadow-sm dark:bg-primary-500'
+          }
+        >
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide ${
+                isAssistant ? 'text-primary-700 dark:text-primary-300' : 'text-primary-50'
+              }`}
+            >
+              {isAssistant ? 'Assistant' : 'You'}
+            </span>
+            {message.timestamp && (
+              <span className={isAssistant ? 'text-[11px] text-gray-400' : 'text-[11px] text-primary-100'}>
+                {message.timestamp}
+              </span>
+            )}
+          </div>
+          {message.error ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+              {message.error}
+            </div>
+          ) : (
+            <div
+              className={`whitespace-pre-line text-sm leading-7 ${
+                isAssistant ? 'text-gray-800 dark:text-gray-100' : 'text-white'
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+          {!!message.attachments?.length && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {message.attachments.map((attachment) => (
+                <span
+                  key={attachment.id}
+                  className="rounded-full bg-white/15 px-3 py-1 text-xs text-white ring-1 ring-white/30"
+                >
+                  {attachment.name}
+                </span>
+              ))}
+            </div>
+          )}
+          {isAssistant && renderList('Highlights', message.highlights)}
+          {isAssistant && renderList('Risks', message.risks)}
+          {isAssistant && renderList('Suggested next steps', message.requiredActions)}
+          {isAssistant && renderList('References', references)}
+          {isAssistant && (message.confidence || message.contextSummary || message.meta) && (
+            <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500 dark:bg-slate-900 dark:text-gray-400">
+              {message.confidence && <span>Confidence: {message.confidence}. </span>}
+              {message.contextSummary && <span>{message.contextSummary}. </span>}
+              {message.meta && (
+                <span>
+                  Source: {message.meta.source || 'Not available'} · Confidence:{' '}
+                  {message.meta.confidence || 'Not available'} · Last updated:{' '}
+                  {message.meta.lastUpdated || 'Not available'}
+                </span>
+              )}
+            </div>
+          )}
+          {showRequestIds && message.requestId && (
+            <div className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+              Request ID: {message.requestId}
+            </div>
+          )}
+        </article>
+      </div>
+    );
+  };
+
+  const handleComposerSubmit = () => {
+    const prompt = draftMessage.trim();
+    if (!prompt && attachments.length === 0) {
+      setInputError('Enter a question or add an attachment to send.');
       return;
     }
-    if (!sessionId) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-error-${Date.now()}`,
-          speaker: 'assistant',
-          role: 'assistant',
-          text: '',
-          error: 'Session is initializing. Please wait a moment.',
-          createdAt: new Date().toISOString(),
-          requestId: null,
-          timestamp: new Date().toLocaleTimeString(),
-          meta: buildAssistantMeta({ targetInsightId: null }),
-        },
-      ]);
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      setInputError('Your message exceeds the 8000 character limit.');
       return;
     }
-    const transcript = voiceTranscriptDraft.trim();
-    if (!transcript) {
-      setVoiceError('Transcript is empty. Try recording again.');
-      return;
-    }
-    if (detectMutationIntent(transcript)) {
-      setVoiceError('Voice requests must be read-only. Please ask for explanations or summaries.');
-      return;
-    }
-    setIsAsking(true);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        speaker: 'user',
-        role: 'user',
-        text: transcript,
-        createdAt: new Date().toISOString(),
-        requestId: null,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
-    setUserTyping(false);
-    setVoiceError(null);
-    try {
-      const response = await aiAssistantAPI.askVoice({
-        intent: voiceIntent,
-        transcript,
-        sessionId,
-        responseMode: 'text',
-        companyId: activeCompanyId,
-      });
-      const answer = response?.answer ?? {};
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          speaker: 'assistant',
-          role: 'assistant',
-          text: answer.message || 'The assistant has no data yet.',
-          highlights: answer.highlights,
-          references: answer.references,
-          requestId: response?.requestId ?? null,
-          createdAt: new Date().toISOString(),
-          timestamp: new Date().toLocaleTimeString(),
-          meta: buildAssistantMeta({ targetInsightId: null }),
-        },
-      ]);
-      setVoiceTranscript('');
-      setVoiceTranscriptDraft('');
-    } catch (err) {
-      const errorRequestId = err?.response?.data?.requestId ?? null;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-error-${Date.now()}`,
-          speaker: 'assistant',
-          role: 'assistant',
-          text: '',
-          error: formatApiError(err, 'Unable to reach the assistant.').message,
-          requestId: errorRequestId,
-          createdAt: new Date().toISOString(),
-          timestamp: new Date().toLocaleTimeString(),
-          meta: buildAssistantMeta({ targetInsightId: null }),
-        },
-      ]);
-    } finally {
-      setIsAsking(false);
-    }
+    const outgoingAttachments = attachments;
+    setDraftMessage('');
+    setAttachments([]);
+    setInputError(null);
+    handleIntent(inferAssistantIntent(prompt), {
+      prompt: prompt || 'I added an attachment.',
+      attachments: outgoingAttachments,
+    });
   };
 
   if (loading && !context && !isReadOnly) {
@@ -1127,189 +1218,205 @@ const AIAssistant = () => {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <Card className="space-y-4">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <Card className="flex min-h-[680px] flex-col overflow-hidden p-0">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="px-5 pt-5">
                 <h2 className="text-xl font-bold text-gray-950 dark:text-white">Assistant chat</h2>
                 <p className="text-xs text-gray-500 mt-1">
                   The assistant references invoices, expenses, bank statements, and AI insights.
                   Every answer is grounded and audit logged.
                 </p>
               </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Read-only advisor</span>
+              <span className="mr-5 mt-5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900">
+                Read-only advisor
+              </span>
             </div>
             <div className="sr-only" role="status" aria-live="polite">
               {latestAssistantMessage
                 ? `Assistant answered: ${latestAssistantMessage.text}`
                 : 'The assistant is ready for your request.'}
             </div>
-            {/* Chat area redesign: grouped messages, empty state, typing indicator, error in-chat */}
-            <div className="min-h-[260px] max-h-[380px] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 transition-all duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-950/60">
-            {messages.length === 0 ? (
-              <ChatEmptyState />
-            ) : (
-              groupMessages(messages).map((group, idx) => (
-                <ChatMessageGroup key={idx} group={group} showRequestIds={showRequestIds} />
-              ))
-            )}
+            <div className="mt-4 flex-1 space-y-5 overflow-y-auto border-y border-gray-100 bg-gray-50 px-5 py-5 dark:border-slate-800 dark:bg-slate-950/50">
+              {messages.length === 0 ? <ChatEmptyState /> : messages.map(renderMessage)}
               {isAsking && <ChatTypingIndicator isAssistant />}
               {userTyping && !isAsking && <ChatTypingIndicator isAssistant={false} />}
             </div>
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-gray-300">
-              <div className="font-semibold text-gray-700 dark:text-gray-200">System hints</div>
-              <div className="mt-1">
-                Allowed: explain insights, summarize risks, highlight overdue or unreconciled items.
+            <div className="bg-white px-5 py-4 dark:bg-slate-950">
+              <div className="mb-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {INTENT_OPTIONS.map((intent) => (
+                  <Button
+                    key={intent.id}
+                    variant="outline"
+                    size="sm"
+                    disabled={isAsking}
+                    onClick={() => handleIntent(intent.id, { selectedQuickAction: true })}
+                    className="min-h-[56px] justify-start text-left"
+                  >
+                    <span className="flex flex-col items-start">
+                      <span className="font-semibold">{intent.label}</span>
+                      <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                        {intent.id}
+                      </span>
+                    </span>
+                  </Button>
+                ))}
               </div>
-              <div className="mt-1">
-                Blocked: creating, editing, deleting, filing, or submitting records.
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 mt-2">
-              {INTENT_OPTIONS.map((intent) => (
-                <Button
-                  key={intent.id}
-                  variant="primary"
-                  size="md"
-                  disabled={isAsking}
-                  onClick={() => handleIntent(intent.id)}
-                  className="justify-start text-left transition-all duration-200 hover:scale-[1.02] focus:scale-[1.01]"
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="font-semibold">{intent.label}</span>
-                    <span className="text-xs text-gray-100 opacity-80">{intent.description}</span>
+              <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                {!!attachments.length && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {attachments.map((attachment) => (
+                      <span
+                        key={attachment.id}
+                        className="inline-flex max-w-full items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700 dark:border-slate-700 dark:bg-slate-950 dark:text-gray-200"
+                      >
+                        <span className="truncate">
+                          {attachment.name} · {attachment.type || attachment.kind} ·{' '}
+                          {formatAttachmentSize(attachment.size)}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${attachment.name}`}
+                          className="text-gray-400 hover:text-red-600"
+                          onClick={() => removeAttachment(attachment.id)}
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
-                </Button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Supported intents: {INTENT_OPTIONS.map((intent) => intent.label).join(', ')}.
-            </p>
-            {/* Optionally, add a textarea for freeform input (not just intent buttons) */}
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="text"
-                className="flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-shadow duration-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-300 dark:border-slate-700 dark:bg-slate-950 dark:text-gray-100 dark:placeholder:text-gray-500"
-                placeholder="Ask a question or describe your focus..."
-                value={draftMessage}
-                onChange={handleUserInput}
-                onFocus={handleUserInput}
-                onBlur={() => setUserTyping(false)}
-                disabled={isAsking}
-                aria-label="Type your question"
-              />
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={isAsking}
-                onClick={() => {
-                  const prompt = draftMessage.trim();
-                  if (!prompt) {
-                    setInputError('Enter a question to send.');
-                    return;
-                  }
-                  if (prompt.length > MAX_PROMPT_LENGTH) {
-                    setInputError('Your message exceeds the 8000 character limit.');
-                    return;
-                  }
-                  handleIntent('review', { prompt });
-                  setDraftMessage('');
-                }}
-                className="ml-2 transition-all duration-200 hover:scale-105"
-              >
-                Send
-              </Button>
-              {isStreaming && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (streamAbortRef.current) {
-                      streamAbortRef.current.abort();
-                    }
-                    setIsStreaming(false);
-                    setIsAsking(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-              )}
-              {aiVoiceEnabled && speechSupported && (
-                <Button
-                  variant={isListening ? 'secondary' : 'outline'}
-                  size="sm"
-                  disabled={isAsking}
-                  onClick={() => (isListening ? stopVoiceCapture() : startVoiceCapture())}
-                  className="transition-all duration-200 hover:scale-105"
-                  aria-label={isListening ? 'Stop recording' : 'Start voice input'}
-                >
-                  {isListening ? 'Stop' : 'Mic'}
-                </Button>
-              )}
-            </div>
-            {aiVoiceEnabled && !speechSupported && (
-              <div className="text-xs text-gray-500">
-                Voice input is unavailable in this browser. Use text input instead.
-              </div>
-            )}
-            {inputError && <div className="text-xs text-red-600">{inputError}</div>}
-            {draftMessage && <MutationIntentGuard prompt={draftMessage} />}
-            {aiVoiceEnabled && voiceTranscriptDraft && (
-              <div className="rounded border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-                <div className="font-semibold text-blue-800">Transcript preview</div>
-                <textarea
-                  className="mt-2 w-full rounded border border-blue-200 bg-white p-2 text-sm text-gray-800"
-                  rows={3}
-                  value={voiceTranscriptDraft}
-                  onChange={(event) => setVoiceTranscriptDraft(event.target.value)}
-                  aria-label="Voice transcript preview"
-                  disabled={isAsking}
-                />
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <label className="text-xs text-blue-800">
-                    Intent
-                    <select
-                      className="ml-2 rounded border border-blue-200 bg-white px-2 py-1 text-xs"
-                      value={voiceIntent}
-                      onChange={(event) => setVoiceIntent(event.target.value)}
+                )}
+                <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    hidden
+                    multiple
+                    onChange={(event) => {
+                      addFiles(event.target.files, 'file');
+                      event.target.value = '';
+                    }}
+                    aria-label="Choose file attachment"
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(event) => {
+                      addFiles(event.target.files, 'image');
+                      event.target.value = '';
+                    }}
+                    aria-label="Capture image attachment"
+                  />
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      aria-label="Attach file"
+                      title="Attach file"
                       disabled={isAsking}
                     >
-                      {INTENT_OPTIONS.map((intent) => (
-                        <option key={intent.id} value={intent.id}>
-                          {intent.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      <PaperClipIcon className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => cameraInputRef.current?.click()}
+                      aria-label="Add image from camera"
+                      title="Add image from camera"
+                      disabled={isAsking}
+                    >
+                      <CameraIcon className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant={isRecording ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => (isRecording ? stopLocalRecording() : startLocalRecording())}
+                      aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+                      title={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+                      disabled={isAsking}
+                    >
+                      {isRecording ? (
+                        <StopIcon className="h-5 w-5" />
+                      ) : (
+                        <MicrophoneIcon className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </div>
+                  <textarea
+                    className="min-h-[54px] max-h-40 flex-1 resize-none rounded-xl border-0 bg-transparent px-2 py-2 text-sm leading-6 text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-100 dark:placeholder:text-gray-500"
+                    placeholder="Message the accounting assistant..."
+                    value={draftMessage}
+                    onChange={handleUserInput}
+                    onFocus={handleUserInput}
+                    onBlur={() => setUserTyping(false)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        if (!isAsking && (draftMessage.trim() || attachments.length)) {
+                          handleComposerSubmit();
+                        }
+                      }
+                    }}
+                    disabled={isAsking}
+                    aria-label="Type your question"
+                  />
                   <Button
                     variant="primary"
                     size="sm"
-                    disabled={isAsking || !voiceTranscriptDraft.trim()}
-                    onClick={handleVoiceSend}
+                    disabled={isAsking || (!draftMessage.trim() && attachments.length === 0)}
+                    onClick={handleComposerSubmit}
+                    aria-label="Send message"
+                    title="Send message"
                   >
-                    Send transcript
+                    <ArrowUpIcon className="h-5 w-5" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={isAsking}
-                    onClick={() => {
-                      setVoiceTranscript('');
-                      setVoiceTranscriptDraft('');
-                      setVoiceError(null);
-                    }}
-                  >
-                    Clear
-                  </Button>
+                  {isStreaming && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (streamAbortRef.current) {
+                          streamAbortRef.current.abort();
+                        }
+                        setIsStreaming(false);
+                        setIsAsking(false);
+                      }}
+                      aria-label="Cancel response"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </Button>
+                  )}
                 </div>
-                {voiceError && <div className="mt-2 text-xs text-red-600">{voiceError}</div>}
-                {!voiceError && voiceTranscript && (
-                  <div className="mt-2 text-[11px] text-blue-700">
-                    Review the transcript before sending. Only text is transmitted.
-                  </div>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>Enter sends. Shift+Enter adds a line. Attachments and recordings stay advisory-only.</span>
+                {isRecording && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-200 dark:ring-red-900">
+                    Recording {recordingSeconds}s
+                    <button type="button" className="underline" onClick={cancelLocalRecording}>
+                      Cancel
+                    </button>
+                  </span>
                 )}
               </div>
+            </div>
+            {inputError && <div className="text-xs text-red-600">{inputError}</div>}
+            {recordingError && <div className="px-5 pb-3 text-xs text-red-600">{recordingError}</div>}
+            {!mediaRecorderSupported && (
+              <div className="px-5 pb-3 text-xs text-gray-500">
+                Voice recording is unavailable in this browser. Text, files, and camera input remain available.
+              </div>
             )}
+            {!!attachments.length && (
+              <div className="px-5 pb-3 text-xs text-gray-500">
+                File analysis and speech-to-text ingestion are not connected yet; I can still help based on your text.
+              </div>
+            )}
+            {draftMessage && <MutationIntentGuard prompt={draftMessage} />}
           </Card>
 
           <Card className="space-y-3">
@@ -1340,35 +1447,6 @@ const AIAssistant = () => {
           </Card>
         </div>
       </div>
-      <Modal
-        open={showVoiceConsent}
-        onClose={() => setShowVoiceConsent(false)}
-        title="Voice Assistant Consent"
-        ariaLabel="Voice assistant consent dialog"
-      >
-        <div className="space-y-4 text-sm text-gray-700">
-          <p>
-            Voice input is optional and transcript-only. Your browser converts speech to text
-            locally before sending; raw audio is not stored by default.
-          </p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowVoiceConsent(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                localStorage.setItem(VOICE_CONSENT_KEY, 'true');
-                setVoiceConsentAccepted(true);
-                setShowVoiceConsent(false);
-              }}
-            >
-              I agree
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </FeatureGate>
   );
 };
