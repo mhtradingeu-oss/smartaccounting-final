@@ -335,5 +335,141 @@ describe('documentIntakeAssistantService', () => {
     );
   });
 
+  it('builds an accounting decision for reviewed expense documents', () => {
+    const reviewedValues = {
+      documentType: 'receipt',
+      businessDirection: 'incoming',
+      vendorName: 'DB Fernverkehr AG',
+      documentDate: '2026-06-18',
+      netAmount: 100,
+      vatRate: 0.19,
+      vatAmount: 19,
+      grossAmount: 119,
+      currency: 'EUR',
+      accountingCategory: 'travel',
+      businessPurpose: 'Client meeting travel',
+    };
+    const intake = documentIntakeAssistantService.analyzeIntake({
+      text: 'Quittung DB Fernverkehr AG Gesamt 119 EUR MwSt 19 EUR',
+      documentType: 'receipt',
+      documentId: 'doc-expense',
+      extractedData: documentIntakeAssistantService.mapReviewedValuesToExtractedData(reviewedValues),
+    });
+
+    const decision = documentIntakeAssistantService.buildAccountingDecision({
+      intake,
+      reviewedValues,
+    });
+
+    expect(decision).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'accounting_decision.v1',
+        documentType: 'receipt',
+        businessDirection: 'incoming',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        vatTreatment: 'domestic_input_vat_review_required',
+        inputVatAllowed: true,
+        outputVatRequired: false,
+        suggestedExpenseCategory: 'travel',
+        accountantReviewRequired: false,
+        riskLevel: 'low',
+        manualOverrideApplied: false,
+        source: 'ai_document_intake',
+      }),
+    );
+    expect(decision.explanation.join(' ')).toMatch(/Input VAT appears present/i);
+  });
+
+  it('builds a restricted accounting decision for manual override documents', () => {
+    const reviewedValues = documentIntakeAssistantService.buildRestrictedManualOverrideReviewedValues({
+      reviewedValues: {
+        documentType: 'receipt',
+        businessDirection: 'incoming',
+        vendorName: 'Taxi Berlin GmbH',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        currency: 'EUR',
+        accountingCategory: 'travel',
+        businessPurpose: 'Client meeting travel',
+      },
+      manualOverride: {
+        shortDescription: 'Taxi ride to client meeting',
+        reason: 'Receipt is incomplete but documents a business expense',
+        riskLevel: 'medium',
+        restrictedTaxTreatmentAcknowledged: true,
+      },
+    });
+    const intake = documentIntakeAssistantService.analyzeIntake({
+      text: 'Taxi receipt Berlin Gesamt 119 EUR',
+      documentType: 'receipt',
+      documentId: 'doc-manual',
+      extractedData: documentIntakeAssistantService.mapReviewedValuesToExtractedData(reviewedValues),
+    });
+
+    const decision = documentIntakeAssistantService.buildAccountingDecision({
+      intake,
+      reviewedValues,
+      manualOverride: reviewedValues.manualOverride,
+    });
+
+    expect(decision).toEqual(
+      expect.objectContaining({
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        vatTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        outputVatRequired: false,
+        accountantReviewRequired: true,
+        riskLevel: 'medium',
+        manualOverrideApplied: true,
+      }),
+    );
+    expect(decision.explanation.join(' ')).toMatch(/Manual override was recorded/i);
+  });
+
+  it('builds an accounting decision for reviewed outgoing invoice documents', () => {
+    const reviewedValues = {
+      documentType: 'customer_invoice',
+      businessDirection: 'outgoing',
+      customerName: 'Reviewed Customer GmbH',
+      documentDate: '2026-06-18',
+      netAmount: 100,
+      vatRate: 0.19,
+      vatAmount: 19,
+      grossAmount: 119,
+      currency: 'EUR',
+      accountingCategory: 'consulting',
+      businessPurpose: 'Consulting services',
+    };
+    const intake = documentIntakeAssistantService.analyzeIntake({
+      text: 'Ausgangsrechnung Kunde Reviewed Customer GmbH Gesamt 119 EUR',
+      documentType: 'invoice',
+      documentId: 'doc-invoice',
+      extractedData: documentIntakeAssistantService.mapReviewedValuesToExtractedData(reviewedValues),
+    });
+
+    const decision = documentIntakeAssistantService.buildAccountingDecision({
+      intake,
+      reviewedValues,
+    });
+
+    expect(decision).toEqual(
+      expect.objectContaining({
+        documentType: 'customer_invoice',
+        businessDirection: 'outgoing',
+        postingIntent: 'invoice_draft',
+        draftType: 'invoice',
+        vatTreatment: 'output_vat_review_required',
+        inputVatAllowed: false,
+        outputVatRequired: true,
+        accountantReviewRequired: true,
+      }),
+    );
+  });
+
+
 
 });

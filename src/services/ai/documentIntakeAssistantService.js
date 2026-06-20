@@ -252,6 +252,165 @@ const buildRestrictedManualOverrideReviewedValues = ({
   };
 };
 
+
+const normalizeAccountingDecisionDirection = ({ intake = {}, reviewedValues = {} } = {}) => {
+  const direction = String(
+    reviewedValues.businessDirection ||
+      intake.classification?.direction ||
+      '',
+  ).toLowerCase();
+
+  if (['incoming', 'supplier_document', 'supplier', 'expense'].includes(direction)) {
+    return 'incoming';
+  }
+  if (['outgoing', 'customer_document', 'customer', 'revenue'].includes(direction)) {
+    return 'outgoing';
+  }
+
+  const draftType = resolveReviewedDraftType({ intake, reviewedValues });
+  if (draftType === 'expense') {
+    return 'incoming';
+  }
+  if (draftType === 'invoice') {
+    return 'outgoing';
+  }
+  return 'unknown';
+};
+
+const normalizeAccountingDecisionVatTreatment = ({
+  intake = {},
+  reviewedValues = {},
+  manualOverride = null,
+} = {}) => {
+  if (
+    reviewedValues.taxTreatment === 'no_vorsteuer_allowed' ||
+    reviewedValues.inputVatAllowed === false ||
+    manualOverride
+  ) {
+    return {
+      vatTreatment: 'no_vorsteuer_allowed',
+      inputVatAllowed: false,
+      outputVatRequired: false,
+      accountantReviewRequired: true,
+      explanation:
+        'Input VAT is blocked because the document was accepted only with restricted tax treatment.',
+    };
+  }
+
+  const draftType = resolveReviewedDraftType({ intake, reviewedValues });
+  const vatRate = toFiniteNumber(reviewedValues.vatRate ?? intake.extracted?.vatRate, null);
+  const vatAmount = toFiniteNumber(reviewedValues.vatAmount ?? intake.extracted?.vatAmount, null);
+
+  if (draftType === 'invoice') {
+    return {
+      vatTreatment: vatRate > 0 || vatAmount > 0 ? 'output_vat_review_required' : 'output_vat_none_or_exempt_review',
+      inputVatAllowed: false,
+      outputVatRequired: vatRate > 0 || vatAmount > 0,
+      accountantReviewRequired: true,
+      explanation: 'Outgoing/customer invoice VAT must be reviewed before issuing or posting.',
+    };
+  }
+
+  if (draftType === 'expense') {
+    return {
+      vatTreatment: vatRate > 0 || vatAmount > 0 ? 'domestic_input_vat_review_required' : 'expense_without_input_vat',
+      inputVatAllowed: vatRate > 0 || vatAmount > 0,
+      outputVatRequired: false,
+      accountantReviewRequired: false,
+      explanation:
+        vatRate > 0 || vatAmount > 0
+          ? 'Input VAT appears present, but source document requirements must still be reviewed.'
+          : 'Expense does not include deductible input VAT based on reviewed values.',
+    };
+  }
+
+  return {
+    vatTreatment: 'needs_accountant_review',
+    inputVatAllowed: false,
+    outputVatRequired: false,
+    accountantReviewRequired: true,
+    explanation: 'VAT treatment cannot be determined from the current reviewed values.',
+  };
+};
+
+const buildAccountingDecision = ({
+  intake = {},
+  reviewedValues = {},
+  manualOverride = null,
+} = {}) => {
+  const safeReviewedValues = clonePlainObject(reviewedValues);
+  const draftType = resolveReviewedDraftType({ intake, reviewedValues: safeReviewedValues });
+  const businessDirection = normalizeAccountingDecisionDirection({
+    intake,
+    reviewedValues: safeReviewedValues,
+  });
+  const vatDecision = normalizeAccountingDecisionVatTreatment({
+    intake,
+    reviewedValues: safeReviewedValues,
+    manualOverride,
+  });
+  const validationStatus = intake.validation?.status || 'unknown';
+  const validationErrors = Array.isArray(intake.validation?.errors) ? intake.validation.errors : [];
+  const missingFields = Array.isArray(intake.validation?.missingFields)
+    ? intake.validation.missingFields
+    : [];
+  const suggestedAction = intake.classification?.suggestedAction || 'ask_missing_data';
+  const riskLevel =
+    manualOverride?.riskLevel ||
+    (validationErrors.length ? 'high' : missingFields.length ? 'medium' : 'low');
+
+  const postingIntent =
+    draftType === 'expense'
+      ? 'expense_draft'
+      : draftType === 'invoice'
+        ? 'invoice_draft'
+        : suggestedAction;
+
+  const explanation = [
+    `Document type: ${safeReviewedValues.documentType || intake.classification?.documentType || 'unknown'}.`,
+    `Business direction: ${businessDirection}.`,
+    vatDecision.explanation,
+  ];
+
+  if (manualOverride) {
+    explanation.push('Manual override was recorded with restricted VAT treatment and accountant review required.');
+  }
+  if (validationErrors.length) {
+    explanation.push('Validation errors must be corrected before relying on this accounting decision.');
+  }
+  if (missingFields.length) {
+    explanation.push('Missing fields require human review before final accounting treatment.');
+  }
+
+  return {
+    schemaVersion: 'accounting_decision.v1',
+    documentType: safeReviewedValues.documentType || intake.classification?.documentType || 'unknown',
+    businessDirection,
+    postingIntent,
+    draftType,
+    suggestedAction,
+    validationStatus,
+    vatTreatment: vatDecision.vatTreatment,
+    inputVatAllowed: vatDecision.inputVatAllowed,
+    outputVatRequired: vatDecision.outputVatRequired,
+    suggestedExpenseCategory:
+      safeReviewedValues.accountingCategory ||
+      safeReviewedValues.category ||
+      intake.classification?.category ||
+      null,
+    suggestedLedgerAccount: null,
+    counterAccount: null,
+    accountantReviewRequired:
+      vatDecision.accountantReviewRequired ||
+      !!manualOverride ||
+      validationStatus !== 'ready_for_review',
+    riskLevel,
+    manualOverrideApplied: !!manualOverride,
+    source: 'ai_document_intake',
+    explanation,
+  };
+};
+
 const buildReviewedExpenseDraftPayload = ({ reviewedValues = {}, documentId, systemContext = {} } = {}) => {
   const netAmount = toFiniteNumber(reviewedValues.netAmount);
   const vatRate = toFiniteNumber(reviewedValues.vatRate);
@@ -745,6 +904,7 @@ module.exports = {
   validateManualOverride,
   hasValidManualOverride,
   buildRestrictedManualOverrideReviewedValues,
+  buildAccountingDecision,
   compareReviewedFields,
   applyRecheckReviewGate,
 };
