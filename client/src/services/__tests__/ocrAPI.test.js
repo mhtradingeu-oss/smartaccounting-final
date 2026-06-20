@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import api from '../api';
-import { createDraftFromReviewedIntake, recheckIntakeDocument } from '../ocrAPI';
+import {
+  createDraftFromReviewedIntake,
+  listDocumentInbox,
+  recheckIntakeDocument,
+} from '../ocrAPI';
 
 vi.mock('../api', () => ({
   __esModule: true,
   default: {
+    get: vi.fn(),
     post: vi.fn(),
   },
 }));
@@ -12,6 +17,44 @@ vi.mock('../api', () => ({
 describe('ocrAPI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('lists document inbox items with filters', async () => {
+    api.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        count: 1,
+        documents: [
+          {
+            id: 'doc-1',
+            documentType: 'receipt',
+            reviewState: { status: 'rechecked' },
+            accountingDecision: { postingIntent: 'expense_draft' },
+          },
+        ],
+      },
+    });
+
+    const result = await listDocumentInbox({
+      reviewStatus: 'rechecked',
+      manualOverride: 'true',
+      draftCreated: 'false',
+    });
+
+    expect(api.get).toHaveBeenCalledWith('/ocr/intake/documents', {
+      params: {
+        reviewStatus: 'rechecked',
+        manualOverride: 'true',
+        draftCreated: 'false',
+      },
+    });
+    expect(result.documents).toHaveLength(1);
+    expect(result.documents[0]).toEqual(
+      expect.objectContaining({
+        id: 'doc-1',
+        documentType: 'receipt',
+      }),
+    );
   });
 
   it('posts reviewed values to the intake recheck endpoint', async () => {

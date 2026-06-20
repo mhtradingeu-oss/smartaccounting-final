@@ -54,6 +54,11 @@ export const analyzeIntake = async (file, options = {}) => {
   return response.data;
 };
 
+export const listDocumentInbox = async (params = {}) => {
+  const response = await api.get('/ocr/intake/documents', { params });
+  return response.data;
+};
+
 export const recheckIntakeDocument = async (documentId, payload = {}, options = {}) => {
   const companyId = options.companyId || payload.companyId;
   const { companyId: _companyId, ...body } = payload;
