@@ -17,3 +17,12 @@ export const buildAttachmentChip = (file, kind = 'file') => ({
   kind,
   file,
 });
+
+export const isSupportedDocumentAttachment = (attachment = {}) => {
+  const type = String(attachment.type || attachment.file?.type || '').toLowerCase();
+  const name = String(attachment.name || attachment.file?.name || '').toLowerCase();
+  return (
+    ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'].includes(type) ||
+    /\.(pdf|jpe?g|png|tiff?)$/.test(name)
+  );
+};

@@ -25,6 +25,7 @@ import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent, truncateText } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
+import { analyzeIntake } from '../services/ocrAPI';
 import { isAIAssistantEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
 import ChatEmptyState from '../components/ChatEmptyState';
@@ -39,7 +40,11 @@ import {
   isGeneralSmallTalk,
   isGreetingMessage,
 } from '../lib/aiChatIntent';
-import { buildAttachmentChip, formatAttachmentSize } from '../lib/aiChatAttachments';
+import {
+  buildAttachmentChip,
+  formatAttachmentSize,
+  isSupportedDocumentAttachment,
+} from '../lib/aiChatAttachments';
 
 const INTENT_OPTIONS = [
   {
@@ -134,6 +139,7 @@ const AIAssistant = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingError, setRecordingError] = useState(null);
+  const [documentIntakeProgress, setDocumentIntakeProgress] = useState(null);
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
   const streamAbortRef = useRef(null);
@@ -289,6 +295,7 @@ const AIAssistant = () => {
     setIsRecording(false);
     setRecordingSeconds(0);
     setRecordingError(null);
+    setDocumentIntakeProgress(null);
   };
 
   useEffect(() => {
@@ -590,6 +597,97 @@ const AIAssistant = () => {
     ]);
   };
 
+  const inferLanguageHint = (text = '') => {
+    if (/[\u0600-\u06FF]/.test(text)) {
+      return 'ar';
+    }
+    if (/[äöüßÄÖÜ]|\b(rechnung|quittung|kontoauszug|steuer)\b/i.test(text)) {
+      return 'de';
+    }
+    return 'auto';
+  };
+
+  const getDocumentIntro = (text = '') => {
+    if (/[\u0600-\u06FF]/.test(text)) {
+      return 'قرأت المستند واستخرجت اقتراحًا محاسبيًا للمراجعة فقط. راجع الحقول قبل إنشاء أي مسودة.';
+    }
+    if (/[äöüßÄÖÜ]|\b(rechnung|quittung|kontoauszug|steuer)\b/i.test(text)) {
+      return 'Ich habe das Dokument gelesen und einen unverbindlichen Buchhaltungsvorschlag erstellt. Bitte prüfe die Felder vor jeder Entwurfserstellung.';
+    }
+    return 'I read the document and prepared an advisory accounting suggestion. Review extracted fields before creating any draft.';
+  };
+
+  const addDocumentAnalysisMessage = (analysis, userText = '') => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `assistant-document-${Date.now()}`,
+        speaker: 'assistant',
+        role: 'assistant',
+        text: getDocumentIntro(userText),
+        documentAnalysis: analysis,
+        requestId: analysis?.requestId ?? null,
+        createdAt: new Date().toISOString(),
+        timestamp: new Date().toLocaleTimeString(),
+        meta: buildAssistantMeta(),
+      },
+    ]);
+  };
+
+  const handleDocumentIntake = async ({ prompt, messageAttachments }) => {
+    const supportedAttachment = messageAttachments.find(isSupportedDocumentAttachment);
+    if (!supportedAttachment?.file) {
+      addUserMessage(prompt || 'I added an attachment.', messageAttachments);
+      addLocalAssistantMessage({
+        message:
+          'File analysis is available for PDF, JPEG, PNG, and TIFF documents. I can still help based on your text.',
+        highlights: ['Audio recordings and unsupported files are not sent for document intake analysis.'],
+        references: ['Read-only assistant guidance'],
+      });
+      return;
+    }
+
+    addUserMessage(prompt || 'Analyze this accounting document.', messageAttachments);
+    setUserTyping(false);
+    setIsAsking(true);
+    const steps = [
+      'Uploading document',
+      'Reading document',
+      'Classifying document',
+      'Validating suggestion',
+    ];
+    try {
+      setDocumentIntakeProgress(steps[0]);
+      await Promise.resolve();
+      setDocumentIntakeProgress(steps[1]);
+      await Promise.resolve();
+      setDocumentIntakeProgress(steps[2]);
+      const result = await analyzeIntake(supportedAttachment.file, {
+        documentType: 'auto',
+        languageHint: inferLanguageHint(prompt),
+        userHint: prompt,
+        companyId: activeCompanyId,
+      });
+      setDocumentIntakeProgress(steps[3]);
+      addDocumentAnalysisMessage(result, prompt);
+    } catch (err) {
+      const message = formatApiError(
+        err,
+        'Unable to analyze the document. The attachment was not used to create or change accounting records.',
+      ).message;
+      addLocalAssistantMessage({
+        message,
+        highlights: [
+          'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+        ],
+        references: ['AI document intake advisory path'],
+      });
+    } finally {
+      setDocumentIntakeProgress(null);
+      setIsAsking(false);
+    }
+  };
+
   const handleIntent = async (intentId, options = {}) => {
     const promptText =
       options.prompt || INTENT_OPTIONS.find((intent) => intent.id === intentId)?.label;
@@ -839,6 +937,71 @@ const AIAssistant = () => {
     );
   };
 
+  const renderDocumentAnalysis = (analysis) => {
+    if (!analysis) {
+      return null;
+    }
+    const extractedEntries = Object.entries(analysis.extracted || {}).filter(
+      ([key, value]) =>
+        !['raw', 'lineItems'].includes(key) &&
+        value !== null &&
+        value !== undefined &&
+        value !== '',
+    );
+    const validation = analysis.validation || {};
+    return (
+      <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">
+              Document analysis
+            </div>
+            <div className="mt-1 text-lg font-semibold">
+              {analysis.classification?.documentType || 'document'} ·{' '}
+              {analysis.classification?.suggestedAction || 'ask_missing_data'}
+            </div>
+          </div>
+          <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 dark:bg-slate-950 dark:text-blue-200 dark:ring-blue-900">
+            Confidence: {analysis.classification?.confidence || 'not available'}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {extractedEntries.length ? (
+            extractedEntries.slice(0, 12).map(([key, value]) => (
+              <div
+                key={key}
+                className="rounded-lg border border-blue-100 bg-white px-3 py-2 dark:border-blue-900 dark:bg-slate-950"
+              >
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+                  {key}
+                </div>
+                <div className="mt-1 break-words text-sm text-gray-800 dark:text-gray-100">
+                  {Array.isArray(value) ? value.join(', ') : String(value)}
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-blue-800 dark:text-blue-100">
+              No structured fields were detected.
+            </p>
+          )}
+        </div>
+
+        {!!validation.errors?.length && renderList('Validation errors', validation.errors)}
+        {!!validation.warnings?.length && renderList('Validation warnings', validation.warnings)}
+        {!!validation.missingFields?.length &&
+          renderList('Missing fields', validation.missingFields)}
+
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          Advisory-only. Human confirmation is required before any invoice, expense, bank
+          transaction, posting, approval, deletion, or reconciliation. Review extracted fields
+          before creating any draft.
+        </div>
+      </div>
+    );
+  };
+
   const renderMessage = (message) => {
     const isAssistant = message.speaker === 'assistant';
     const references = [
@@ -900,6 +1063,7 @@ const AIAssistant = () => {
           {isAssistant && renderList('Risks', message.risks)}
           {isAssistant && renderList('Suggested next steps', message.requiredActions)}
           {isAssistant && renderList('References', references)}
+          {isAssistant && renderDocumentAnalysis(message.documentAnalysis)}
           {isAssistant && (message.confidence || message.contextSummary || message.meta) && (
             <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500 dark:bg-slate-900 dark:text-gray-400">
               {message.confidence && <span>Confidence: {message.confidence}. </span>}
@@ -937,6 +1101,13 @@ const AIAssistant = () => {
     setDraftMessage('');
     setAttachments([]);
     setInputError(null);
+    if (outgoingAttachments.length) {
+      handleDocumentIntake({
+        prompt: prompt || 'Analyze this accounting document.',
+        messageAttachments: outgoingAttachments,
+      });
+      return;
+    }
     handleIntent(inferAssistantIntent(prompt), {
       prompt: prompt || 'I added an attachment.',
       attachments: outgoingAttachments,
@@ -1239,6 +1410,13 @@ const AIAssistant = () => {
             </div>
             <div className="mt-4 flex-1 space-y-5 overflow-y-auto border-y border-gray-100 bg-gray-50 px-5 py-5 dark:border-slate-800 dark:bg-slate-950/50">
               {messages.length === 0 ? <ChatEmptyState /> : messages.map(renderMessage)}
+              {documentIntakeProgress && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm text-blue-700 shadow-sm dark:border-blue-900 dark:bg-slate-950 dark:text-blue-200">
+                    {documentIntakeProgress}…
+                  </div>
+                </div>
+              )}
               {isAsking && <ChatTypingIndicator isAssistant />}
               {userTyping && !isAsking && <ChatTypingIndicator isAssistant={false} />}
             </div>
@@ -1292,6 +1470,7 @@ const AIAssistant = () => {
                     type="file"
                     hidden
                     multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.tiff"
                     onChange={(event) => {
                       addFiles(event.target.files, 'file');
                       event.target.value = '';
@@ -1413,7 +1592,8 @@ const AIAssistant = () => {
             )}
             {!!attachments.length && (
               <div className="px-5 pb-3 text-xs text-gray-500">
-                File analysis and speech-to-text ingestion are not connected yet; I can still help based on your text.
+                Supported PDF and image attachments will be analyzed for advisory document intake.
+                Audio transcription is not connected yet.
               </div>
             )}
             {draftMessage && <MutationIntentGuard prompt={draftMessage} />}

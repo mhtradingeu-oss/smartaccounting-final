@@ -15,6 +15,7 @@ const {
   validateUploadedFile,
 } = require('../middleware/secureUpload');
 const { analyzeDocument, classifyDocumentType } = require('../services/documentAnalysisService');
+const documentIntakeAssistantService = require('../services/ai/documentIntakeAssistantService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
@@ -79,6 +80,11 @@ const validateDocument = [
     .optional()
     .isIn(['invoice', 'receipt', 'bank_statement', 'tax_document', 'auto'])
     .withMessage('Unsupported document type'),
+  body('languageHint')
+    .optional()
+    .isIn(['auto', 'de', 'en', 'ar'])
+    .withMessage('Unsupported language hint'),
+  body('userHint').optional().isString().isLength({ max: 1000 }),
 ];
 
 const handleValidation = (req, res) => {
@@ -91,6 +97,37 @@ const handleValidation = (req, res) => {
 
 const OCR_PREVIEW_ENABLED =
   String(process.env.OCR_PREVIEW_ENABLED || 'false').toLowerCase() === 'true';
+
+const validateOcrUpload = (req, res) => {
+  const fileCheck = validateUploadedFile(req.file.path, ['pdf', 'png', 'jpg', 'tiff']);
+  if (!fileCheck.valid) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    sendError(res, `Unsupported file content. ${fileCheck.reason}`, 400);
+    return null;
+  }
+  const ext = req.file.originalname.toLowerCase().split('.').pop();
+  const extensionMap = {
+    pdf: ['pdf'],
+    png: ['png'],
+    jpg: ['jpg', 'jpeg'],
+    tiff: ['tiff'],
+  };
+  const expectedExts = extensionMap[fileCheck.detected] || [];
+  if (expectedExts.length && !expectedExts.includes(ext)) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    sendError(
+      res,
+      `File extension does not match detected content (${fileCheck.detected}).`,
+      400,
+    );
+    return null;
+  }
+  return fileCheck;
+};
 
 const previewHandler = async (req, res) => {
   if (handleValidation(req, res)) {
@@ -198,6 +235,137 @@ if (OCR_PREVIEW_ENABLED) {
   router.all('/preview', disabledFeatureHandler('OCR preview'));
   // Explicitly block unsupported methods for OCR preview endpoint
 }
+
+router.post(
+  '/intake/analyze',
+  requireRole(['accountant']),
+  upload.single('document'),
+  validateDocument,
+  async (req, res) => {
+    if (handleValidation(req, res)) {
+      return;
+    }
+
+    if (!req.file) {
+      return sendError(res, 'No document uploaded', 400);
+    }
+
+    try {
+      const fileCheck = validateOcrUpload(req, res);
+      if (!fileCheck) {
+        return;
+      }
+
+      const requestedType = req.body.documentType || 'auto';
+      const documentType = requestedType === 'auto' ? 'invoice' : requestedType;
+      const languageMap = {
+        de: 'deu',
+        en: 'eng',
+        ar: 'ara',
+        auto: 'deu+eng',
+      };
+      const language = languageMap[req.body.languageHint || 'auto'] || 'deu+eng';
+
+      const ocrResult = await ocrService.processDocument(req.file.path, {
+        language,
+        documentType,
+        userId: req.userId,
+        companyId: req.companyId,
+        originalName: req.file.originalname,
+        uploadedBy: req.userId,
+      });
+
+      if (!ocrResult.success) {
+        throw new Error(ocrResult.error || 'OCR processing failed');
+      }
+
+      let extractedData = ocrResult.extractedData || {};
+      let effectiveType = documentType;
+      if (requestedType === 'auto') {
+        effectiveType = classifyDocumentType(ocrResult.text || '') || documentType;
+        extractedData = await ocrService.extractStructuredData(ocrResult.text || '', effectiveType);
+      }
+
+      const intake = documentIntakeAssistantService.analyzeIntake({
+        text: ocrResult.text || '',
+        extractedData,
+        documentType: requestedType === 'auto' ? 'auto' : effectiveType,
+        documentId: ocrResult.documentId,
+        userHint: req.body.userHint,
+      });
+
+      const documentRecord = await FileAttachment.findOne({
+        where: { id: ocrResult.documentId, companyId: req.companyId },
+      });
+
+      if (documentRecord) {
+        await documentRecord.update({
+          processingStatus: intake.validation.status,
+          documentType: intake.classification.documentType,
+          extractedData: {
+            ...extractedData,
+            intake,
+          },
+        });
+      }
+
+      await AuditLogService.appendEntry({
+        action: 'ocr_intake_analyze',
+        resourceType: 'FileAttachment',
+        resourceId: ocrResult.documentId ? String(ocrResult.documentId) : null,
+        userId: req.userId,
+        companyId: req.companyId,
+        reason: 'AI document intake analyzed source document for advisory draft suggestion',
+        newValues: {
+          documentType: intake.classification.documentType,
+          suggestedAction: intake.classification.suggestedAction,
+          advisoryOnly: true,
+          requiresHumanConfirmation: true,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent') || null,
+      });
+
+      return sendSuccess(res, 'Document intake analyzed', {
+        requestId: req.requestId || null,
+        document: documentRecord
+          ? {
+              id: documentRecord.id,
+              originalName: documentRecord.originalName,
+              mimeType: documentRecord.mimeType,
+              fileSize: documentRecord.fileSize,
+              fileHash: documentRecord.fileHash,
+              documentType: documentRecord.documentType,
+              processingStatus: documentRecord.processingStatus,
+              ocrConfidence: documentRecord.ocrConfidence,
+            }
+          : {
+              id: ocrResult.documentId,
+              originalName: req.file.originalname,
+              documentType: intake.classification.documentType,
+              processingStatus: intake.validation.status,
+              ocrConfidence: ocrResult.confidence,
+            },
+        ocr: {
+          rawText: ocrResult.text || '',
+          languageDetected: req.body.languageHint || 'auto',
+          confidence: ocrResult.confidence ?? null,
+        },
+        classification: intake.classification,
+        extracted: intake.extracted,
+        validation: intake.validation,
+        draft: intake.draft,
+        audit: intake.audit,
+      });
+    } catch (error) {
+      logger.error('OCR intake analysis failed', { error: error.message });
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return sendError(res, 'Unable to analyze document intake', 500);
+    }
+  },
+);
 
 router.post(
   '/process',

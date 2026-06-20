@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import AIAssistant from '../AIAssistant';
 import CompanyContext from '../../context/CompanyContext';
 import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+import { analyzeIntake } from '../../services/ocrAPI';
 
 const mockNavigate = vi.fn();
 
@@ -35,6 +36,10 @@ vi.mock('../../services/aiAssistantAPI', () => ({
     askVoice: vi.fn(),
     reset: vi.fn(),
   },
+}));
+
+vi.mock('../../services/ocrAPI', () => ({
+  analyzeIntake: vi.fn(),
 }));
 
 vi.mock('../../lib/featureFlags', () => ({
@@ -188,6 +193,60 @@ describe('AI Assistant ChatGPT-like experience', () => {
     expect(await screen.findByText(/invoice\.pdf/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Remove invoice\.pdf/i }));
     expect(screen.queryByText(/invoice\.pdf/i)).not.toBeInTheDocument();
+  });
+
+  it('uploads attached document to OCR intake and renders analysis card', async () => {
+    analyzeIntake.mockResolvedValueOnce({
+      success: true,
+      requestId: 'req-doc',
+      document: { id: 'doc-1', originalName: 'receipt.pdf' },
+      ocr: { confidence: 88 },
+      classification: {
+        documentType: 'receipt',
+        suggestedAction: 'create_expense_draft',
+        confidence: 'medium',
+      },
+      extracted: {
+        vendorName: 'DB Vertrieb GmbH',
+        grossAmount: 11.9,
+        currency: 'EUR',
+      },
+      validation: {
+        status: 'needs_review',
+        errors: [],
+        warnings: ['Business purpose is required before using this as an expense draft.'],
+        missingFields: ['businessPurpose'],
+      },
+      draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-1'] } },
+      audit: {
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+        blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+      },
+    });
+    await renderAssistant();
+
+    const file = new File(['%PDF-1.4'], 'receipt.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Choose file attachment'), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() =>
+      expect(analyzeIntake).toHaveBeenCalledWith(
+        file,
+        expect.objectContaining({ companyId: 1, documentType: 'auto' }),
+      ),
+    );
+    expect(await screen.findByText('Document analysis')).toBeInTheDocument();
+    expect(screen.getByText(/receipt · create_expense_draft/i)).toBeInTheDocument();
+    expect(screen.getByText('vendorName')).toBeInTheDocument();
+    expect(screen.getByText('DB Vertrieb GmbH')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Advisory-only\. Human confirmation is required before any invoice/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create expense/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create invoice/i })).not.toBeInTheDocument();
   });
 
   it('camera input exists with image accept', async () => {

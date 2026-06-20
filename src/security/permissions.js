@@ -45,6 +45,10 @@ module.exports = {
       'POST /api/ai/read/*',
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
+      'POST /api/ocr/intake/analyze',
+      'POST /api/ocr/process',
+      'GET /api/ocr/results/:id',
+      'GET /api/ocr/validate/:id',
 
       'GET /api/exports/*',
       'GET /api/compliance/*',
