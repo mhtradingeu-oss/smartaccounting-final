@@ -947,8 +947,25 @@ describe('OCR document intake analyze route', () => {
       where: { action: 'DOCUMENT_DRAFT_CREATED_FROM_REVIEWED_VALUES' },
       order: [['createdAt', 'DESC']],
     });
+    expect(response.body.accountingDecision).toEqual(
+      expect.objectContaining({
+        vatTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+        manualOverrideApplied: true,
+      }),
+    );
+    expect(response.body.intake.accountingDecision).toEqual(response.body.accountingDecision);
+    expect(response.body.intake.draftCreation.accountingDecision).toEqual(response.body.accountingDecision);
+
     expect(auditLog?.newValues).toEqual(
       expect.objectContaining({
+        accountingDecision: expect.objectContaining({
+          vatTreatment: 'no_vorsteuer_allowed',
+          inputVatAllowed: false,
+          accountantReviewRequired: true,
+          manualOverrideApplied: true,
+        }),
         manualOverride: expect.objectContaining({
           riskLevel: 'medium',
           restrictedTaxTreatmentAcknowledged: true,
@@ -1093,11 +1110,29 @@ describe('OCR document intake analyze route', () => {
       where: { action: 'DOCUMENT_DRAFT_CREATED_FROM_REVIEWED_VALUES' },
       order: [['createdAt', 'DESC']],
     });
+    expect(response.body.accountingDecision).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'accounting_decision.v1',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        source: 'ai_document_intake',
+      }),
+    );
+    expect(response.body.intake.accountingDecision).toEqual(response.body.accountingDecision);
+    expect(response.body.intake.lifecycle.accountingDecision).toEqual(response.body.accountingDecision);
+    expect(response.body.intake.draftCreation.accountingDecision).toEqual(response.body.accountingDecision);
+
     expect(auditLog?.newValues).toEqual(
       expect.objectContaining({
         documentId: analyzeResponse.body.document.id,
         source: 'ai_document_intake_reviewed',
         decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        accountingDecision: expect.objectContaining({
+          schemaVersion: 'accounting_decision.v1',
+          postingIntent: 'expense_draft',
+          draftType: 'expense',
+          source: 'ai_document_intake',
+        }),
         fieldChanges: expect.any(Array),
       }),
     );

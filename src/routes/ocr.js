@@ -783,6 +783,7 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
     );
     const hasManualOverride = isNonEmptyPlainObject(storedManualOverride);
     const currentFingerprint = intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null;
+    const accountingDecision = intake.accountingDecision || intake.lifecycle?.accountingDecision || null;
 
     if (reviewState.status !== 'rechecked' || reviewState.criticalFieldsReviewed !== true) {
       return sendError(res, 'Review extracted fields and re-check document before draft creation.', 409);
@@ -851,6 +852,7 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
       documentId: documentRecord.id,
       requestId: req.requestId || null,
       decisionFingerprint: currentFingerprint,
+      accountingDecision,
       reviewState,
       fieldChanges: editablePayload.fieldChanges || [],
       manualOverride: hasManualOverride ? storedManualOverride : null,
@@ -888,11 +890,17 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
 
     const updatedIntake = {
       ...intake,
+      accountingDecision,
+      lifecycle: {
+        ...(intake.lifecycle || {}),
+        ...(accountingDecision ? { accountingDecision } : {}),
+      },
       draftCreation: {
         draftType,
         draftId: createdDraft?.id || null,
         createdAt: new Date().toISOString(),
         decisionFingerprint: currentFingerprint,
+        accountingDecision,
       },
     };
     await documentRecord.reload();
@@ -917,6 +925,7 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
         draftType,
         draftId: createdDraft?.id || null,
         decisionFingerprint: currentFingerprint,
+        accountingDecision,
         reviewState,
         fieldChanges: editablePayload.fieldChanges || [],
         manualOverride: hasManualOverride ? storedManualOverride : null,
@@ -947,6 +956,7 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
       reviewState: updatedIntake.reviewState,
       editablePayload: updatedIntake.editablePayload,
       draftEligibility: updatedIntake.draftEligibility,
+      accountingDecision: updatedIntake.accountingDecision || updatedIntake.lifecycle?.accountingDecision || null,
       decisionFingerprint: currentFingerprint,
     }, 201);
   } catch (error) {
