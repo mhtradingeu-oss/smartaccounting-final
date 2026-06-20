@@ -32,7 +32,17 @@ app.use((err, _req, res, _next) => {
   });
 });
 
+const tinyPngBuffer = () =>
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+    'base64',
+  );
+
 const uploadFile = async (token, companyId, filePath, fields = {}) => {
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, fields.content || tinyPngBuffer());
+  }
+
   return new Promise((resolve) => {
     const req = httpMocks.createRequest({
       method: 'POST',
@@ -49,9 +59,9 @@ const uploadFile = async (token, companyId, filePath, fields = {}) => {
     });
     req.file = {
       path: filePath,
-      originalname: path.basename(filePath),
-      filename: path.basename(filePath),
-      mimetype: 'application/pdf',
+      originalname: fields.originalName || path.basename(filePath),
+      filename: fields.originalName || path.basename(filePath),
+      mimetype: fields.mimetype || 'image/png',
       size: fs.statSync(filePath).size,
     };
     req.socket = req.socket || { setTimeout: () => {} };
@@ -76,14 +86,14 @@ const uploadFile = async (token, companyId, filePath, fields = {}) => {
 };
 
 describe('OCR document intake analyze route', () => {
-  const fixturePath = path.join('/tmp', 'ocr-intake-test.pdf');
+  const fixturePath = path.join('/tmp', 'ocr-intake-test.png');
   let admin;
   let accountant;
   let viewer;
   let otherAdmin;
 
   beforeAll(() => {
-    fs.writeFileSync(fixturePath, '%PDF-1.4\n%Mock OCR intake\n');
+    fs.writeFileSync(fixturePath, tinyPngBuffer());
   });
 
   beforeEach(async () => {
@@ -109,11 +119,11 @@ describe('OCR document intake analyze route', () => {
 
   const mockReceiptOcr = async ({ user, companyId }) => {
     const attachment = await FileAttachment.create({
-      fileName: 'receipt.pdf',
-      originalName: 'receipt.pdf',
+      fileName: 'receipt.png',
+      originalName: 'receipt.png',
       filePath: fixturePath,
       fileSize: 123,
-      mimeType: 'application/pdf',
+      mimeType: 'image/png',
       documentType: 'receipt',
       userId: user.id,
       companyId,
@@ -151,6 +161,45 @@ describe('OCR document intake analyze route', () => {
     expect(response.body.audit.blockedActions).toEqual(['post', 'approve', 'delete', 'reconcile']);
     expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
     expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('returns safe review-required analysis for unsupported PDF OCR runtime', async () => {
+    const pdfPath = path.join('/tmp', 'ocr-intake-test-pdf-fallback.pdf');
+
+    const response = await uploadFile(accountant.token, accountant.user.companyId, pdfPath, {
+      mimetype: 'application/pdf',
+      originalName: 'ocr-intake-test.pdf',
+      documentType: 'auto',
+      content: '%PDF-1.4 fake pdf content',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.classification).toEqual(
+      expect.objectContaining({
+        documentType: 'pdf',
+        suggestedAction: 'ask_missing_data',
+        confidence: 'low',
+      }),
+    );
+    expect(response.body.validation).toEqual(
+      expect.objectContaining({
+        status: 'needs_review',
+        errors: expect.arrayContaining(['PDF OCR is not available in this local runtime.']),
+        missingFields: expect.arrayContaining(['readableDocumentImage']),
+      }),
+    );
+    expect(response.body.draft).toBeNull();
+    expect(response.body.audit).toEqual(
+      expect.objectContaining({
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+      }),
+    );
+
+    if (fs.existsSync(pdfPath)) {
+      fs.unlinkSync(pdfPath);
+    }
   });
 
   it('rejects viewer role for persistent intake analysis', async () => {

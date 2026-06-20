@@ -40,12 +40,12 @@ class OCRService {
   async processDocument(filePath, options = {}) {
     // Guard: check FileAttachment OCR columns
     const ocrSchemaOk = await checkTableAndColumns('file_attachments', [
-      'ocrText',
-      'ocrConfidence',
-      'extractedData',
-      'processingStatus',
+      'ocr_text',
+      'ocr_confidence',
+      'extracted_data',
+      'processing_status',
       'archived',
-      'retentionPeriod',
+      'retention_period',
     ]);
     if (!ocrSchemaOk) {
       return { success: false, error: 'OCR schema missing or incomplete' };

@@ -258,6 +258,107 @@ router.post(
 
       const requestedType = req.body.documentType || 'auto';
       const documentType = requestedType === 'auto' ? 'invoice' : requestedType;
+
+      const isPdfDocument =
+        req.file.mimetype === 'application/pdf' ||
+        String(req.file.originalname || '').toLowerCase().endsWith('.pdf');
+
+      if (isPdfDocument) {
+        const documentRecord = await FileAttachment.create({
+          originalName: req.file.originalname,
+          fileName: req.file.filename || req.file.originalname,
+          filePath: req.file.path,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          documentType: 'pdf',
+          userId: req.userId,
+          companyId: req.companyId,
+          uploadedBy: req.userId,
+          processingStatus: 'needs_review',
+          extractedData: {
+            intake: {
+              classification: {
+                documentType: 'pdf',
+                suggestedAction: 'ask_missing_data',
+                confidence: 'low',
+              },
+              extracted: {},
+              validation: {
+                status: 'needs_review',
+                errors: ['PDF OCR is not available in this local runtime.'],
+                warnings: [
+                  'Upload a clear image of the document or enable PDF conversion/text extraction support.',
+                  'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+                ],
+                missingFields: ['readableDocumentImage'],
+              },
+              draft: null,
+              audit: {
+                advisoryOnly: true,
+                requiresHumanConfirmation: true,
+                blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+              },
+            },
+          },
+        });
+
+        await AuditLogService.appendEntry({
+          action: 'ocr_intake_analyze_pdf_unsupported',
+          resourceType: 'FileAttachment',
+          resourceId: String(documentRecord.id),
+          userId: req.userId,
+          companyId: req.companyId,
+          reason: 'AI document intake received PDF but local PDF OCR conversion is not enabled',
+          newValues: {
+            documentType: 'pdf',
+            suggestedAction: 'ask_missing_data',
+            advisoryOnly: true,
+            requiresHumanConfirmation: true,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent') || null,
+        });
+
+        return sendSuccess(res, 'Document intake analyzed with review required', {
+          requestId: req.requestId || null,
+          document: {
+            id: documentRecord.id,
+            originalName: documentRecord.originalName,
+            mimeType: documentRecord.mimeType,
+            fileSize: documentRecord.fileSize,
+            fileHash: documentRecord.fileHash,
+            documentType: documentRecord.documentType,
+            processingStatus: documentRecord.processingStatus,
+            ocrConfidence: null,
+          },
+          ocr: {
+            rawText: '',
+            languageDetected: req.body.languageHint || 'auto',
+            confidence: null,
+          },
+          classification: {
+            documentType: 'pdf',
+            suggestedAction: 'ask_missing_data',
+            confidence: 'low',
+          },
+          extracted: {},
+          validation: {
+            status: 'needs_review',
+            errors: ['PDF OCR is not available in this local runtime.'],
+            warnings: [
+              'Upload a clear image of the document or enable PDF conversion/text extraction support.',
+              'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+            ],
+            missingFields: ['readableDocumentImage'],
+          },
+          draft: null,
+          audit: {
+            advisoryOnly: true,
+            requiresHumanConfirmation: true,
+            blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+          },
+        });
+      }
       const languageMap = {
         de: 'deu',
         en: 'eng',
@@ -410,6 +511,107 @@ router.post(
 
       const requestedType = req.body.documentType || 'auto';
       const documentType = requestedType === 'auto' ? 'invoice' : requestedType;
+
+      const isPdfDocument =
+        req.file.mimetype === 'application/pdf' ||
+        String(req.file.originalname || '').toLowerCase().endsWith('.pdf');
+
+      if (isPdfDocument) {
+        const documentRecord = await FileAttachment.create({
+          originalName: req.file.originalname,
+          fileName: req.file.filename || req.file.originalname,
+          filePath: req.file.path,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          documentType: 'pdf',
+          userId: req.userId,
+          companyId: req.companyId,
+          uploadedBy: req.userId,
+          processingStatus: 'needs_review',
+          extractedData: {
+            intake: {
+              classification: {
+                documentType: 'pdf',
+                suggestedAction: 'ask_missing_data',
+                confidence: 'low',
+              },
+              extracted: {},
+              validation: {
+                status: 'needs_review',
+                errors: ['PDF OCR is not available in this local runtime.'],
+                warnings: [
+                  'Upload a clear image of the document or enable PDF conversion/text extraction support.',
+                  'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+                ],
+                missingFields: ['readableDocumentImage'],
+              },
+              draft: null,
+              audit: {
+                advisoryOnly: true,
+                requiresHumanConfirmation: true,
+                blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+              },
+            },
+          },
+        });
+
+        await AuditLogService.appendEntry({
+          action: 'ocr_intake_analyze_pdf_unsupported',
+          resourceType: 'FileAttachment',
+          resourceId: String(documentRecord.id),
+          userId: req.userId,
+          companyId: req.companyId,
+          reason: 'AI document intake received PDF but local PDF OCR conversion is not enabled',
+          newValues: {
+            documentType: 'pdf',
+            suggestedAction: 'ask_missing_data',
+            advisoryOnly: true,
+            requiresHumanConfirmation: true,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent') || null,
+        });
+
+        return sendSuccess(res, 'Document intake analyzed with review required', {
+          requestId: req.requestId || null,
+          document: {
+            id: documentRecord.id,
+            originalName: documentRecord.originalName,
+            mimeType: documentRecord.mimeType,
+            fileSize: documentRecord.fileSize,
+            fileHash: documentRecord.fileHash,
+            documentType: documentRecord.documentType,
+            processingStatus: documentRecord.processingStatus,
+            ocrConfidence: null,
+          },
+          ocr: {
+            rawText: '',
+            languageDetected: req.body.languageHint || 'auto',
+            confidence: null,
+          },
+          classification: {
+            documentType: 'pdf',
+            suggestedAction: 'ask_missing_data',
+            confidence: 'low',
+          },
+          extracted: {},
+          validation: {
+            status: 'needs_review',
+            errors: ['PDF OCR is not available in this local runtime.'],
+            warnings: [
+              'Upload a clear image of the document or enable PDF conversion/text extraction support.',
+              'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+            ],
+            missingFields: ['readableDocumentImage'],
+          },
+          draft: null,
+          audit: {
+            advisoryOnly: true,
+            requiresHumanConfirmation: true,
+            blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+          },
+        });
+      }
 
       const ocrResult = await ocrService.processDocument(req.file.path, {
         documentType,
