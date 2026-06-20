@@ -148,6 +148,47 @@ const getJsonObject = (value) => {
 const isNonEmptyPlainObject = (value) =>
   !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
 
+const buildDocumentInboxItem = (documentRecord) => {
+  const extractedData = getJsonObject(documentRecord.extractedData);
+  const intake = getJsonObject(extractedData.intake);
+  const reviewState = getJsonObject(intake.reviewState);
+  const draftEligibility = getJsonObject(intake.draftEligibility);
+  const accountingDecision = intake.accountingDecision || intake.lifecycle?.accountingDecision || null;
+  const editablePayload = getJsonObject(intake.editablePayload);
+  const manualOverride = editablePayload.manualOverride || intake.manualOverride || intake.lifecycle?.manualOverride || null;
+  const draftCreation = getJsonObject(intake.draftCreation);
+
+  return {
+    id: documentRecord.id,
+    originalName: documentRecord.originalName,
+    fileName: documentRecord.fileName,
+    mimeType: documentRecord.mimeType,
+    fileSize: documentRecord.fileSize,
+    fileHash: documentRecord.fileHash,
+    documentType: documentRecord.documentType || intake.classification?.documentType || null,
+    processingStatus: documentRecord.processingStatus,
+    ocrConfidence: documentRecord.ocrConfidence,
+    uploadedAt: documentRecord.createdAt,
+    updatedAt: documentRecord.updatedAt,
+    classification: intake.classification || null,
+    reviewState: isNonEmptyPlainObject(reviewState) ? reviewState : null,
+    draftEligibility: isNonEmptyPlainObject(draftEligibility) ? draftEligibility : null,
+    accountingDecision,
+    decisionFingerprint: intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null,
+    draftCreation: isNonEmptyPlainObject(draftCreation) ? draftCreation : null,
+    manualOverride: isNonEmptyPlainObject(manualOverride) ? manualOverride : null,
+    vatTreatment: accountingDecision?.vatTreatment || editablePayload.reviewedValues?.taxTreatment || null,
+    inputVatAllowed:
+      accountingDecision?.inputVatAllowed ??
+      editablePayload.reviewedValues?.inputVatAllowed ??
+      null,
+    accountantReviewRequired:
+      accountingDecision?.accountantReviewRequired ??
+      editablePayload.reviewedValues?.accountantReviewRequired ??
+      null,
+  };
+};
+
 const buildIntakeResponse = ({ req, documentRecord, intake }) => ({
   requestId: req.requestId || null,
   document: {
@@ -607,6 +648,70 @@ router.post(
         fs.unlinkSync(req.file.path);
       }
       return sendError(res, 'Unable to analyze document intake', 500);
+    }
+  },
+);
+
+router.get(
+  '/intake/documents',
+  requireRole(['admin', 'accountant', 'auditor', 'viewer']),
+  async (req, res) => {
+    try {
+      const {
+        status,
+        reviewStatus,
+        draftCreated,
+        manualOverride,
+        accountantReviewRequired,
+        limit = 50,
+      } = req.query;
+
+      const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+      const records = await FileAttachment.findAll({
+        where: { companyId: req.companyId },
+        order: [['createdAt', 'DESC']],
+        limit: safeLimit,
+      });
+
+      let documents = records
+        .map(buildDocumentInboxItem)
+        .filter((item) => item.classification || item.reviewState || item.accountingDecision);
+
+      if (status) {
+        documents = documents.filter((item) => String(item.processingStatus || '') === String(status));
+      }
+
+      if (reviewStatus) {
+        documents = documents.filter(
+          (item) => String(item.reviewState?.status || '') === String(reviewStatus),
+        );
+      }
+
+      if (draftCreated === 'true') {
+        documents = documents.filter((item) => !!item.draftCreation?.draftId);
+      } else if (draftCreated === 'false') {
+        documents = documents.filter((item) => !item.draftCreation?.draftId);
+      }
+
+      if (manualOverride === 'true') {
+        documents = documents.filter((item) => !!item.manualOverride);
+      } else if (manualOverride === 'false') {
+        documents = documents.filter((item) => !item.manualOverride);
+      }
+
+      if (accountantReviewRequired === 'true') {
+        documents = documents.filter((item) => item.accountantReviewRequired === true);
+      } else if (accountantReviewRequired === 'false') {
+        documents = documents.filter((item) => item.accountantReviewRequired === false);
+      }
+
+      return sendSuccess(res, 'Document inbox retrieved', {
+        count: documents.length,
+        documents,
+      });
+    } catch (error) {
+      logger.error('OCR document inbox failed', { error: error.message });
+      return sendError(res, 'Unable to retrieve document inbox', 500);
     }
   },
 );

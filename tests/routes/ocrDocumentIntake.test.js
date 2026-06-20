@@ -156,6 +156,42 @@ const createDraftFromReviewedDocument = async (token, companyId, documentId, bod
     app(req, res);
   });
 
+const listDocumentInbox = async (token, companyId, query = {}) => {
+  const queryString = new URLSearchParams(query).toString();
+  const url = queryString
+    ? `/api/ocr/intake/documents?${queryString}`
+    : '/api/ocr/intake/documents';
+
+  return new Promise((resolve) => {
+    const req = httpMocks.createRequest({
+      method: 'GET',
+      url,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-company-id': String(companyId),
+      },
+      query,
+    });
+    req.socket = req.socket || { setTimeout: () => {} };
+    req.setTimeout = () => {};
+
+    const res = httpMocks.createResponse({ eventEmitter: EventEmitter });
+    res.on('end', () => {
+      const raw = res._getData();
+      let parsed = raw;
+      if (typeof raw === 'string') {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          parsed = raw;
+        }
+      }
+      resolve({ req, res, status: res.statusCode, body: parsed, headers: res._getHeaders() });
+    });
+    app(req, res);
+  });
+};
+
 describe('OCR document intake analyze route', () => {
   const fixturePath = path.join('/tmp', 'ocr-intake-test.png');
   let admin;
@@ -635,6 +671,219 @@ describe('OCR document intake analyze route', () => {
         riskLevel: 'medium',
         restrictedTaxTreatmentAcknowledged: true,
       }),
+    );
+  });
+
+  it('lists document intake inbox items for the active company', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    expect(analyzeResponse.status).toBe(200);
+
+    const response = await listDocumentInbox(accountant.token, accountant.user.companyId);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.count).toBeGreaterThanOrEqual(1);
+    expect(response.body.documents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: analyzeResponse.body.document.id,
+          originalName: expect.any(String),
+          documentType: 'receipt',
+          classification: expect.objectContaining({
+            documentType: 'receipt',
+            suggestedAction: 'create_expense_draft',
+          }),
+          reviewState: expect.objectContaining({
+            status: 'needs_review',
+            reviewRequired: true,
+          }),
+          draftEligibility: expect.objectContaining({
+            eligible: false,
+          }),
+          accountingDecision: expect.objectContaining({
+            schemaVersion: 'accounting_decision.v1',
+            postingIntent: 'expense_draft',
+            draftType: 'expense',
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('filters document inbox by rechecked status, manual override, and draft creation', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          vendorName: 'Taxi Berlin GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 19,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client meeting travel',
+        },
+        changeReason: 'Reviewed incomplete receipt with restricted tax treatment',
+        manualOverride: {
+          shortDescription: 'Taxi ride to client meeting',
+          reason: 'Receipt is partially incomplete but documents a business expense',
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        },
+      },
+    );
+
+    expect(recheckResponse.status).toBe(200);
+
+    const beforeDraftResponse = await listDocumentInbox(accountant.token, accountant.user.companyId, {
+      reviewStatus: 'rechecked',
+      manualOverride: 'true',
+      accountantReviewRequired: 'true',
+      draftCreated: 'false',
+    });
+
+    expect(beforeDraftResponse.status).toBe(200);
+    expect(beforeDraftResponse.body.documents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: analyzeResponse.body.document.id,
+          reviewState: expect.objectContaining({ status: 'rechecked' }),
+          manualOverride: expect.objectContaining({ riskLevel: 'medium' }),
+          vatTreatment: 'no_vorsteuer_allowed',
+          inputVatAllowed: false,
+          accountantReviewRequired: true,
+          draftCreation: null,
+        }),
+      ]),
+    );
+
+    const draftResponse = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create restricted expense draft from manual override',
+      },
+    );
+
+    expect(draftResponse.status).toBe(201);
+
+    const afterDraftResponse = await listDocumentInbox(accountant.token, accountant.user.companyId, {
+      draftCreated: 'true',
+      manualOverride: 'true',
+    });
+
+    expect(afterDraftResponse.status).toBe(200);
+    expect(afterDraftResponse.body.documents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: analyzeResponse.body.document.id,
+          draftCreation: expect.objectContaining({
+            draftType: 'expense',
+            draftId: expect.any(Number),
+            accountingDecision: expect.objectContaining({
+              vatTreatment: 'no_vorsteuer_allowed',
+            }),
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('keeps document inbox scoped to the active company', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    expect(analyzeResponse.status).toBe(200);
+
+    const response = await listDocumentInbox(otherAdmin.token, otherAdmin.user.companyId);
+
+    expect(response.status).toBe(200);
+    expect(response.body.documents).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: analyzeResponse.body.document.id,
+        }),
+      ]),
+    );
+  });
+
+  it('allows viewer role to read document inbox without write access', async () => {
+    const viewerDocument = await FileAttachment.create({
+      originalName: 'viewer-receipt.png',
+      fileName: 'viewer-receipt.png',
+      filePath: '/tmp/viewer-receipt.png',
+      fileSize: 68,
+      mimeType: 'image/png',
+      documentType: 'receipt',
+      userId: viewer.user.id,
+      companyId: viewer.user.companyId,
+      uploadedBy: viewer.user.id,
+      ocrText: 'Viewer company receipt',
+      ocrConfidence: 0.9,
+      processingStatus: 'ready_for_review',
+      extractedData: {
+        intake: {
+          classification: {
+            documentType: 'receipt',
+            suggestedAction: 'create_expense_draft',
+            confidence: 'medium',
+          },
+          reviewState: {
+            status: 'needs_review',
+            reviewRequired: true,
+          },
+          draftEligibility: {
+            eligible: false,
+          },
+          accountingDecision: {
+            schemaVersion: 'accounting_decision.v1',
+            postingIntent: 'expense_draft',
+            draftType: 'expense',
+            vatTreatment: 'expense_without_input_vat',
+            inputVatAllowed: false,
+            outputVatRequired: false,
+            accountantReviewRequired: false,
+            source: 'ai_document_intake',
+          },
+        },
+      },
+    });
+
+    const response = await listDocumentInbox(viewer.token, viewer.user.companyId);
+
+    expect(response.status).toBe(200);
+    expect(response.body.documents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: viewerDocument.id,
+          originalName: 'viewer-receipt.png',
+          documentType: 'receipt',
+        }),
+      ]),
     );
   });
 
