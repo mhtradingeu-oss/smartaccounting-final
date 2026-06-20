@@ -6,7 +6,11 @@ import { MemoryRouter } from 'react-router-dom';
 import AIAssistant from '../AIAssistant';
 import CompanyContext from '../../context/CompanyContext';
 import { aiAssistantAPI } from '../../services/aiAssistantAPI';
-import { analyzeIntake, recheckIntakeDocument } from '../../services/ocrAPI';
+import {
+  analyzeIntake,
+  createDraftFromReviewedIntake,
+  recheckIntakeDocument,
+} from '../../services/ocrAPI';
 import { expensesAPI } from '../../services/expensesAPI';
 import { invoicesAPI } from '../../services/invoicesAPI';
 
@@ -42,6 +46,7 @@ vi.mock('../../services/aiAssistantAPI', () => ({
 
 vi.mock('../../services/ocrAPI', () => ({
   analyzeIntake: vi.fn(),
+  createDraftFromReviewedIntake: vi.fn(),
   recheckIntakeDocument: vi.fn(),
 }));
 
@@ -357,6 +362,7 @@ describe('AI Assistant ChatGPT-like experience', () => {
     recheckIntakeDocument.mockResolvedValueOnce({
       requestId: 'req-recheck',
       document: { id: 'doc-1', originalName: 'receipt.pdf' },
+      decisionFingerprint: 'fp-reviewed',
       classification: {
         documentType: 'receipt',
         suggestedAction: 'create_expense_draft',
@@ -430,14 +436,50 @@ describe('AI Assistant ChatGPT-like experience', () => {
         ],
       },
       draftEligibility: {
-        eligible: false,
-        reason: 'Review extracted fields and re-check document before draft creation.',
+        eligible: true,
+        reason: 'Reviewed fields were re-checked and can be used for draft creation.',
       },
       draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-1'] } },
       audit: {
         advisoryOnly: true,
         requiresHumanConfirmation: true,
         blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+      },
+    });
+    createDraftFromReviewedIntake.mockResolvedValueOnce({
+      requestId: 'req-create-draft',
+      draft: {
+        type: 'expense',
+        id: 'expense-1',
+        status: 'pending',
+        summary: 'DB Fernverkehr AG',
+      },
+      intake: {
+        reviewState: {
+          status: 'rechecked',
+          reviewRequired: true,
+          reviewedByUserId: 1,
+          reviewedAt: '2026-06-20T10:00:00.000Z',
+          hasUserCorrections: true,
+          criticalFieldsReviewed: true,
+        },
+        editablePayload: {
+          fieldChanges: [
+            {
+              field: 'vendorName',
+              aiValue: 'DB Vertrieb GmbH',
+              correctedValue: 'DB Fernverkehr AG',
+              userId: 1,
+              timestamp: '2026-06-20T10:00:00.000Z',
+              reason: 'Corrected OCR fields before draft',
+            },
+          ],
+        },
+        draftEligibility: {
+          eligible: true,
+          reason: 'Reviewed fields were re-checked and can be used for draft creation.',
+        },
+        decisionFingerprint: 'fp-reviewed',
       },
     });
 
@@ -500,6 +542,21 @@ describe('AI Assistant ChatGPT-like experience', () => {
     expect(screen.getAllByText('Reviewed value:').length).toBeGreaterThan(0);
     expect(screen.getAllByText('DB Fernverkehr AG').length).toBeGreaterThan(0);
     expect(screen.getByText('Recheck complete')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Create draft$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Create draft$/i }));
+
+    await waitFor(() =>
+      expect(createDraftFromReviewedIntake).toHaveBeenCalledWith(
+        'doc-1',
+        {
+          decisionFingerprint: 'fp-reviewed',
+          reason: 'Create draft from reviewed document values',
+        },
+        { companyId: 1 },
+      ),
+    );
+    expect(await screen.findByText('Expense draft created from reviewed values')).toBeInTheDocument();
     expect(expensesAPI.create).not.toHaveBeenCalled();
     expect(invoicesAPI.create).not.toHaveBeenCalled();
   });
@@ -577,6 +634,7 @@ describe('AI Assistant ChatGPT-like experience', () => {
     fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 
     expect(await screen.findByRole('button', { name: /Review extracted fields/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Create draft$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirm create invoice draft/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirm create expense draft/i })).not.toBeInTheDocument();
     expect(recheckIntakeDocument).not.toHaveBeenCalled();

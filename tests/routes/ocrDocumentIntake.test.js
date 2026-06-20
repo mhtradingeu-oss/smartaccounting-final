@@ -14,10 +14,14 @@ jest.mock('../../src/services/ocrService', () => {
   };
 });
 
+jest.mock('../../src/middleware/rateLimiter', () => ({
+  ocrLimiter: (_req, _res, next) => next(),
+}));
+
 const ocrRouter = require('../../src/routes/ocr');
 const ocrService = require('../../src/services/ocrService');
 const { createApiTimeoutMiddleware } = require('../../src/middleware/apiTimeout');
-const { Expense, FileAttachment, Invoice } = require('../../src/models');
+const { AuditLog, Expense, FileAttachment, Invoice } = require('../../src/models');
 
 const app = express();
 app.use(express.json());
@@ -120,11 +124,44 @@ const recheckDocument = async (token, companyId, documentId, body = {}) =>
     app(req, res);
   });
 
+const createDraftFromReviewedDocument = async (token, companyId, documentId, body = {}) =>
+  new Promise((resolve) => {
+    const req = httpMocks.createRequest({
+      method: 'POST',
+      url: `/api/ocr/intake/${documentId}/create-draft`,
+      params: { documentId },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-company-id': String(companyId),
+        'content-type': 'application/json',
+      },
+      body,
+    });
+    req.socket = req.socket || { setTimeout: () => {} };
+    req.setTimeout = () => {};
+
+    const res = httpMocks.createResponse({ eventEmitter: EventEmitter });
+    res.on('end', () => {
+      const raw = res._getData();
+      let parsed = raw;
+      if (typeof raw === 'string') {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          parsed = raw;
+        }
+      }
+      resolve({ req, res, status: res.statusCode, body: parsed, headers: res._getHeaders() });
+    });
+    app(req, res);
+  });
+
 describe('OCR document intake analyze route', () => {
   const fixturePath = path.join('/tmp', 'ocr-intake-test.png');
   let admin;
   let accountant;
   let viewer;
+  let auditor;
   let otherAdmin;
 
   beforeAll(() => {
@@ -135,6 +172,7 @@ describe('OCR document intake analyze route', () => {
     admin = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
     accountant = await global.testUtils.createTestUserAndLogin({ role: 'accountant' });
     viewer = await global.testUtils.createTestUserAndLogin({ role: 'viewer' });
+    auditor = await global.testUtils.createTestUserAndLogin({ role: 'auditor' });
     otherAdmin = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
     ocrService.processDocument.mockReset();
     ocrService.extractPdfText.mockReset();
@@ -412,7 +450,7 @@ describe('OCR document intake analyze route', () => {
     expect(new Date(response.body.editablePayload.fieldChanges[0].timestamp).toString()).not.toBe(
       'Invalid Date',
     );
-    expect(response.body.draftEligibility.eligible).toBe(false);
+    expect(response.body.draftEligibility.eligible).toBe(true);
     expect(response.body.decisionFingerprint).toEqual(expect.any(String));
 
     const document = await FileAttachment.findByPk(analyzeResponse.body.document.id);
@@ -522,6 +560,415 @@ describe('OCR document intake analyze route', () => {
     expect(response.body.validation.status).toBe('needs_correction');
     expect(response.body.validation.errors.join(' ')).toMatch(/Net \+ VAT/i);
     expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('rejects create-draft before document recheck is complete', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: 'missing',
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(409);
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('rejects create-draft when critical fields were not reviewed', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const document = await FileAttachment.findByPk(analyzeResponse.body.document.id);
+    const intake = {
+      ...document.extractedData.intake,
+      reviewState: {
+        ...document.extractedData.intake.reviewState,
+        status: 'rechecked',
+        criticalFieldsReviewed: false,
+      },
+      editablePayload: {
+        ...document.extractedData.intake.editablePayload,
+        reviewedValues: {
+          documentType: 'receipt',
+          vendorName: 'Reviewed Vendor',
+          grossAmount: 11.9,
+          currency: 'EUR',
+        },
+      },
+      decisionFingerprint: 'fingerprint-without-critical-review',
+      draftEligibility: { eligible: true },
+    };
+    await document.update({ extractedData: { ...document.extractedData, intake } });
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      document.id,
+      {
+        decisionFingerprint: 'fingerprint-without-critical-review',
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(409);
+  });
+
+  it('rejects create-draft with stale or missing decision fingerprint', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          vendorName: 'Reviewed Vendor GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 10,
+          vatRate: 0.19,
+          vatAmount: 1.9,
+          grossAmount: 11.9,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client visit',
+        },
+      },
+    );
+
+    expect(recheckResponse.body.draftEligibility.eligible).toBe(true);
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: 'stale-fingerprint',
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(409);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('rejects create-draft for invalid VAT math after recheck', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'invoice',
+          vendorName: 'Supplier GmbH',
+          documentNumber: 'R-1',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 10,
+          grossAmount: 119,
+          currency: 'EUR',
+        },
+      },
+    );
+    expect(recheckResponse.status).toBe(200);
+    expect(recheckResponse.body.decisionFingerprint).toEqual(expect.any(String));
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(409);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('rejects create-draft for unsupported reviewed document type', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'contract',
+          vendorName: 'Contract Vendor',
+          documentDate: '2026-06-18',
+          grossAmount: 119,
+          currency: 'EUR',
+        },
+      },
+    );
+    expect(recheckResponse.status).toBe(200);
+    expect(recheckResponse.body.decisionFingerprint).toEqual(expect.any(String));
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(422);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+  });
+
+  it('creates an expense draft from reviewed receipt values only and links the source document', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const reviewedValues = {
+      documentType: 'receipt',
+      businessDirection: 'incoming',
+      vendorName: 'Reviewed Vendor GmbH',
+      documentDate: '2026-06-18',
+      netAmount: 10,
+      vatRate: 0.19,
+      vatAmount: 1.9,
+      grossAmount: 11.9,
+      currency: 'EUR',
+      accountingCategory: 'travel',
+      businessPurpose: 'Train ticket to client meeting',
+      paymentMethod: 'card',
+    };
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues,
+        changeReason: 'Corrected OCR fields before draft',
+      },
+    );
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.body.draft).toEqual(
+      expect.objectContaining({
+        type: 'expense',
+        status: 'pending',
+        summary: 'Reviewed Vendor GmbH',
+      }),
+    );
+    const expense = await Expense.findOne({ where: { companyId: accountant.user.companyId } });
+    expect(expense).toEqual(
+      expect.objectContaining({
+        vendorName: 'Reviewed Vendor GmbH',
+        category: 'travel',
+        source: 'ai_document_intake_reviewed',
+      }),
+    );
+    expect(Number(expense.netAmount)).toBe(10);
+    expect(Number(expense.vatAmount)).toBe(1.9);
+    expect(Number(expense.grossAmount)).toBe(11.9);
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    const sourceDocument = await FileAttachment.findByPk(analyzeResponse.body.document.id);
+    const sourceData = sourceDocument.extractedData || {};
+    expect(
+      String(sourceDocument.expenseId || '') === String(expense.id) ||
+        String(sourceData.linkedExpenseId || '') === String(expense.id) ||
+        sourceDocument.attachedToType === 'Expense',
+    ).toBe(true);
+    const auditLog = await AuditLog.findOne({
+      where: { action: 'DOCUMENT_DRAFT_CREATED_FROM_REVIEWED_VALUES' },
+      order: [['createdAt', 'DESC']],
+    });
+    expect(auditLog?.newValues).toEqual(
+      expect.objectContaining({
+        documentId: analyzeResponse.body.document.id,
+        source: 'ai_document_intake_reviewed',
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        fieldChanges: expect.any(Array),
+      }),
+    );
+  });
+
+  it('creates an invoice draft from reviewed customer invoice values only', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const reviewedValues = {
+      documentType: 'customer_invoice',
+      businessDirection: 'outgoing',
+      customerName: 'Reviewed Customer GmbH',
+      documentNumber: 'INV-REVIEW-1',
+      documentDate: '2026-06-18',
+      dueDate: '2026-07-02',
+      netAmount: 100,
+      vatRate: 0.19,
+      vatAmount: 19,
+      grossAmount: 119,
+      currency: 'EUR',
+      accountingCategory: 'consulting',
+      businessPurpose: 'Reviewed consulting services',
+    };
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      { reviewedValues },
+    );
+
+    const response = await createDraftFromReviewedDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.body.draft).toEqual(
+      expect.objectContaining({
+        type: 'invoice',
+        status: 'DRAFT',
+        summary: 'Reviewed Customer GmbH',
+      }),
+    );
+    const invoice = await Invoice.findOne({ where: { companyId: accountant.user.companyId } });
+    expect(invoice.clientName).toBe('Reviewed Customer GmbH');
+    expect(invoice.status).toBe('DRAFT');
+    expect(Number(invoice.subtotal)).toBe(100);
+    expect(Number(invoice.total)).toBe(119);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    const sourceDocument = await FileAttachment.findByPk(analyzeResponse.body.document.id);
+    expect(sourceDocument.invoiceId).toBe(invoice.id);
+  });
+
+  it('keeps create-draft scoped to the active company', async () => {
+    await mockReceiptOcr({ user: admin.user, companyId: admin.user.companyId });
+    const analyzeResponse = await uploadFile(admin.token, admin.user.companyId, fixturePath);
+    const recheckResponse = await recheckDocument(admin.token, admin.user.companyId, analyzeResponse.body.document.id, {
+      reviewedValues: {
+        documentType: 'receipt',
+        vendorName: 'Reviewed Vendor GmbH',
+        documentDate: '2026-06-18',
+        netAmount: 10,
+        vatRate: 0.19,
+        vatAmount: 1.9,
+        grossAmount: 11.9,
+        currency: 'EUR',
+        accountingCategory: 'travel',
+        businessPurpose: 'Client visit',
+      },
+    });
+
+    const response = await createDraftFromReviewedDocument(
+      otherAdmin.token,
+      otherAdmin.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it('blocks viewer and auditor roles from creating reviewed drafts', async () => {
+    await mockReceiptOcr({ user: accountant.user, companyId: accountant.user.companyId });
+    const analyzeResponse = await uploadFile(
+      accountant.token,
+      accountant.user.companyId,
+      fixturePath,
+    );
+    const recheckResponse = await recheckDocument(
+      accountant.token,
+      accountant.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        reviewedValues: {
+          documentType: 'receipt',
+          vendorName: 'Reviewed Vendor GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 10,
+          vatRate: 0.19,
+          vatAmount: 1.9,
+          grossAmount: 11.9,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client visit',
+        },
+      },
+    );
+
+    const viewerResponse = await createDraftFromReviewedDocument(
+      viewer.token,
+      viewer.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+    const auditorResponse = await createDraftFromReviewedDocument(
+      auditor.token,
+      auditor.user.companyId,
+      analyzeResponse.body.document.id,
+      {
+        decisionFingerprint: recheckResponse.body.decisionFingerprint,
+        reason: 'Create draft from reviewed document values',
+      },
+    );
+
+    expect(viewerResponse.status).toBe(403);
+    expect(auditorResponse.status).toBe(403);
     expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
   });
 

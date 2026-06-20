@@ -60,9 +60,12 @@ const buildEditablePayload = (aiExtractedValues = {}) => ({
   fieldChanges: [],
 });
 
-const buildDraftEligibility = () => ({
-  eligible: false,
-  reason: 'Review extracted fields and re-check document before draft creation.',
+const buildDraftEligibility = ({
+  eligible = false,
+  reason = 'Review extracted fields and re-check document before draft creation.',
+} = {}) => ({
+  eligible,
+  reason,
   requiredState: {
     reviewStatus: 'rechecked',
     criticalFieldsReviewed: true,
@@ -121,6 +124,112 @@ const mapReviewedValuesToExtractedData = (reviewedValues = {}) => {
     amount: reviewedValues.grossAmount ?? reviewedValues.amount,
     category: reviewedValues.accountingCategory ?? reviewedValues.category,
     accountingCategory: reviewedValues.accountingCategory ?? reviewedValues.category,
+  };
+};
+
+const toFiniteNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const resolveReviewedDraftType = ({ intake = {}, reviewedValues = {} } = {}) => {
+  const action = intake.classification?.suggestedAction;
+  const documentType = String(reviewedValues.documentType || intake.classification?.documentType || '')
+    .toLowerCase();
+  const direction = String(
+    reviewedValues.businessDirection || intake.classification?.direction || '',
+  ).toLowerCase();
+  const unsupportedDocumentTypes = new Set([
+    'bank_statement',
+    'contract',
+    'delivery_note',
+    'offer',
+    'quote',
+    'tax_document',
+    'unknown',
+    'non_accounting',
+  ]);
+
+  if (unsupportedDocumentTypes.has(documentType)) {
+    return null;
+  }
+
+  if (
+    action === 'create_expense_draft' ||
+    documentType === 'receipt' ||
+    documentType === 'supplier_invoice' ||
+    direction === 'incoming' ||
+    direction === 'supplier_document'
+  ) {
+    return 'expense';
+  }
+  if (
+    action === 'create_invoice_draft' ||
+    documentType === 'customer_invoice' ||
+    direction === 'outgoing' ||
+    direction === 'customer_document'
+  ) {
+    return 'invoice';
+  }
+  return null;
+};
+
+const buildReviewedExpenseDraftPayload = ({ reviewedValues = {}, documentId, systemContext = {} } = {}) => {
+  const netAmount = toFiniteNumber(reviewedValues.netAmount);
+  const vatRate = toFiniteNumber(reviewedValues.vatRate);
+  const vatAmount = toFiniteNumber(reviewedValues.vatAmount, +(netAmount * vatRate).toFixed(2));
+  const grossAmount = toFiniteNumber(reviewedValues.grossAmount, +(netAmount + vatAmount).toFixed(2));
+  const description =
+    reviewedValues.businessPurpose ||
+    reviewedValues.shortDescription ||
+    reviewedValues.documentNumber ||
+    'Reviewed document draft';
+  return {
+    vendorName: reviewedValues.vendorName || reviewedValues.supplierName || 'Reviewed vendor',
+    description,
+    category: reviewedValues.accountingCategory || reviewedValues.category || 'uncategorized',
+    expenseDate: reviewedValues.documentDate || reviewedValues.date || new Date().toISOString().slice(0, 10),
+    currency: reviewedValues.currency || 'EUR',
+    netAmount,
+    vatRate,
+    vatAmount,
+    grossAmount,
+    status: 'pending',
+    source: 'ai_document_intake_reviewed',
+    attachments: documentId ? [documentId] : [],
+    notes: `Created from reviewed document values. Source document ID: ${documentId}.`,
+    reason: systemContext.reason || 'Create draft from reviewed document values',
+  };
+};
+
+const buildReviewedInvoiceDraftPayload = ({ reviewedValues = {}, documentId, systemContext = {} } = {}) => {
+  const netAmount = toFiniteNumber(reviewedValues.netAmount ?? reviewedValues.grossAmount);
+  const vatRate = toFiniteNumber(reviewedValues.vatRate);
+  return {
+    clientName: reviewedValues.customerName || reviewedValues.clientName || 'Reviewed customer',
+    date: reviewedValues.documentDate || reviewedValues.date || new Date().toISOString().slice(0, 10),
+    dueDate:
+      reviewedValues.dueDate ||
+      reviewedValues.documentDate ||
+      reviewedValues.date ||
+      new Date().toISOString().slice(0, 10),
+    currency: reviewedValues.currency || 'EUR',
+    status: 'DRAFT',
+    notes: `Created from reviewed document values. Source document ID: ${documentId}.`,
+    reason: systemContext.reason || 'Create draft from reviewed document values',
+    attachments: documentId ? [documentId] : [],
+    items: [
+      {
+        description:
+          reviewedValues.businessPurpose ||
+          reviewedValues.accountingCategory ||
+          reviewedValues.documentNumber ||
+          'Reviewed document line item',
+        quantity: 1,
+        unitPrice: netAmount,
+        vatRate,
+      },
+    ],
   };
 };
 
@@ -189,7 +298,20 @@ const applyRecheckReviewGate = ({
     reviewedValues: clonePlainObject(reviewedValues),
     fieldChanges: clonePlainObject(fieldChanges),
   };
-  const draftEligibility = buildDraftEligibility();
+  const draftEligibleActions = new Set(['create_expense_draft', 'create_invoice_draft']);
+  const hasBlockingValidation =
+    intake.validation.errors.length > 0 || intake.validation.missingFields.length > 0;
+  const reviewedDraftType = resolveReviewedDraftType({ intake, reviewedValues });
+  const canCreateReviewedDraft =
+    !hasBlockingValidation &&
+    !!reviewedDraftType &&
+    draftEligibleActions.has(intake.classification.suggestedAction);
+  const draftEligibility = buildDraftEligibility({
+    eligible: canCreateReviewedDraft,
+    reason: canCreateReviewedDraft
+      ? 'Reviewed fields were re-checked and can be used for draft creation.'
+      : 'Reviewed fields still need correction or are not supported for draft creation.',
+  });
   const decisionBase = {
     schemaVersion: 'document_lifecycle_decision.v1',
     classification: intake.classification,
@@ -328,8 +450,10 @@ const validateGermanReadiness = ({ documentType, direction, extracted }) => {
     }
   }
   if (documentType === 'receipt') {
-    missingFields.push('businessPurpose');
-    warnings.push('Business purpose is required before using this as an expense draft.');
+    if (!extracted.businessPurpose) {
+      missingFields.push('businessPurpose');
+      warnings.push('Business purpose is required before using this as an expense draft.');
+    }
   }
   if (!extracted.currency) {
     warnings.push('Currency was not detected; EUR is assumed.');
@@ -537,6 +661,9 @@ module.exports = {
   buildDecisionFingerprint,
   mapReviewedDocumentType,
   mapReviewedValuesToExtractedData,
+  resolveReviewedDraftType,
+  buildReviewedExpenseDraftPayload,
+  buildReviewedInvoiceDraftPayload,
   compareReviewedFields,
   applyRecheckReviewGate,
 };

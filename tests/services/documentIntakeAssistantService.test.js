@@ -180,4 +180,79 @@ describe('documentIntakeAssistantService', () => {
     expect(result.decisionFingerprint).toEqual(expect.any(String));
     expect(result.classification.category).toBe('travel');
   });
+
+  it('builds expense draft payloads from reviewed values only', () => {
+    const payload = documentIntakeAssistantService.buildReviewedExpenseDraftPayload({
+      documentId: 'doc-reviewed',
+      reviewedValues: {
+        vendorName: 'Reviewed Vendor GmbH',
+        documentDate: '2026-06-18',
+        netAmount: '100',
+        vatRate: '0.19',
+        vatAmount: '19',
+        grossAmount: '119',
+        currency: 'EUR',
+        accountingCategory: 'software',
+        businessPurpose: 'Reviewed SaaS subscription',
+      },
+      systemContext: {
+        reason: 'Create draft from reviewed document values',
+      },
+    });
+
+    expect(payload).toEqual(
+      expect.objectContaining({
+        vendorName: 'Reviewed Vendor GmbH',
+        description: 'Reviewed SaaS subscription',
+        category: 'software',
+        expenseDate: '2026-06-18',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'ai_document_intake_reviewed',
+        attachments: ['doc-reviewed'],
+      }),
+    );
+  });
+
+  it('builds invoice draft payloads from reviewed values only', () => {
+    const payload = documentIntakeAssistantService.buildReviewedInvoiceDraftPayload({
+      documentId: 'doc-reviewed',
+      reviewedValues: {
+        customerName: 'Reviewed Customer GmbH',
+        documentDate: '2026-06-18',
+        dueDate: '2026-07-02',
+        netAmount: '100',
+        vatRate: '0.19',
+        currency: 'EUR',
+        accountingCategory: 'consulting',
+        businessPurpose: 'Reviewed consulting services',
+      },
+      systemContext: {
+        reason: 'Create draft from reviewed document values',
+      },
+    });
+
+    expect(payload).toEqual(
+      expect.objectContaining({
+        clientName: 'Reviewed Customer GmbH',
+        date: '2026-06-18',
+        dueDate: '2026-07-02',
+        currency: 'EUR',
+        status: 'DRAFT',
+        attachments: ['doc-reviewed'],
+      }),
+    );
+    expect(payload.items).toEqual([
+      expect.objectContaining({
+        description: 'Reviewed consulting services',
+        quantity: 1,
+        unitPrice: 100,
+        vatRate: 0.19,
+      }),
+    ]);
+  });
 });

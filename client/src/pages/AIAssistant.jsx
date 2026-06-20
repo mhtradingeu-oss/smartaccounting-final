@@ -25,7 +25,11 @@ import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent, truncateText } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
-import { analyzeIntake, recheckIntakeDocument } from '../services/ocrAPI';
+import {
+  analyzeIntake,
+  createDraftFromReviewedIntake,
+  recheckIntakeDocument,
+} from '../services/ocrAPI';
 import { expensesAPI } from '../services/expensesAPI';
 import { invoicesAPI } from '../services/invoicesAPI';
 import { isAIAssistantEnabled } from '../lib/featureFlags';
@@ -167,6 +171,7 @@ const AIAssistant = () => {
   const [documentReviewForms, setDocumentReviewForms] = useState({});
   const [documentReviewReasons, setDocumentReviewReasons] = useState({});
   const [documentRecheckStatus, setDocumentRecheckStatus] = useState({});
+  const [documentDraftStatus, setDocumentDraftStatus] = useState({});
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
   const streamAbortRef = useRef(null);
@@ -327,6 +332,7 @@ const AIAssistant = () => {
     setDocumentReviewForms({});
     setDocumentReviewReasons({});
     setDocumentRecheckStatus({});
+    setDocumentDraftStatus({});
   };
 
   useEffect(() => {
@@ -1314,13 +1320,78 @@ const AIAssistant = () => {
     }
   };
 
+  const handleCreateReviewedDraft = async (messageId, analysis) => {
+    const documentId = analysis?.document?.id;
+    const decisionFingerprint = analysis?.decisionFingerprint || analysis?.lifecycle?.decisionFingerprint;
+    if (!documentId || !decisionFingerprint) {
+      setDocumentDraftStatus((prev) => ({
+        ...prev,
+        [messageId]: { type: 'error', message: 'Re-check document before draft creation.' },
+      }));
+      return;
+    }
+
+    setDocumentDraftStatus((prev) => ({
+      ...prev,
+      [messageId]: { type: 'loading', message: 'Creating draft' },
+    }));
+    try {
+      const result = await createDraftFromReviewedIntake(
+        documentId,
+        {
+          decisionFingerprint,
+          reason: 'Create draft from reviewed document values',
+        },
+        { companyId: activeCompanyId },
+      );
+      const draftType = result?.draft?.type;
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                documentAnalysis: {
+                  ...msg.documentAnalysis,
+                  ...(result?.intake || {}),
+                  draftCreation: result?.draft || null,
+                },
+                requestId: result?.requestId || msg.requestId || null,
+              }
+            : msg,
+        ),
+      );
+      setDocumentDraftStatus((prev) => ({
+        ...prev,
+        [messageId]: {
+          type: 'success',
+          message:
+            draftType === 'invoice'
+              ? 'Invoice draft created from reviewed values'
+              : 'Expense draft created from reviewed values',
+        },
+      }));
+    } catch (err) {
+      const message = formatApiError(err, 'Unable to create draft from reviewed values.').message;
+      setDocumentDraftStatus((prev) => ({
+        ...prev,
+        [messageId]: { type: 'error', message },
+      }));
+    }
+  };
+
   const renderDocumentReviewForm = (analysis, messageId) => {
     const isOpen = !!documentReviewOpen[messageId];
     const formValues = documentReviewForms[messageId] || buildDocumentReviewForm(analysis);
     const reasonValue = documentReviewReasons[messageId] || DEFAULT_RECHECK_REASON;
     const recheckState = documentRecheckStatus[messageId];
+    const draftState = documentDraftStatus[messageId];
     const fieldChanges =
       analysis?.editablePayload?.fieldChanges || analysis?.lifecycle?.editablePayload?.fieldChanges || [];
+    const canCreateReviewedDraft =
+      analysis?.reviewState?.status === 'rechecked' &&
+      analysis?.reviewState?.criticalFieldsReviewed === true &&
+      analysis?.draftEligibility?.eligible === true &&
+      !!(analysis?.decisionFingerprint || analysis?.lifecycle?.decisionFingerprint);
 
     return (
       <div className="mt-4 border-t border-blue-100 pt-4 dark:border-blue-900">
@@ -1380,6 +1451,24 @@ const AIAssistant = () => {
                 </span>
               )}
             </div>
+            {canCreateReviewedDraft && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-blue-100 pt-3 dark:border-blue-900">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={draftState?.type === 'loading'}
+                  onClick={() => handleCreateReviewedDraft(messageId, analysis)}
+                >
+                  Create draft
+                </Button>
+                {draftState?.message && (
+                  <span className="text-xs text-blue-700 dark:text-blue-200">
+                    {draftState.message}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
 

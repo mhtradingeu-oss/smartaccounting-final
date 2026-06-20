@@ -16,6 +16,8 @@ const {
 } = require('../middleware/secureUpload');
 const { analyzeDocument, classifyDocumentType } = require('../services/documentAnalysisService');
 const documentIntakeAssistantService = require('../services/ai/documentIntakeAssistantService');
+const expenseService = require('../services/expenseService');
+const invoiceService = require('../services/invoiceService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
@@ -714,6 +716,156 @@ router.post('/intake/:documentId/recheck', requireRole(['accountant']), async (r
   } catch (error) {
     logger.error('OCR intake recheck failed', { error: error.message });
     return sendError(res, 'Unable to recheck document intake', 500);
+  }
+});
+
+router.post('/intake/:documentId/create-draft', requireRole(['accountant']), async (req, res) => {
+  const reason = String(req.body?.reason || 'Create draft from reviewed document values').trim();
+  const providedFingerprint = String(req.body?.decisionFingerprint || '').trim();
+
+  try {
+    const documentRecord = await FileAttachment.findOne({
+      where: { id: req.params.documentId, companyId: req.companyId },
+    });
+
+    if (!documentRecord) {
+      return sendError(res, 'Document not found.', 404);
+    }
+
+    const existingData = getJsonObject(documentRecord.extractedData);
+    const intake = getJsonObject(existingData.intake);
+    const reviewState = getJsonObject(intake.reviewState);
+    const editablePayload = getJsonObject(intake.editablePayload);
+    const reviewedValues = getJsonObject(editablePayload.reviewedValues);
+    const currentFingerprint = intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null;
+
+    if (reviewState.status !== 'rechecked' || reviewState.criticalFieldsReviewed !== true) {
+      return sendError(res, 'Review extracted fields and re-check document before draft creation.', 409);
+    }
+
+    if (!isNonEmptyPlainObject(reviewedValues)) {
+      return sendError(res, 'Reviewed values are required before draft creation.', 409);
+    }
+
+    if (!currentFingerprint || !providedFingerprint || providedFingerprint !== currentFingerprint) {
+      return sendError(res, 'The reviewed document decision is stale. Re-check document first.', 409);
+    }
+
+    if (intake.validation?.status === 'needs_correction' || intake.validation?.errors?.length) {
+      return sendError(res, 'Reviewed document still needs correction before draft creation.', 409);
+    }
+
+    if (Array.isArray(intake.validation?.missingFields) && intake.validation.missingFields.length > 0) {
+      return sendError(res, 'Reviewed document needs additional information before draft creation.', 409);
+    }
+
+    const draftType = documentIntakeAssistantService.resolveReviewedDraftType({
+      intake,
+      reviewedValues,
+    });
+    if (!draftType) {
+      return sendError(res, 'Unsupported reviewed document type for draft creation.', 422);
+    }
+
+    if (!intake.draftEligibility?.eligible) {
+      return sendError(res, 'Reviewed document is not eligible for draft creation.', 422);
+    }
+
+    const systemContext = {
+      source: 'ai_document_intake_reviewed',
+      documentId: documentRecord.id,
+      requestId: req.requestId || null,
+      decisionFingerprint: currentFingerprint,
+      reviewState,
+      fieldChanges: editablePayload.fieldChanges || [],
+      reason,
+    };
+
+    let createdDraft;
+    if (draftType === 'expense') {
+      const payload = documentIntakeAssistantService.buildReviewedExpenseDraftPayload({
+        reviewedValues,
+        documentId: documentRecord.id,
+        systemContext,
+      });
+      createdDraft = await expenseService.createExpense(payload, req.userId, req.companyId, {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent') || null,
+        userId: req.userId,
+        ...systemContext,
+      });
+    } else if (draftType === 'invoice') {
+      const payload = documentIntakeAssistantService.buildReviewedInvoiceDraftPayload({
+        reviewedValues,
+        documentId: documentRecord.id,
+        systemContext,
+      });
+      createdDraft = await invoiceService.createInvoice(payload, req.userId, req.companyId);
+    }
+
+    const updatedIntake = {
+      ...intake,
+      draftCreation: {
+        draftType,
+        draftId: createdDraft?.id || null,
+        createdAt: new Date().toISOString(),
+        decisionFingerprint: currentFingerprint,
+      },
+    };
+    await documentRecord.reload();
+    const latestData = getJsonObject(documentRecord.extractedData);
+    await documentRecord.update({
+      extractedData: {
+        ...latestData,
+        intake: updatedIntake,
+      },
+    });
+
+    await AuditLogService.appendEntry({
+      action: 'DOCUMENT_DRAFT_CREATED_FROM_REVIEWED_VALUES',
+      resourceType: draftType === 'expense' ? 'Expense' : 'Invoice',
+      resourceId: createdDraft?.id ? String(createdDraft.id) : null,
+      userId: req.userId,
+      reason,
+      newValues: {
+        companyId: req.companyId,
+        documentId: documentRecord.id,
+        source: 'ai_document_intake_reviewed',
+        draftType,
+        draftId: createdDraft?.id || null,
+        decisionFingerprint: currentFingerprint,
+        reviewState,
+        fieldChanges: editablePayload.fieldChanges || [],
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent') || null,
+    });
+
+    return sendSuccess(res, 'Draft created from reviewed values', {
+      requestId: req.requestId || null,
+      draft: {
+        type: draftType,
+        id: createdDraft?.id || null,
+        status: createdDraft?.status || (draftType === 'invoice' ? 'DRAFT' : 'pending'),
+        summary:
+          draftType === 'expense'
+            ? createdDraft?.vendorName || reviewedValues.vendorName || null
+            : createdDraft?.clientName || reviewedValues.customerName || null,
+      },
+      intake: updatedIntake,
+      reviewState: updatedIntake.reviewState,
+      editablePayload: updatedIntake.editablePayload,
+      draftEligibility: updatedIntake.draftEligibility,
+      decisionFingerprint: currentFingerprint,
+    }, 201);
+  } catch (error) {
+    logger.error('OCR intake draft creation failed', { error: error.message });
+    const status = error.status || error.statusCode || 500;
+    return sendError(
+      res,
+      status >= 500 ? 'Unable to create draft from reviewed document values' : error.message,
+      status,
+    );
   }
 });
 
