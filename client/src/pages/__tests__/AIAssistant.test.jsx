@@ -561,6 +561,196 @@ describe('AI Assistant ChatGPT-like experience', () => {
     expect(invoicesAPI.create).not.toHaveBeenCalled();
   });
 
+
+  it('submits manual override with restricted VAT acknowledgement during recheck', async () => {
+    analyzeIntake.mockResolvedValueOnce({
+      requestId: 'req-doc-manual',
+      document: { id: 'doc-manual-1', originalName: 'receipt.pdf' },
+      classification: {
+        documentType: 'receipt',
+        suggestedAction: 'create_expense_draft',
+        category: 'travel',
+        confidence: 'medium',
+      },
+      extracted: {
+        vendorName: 'Taxi Berlin GmbH',
+        documentDate: '2026-06-18',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        currency: 'EUR',
+      },
+      validation: {
+        status: 'needs_review',
+        errors: [],
+        warnings: ['Document is incomplete.'],
+        missingFields: [],
+      },
+      reviewState: {
+        status: 'needs_review',
+        reviewRequired: true,
+        reviewedByUserId: null,
+        reviewedAt: null,
+        hasUserCorrections: false,
+        criticalFieldsReviewed: false,
+      },
+      editablePayload: {
+        aiExtractedValues: {
+          documentType: 'receipt',
+          vendorName: 'Taxi Berlin GmbH',
+          documentDate: '2026-06-18',
+          netAmount: 100,
+          vatRate: 0.19,
+          vatAmount: 19,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          businessPurpose: 'Client meeting travel',
+        },
+        reviewedValues: null,
+        fieldChanges: [],
+      },
+      draftEligibility: {
+        eligible: false,
+        reason: 'Review extracted fields and re-check document before draft creation.',
+      },
+      audit: {
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+        blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+      },
+    });
+
+    recheckIntakeDocument.mockResolvedValueOnce({
+      requestId: 'req-manual-recheck',
+      document: { id: 'doc-manual-1', originalName: 'receipt.pdf' },
+      decisionFingerprint: 'fp-manual-reviewed',
+      classification: {
+        documentType: 'receipt',
+        suggestedAction: 'create_expense_draft',
+        category: 'travel',
+        confidence: 'medium',
+      },
+      extracted: {
+        vendorName: 'Taxi Berlin GmbH',
+        documentDate: '2026-06-18',
+        netAmount: 119,
+        vatRate: 0,
+        vatAmount: 0,
+        grossAmount: 119,
+        currency: 'EUR',
+        accountingCategory: 'travel',
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+      },
+      validation: {
+        status: 'needs_review',
+        errors: [],
+        warnings: [],
+        missingFields: [],
+      },
+      reviewState: {
+        status: 'rechecked',
+        reviewRequired: true,
+        reviewedByUserId: 1,
+        reviewedAt: '2026-06-20T10:00:00.000Z',
+        hasUserCorrections: true,
+        criticalFieldsReviewed: true,
+      },
+      editablePayload: {
+        aiExtractedValues: {
+          documentType: 'receipt',
+          vendorName: 'Taxi Berlin GmbH',
+          vatRate: 0.19,
+          vatAmount: 19,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+        },
+        reviewedValues: {
+          documentType: 'receipt',
+          vendorName: 'Taxi Berlin GmbH',
+          netAmount: 119,
+          vatRate: 0,
+          vatAmount: 0,
+          grossAmount: 119,
+          currency: 'EUR',
+          accountingCategory: 'travel',
+          taxTreatment: 'no_vorsteuer_allowed',
+          inputVatAllowed: false,
+          accountantReviewRequired: true,
+        },
+        manualOverride: {
+          shortDescription: 'Taxi ride to client meeting',
+          reason: 'Receipt is partially incomplete but documents a business expense',
+          riskLevel: 'medium',
+          restrictedTaxTreatmentAcknowledged: true,
+        },
+        fieldChanges: [],
+      },
+      draftEligibility: {
+        eligible: true,
+        reason: 'Reviewed fields were re-checked and can be used for draft creation.',
+        restrictedTaxTreatment: {
+          taxTreatment: 'no_vorsteuer_allowed',
+          inputVatAllowed: false,
+          accountantReviewRequired: true,
+        },
+      },
+      audit: {
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+        blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+      },
+    });
+
+    await renderAssistant();
+
+    const file = new File(['%PDF-1.4'], 'receipt.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Choose file attachment'), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    fireEvent.click(await screen.findByRole('button', { name: /Review extracted fields/i }));
+
+    fireEvent.click(screen.getByLabelText(/Manual override with restricted VAT treatment/i));
+    fireEvent.change(screen.getByLabelText(/Manual override short description/i), {
+      target: { value: 'Taxi ride to client meeting' },
+    });
+    fireEvent.change(screen.getByLabelText(/Manual override reason/i), {
+      target: { value: 'Receipt is partially incomplete but documents a business expense' },
+    });
+    fireEvent.change(screen.getByLabelText(/Manual override risk level/i), {
+      target: { value: 'medium' },
+    });
+    fireEvent.click(
+      screen.getByLabelText(/I acknowledge that input VAT will not be deducted/i),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Re-check document/i }));
+
+    await waitFor(() =>
+      expect(recheckIntakeDocument).toHaveBeenCalledWith(
+        'doc-manual-1',
+        expect.objectContaining({
+          manualOverride: {
+            shortDescription: 'Taxi ride to client meeting',
+            reason: 'Receipt is partially incomplete but documents a business expense',
+            riskLevel: 'medium',
+            restrictedTaxTreatmentAcknowledged: true,
+          },
+        }),
+        { companyId: 1 },
+      ),
+    );
+
+    expect(await screen.findByText('Manual override recorded. Expense draft will use no input VAT and requires accountant review.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Create draft$/i })).toBeInTheDocument();
+  });
+
   it('does not create an invoice draft directly from raw document analysis', async () => {
     analyzeIntake.mockResolvedValueOnce({
       requestId: 'req-invoice-doc',

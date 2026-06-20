@@ -170,6 +170,8 @@ const AIAssistant = () => {
   const [documentReviewOpen, setDocumentReviewOpen] = useState({});
   const [documentReviewForms, setDocumentReviewForms] = useState({});
   const [documentReviewReasons, setDocumentReviewReasons] = useState({});
+  const [documentManualOverrideForms, setDocumentManualOverrideForms] = useState({});
+  const [documentManualOverrideEnabled, setDocumentManualOverrideEnabled] = useState({});
   const [documentRecheckStatus, setDocumentRecheckStatus] = useState({});
   const [documentDraftStatus, setDocumentDraftStatus] = useState({});
   const initialMessageSent = useRef(false);
@@ -1236,6 +1238,60 @@ const AIAssistant = () => {
     }, {});
   };
 
+  const buildManualOverrideForm = (analysis) => {
+    const existing =
+      analysis?.editablePayload?.manualOverride ||
+      analysis?.manualOverride ||
+      analysis?.lifecycle?.manualOverride ||
+      {};
+    const reviewedValues =
+      analysis?.editablePayload?.reviewedValues ||
+      analysis?.lifecycle?.editablePayload?.reviewedValues ||
+      analysis?.editablePayload?.aiExtractedValues ||
+      analysis?.extracted ||
+      {};
+    return {
+      shortDescription: normalizeReviewFormValue(
+        existing.shortDescription || reviewedValues.businessPurpose || reviewedValues.shortDescription || '',
+      ),
+      reason: normalizeReviewFormValue(existing.reason || ''),
+      riskLevel: normalizeReviewFormValue(existing.riskLevel || 'medium'),
+      restrictedTaxTreatmentAcknowledged:
+        existing.restrictedTaxTreatmentAcknowledged === true,
+    };
+  };
+
+  const isManualOverridePresent = (analysis) =>
+    !!(
+      analysis?.editablePayload?.manualOverride ||
+      analysis?.manualOverride ||
+      analysis?.lifecycle?.manualOverride
+    );
+
+  const handleManualOverrideFieldChange = (messageId, field, value) => {
+    setDocumentManualOverrideForms((prev) => ({
+      ...prev,
+      [messageId]: {
+        ...(prev[messageId] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const buildManualOverridePayload = (messageId) => {
+    if (!documentManualOverrideEnabled[messageId]) {
+      return null;
+    }
+    const values = documentManualOverrideForms[messageId] || {};
+    return {
+      shortDescription: String(values.shortDescription || '').trim(),
+      reason: String(values.reason || '').trim(),
+      riskLevel: String(values.riskLevel || 'medium').trim().toLowerCase(),
+      restrictedTaxTreatmentAcknowledged:
+        values.restrictedTaxTreatmentAcknowledged === true,
+    };
+  };
+
   const openDocumentReview = (messageId, analysis) => {
     setDocumentReviewOpen((prev) => ({ ...prev, [messageId]: true }));
     setDocumentReviewForms((prev) => ({
@@ -1245,6 +1301,14 @@ const AIAssistant = () => {
     setDocumentReviewReasons((prev) => ({
       ...prev,
       [messageId]: prev[messageId] || DEFAULT_RECHECK_REASON,
+    }));
+    setDocumentManualOverrideForms((prev) => ({
+      ...prev,
+      [messageId]: prev[messageId] || buildManualOverrideForm(analysis),
+    }));
+    setDocumentManualOverrideEnabled((prev) => ({
+      ...prev,
+      [messageId]: prev[messageId] || isManualOverridePresent(analysis),
     }));
   };
 
@@ -1277,6 +1341,24 @@ const AIAssistant = () => {
       documentReviewForms[messageId] || buildDocumentReviewForm(analysis),
     );
     const changeReason = documentReviewReasons[messageId] || DEFAULT_RECHECK_REASON;
+    const manualOverride = buildManualOverridePayload(messageId);
+    if (documentManualOverrideEnabled[messageId]) {
+      if (
+        !manualOverride?.shortDescription ||
+        !manualOverride?.reason ||
+        !manualOverride?.riskLevel ||
+        manualOverride.restrictedTaxTreatmentAcknowledged !== true
+      ) {
+        setDocumentRecheckStatus((prev) => ({
+          ...prev,
+          [messageId]: {
+            type: 'error',
+            message: 'Manual override requires description, reason, risk level, and acknowledgement.',
+          },
+        }));
+        return;
+      }
+    }
     setDocumentRecheckStatus((prev) => ({
       ...prev,
       [messageId]: { type: 'loading', message: 'Re-check document' },
@@ -1288,7 +1370,7 @@ const AIAssistant = () => {
         {
           reviewedValues,
           changeReason,
-          manualOverride: null,
+          manualOverride,
         },
         { companyId: activeCompanyId },
       );
@@ -1306,6 +1388,14 @@ const AIAssistant = () => {
       setDocumentReviewForms((prev) => ({
         ...prev,
         [messageId]: buildDocumentReviewForm(result),
+      }));
+      setDocumentManualOverrideForms((prev) => ({
+        ...prev,
+        [messageId]: buildManualOverrideForm(result),
+      }));
+      setDocumentManualOverrideEnabled((prev) => ({
+        ...prev,
+        [messageId]: prev[messageId] || isManualOverridePresent(result),
       }));
       setDocumentRecheckStatus((prev) => ({
         ...prev,
@@ -1383,6 +1473,13 @@ const AIAssistant = () => {
     const isOpen = !!documentReviewOpen[messageId];
     const formValues = documentReviewForms[messageId] || buildDocumentReviewForm(analysis);
     const reasonValue = documentReviewReasons[messageId] || DEFAULT_RECHECK_REASON;
+    const manualOverrideForm = documentManualOverrideForms[messageId] || buildManualOverrideForm(analysis);
+    const manualOverrideEnabled = !!documentManualOverrideEnabled[messageId];
+    const hasStoredManualOverride = isManualOverridePresent(analysis);
+    const restrictedTaxTreatment =
+      analysis?.draftEligibility?.restrictedTaxTreatment ||
+      analysis?.lifecycle?.draftEligibility?.restrictedTaxTreatment ||
+      null;
     const recheckState = documentRecheckStatus[messageId];
     const draftState = documentDraftStatus[messageId];
     const fieldChanges =
@@ -1435,6 +1532,87 @@ const AIAssistant = () => {
                 className="mt-1 w-full rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm font-normal text-gray-900 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-blue-900 dark:bg-slate-950 dark:text-gray-100"
               />
             </label>
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+              <label className="flex items-start gap-2 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={manualOverrideEnabled}
+                  onChange={(event) =>
+                    setDocumentManualOverrideEnabled((prev) => ({
+                      ...prev,
+                      [messageId]: event.target.checked,
+                    }))
+                  }
+                  className="mt-0.5"
+                />
+                <span>Manual override with restricted VAT treatment</span>
+              </label>
+              <p className="mt-2 leading-5">
+                Use this only when the document is incomplete but still documents a business expense.
+                Input VAT will not be deducted and accountant review will be required.
+              </p>
+              {(manualOverrideEnabled || hasStoredManualOverride) && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block font-semibold">
+                    <span>Manual override short description</span>
+                    <input
+                      type="text"
+                      value={manualOverrideForm.shortDescription || ''}
+                      onChange={(event) =>
+                        handleManualOverrideFieldChange(messageId, 'shortDescription', event.target.value)
+                      }
+                      className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-normal text-gray-900 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:border-amber-900 dark:bg-slate-950 dark:text-gray-100"
+                    />
+                  </label>
+                  <label className="block font-semibold">
+                    <span>Manual override risk level</span>
+                    <select
+                      value={manualOverrideForm.riskLevel || 'medium'}
+                      onChange={(event) =>
+                        handleManualOverrideFieldChange(messageId, 'riskLevel', event.target.value)
+                      }
+                      className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-normal text-gray-900 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:border-amber-900 dark:bg-slate-950 dark:text-gray-100"
+                    >
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high">high</option>
+                    </select>
+                  </label>
+                  <label className="block font-semibold sm:col-span-2">
+                    <span>Manual override reason</span>
+                    <textarea
+                      value={manualOverrideForm.reason || ''}
+                      onChange={(event) =>
+                        handleManualOverrideFieldChange(messageId, 'reason', event.target.value)
+                      }
+                      className="mt-1 min-h-20 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-normal text-gray-900 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:border-amber-900 dark:bg-slate-950 dark:text-gray-100"
+                    />
+                  </label>
+                  <label className="flex items-start gap-2 font-semibold sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={manualOverrideForm.restrictedTaxTreatmentAcknowledged === true}
+                      onChange={(event) =>
+                        handleManualOverrideFieldChange(
+                          messageId,
+                          'restrictedTaxTreatmentAcknowledged',
+                          event.target.checked,
+                        )
+                      }
+                      className="mt-0.5"
+                    />
+                    <span>
+                      I acknowledge that input VAT will not be deducted unless the invoice requirements are complete.
+                    </span>
+                  </label>
+                </div>
+              )}
+              {restrictedTaxTreatment && (
+                <div className="mt-3 rounded-lg border border-amber-300 bg-white px-3 py-2 dark:border-amber-800 dark:bg-slate-950">
+                  Manual override recorded. Expense draft will use no input VAT and requires accountant review.
+                </div>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
