@@ -72,19 +72,27 @@ const buildDraftEligibility = ({
   },
 });
 
-const buildReviewGate = ({ aiExtractedValues = {} } = {}) => {
+const buildReviewGate = ({ aiExtractedValues = {}, intake = null } = {}) => {
   const reviewState = buildReviewState();
   const editablePayload = buildEditablePayload(aiExtractedValues);
   const draftEligibility = buildDraftEligibility();
+  const accountingDecision = intake
+    ? buildAccountingDecision({
+        intake,
+        reviewedValues: aiExtractedValues,
+      })
+    : null;
   return {
     reviewState,
     editablePayload,
     draftEligibility,
+    ...(accountingDecision ? { accountingDecision } : {}),
     lifecycle: {
       schemaVersion: 'document_lifecycle_decision.v1',
       reviewState,
       editablePayload,
       draftEligibility,
+      ...(accountingDecision ? { accountingDecision } : {}),
     },
   };
 };
@@ -549,6 +557,11 @@ const applyRecheckReviewGate = ({
       ? 'Reviewed fields were re-checked and can be used for draft creation.'
       : 'Reviewed fields still need correction or are not supported for draft creation.',
   });
+  const accountingDecision = buildAccountingDecision({
+    intake,
+    reviewedValues,
+    manualOverride: reviewedValues.manualOverride || null,
+  });
   const decisionBase = {
     schemaVersion: 'document_lifecycle_decision.v1',
     classification: intake.classification,
@@ -557,6 +570,7 @@ const applyRecheckReviewGate = ({
     reviewState,
     editablePayload,
     draftEligibility,
+    accountingDecision,
   };
   const decisionFingerprint = buildDecisionFingerprint(decisionBase);
   return {
@@ -564,6 +578,7 @@ const applyRecheckReviewGate = ({
     reviewState,
     editablePayload,
     draftEligibility,
+    accountingDecision,
     decisionFingerprint,
     lifecycle: {
       ...decisionBase,
@@ -867,9 +882,7 @@ function analyzeIntake({ text = '', extractedData = {}, documentType = 'auto', d
         ? 'medium'
         : 'high';
   const action = SUPPORTED_ACTIONS.has(suggestedAction) ? suggestedAction : 'ask_missing_data';
-  const reviewGate = buildReviewGate({ aiExtractedValues: extracted });
-
-  return {
+  const intakeCore = {
     classification: {
       documentType: inferredType,
       direction,
@@ -879,8 +892,16 @@ function analyzeIntake({ text = '', extractedData = {}, documentType = 'auto', d
       confidence,
     },
     extracted,
-    ...reviewGate,
     validation,
+  };
+  const reviewGate = buildReviewGate({
+    aiExtractedValues: extracted,
+    intake: intakeCore,
+  });
+
+  return {
+    ...intakeCore,
+    ...reviewGate,
     draft: buildDraftPayload({ action, extracted, documentId, category }),
     audit: {
       advisoryOnly: true,

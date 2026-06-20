@@ -47,6 +47,16 @@ describe('documentIntakeAssistantService', () => {
         reviewState: result.reviewState,
         editablePayload: result.editablePayload,
         draftEligibility: result.draftEligibility,
+        accountingDecision: result.accountingDecision,
+      }),
+    );
+    expect(result.accountingDecision).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'accounting_decision.v1',
+        documentType: 'receipt',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        source: 'ai_document_intake',
       }),
     );
   });
@@ -177,6 +187,16 @@ describe('documentIntakeAssistantService', () => {
     expect(result.editablePayload.reviewedValues).toEqual(reviewedValues);
     expect(result.editablePayload.fieldChanges).toEqual(fieldChanges);
     expect(result.draftEligibility.eligible).toBe(false);
+    expect(result.accountingDecision).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'accounting_decision.v1',
+        documentType: 'receipt',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        vatTreatment: 'domestic_input_vat_review_required',
+      }),
+    );
+    expect(result.lifecycle.accountingDecision).toEqual(result.accountingDecision);
     expect(result.decisionFingerprint).toEqual(expect.any(String));
     expect(result.classification.category).toBe('travel');
   });

@@ -262,6 +262,15 @@ describe('OCR document intake analyze route', () => {
         reason: expect.stringMatching(/Review extracted fields/i),
       }),
     );
+    expect(response.body.accountingDecision).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'accounting_decision.v1',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        source: 'ai_document_intake',
+      }),
+    );
+    expect(response.body.lifecycle.accountingDecision).toEqual(response.body.accountingDecision);
     expect(response.body.audit.blockedActions).toEqual(['post', 'approve', 'delete', 'reconcile']);
     const document = await FileAttachment.findByPk(response.body.document.id);
     expect(document.extractedData.intake.reviewState).toEqual(response.body.reviewState);
@@ -451,6 +460,15 @@ describe('OCR document intake analyze route', () => {
       'Invalid Date',
     );
     expect(response.body.draftEligibility.eligible).toBe(true);
+    expect(response.body.accountingDecision).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'accounting_decision.v1',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        source: 'ai_document_intake',
+      }),
+    );
+    expect(response.body.lifecycle.accountingDecision).toEqual(response.body.accountingDecision);
     expect(response.body.decisionFingerprint).toEqual(expect.any(String));
 
     const document = await FileAttachment.findByPk(analyzeResponse.body.document.id);
@@ -589,6 +607,14 @@ describe('OCR document intake analyze route', () => {
         taxTreatment: 'no_vorsteuer_allowed',
         inputVatAllowed: false,
         accountantReviewRequired: true,
+      }),
+    );
+    expect(response.body.accountingDecision).toEqual(
+      expect.objectContaining({
+        vatTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+        manualOverrideApplied: true,
       }),
     );
     expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
