@@ -95,6 +95,7 @@
     "invoices": "Invoices",
     "bank_statements": "Bank Statements",
     "ocr_preview": "OCR Preview",
+    "document_inbox": "Document Inbox",
     "tax_reports": "Tax Reports",
     "gdpr_actions": "GDPR Actions",
     "audit_logs": "Audit Logs",

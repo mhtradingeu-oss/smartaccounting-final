@@ -90,6 +90,15 @@ export const ACCOUNTING_NAVIGATION_ITEMS = [
     enabled: true,
   },
   {
+    nameKey: 'navigation.document_inbox',
+    href: '/documents/inbox',
+    icon: DocumentMagnifyingGlassIcon,
+    iconSolid: DocumentMagnifyingGlassIconSolid,
+    badge: 'AI',
+    description: 'AI document intake inbox',
+    enabled: true,
+  },
+  {
     nameKey: 'navigation.ocr_preview',
     href: '/ocr-preview',
     icon: ArrowDownTrayIcon,

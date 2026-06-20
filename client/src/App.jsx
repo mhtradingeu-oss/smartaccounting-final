@@ -63,6 +63,7 @@ const ExpensesCreate = lazy(() => import('./pages/ExpensesCreate'));
 const BankStatements = lazy(() => import('./pages/BankStatements'));
 const BankStatementPreview = lazy(() => import('./pages/BankStatementPreview'));
 const OCRPreview = lazy(() => import('./pages/OCRPreview'));
+const DocumentInbox = lazy(() => import('./pages/DocumentInbox'));
 const BankStatementImport = lazy(() => import('./pages/BankStatementImport'));
 const BankStatementDetail = lazy(() => import('./pages/BankStatementDetail'));
 const BankStatementReconciliationPreview = lazy(
@@ -368,6 +369,14 @@ export const ROUTE_DEFINITIONS = [
     path: '/bank-statements/preview',
     element: renderProtectedRoute(<BankStatementPreview />),
     componentFile: 'client/src/pages/BankStatementPreview.jsx',
+    authRequired: true,
+    requiredRole: null,
+    featureFlags: [],
+  },
+  {
+    path: '/documents/inbox',
+    element: renderProtectedRoute(<DocumentInbox />),
+    componentFile: 'client/src/pages/DocumentInbox.jsx',
     authRequired: true,
     requiredRole: null,
     featureFlags: [],
