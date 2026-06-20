@@ -40,6 +40,49 @@ const normalizeVatRate = (value) => {
   return number > 1 ? +(number / 100).toFixed(4) : +number.toFixed(4);
 };
 
+const buildReviewState = () => ({
+  status: 'needs_review',
+  reviewRequired: true,
+  reviewedByUserId: null,
+  reviewedAt: null,
+  hasUserCorrections: false,
+  criticalFieldsReviewed: false,
+});
+
+const clonePlainObject = (value) => JSON.parse(JSON.stringify(value || {}));
+
+const buildEditablePayload = (aiExtractedValues = {}) => ({
+  aiExtractedValues: clonePlainObject(aiExtractedValues),
+  reviewedValues: null,
+  fieldChanges: [],
+});
+
+const buildDraftEligibility = () => ({
+  eligible: false,
+  reason: 'Review extracted fields and re-check document before draft creation.',
+  requiredState: {
+    reviewStatus: 'rechecked',
+    criticalFieldsReviewed: true,
+  },
+});
+
+const buildReviewGate = ({ aiExtractedValues = {} } = {}) => {
+  const reviewState = buildReviewState();
+  const editablePayload = buildEditablePayload(aiExtractedValues);
+  const draftEligibility = buildDraftEligibility();
+  return {
+    reviewState,
+    editablePayload,
+    draftEligibility,
+    lifecycle: {
+      schemaVersion: 'document_lifecycle_decision.v1',
+      reviewState,
+      editablePayload,
+      draftEligibility,
+    },
+  };
+};
+
 const inferDocumentType = ({ text = '', requestedType = 'auto', extracted = {} } = {}) => {
   if (requestedType && requestedType !== 'auto') {
     return requestedType;
@@ -322,6 +365,7 @@ function analyzeIntake({ text = '', extractedData = {}, documentType = 'auto', d
         ? 'medium'
         : 'high';
   const action = SUPPORTED_ACTIONS.has(suggestedAction) ? suggestedAction : 'ask_missing_data';
+  const reviewGate = buildReviewGate({ aiExtractedValues: extracted });
 
   return {
     classification: {
@@ -333,6 +377,7 @@ function analyzeIntake({ text = '', extractedData = {}, documentType = 'auto', d
       confidence,
     },
     extracted,
+    ...reviewGate,
     validation,
     draft: buildDraftPayload({ action, extracted, documentId, category }),
     audit: {
@@ -347,4 +392,5 @@ module.exports = {
   analyzeIntake,
   inferDocumentType,
   validateGermanReadiness,
+  buildReviewGate,
 };

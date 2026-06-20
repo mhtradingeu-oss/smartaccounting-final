@@ -1180,6 +1180,8 @@ const AIAssistant = () => {
         value !== '',
     );
     const validation = analysis.validation || {};
+    const reviewState = analysis.reviewState || analysis.lifecycle?.reviewState;
+    const draftEligibility = analysis.draftEligibility || analysis.lifecycle?.draftEligibility;
     return (
       <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1196,6 +1198,16 @@ const AIAssistant = () => {
             Confidence: {analysis.classification?.confidence || 'not available'}
           </div>
         </div>
+
+        {reviewState?.reviewRequired && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+            <div className="font-semibold">Review extracted fields required</div>
+            <div>
+              Status: {reviewState.status || 'needs_review'}.{' '}
+              {draftEligibility?.reason || 'Re-check document before draft eligibility.'}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {extractedEntries.length ? (

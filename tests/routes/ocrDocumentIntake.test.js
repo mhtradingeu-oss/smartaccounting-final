@@ -168,7 +168,36 @@ describe('OCR document intake analyze route', () => {
         requiresHumanConfirmation: true,
       }),
     );
+    expect(response.body.reviewState).toEqual({
+      status: 'needs_review',
+      reviewRequired: true,
+      reviewedByUserId: null,
+      reviewedAt: null,
+      hasUserCorrections: false,
+      criticalFieldsReviewed: false,
+    });
+    expect(response.body.editablePayload).toEqual(
+      expect.objectContaining({
+        aiExtractedValues: expect.objectContaining({
+          vendorName: 'DB Vertrieb GmbH',
+          documentType: 'receipt',
+        }),
+        reviewedValues: null,
+        fieldChanges: [],
+      }),
+    );
+    expect(response.body.draftEligibility).toEqual(
+      expect.objectContaining({
+        eligible: false,
+        reason: expect.stringMatching(/Review extracted fields/i),
+      }),
+    );
     expect(response.body.audit.blockedActions).toEqual(['post', 'approve', 'delete', 'reconcile']);
+    const document = await FileAttachment.findByPk(response.body.document.id);
+    expect(document.extractedData.intake.reviewState).toEqual(response.body.reviewState);
+    expect(document.extractedData.intake.editablePayload.aiExtractedValues).toEqual(
+      response.body.editablePayload.aiExtractedValues,
+    );
     expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
     expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
   });
@@ -203,6 +232,24 @@ describe('OCR document intake analyze route', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.classification.suggestedAction).toBe('create_expense_draft');
     expect(response.body.ocr.rawText).toContain('DB Vertrieb GmbH');
+    expect(response.body.reviewState).toEqual(
+      expect.objectContaining({
+        status: 'needs_review',
+        reviewRequired: true,
+        criticalFieldsReviewed: false,
+      }),
+    );
+    expect(response.body.editablePayload).toEqual(
+      expect.objectContaining({
+        aiExtractedValues: expect.objectContaining({
+          vendorName: 'DB Vertrieb GmbH',
+          documentType: 'receipt',
+        }),
+        reviewedValues: null,
+        fieldChanges: [],
+      }),
+    );
+    expect(response.body.draftEligibility.eligible).toBe(false);
     expect(response.body.audit).toEqual(
       expect.objectContaining({
         advisoryOnly: true,
@@ -245,6 +292,19 @@ describe('OCR document intake analyze route', () => {
       }),
     );
     expect(response.body.draft).toBeNull();
+    expect(response.body.reviewState).toEqual(
+      expect.objectContaining({
+        status: 'needs_review',
+        reviewRequired: true,
+        criticalFieldsReviewed: false,
+      }),
+    );
+    expect(response.body.editablePayload).toEqual({
+      aiExtractedValues: {},
+      reviewedValues: null,
+      fieldChanges: [],
+    });
+    expect(response.body.draftEligibility.eligible).toBe(false);
     expect(response.body.audit).toEqual(
       expect.objectContaining({
         advisoryOnly: true,

@@ -339,12 +339,19 @@ router.post(
             },
             classification: intake.classification,
             extracted: intake.extracted,
+            reviewState: intake.reviewState,
+            editablePayload: intake.editablePayload,
+            draftEligibility: intake.draftEligibility,
+            lifecycle: intake.lifecycle,
             validation: intake.validation,
             draft: intake.draft,
             audit: intake.audit,
           });
         }
 
+        const reviewGate = documentIntakeAssistantService.buildReviewGate({
+          aiExtractedValues: {},
+        });
         const documentRecord = await FileAttachment.create({
           originalName: req.file.originalname,
           fileName: req.file.filename || req.file.originalname,
@@ -364,6 +371,7 @@ router.post(
                 confidence: 'low',
               },
               extracted: {},
+              ...reviewGate,
               validation: {
                 status: 'needs_review',
                 errors: ['PDF OCR is not available in this local runtime.'],
@@ -423,6 +431,10 @@ router.post(
             confidence: 'low',
           },
           extracted: {},
+          reviewState: reviewGate.reviewState,
+          editablePayload: reviewGate.editablePayload,
+          draftEligibility: reviewGate.draftEligibility,
+          lifecycle: reviewGate.lifecycle,
           validation: {
             status: 'needs_review',
             errors: ['PDF OCR is not available in this local runtime.'],
@@ -535,6 +547,10 @@ router.post(
         },
         classification: intake.classification,
         extracted: intake.extracted,
+        reviewState: intake.reviewState,
+        editablePayload: intake.editablePayload,
+        draftEligibility: intake.draftEligibility,
+        lifecycle: intake.lifecycle,
         validation: intake.validation,
         draft: intake.draft,
         audit: intake.audit,

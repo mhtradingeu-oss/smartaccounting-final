@@ -20,6 +20,58 @@ describe('documentIntakeAssistantService', () => {
     expect(result.draft.targetRoute).toBe('POST /api/expenses');
     expect(result.audit.advisoryOnly).toBe(true);
     expect(result.audit.requiresHumanConfirmation).toBe(true);
+    expect(result.reviewState).toEqual({
+      status: 'needs_review',
+      reviewRequired: true,
+      reviewedByUserId: null,
+      reviewedAt: null,
+      hasUserCorrections: false,
+      criticalFieldsReviewed: false,
+    });
+    expect(result.editablePayload).toEqual(
+      expect.objectContaining({
+        reviewedValues: null,
+        fieldChanges: [],
+      }),
+    );
+    expect(result.editablePayload.aiExtractedValues).toEqual(result.extracted);
+    expect(result.draftEligibility).toEqual(
+      expect.objectContaining({
+        eligible: false,
+        reason: expect.stringMatching(/Review extracted fields/i),
+      }),
+    );
+    expect(result.lifecycle).toEqual(
+      expect.objectContaining({
+        schemaVersion: 'document_lifecycle_decision.v1',
+        reviewState: result.reviewState,
+        editablePayload: result.editablePayload,
+        draftEligibility: result.draftEligibility,
+      }),
+    );
+  });
+
+  it('keeps the AI extracted values as an immutable intake snapshot', () => {
+    const result = documentIntakeAssistantService.analyzeIntake({
+      text: 'Quittung DB Vertrieb GmbH 18.06.2026 Gesamt 11,90 EUR MwSt 1,90',
+      documentType: 'auto',
+      documentId: 'doc-1',
+      extractedData: {
+        type: 'receipt',
+        vendor: 'DB Vertrieb GmbH',
+        date: '18.06.2026',
+        amount: 11.9,
+        vatAmount: 1.9,
+      },
+    });
+
+    result.extracted.vendorName = 'Changed Vendor';
+    result.extracted.raw.vendor = 'Changed Raw Vendor';
+
+    expect(result.editablePayload.aiExtractedValues.vendorName).toBe('DB Vertrieb GmbH');
+    expect(result.editablePayload.aiExtractedValues.raw.vendor).toBe('DB Vertrieb GmbH');
+    expect(result.editablePayload.reviewedValues).toBeNull();
+    expect(result.editablePayload.fieldChanges).toEqual([]);
   });
 
   it('classifies bank statement-like OCR text as bank_statement_dry_run', () => {

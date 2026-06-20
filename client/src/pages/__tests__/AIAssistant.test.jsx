@@ -231,6 +231,27 @@ describe('AI Assistant ChatGPT-like experience', () => {
         warnings: ['Business purpose is required before using this as an expense draft.'],
         missingFields: ['businessPurpose'],
       },
+      reviewState: {
+        status: 'needs_review',
+        reviewRequired: true,
+        reviewedByUserId: null,
+        reviewedAt: null,
+        hasUserCorrections: false,
+        criticalFieldsReviewed: false,
+      },
+      editablePayload: {
+        aiExtractedValues: {
+          vendorName: 'DB Vertrieb GmbH',
+          grossAmount: 11.9,
+          currency: 'EUR',
+        },
+        reviewedValues: null,
+        fieldChanges: [],
+      },
+      draftEligibility: {
+        eligible: false,
+        reason: 'Review extracted fields and re-check document before draft creation.',
+      },
       draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-1'] } },
       audit: {
         advisoryOnly: true,
@@ -256,6 +277,10 @@ describe('AI Assistant ChatGPT-like experience', () => {
     expect(screen.getByText(/receipt · create_expense_draft/i)).toBeInTheDocument();
     expect(screen.getByText('vendorName')).toBeInTheDocument();
     expect(screen.getByText('DB Vertrieb GmbH')).toBeInTheDocument();
+    expect(screen.getByText('Review extracted fields required')).toBeInTheDocument();
+    expect(screen.getByText(/Status: needs_review/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review extracted fields and re-check document/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Accept for draft/i })).not.toBeInTheDocument();
     expect(
       screen.getByText(/Advisory-only\. Human confirmation is required before any invoice/i),
     ).toBeInTheDocument();
