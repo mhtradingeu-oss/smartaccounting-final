@@ -26,6 +26,8 @@ import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent, truncateText } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
 import { analyzeIntake } from '../services/ocrAPI';
+import { expensesAPI } from '../services/expensesAPI';
+import { invoicesAPI } from '../services/invoicesAPI';
 import { isAIAssistantEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
 import ChatEmptyState from '../components/ChatEmptyState';
@@ -140,6 +142,7 @@ const AIAssistant = () => {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingError, setRecordingError] = useState(null);
   const [documentIntakeProgress, setDocumentIntakeProgress] = useState(null);
+  const [draftCreationStatus, setDraftCreationStatus] = useState(null);
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
   const streamAbortRef = useRef(null);
@@ -937,6 +940,199 @@ const AIAssistant = () => {
     );
   };
 
+
+  const toDraftNumber = (value, fallback = 0) => {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    let normalized = String(value).trim().replace(/[^\d,.-]/g, '');
+
+    const hasComma = normalized.includes(',');
+    const hasDot = normalized.includes('.');
+
+    if (hasComma && hasDot) {
+      normalized = normalized.replace(/\./g, '').replace(',', '.');
+    } else if (hasComma) {
+      normalized = normalized.replace(',', '.');
+    }
+
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : fallback;
+  };
+
+  const toDraftVatRate = (value) => {
+    const number = toDraftNumber(value, 0.19);
+    if (!Number.isFinite(number) || number < 0) {
+      return 0.19;
+    }
+    return number > 1 ? number / 100 : number;
+  };
+
+  const getDocumentSourceNote = (analysis) => {
+    const document = analysis?.document || {};
+    const parts = [
+      'Created from AI document intake review.',
+      document.id ? `Source document ID: ${document.id}.` : null,
+      document.originalName ? `Original file: ${document.originalName}.` : null,
+      analysis?.requestId ? `AI request ID: ${analysis.requestId}.` : null,
+      'Human confirmed draft creation. Advisory AI suggestion only.',
+    ].filter(Boolean);
+    return parts.join(' ');
+  };
+
+  const buildExpenseDraftPayloadFromAnalysis = (analysis) => {
+    const extracted = analysis?.extracted || {};
+    const classification = analysis?.classification || {};
+    const netAmount = toDraftNumber(extracted.netAmount ?? extracted.amount, 0);
+    const vatRate = toDraftVatRate(extracted.vatRate);
+    const vatAmount = toDraftNumber(extracted.vatAmount, +(netAmount * vatRate).toFixed(2));
+    const grossAmount = toDraftNumber(extracted.grossAmount, +(netAmount + vatAmount).toFixed(2));
+    const vendorName =
+      extracted.vendorName ||
+      extracted.supplierName ||
+      extracted.merchantName ||
+      extracted.counterpartyName ||
+      'Unknown vendor';
+
+    return {
+      companyId: activeCompanyId,
+      vendorName,
+      description:
+        extracted.description ||
+        extracted.documentNumber ||
+        `AI document intake draft for ${vendorName}`,
+      category: classification.category || extracted.category || 'general',
+      expenseDate:
+        extracted.documentDate ||
+        extracted.invoiceDate ||
+        extracted.date ||
+        new Date().toISOString().slice(0, 10),
+      currency: extracted.currency || 'EUR',
+      netAmount,
+      vatRate,
+      vatAmount,
+      grossAmount,
+      status: 'pending',
+      source: 'ai_document_intake',
+      notes: getDocumentSourceNote(analysis),
+    };
+  };
+
+  const buildInvoiceDraftPayloadFromAnalysis = (analysis) => {
+    const extracted = analysis?.extracted || {};
+    const classification = analysis?.classification || {};
+    const netAmount = toDraftNumber(extracted.netAmount ?? extracted.amount, 0);
+    const vatRate = toDraftVatRate(extracted.vatRate);
+    const clientName =
+      extracted.customerName ||
+      extracted.clientName ||
+      extracted.buyerName ||
+      extracted.counterpartyName ||
+      'Review customer';
+
+    return {
+      companyId: activeCompanyId,
+      clientName,
+      date:
+        extracted.documentDate ||
+        extracted.invoiceDate ||
+        extracted.date ||
+        new Date().toISOString().slice(0, 10),
+      dueDate:
+        extracted.dueDate ||
+        extracted.documentDate ||
+        extracted.invoiceDate ||
+        extracted.date ||
+        new Date().toISOString().slice(0, 10),
+      currency: extracted.currency || 'EUR',
+      status: 'draft',
+      notes: getDocumentSourceNote(analysis),
+      items: [
+        {
+          description:
+            extracted.description ||
+            classification.category ||
+            extracted.documentNumber ||
+            'AI document intake line item',
+          quantity: 1,
+          unitPrice: netAmount,
+          vatRate,
+        },
+      ],
+    };
+  };
+
+  const handleCreateDraftFromAnalysis = async (analysis) => {
+    if (!analysis || isReadOnly || !activeCompanyId) {
+      return;
+    }
+
+    const suggestedAction = analysis.classification?.suggestedAction;
+    const isExpenseDraft = suggestedAction === 'create_expense_draft';
+    const isInvoiceDraft = suggestedAction === 'create_invoice_draft';
+
+    if (!isExpenseDraft && !isInvoiceDraft) {
+      addLocalAssistantMessage({
+        message:
+          'This document needs review or correction before a draft can be created. No accounting record was changed.',
+        highlights: ['Resolve validation warnings and missing fields before confirming a draft.'],
+        references: ['AI document intake safety policy'],
+      });
+      return;
+    }
+
+    setDraftCreationStatus('Creating draft...');
+    setIsAsking(true);
+
+    try {
+      if (isExpenseDraft) {
+        const result = await expensesAPI.create(buildExpenseDraftPayloadFromAnalysis(analysis));
+        const expense = result?.expense || result?.data?.expense || result;
+        addLocalAssistantMessage({
+          message:
+            'Expense draft created after your confirmation. Please review it before booking or posting.',
+          highlights: [
+            `Draft expense: ${expense?.vendorName || expense?.vendor || 'Created expense draft'}`,
+            'The original document was not automatically posted, approved, deleted, or reconciled.',
+          ],
+          references: ['Created through existing Expenses API', analysis?.document?.id].filter(Boolean),
+        });
+      }
+
+      if (isInvoiceDraft) {
+        const invoice = await invoicesAPI.create(buildInvoiceDraftPayloadFromAnalysis(analysis));
+        addLocalAssistantMessage({
+          message:
+            'Invoice draft created after your confirmation. Please review it before issuing or sending.',
+          highlights: [
+            `Draft invoice: ${invoice?.clientName || 'Created invoice draft'}`,
+            'The original document was not automatically issued, posted, approved, deleted, or reconciled.',
+          ],
+          references: ['Created through existing Invoices API', analysis?.document?.id].filter(Boolean),
+        });
+      }
+    } catch (err) {
+      const message = formatApiError(
+        err,
+        'Unable to create a draft from this document. No accounting record was changed.',
+      ).message;
+      addLocalAssistantMessage({
+        message,
+        highlights: ['No invoice, expense, posting, approval, deletion, or reconciliation was created.'],
+        references: ['AI document intake confirmation path'],
+      });
+    } finally {
+      setDraftCreationStatus(null);
+      setIsAsking(false);
+    }
+  };
+
+
   const renderDocumentAnalysis = (analysis) => {
     if (!analysis) {
       return null;
@@ -992,6 +1188,39 @@ const AIAssistant = () => {
         {!!validation.warnings?.length && renderList('Validation warnings', validation.warnings)}
         {!!validation.missingFields?.length &&
           renderList('Missing fields', validation.missingFields)}
+
+        {!isReadOnly &&
+          ['create_expense_draft', 'create_invoice_draft'].includes(
+            analysis.classification?.suggestedAction,
+          ) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {analysis.classification?.suggestedAction === 'create_expense_draft' && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={isAsking || !!draftCreationStatus}
+                  onClick={() => handleCreateDraftFromAnalysis(analysis)}
+                >
+                  Confirm create expense draft
+                </Button>
+              )}
+              {analysis.classification?.suggestedAction === 'create_invoice_draft' && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={isAsking || !!draftCreationStatus}
+                  onClick={() => handleCreateDraftFromAnalysis(analysis)}
+                >
+                  Confirm create invoice draft
+                </Button>
+              )}
+              <span className="self-center text-xs text-blue-700 dark:text-blue-200">
+                {draftCreationStatus || 'Draft only. Final posting still requires normal review.'}
+              </span>
+            </div>
+          )}
 
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
           Advisory-only. Human confirmation is required before any invoice, expense, bank

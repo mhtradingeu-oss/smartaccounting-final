@@ -7,6 +7,8 @@ import AIAssistant from '../AIAssistant';
 import CompanyContext from '../../context/CompanyContext';
 import { aiAssistantAPI } from '../../services/aiAssistantAPI';
 import { analyzeIntake } from '../../services/ocrAPI';
+import { expensesAPI } from '../../services/expensesAPI';
+import { invoicesAPI } from '../../services/invoicesAPI';
 
 const mockNavigate = vi.fn();
 
@@ -40,6 +42,18 @@ vi.mock('../../services/aiAssistantAPI', () => ({
 
 vi.mock('../../services/ocrAPI', () => ({
   analyzeIntake: vi.fn(),
+}));
+
+vi.mock('../../services/expensesAPI', () => ({
+  expensesAPI: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('../../services/invoicesAPI', () => ({
+  invoicesAPI: {
+    create: vi.fn(),
+  },
 }));
 
 vi.mock('../../lib/featureFlags', () => ({
@@ -245,8 +259,84 @@ describe('AI Assistant ChatGPT-like experience', () => {
     expect(
       screen.getByText(/Advisory-only\. Human confirmation is required before any invoice/i),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /create expense/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /create invoice/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Confirm create expense draft/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Confirm create invoice draft/i })).not.toBeInTheDocument();
+  });
+
+  it('creates an expense draft only after explicit confirmation', async () => {
+    analyzeIntake.mockResolvedValueOnce({
+      requestId: 'req-doc',
+      document: { id: 'doc-1', originalName: 'receipt.pdf' },
+      classification: {
+        documentType: 'receipt',
+        suggestedAction: 'create_expense_draft',
+        category: 'travel',
+        confidence: 'medium',
+      },
+      extracted: {
+        vendorName: 'DB Vertrieb GmbH',
+        documentDate: '2026-06-18',
+        netAmount: 10,
+        vatRate: 0.19,
+        vatAmount: 1.9,
+        grossAmount: 11.9,
+        currency: 'EUR',
+      },
+      validation: {
+        status: 'needs_review',
+        errors: [],
+        warnings: [],
+        missingFields: [],
+      },
+      audit: {
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+        blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+      },
+    });
+    expensesAPI.create.mockResolvedValueOnce({
+      success: true,
+      expense: { id: 'expense-1', vendorName: 'DB Vertrieb GmbH', status: 'pending' },
+    });
+
+    await renderAssistant();
+
+    const file = new File(['%PDF-1.4'], 'receipt.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Choose file attachment'), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    const confirmButton = await screen.findByRole('button', {
+      name: /Confirm create expense draft/i,
+    });
+
+    expect(expensesAPI.create).not.toHaveBeenCalled();
+
+    fireEvent.click(confirmButton);
+
+    await waitFor(() =>
+      expect(expensesAPI.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          companyId: 1,
+          vendorName: 'DB Vertrieb GmbH',
+          category: 'travel',
+          status: 'pending',
+          source: 'ai_document_intake',
+          netAmount: 10,
+          vatRate: 0.19,
+          vatAmount: 1.9,
+          grossAmount: 11.9,
+        }),
+      ),
+    );
+
+    expect(
+      (await screen.findAllByText(/Expense draft created after your confirmation/i)).length,
+    ).toBeGreaterThan(0);
+    expect(invoicesAPI.create).not.toHaveBeenCalled();
   });
 
   it('camera input exists with image accept', async () => {
