@@ -79,6 +79,12 @@ describe('invoicesAPI', () => {
       dueDate: '2026-06-25',
       currency: 'EUR',
       status: 'draft',
+      attachments: ['8cd96f98-1813-4c04-b529-753f0e09c5a4'],
+      reason: 'Human confirmed AI document intake suggestion',
+      systemContext: {
+        source: 'ai_document_intake',
+        documentId: '8cd96f98-1813-4c04-b529-753f0e09c5a4',
+      },
       items: [{ description: 'Service', quantity: '1', unitPrice: '100', vatRate: '19' }],
     });
 
@@ -86,6 +92,12 @@ describe('invoicesAPI', () => {
       '/invoices',
       expect.objectContaining({
         status: 'DRAFT',
+        attachments: ['8cd96f98-1813-4c04-b529-753f0e09c5a4'],
+        reason: 'Human confirmed AI document intake suggestion',
+        systemContext: {
+          source: 'ai_document_intake',
+          documentId: '8cd96f98-1813-4c04-b529-753f0e09c5a4',
+        },
         items: [
           {
             description: 'Service',

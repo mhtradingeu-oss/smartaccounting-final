@@ -220,6 +220,7 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
         newValues: normalizedData,
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
+        reason: normalizedData.reason || 'Invoice created',
         demoFills: demoFills.length > 0 ? demoFills : undefined,
       },
       async () => invoiceService.createInvoice(normalizedData, req.userId, req.companyId),

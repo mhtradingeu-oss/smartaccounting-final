@@ -49,7 +49,9 @@ const expenseSchema = Joi.object({
     'number.base': 'vatRate must be a number',
   }),
   notes: Joi.string().allow('', null).optional(),
-  attachments: Joi.array().items(Joi.number().integer()).optional(),
+  attachments: Joi.array()
+    .items(Joi.alternatives().try(Joi.number().integer(), Joi.string().guid({ version: 'uuidv4' })))
+    .optional(),
 });
 
 module.exports = {

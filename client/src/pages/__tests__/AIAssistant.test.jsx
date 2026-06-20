@@ -282,13 +282,20 @@ describe('AI Assistant ChatGPT-like experience', () => {
         vatRate: 0.19,
         vatAmount: 1.9,
         grossAmount: 11.9,
-        currency: 'EUR',
+        currency: 'USD',
       },
       validation: {
         status: 'needs_review',
         errors: [],
         warnings: [],
         missingFields: [],
+      },
+      draft: {
+        targetRoute: 'POST /api/expenses',
+        payload: {
+          reason: 'User must confirm AI document intake suggestion',
+          systemContext: { source: 'ai_document_intake', documentId: 'doc-1' },
+        },
       },
       audit: {
         advisoryOnly: true,
@@ -325,6 +332,14 @@ describe('AI Assistant ChatGPT-like experience', () => {
           category: 'travel',
           status: 'pending',
           source: 'ai_document_intake',
+          currency: 'USD',
+          attachments: ['doc-1'],
+          reason: 'User must confirm AI document intake suggestion',
+          systemContext: expect.objectContaining({
+            source: 'ai_document_intake',
+            documentId: 'doc-1',
+            requestId: 'req-doc',
+          }),
           netAmount: 10,
           vatRate: 0.19,
           vatAmount: 1.9,
@@ -337,6 +352,101 @@ describe('AI Assistant ChatGPT-like experience', () => {
       (await screen.findAllByText(/Expense draft created after your confirmation/i)).length,
     ).toBeGreaterThan(0);
     expect(invoicesAPI.create).not.toHaveBeenCalled();
+  });
+
+  it('creates an invoice draft with the source document only after explicit confirmation', async () => {
+    analyzeIntake.mockResolvedValueOnce({
+      requestId: 'req-invoice-doc',
+      document: { id: 'doc-invoice-1', originalName: 'invoice.pdf' },
+      classification: {
+        documentType: 'invoice',
+        suggestedAction: 'create_invoice_draft',
+        category: 'services',
+        confidence: 'high',
+      },
+      extracted: {
+        customerName: 'ACME GmbH',
+        documentDate: '2026-06-18',
+        dueDate: '2026-07-02',
+        documentNumber: 'INV-9',
+        netAmount: 100,
+        vatRate: 0.19,
+        currency: 'EUR',
+      },
+      validation: {
+        status: 'ready_for_review',
+        errors: [],
+        warnings: [],
+        missingFields: [],
+      },
+      draft: {
+        targetRoute: 'POST /api/invoices',
+        payload: {
+          reason: 'User must confirm AI document intake suggestion',
+          systemContext: { source: 'ai_document_intake', documentId: 'doc-invoice-1' },
+        },
+      },
+      audit: {
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+        blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+      },
+    });
+    invoicesAPI.create.mockResolvedValueOnce({
+      id: 'invoice-1',
+      clientName: 'ACME GmbH',
+      status: 'draft',
+      items: [],
+      attachments: [],
+    });
+
+    await renderAssistant();
+
+    const file = new File(['%PDF-1.4'], 'invoice.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Choose file attachment'), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    const confirmButton = await screen.findByRole('button', {
+      name: /Confirm create invoice draft/i,
+    });
+
+    expect(invoicesAPI.create).not.toHaveBeenCalled();
+
+    fireEvent.click(confirmButton);
+
+    await waitFor(() =>
+      expect(invoicesAPI.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          companyId: 1,
+          clientName: 'ACME GmbH',
+          status: 'draft',
+          currency: 'EUR',
+          attachments: ['doc-invoice-1'],
+          reason: 'User must confirm AI document intake suggestion',
+          systemContext: expect.objectContaining({
+            source: 'ai_document_intake',
+            documentId: 'doc-invoice-1',
+            requestId: 'req-invoice-doc',
+          }),
+          notes: expect.stringContaining('Source document ID: doc-invoice-1'),
+          items: [
+            expect.objectContaining({
+              description: 'services',
+              quantity: 1,
+              unitPrice: 100,
+              vatRate: 0.19,
+            }),
+          ],
+        }),
+      ),
+    );
+
+    expect(
+      (await screen.findAllByText(/Invoice draft created after your confirmation/i)).length,
+    ).toBeGreaterThan(0);
+    expect(expensesAPI.create).not.toHaveBeenCalled();
   });
 
   it('camera input exists with image accept', async () => {

@@ -16,6 +16,7 @@ jest.mock('../../src/services/ocrService', () => {
 
 const ocrRouter = require('../../src/routes/ocr');
 const ocrService = require('../../src/services/ocrService');
+const { createApiTimeoutMiddleware } = require('../../src/middleware/apiTimeout');
 const { Expense, FileAttachment, Invoice } = require('../../src/models');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use((req, _res, next) => {
   req.requestId = 'test-request-id';
   next();
 });
+app.use('/api', createApiTimeoutMiddleware());
 app.use('/api/ocr', ocrRouter);
 app.use((err, _req, res, _next) => {
   res.status(err.status || err.statusCode || 500).json({
@@ -80,7 +82,7 @@ const uploadFile = async (token, companyId, filePath, fields = {}) => {
           parsed = raw;
         }
       }
-      resolve({ req, res, status: res.statusCode, body: parsed });
+      resolve({ req, res, status: res.statusCode, body: parsed, headers: res._getHeaders() });
     });
     app(req, res);
   });
@@ -157,6 +159,7 @@ describe('OCR document intake analyze route', () => {
     const response = await uploadFile(accountant.token, accountant.user.companyId, fixturePath);
 
     expect(response.status).toBe(200);
+    expect(response.headers['x-api-timeout']).toBe('30000ms');
     expect(response.body.success).toBe(true);
     expect(response.body.classification.suggestedAction).toBe('create_expense_draft');
     expect(response.body.audit).toEqual(

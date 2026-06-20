@@ -1,7 +1,7 @@
 /* eslint-disable no-useless-escape */
 const Tesseract = require('tesseract.js');
 const sharp = require('sharp');
-const pdfParse = require('pdf-parse');
+const pdfParseModule = require('pdf-parse');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,6 +18,34 @@ const DOCUMENT_TYPE_LABELS = {
   tax_document: 'Tax document',
   generic: 'Document',
 };
+
+async function parseDigitalPdfBuffer(buffer) {
+  if (typeof pdfParseModule === 'function') {
+    return pdfParseModule(buffer);
+  }
+
+  if (typeof pdfParseModule.default === 'function') {
+    return pdfParseModule.default(buffer);
+  }
+
+  if (pdfParseModule.PDFParse) {
+    const parser = new pdfParseModule.PDFParse({ data: buffer });
+    try {
+      const result = await parser.getText();
+      return {
+        text: typeof result === 'string' ? result : result?.text || '',
+        numpages: result?.total || result?.numpages || result?.pages || null,
+        info: result?.info || result?.metadata || null,
+      };
+    } finally {
+      if (typeof parser.destroy === 'function') {
+        await parser.destroy();
+      }
+    }
+  }
+
+  throw new TypeError('Unsupported pdf-parse module export shape');
+}
 
 class OCRService {
   constructor() {
@@ -221,7 +249,7 @@ class OCRService {
       }
 
       const buffer = fs.readFileSync(filePath);
-      const parsed = await pdfParse(buffer);
+      const parsed = await parseDigitalPdfBuffer(buffer);
       const text = String(parsed.text || '').trim();
 
       return {

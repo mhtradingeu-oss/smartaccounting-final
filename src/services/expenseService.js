@@ -1,4 +1,5 @@
 const { Expense, FileAttachment, sequelize } = require('../models');
+const AuditLogService = require('./auditLogService');
 const {
   enforceCurrencyIsEur,
   ensureVatTotalsMatch,
@@ -129,28 +130,45 @@ async function createExpense(data, userId, companyId, context = {}) {
   await sequelize.transaction(async (t) => {
     createdExpense = await Expense.create(expensePayload, { transaction: t });
     // Attach files if provided
-    if (supportsAttachments && Array.isArray(data.attachments) && data.attachments.length > 0) {
+    if (Array.isArray(data.attachments) && data.attachments.length > 0) {
       for (const fileId of data.attachments) {
-        await FileAttachment.update(
-          { expenseId: createdExpense.id },
-          { where: { id: fileId, companyId }, transaction: t },
-        );
-        await withAuditLog(
-          {
-            action: 'EXPENSE_ATTACHMENT_ADD',
-            resourceType: 'FileAttachment',
-            resourceId: fileId,
-            companyId,
-            userId,
-            oldValues: null,
-            newValues: { expenseId: createdExpense.id },
-            ipAddress: context.ipAddress,
-            userAgent: context.userAgent,
-            reason: 'Attachment added to expense',
-            status: 'SUCCESS',
-          },
-          async () => Promise.resolve(),
-        );
+        const existingAttachment = await FileAttachment.findOne({
+          where: { id: fileId, companyId },
+          transaction: t,
+        });
+        if (!existingAttachment) {
+          continue;
+        }
+        const oldAttachmentValues = supportsAttachments
+          ? { expenseId: existingAttachment.expenseId || null }
+          : {
+              attachedToType: existingAttachment.attachedToType || null,
+              extractedData: existingAttachment.extractedData || null,
+            };
+        const linkPatch = supportsAttachments
+          ? { expenseId: createdExpense.id }
+          : {
+              attachedToType: 'Expense',
+              extractedData: {
+                ...(existingAttachment.extractedData || {}),
+                linkedExpenseId: createdExpense.id,
+                linkedVia: 'ai_document_intake_confirmed_draft',
+              },
+            };
+        await existingAttachment.update(linkPatch, { transaction: t });
+        await AuditLogService.appendEntry({
+          action: 'EXPENSE_ATTACHMENT_ADD',
+          resourceType: 'FileAttachment',
+          resourceId: String(fileId),
+          companyId,
+          userId,
+          oldValues: oldAttachmentValues,
+          newValues: linkPatch,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+          reason: context.reason || 'Attachment added to expense',
+          transaction: t,
+        });
       }
     }
   });
@@ -166,7 +184,7 @@ async function createExpense(data, userId, companyId, context = {}) {
       newValues: expensePayload,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
-      reason: 'Expense created',
+      reason: context.reason || 'Expense created',
       status: 'SUCCESS',
     },
     async () => Promise.resolve(),

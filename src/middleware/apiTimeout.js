@@ -5,8 +5,13 @@ const API_PREFIX = process.env.API_BASE_URL || '/api';
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.API_REQUEST_TIMEOUT_MS) || 500;
 const DASHBOARD_TIMEOUT_MS = Number(process.env.DASHBOARD_REQUEST_TIMEOUT_MS) || 800;
+const OCR_TIMEOUT_MS = Number(process.env.OCR_REQUEST_TIMEOUT_MS) || 30000;
 
 const TIMEOUT_OVERRIDES = [
+  {
+    prefix: `${API_PREFIX}/ocr`,
+    timeoutMs: OCR_TIMEOUT_MS,
+  },
   {
     prefix: `${API_PREFIX}/dashboard`,
     timeoutMs: DASHBOARD_TIMEOUT_MS,

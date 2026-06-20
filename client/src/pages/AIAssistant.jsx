@@ -975,19 +975,32 @@ const AIAssistant = () => {
 
   const getDocumentSourceNote = (analysis) => {
     const document = analysis?.document || {};
+    const detectedCurrency = analysis?.extracted?.currency;
     const parts = [
       'Created from AI document intake review.',
       document.id ? `Source document ID: ${document.id}.` : null,
       document.originalName ? `Original file: ${document.originalName}.` : null,
       analysis?.requestId ? `AI request ID: ${analysis.requestId}.` : null,
+      detectedCurrency
+        ? `Detected currency: ${String(detectedCurrency).toUpperCase()}.`
+        : 'Currency was not detected; EUR is assumed.',
       'Human confirmed draft creation. Advisory AI suggestion only.',
     ].filter(Boolean);
     return parts.join(' ');
   };
 
+  const getDocumentAttachmentIds = (analysis) => {
+    const documentId = analysis?.document?.id;
+    return documentId ? [documentId] : [];
+  };
+
+  const getDraftSuggestion = (analysis) => analysis?.draft?.payload || {};
+
   const buildExpenseDraftPayloadFromAnalysis = (analysis) => {
     const extracted = analysis?.extracted || {};
     const classification = analysis?.classification || {};
+    const draftSuggestion = getDraftSuggestion(analysis);
+    const attachmentIds = getDocumentAttachmentIds(analysis);
     const netAmount = toDraftNumber(extracted.netAmount ?? extracted.amount, 0);
     const vatRate = toDraftVatRate(extracted.vatRate);
     const vatAmount = toDraftNumber(extracted.vatAmount, +(netAmount * vatRate).toFixed(2));
@@ -1019,13 +1032,25 @@ const AIAssistant = () => {
       grossAmount,
       status: 'pending',
       source: 'ai_document_intake',
+      ...(attachmentIds.length ? { attachments: attachmentIds } : {}),
       notes: getDocumentSourceNote(analysis),
+      reason:
+        draftSuggestion.reason ||
+        'Human confirmed AI document intake suggestion for draft creation',
+      systemContext: {
+        ...(draftSuggestion.systemContext || {}),
+        source: 'ai_document_intake',
+        documentId: analysis?.document?.id || draftSuggestion.systemContext?.documentId || null,
+        requestId: analysis?.requestId || null,
+      },
     };
   };
 
   const buildInvoiceDraftPayloadFromAnalysis = (analysis) => {
     const extracted = analysis?.extracted || {};
     const classification = analysis?.classification || {};
+    const draftSuggestion = getDraftSuggestion(analysis);
+    const attachmentIds = getDocumentAttachmentIds(analysis);
     const netAmount = toDraftNumber(extracted.netAmount ?? extracted.amount, 0);
     const vatRate = toDraftVatRate(extracted.vatRate);
     const clientName =
@@ -1052,6 +1077,16 @@ const AIAssistant = () => {
       currency: extracted.currency || 'EUR',
       status: 'draft',
       notes: getDocumentSourceNote(analysis),
+      reason:
+        draftSuggestion.reason ||
+        'Human confirmed AI document intake suggestion for invoice draft creation',
+      systemContext: {
+        ...(draftSuggestion.systemContext || {}),
+        source: 'ai_document_intake',
+        documentId: analysis?.document?.id || draftSuggestion.systemContext?.documentId || null,
+        requestId: analysis?.requestId || null,
+      },
+      ...(attachmentIds.length ? { attachments: attachmentIds } : {}),
       items: [
         {
           description:

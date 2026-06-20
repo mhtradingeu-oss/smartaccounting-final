@@ -161,6 +161,8 @@ const mapInvoicePayloadToBackend = (invoiceData = {}, { requireItems = false } =
     ...(Object.prototype.hasOwnProperty.call(invoiceData, 'notes')
       ? { notes: invoiceData.notes }
       : {}),
+    ...(invoiceData.reason ? { reason: invoiceData.reason } : {}),
+    ...(invoiceData.systemContext ? { systemContext: invoiceData.systemContext } : {}),
   };
 
   const backendStatus = mapStatusToBackend(invoiceData.status);

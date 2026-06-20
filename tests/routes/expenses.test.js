@@ -1,7 +1,7 @@
 process.env.API_BASE_URL = '/api';
 
 const app = require('../../src/app');
-const { AuditLog, Expense } = require('../../src/models');
+const { AuditLog, Expense, FileAttachment } = require('../../src/models');
 const buildSystemContext = require('../utils/buildSystemContext');
 const { buildExpensePayload } = require('../utils/buildPayload');
 
@@ -60,6 +60,7 @@ const createExpenseFor = (user, overrides = {}) => Expense.create(payloadFor(use
 
 beforeEach(async () => {
   await AuditLog.destroy({ where: {} });
+  await FileAttachment.destroy({ where: {}, force: true });
   await Expense.destroy({ where: {} });
 });
 
@@ -127,6 +128,57 @@ describe('Expenses API', () => {
       });
 
       expect(res.status).toBe(403);
+    });
+
+    it('links same-company source document attachment when creating an expense draft', async () => {
+      const { user, token } = await createRoleSession('accountant');
+      const document = await FileAttachment.create({
+        fileName: 'receipt.pdf',
+        originalName: 'receipt.pdf',
+        filePath: '/tmp/receipt.pdf',
+        fileSize: 100,
+        mimeType: 'application/pdf',
+        documentType: 'receipt',
+        userId: user.id,
+        companyId: user.companyId,
+        uploadedBy: user.id,
+        processingStatus: 'needs_review',
+      });
+
+      const res = await requestFor({
+        method: 'post',
+        token,
+        companyId: user.companyId,
+        body: {
+          ...createPayloadFor(user, {
+            source: 'ai_document_intake',
+            attachments: [document.id],
+            notes: 'Created from AI document intake review.',
+            reason: 'Human confirmed AI document intake suggestion for draft creation',
+            systemContext: {
+              source: 'ai_document_intake',
+              documentId: document.id,
+              requestId: 'req-doc',
+            },
+          }),
+        },
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.expense.source).toBe('ai_document_intake');
+      expect(res.body.reason).toBe(
+        'Human confirmed AI document intake suggestion for draft creation',
+      );
+
+      const linkedDocument = await FileAttachment.findByPk(document.id);
+      expect(linkedDocument.attachedToType).toBe('Expense');
+      expect(linkedDocument.extractedData).toEqual(
+        expect.objectContaining({
+          linkedExpenseId: res.body.expense.id,
+          linkedVia: 'ai_document_intake_confirmed_draft',
+        }),
+      );
+      expect(linkedDocument.companyId).toBe(user.companyId);
     });
   });
 

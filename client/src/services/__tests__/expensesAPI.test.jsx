@@ -77,6 +77,13 @@ describe('expensesAPI', () => {
       category: 'services',
       netAmount: 100,
       vatRate: 0.19,
+      currency: 'usd',
+      attachments: ['8cd96f98-1813-4c04-b529-753f0e09c5a4'],
+      reason: 'Human confirmed AI document intake suggestion',
+      systemContext: {
+        source: 'ai_document_intake',
+        documentId: '8cd96f98-1813-4c04-b529-753f0e09c5a4',
+      },
     });
     expect(api.post).toHaveBeenCalledWith(
       '/expenses',
@@ -88,7 +95,13 @@ describe('expensesAPI', () => {
         netAmount: 100,
         vatAmount: 19,
         grossAmount: 119,
-        currency: 'EUR',
+        currency: 'USD',
+        attachments: ['8cd96f98-1813-4c04-b529-753f0e09c5a4'],
+        reason: 'Human confirmed AI document intake suggestion',
+        systemContext: {
+          source: 'ai_document_intake',
+          documentId: '8cd96f98-1813-4c04-b529-753f0e09c5a4',
+        },
         status: 'pending',
       }),
       { headers: { 'X-Company-Id': companyId } },

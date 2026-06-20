@@ -28,6 +28,11 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
+const normalizeCurrency = (value) => {
+  const currency = String(value || 'EUR').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(currency) ? currency : 'EUR';
+};
+
 const normalizeExpense = (expense = {}) => {
   const grossAmount = toNumber(expense.grossAmount ?? expense.amount);
   const netAmount = toNumber(expense.netAmount, grossAmount);
@@ -76,7 +81,7 @@ const buildCreatePayload = (data = {}) => {
     companyId: data.companyId,
     createdByUserId: data.createdByUserId,
     expenseDate: data.expenseDate ?? data.date,
-    currency: 'EUR',
+    currency: normalizeCurrency(data.currency),
     status: 'pending',
     source: data.source ?? 'manual',
     category: data.category,
@@ -88,6 +93,8 @@ const buildCreatePayload = (data = {}) => {
     vendorName: data.vendorName ?? data.vendor,
     ...(data.notes ? { notes: data.notes } : {}),
     ...(Array.isArray(data.attachments) ? { attachments: data.attachments } : {}),
+    ...(data.reason ? { reason: data.reason } : {}),
+    ...(data.systemContext ? { systemContext: data.systemContext } : {}),
   };
 };
 
