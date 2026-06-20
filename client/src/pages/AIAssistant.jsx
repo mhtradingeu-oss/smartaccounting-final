@@ -1693,6 +1693,22 @@ const AIAssistant = () => {
     const validation = analysis.validation || {};
     const reviewState = analysis.reviewState || analysis.lifecycle?.reviewState;
     const draftEligibility = analysis.draftEligibility || analysis.lifecycle?.draftEligibility;
+    const accountingDecision = analysis.accountingDecision || analysis.lifecycle?.accountingDecision || null;
+    const accountingDecisionItems = accountingDecision
+      ? [
+          ['Posting intent', accountingDecision.postingIntent],
+          ['Draft type', accountingDecision.draftType],
+          ['VAT treatment', accountingDecision.vatTreatment],
+          ['Input VAT allowed', accountingDecision.inputVatAllowed === true ? 'Yes' : 'No'],
+          ['Output VAT required', accountingDecision.outputVatRequired === true ? 'Yes' : 'No'],
+          [
+            'Accountant review required',
+            accountingDecision.accountantReviewRequired === true ? 'Yes' : 'No',
+          ],
+          ['Risk level', accountingDecision.riskLevel],
+          ['Category', accountingDecision.suggestedExpenseCategory],
+        ].filter(([, value]) => value !== null && value !== undefined && value !== '')
+      : [];
     return (
       <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1717,6 +1733,39 @@ const AIAssistant = () => {
               Status: {reviewState.status || 'needs_review'}.{' '}
               {draftEligibility?.reason || 'Re-check document before draft eligibility.'}
             </div>
+          </div>
+        )}
+
+        {accountingDecision && (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs leading-5 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+            <div className="font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+              Accounting decision
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {accountingDecisionItems.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-emerald-100 bg-white px-3 py-2 dark:border-emerald-900 dark:bg-slate-950"
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
+                    {label}
+                  </div>
+                  <div className="mt-1 break-words text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {String(value)}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!!accountingDecision.explanation?.length && (
+              <div className="mt-3">
+                <div className="font-semibold">Decision explanation</div>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {accountingDecision.explanation.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

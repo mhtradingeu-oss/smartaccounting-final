@@ -258,6 +258,26 @@ describe('AI Assistant ChatGPT-like experience', () => {
         eligible: false,
         reason: 'Review extracted fields and re-check document before draft creation.',
       },
+      accountingDecision: {
+        schemaVersion: 'accounting_decision.v1',
+        documentType: 'receipt',
+        businessDirection: 'incoming',
+        postingIntent: 'expense_draft',
+        draftType: 'expense',
+        vatTreatment: 'domestic_input_vat_review_required',
+        inputVatAllowed: true,
+        outputVatRequired: false,
+        suggestedExpenseCategory: 'travel',
+        accountantReviewRequired: false,
+        riskLevel: 'medium',
+        manualOverrideApplied: false,
+        source: 'ai_document_intake',
+        explanation: [
+          'Document type: receipt.',
+          'Business direction: incoming.',
+          'Input VAT appears present, but source document requirements must still be reviewed.',
+        ],
+      },
       draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-1'] } },
       audit: {
         advisoryOnly: true,
@@ -281,6 +301,12 @@ describe('AI Assistant ChatGPT-like experience', () => {
     );
     expect(await screen.findByText('Document analysis')).toBeInTheDocument();
     expect(screen.getByText(/receipt · create_expense_draft/i)).toBeInTheDocument();
+    expect(screen.getByText(/Accounting decision/i)).toBeInTheDocument();
+    expect(screen.getByText(/Posting intent/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/expense_draft/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/VAT treatment/i)).toBeInTheDocument();
+    expect(screen.getByText(/domestic_input_vat_review_required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Decision explanation/i)).toBeInTheDocument();
     expect(screen.getByText('vendorName')).toBeInTheDocument();
     expect(screen.getByText('DB Vertrieb GmbH')).toBeInTheDocument();
     expect(screen.getByText('Review extracted fields required')).toBeInTheDocument();
