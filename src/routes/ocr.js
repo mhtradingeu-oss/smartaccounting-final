@@ -264,6 +264,87 @@ router.post(
         String(req.file.originalname || '').toLowerCase().endsWith('.pdf');
 
       if (isPdfDocument) {
+        const pdfTextResult = await ocrService.extractPdfText(req.file.path);
+        const pdfText = String(pdfTextResult.text || '').trim();
+
+        if (pdfText.length >= 20) {
+          const effectiveType =
+            requestedType === 'auto' ? classifyDocumentType(pdfText) || documentType : documentType;
+          const extractedData = await ocrService.extractStructuredData(pdfText, effectiveType);
+          const intake = documentIntakeAssistantService.analyzeIntake({
+            text: pdfText,
+            extractedData,
+            documentType: requestedType === 'auto' ? 'auto' : effectiveType,
+            documentId: null,
+            userHint: req.body.userHint,
+          });
+
+          const documentRecord = await FileAttachment.create({
+            originalName: req.file.originalname,
+            fileName: req.file.filename || req.file.originalname,
+            filePath: req.file.path,
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype,
+            documentType: intake.classification.documentType,
+            userId: req.userId,
+            companyId: req.companyId,
+            uploadedBy: req.userId,
+            ocrText: pdfText,
+            ocrConfidence: null,
+            processingStatus: intake.validation.status,
+            extractedData: {
+              ...extractedData,
+              pdfTextExtraction: {
+                pages: pdfTextResult.pages || null,
+                digitalText: true,
+              },
+              intake,
+            },
+          });
+
+          await AuditLogService.appendEntry({
+            action: 'ocr_intake_analyze_pdf_text',
+            resourceType: 'FileAttachment',
+            resourceId: String(documentRecord.id),
+            userId: req.userId,
+            companyId: req.companyId,
+            reason: 'AI document intake analyzed extractable PDF text for advisory draft suggestion',
+            newValues: {
+              documentType: intake.classification.documentType,
+              suggestedAction: intake.classification.suggestedAction,
+              advisoryOnly: true,
+              requiresHumanConfirmation: true,
+              pdfTextExtraction: true,
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent') || null,
+          });
+
+          return sendSuccess(res, 'Document intake analyzed', {
+            requestId: req.requestId || null,
+            document: {
+              id: documentRecord.id,
+              originalName: documentRecord.originalName,
+              mimeType: documentRecord.mimeType,
+              fileSize: documentRecord.fileSize,
+              fileHash: documentRecord.fileHash,
+              documentType: documentRecord.documentType,
+              processingStatus: documentRecord.processingStatus,
+              ocrConfidence: null,
+            },
+            ocr: {
+              rawText: pdfText,
+              languageDetected: req.body.languageHint || 'auto',
+              confidence: null,
+            },
+            classification: intake.classification,
+            extracted: intake.extracted,
+            validation: intake.validation,
+            draft: intake.draft,
+            audit: intake.audit,
+          });
+        }
+
         const documentRecord = await FileAttachment.create({
           originalName: req.file.originalname,
           fileName: req.file.filename || req.file.originalname,

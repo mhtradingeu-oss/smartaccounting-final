@@ -9,6 +9,7 @@ jest.mock('../../src/services/ocrService', () => {
   return {
     ...actual,
     processDocument: jest.fn(),
+    extractPdfText: jest.fn(),
     extractStructuredData: jest.fn(),
   };
 });
@@ -102,6 +103,12 @@ describe('OCR document intake analyze route', () => {
     viewer = await global.testUtils.createTestUserAndLogin({ role: 'viewer' });
     otherAdmin = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
     ocrService.processDocument.mockReset();
+    ocrService.extractPdfText.mockReset();
+    ocrService.extractPdfText.mockResolvedValue({
+      success: false,
+      text: '',
+      error: 'No extractable PDF text found',
+    });
     ocrService.extractStructuredData.mockReset();
   });
 
@@ -163,6 +170,51 @@ describe('OCR document intake analyze route', () => {
     expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
   });
 
+  it('analyzes extractable digital PDF text without creating invoices or expenses', async () => {
+    const pdfPath = path.join('/tmp', 'ocr-intake-digital-text.pdf');
+    const pdfText =
+      'Quittung DB Vertrieb GmbH Rechnung Gesamt 11,90 EUR MwSt 1,90 Datum 17.06.2026';
+
+    ocrService.extractPdfText.mockResolvedValue({
+      success: true,
+      text: pdfText,
+      pages: 1,
+      metadata: {},
+    });
+    ocrService.extractStructuredData.mockResolvedValue({
+      type: 'receipt',
+      vendor: 'DB Vertrieb GmbH',
+      amount: 11.9,
+      vatAmount: 1.9,
+      date: '17.06.2026',
+    });
+
+    const response = await uploadFile(accountant.token, accountant.user.companyId, pdfPath, {
+      mimetype: 'application/pdf',
+      originalName: 'ocr-intake-digital-text.pdf',
+      documentType: 'auto',
+      content: '%PDF-1.4 digital text pdf placeholder',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.classification.suggestedAction).toBe('create_expense_draft');
+    expect(response.body.ocr.rawText).toContain('DB Vertrieb GmbH');
+    expect(response.body.audit).toEqual(
+      expect.objectContaining({
+        advisoryOnly: true,
+        requiresHumanConfirmation: true,
+      }),
+    );
+    expect(ocrService.processDocument).not.toHaveBeenCalled();
+    expect(await Invoice.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+    expect(await Expense.count({ where: { companyId: accountant.user.companyId } })).toBe(0);
+
+    if (fs.existsSync(pdfPath)) {
+      fs.unlinkSync(pdfPath);
+    }
+  });
+
   it('returns safe review-required analysis for unsupported PDF OCR runtime', async () => {
     const pdfPath = path.join('/tmp', 'ocr-intake-test-pdf-fallback.pdf');
 
@@ -196,6 +248,7 @@ describe('OCR document intake analyze route', () => {
         requiresHumanConfirmation: true,
       }),
     );
+    expect(ocrService.processDocument).not.toHaveBeenCalled();
 
     if (fs.existsSync(pdfPath)) {
       fs.unlinkSync(pdfPath);

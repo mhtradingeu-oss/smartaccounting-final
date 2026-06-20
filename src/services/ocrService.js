@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-escape */
 const Tesseract = require('tesseract.js');
 const sharp = require('sharp');
+const pdfParse = require('pdf-parse');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -203,6 +204,40 @@ class OCRService {
       return { valid: true };
     } catch (error) {
       return { valid: false, error: error.message };
+    }
+  }
+
+  // Extract embedded text from digital PDFs without image OCR.
+  async extractPdfText(filePath) {
+    try {
+      const validation = await this.validateDocument(filePath);
+      if (!validation.valid) {
+        return { success: false, error: validation.error, text: '' };
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext !== '.pdf') {
+        return { success: false, error: 'File is not a PDF', text: '' };
+      }
+
+      const buffer = fs.readFileSync(filePath);
+      const parsed = await pdfParse(buffer);
+      const text = String(parsed.text || '').trim();
+
+      return {
+        success: text.length > 0,
+        text,
+        pages: parsed.numpages || null,
+        metadata: parsed.info || null,
+        error: text.length > 0 ? null : 'No extractable PDF text found',
+      };
+    } catch (error) {
+      logger.error('PDF text extraction error:', error);
+      return {
+        success: false,
+        error: error.message,
+        text: '',
+      };
     }
   }
 
