@@ -25,7 +25,7 @@ import { useCompany } from '../context/CompanyContext';
 import { isReadOnlyRole } from '../lib/permissions';
 import { formatCurrency, formatDate, formatPercent, truncateText } from '../lib/utils/formatting';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
-import { analyzeIntake } from '../services/ocrAPI';
+import { analyzeIntake, recheckIntakeDocument } from '../services/ocrAPI';
 import { expensesAPI } from '../services/expensesAPI';
 import { invoicesAPI } from '../services/invoicesAPI';
 import { isAIAssistantEnabled } from '../lib/featureFlags';
@@ -75,6 +75,26 @@ const INTENT_OPTIONS = [
 
 const MAX_PROMPT_LENGTH = 8000;
 const STARTUP_TIMEOUT_MS = 10000;
+const DOCUMENT_REVIEW_FIELDS = [
+  { key: 'documentType', label: 'documentType' },
+  { key: 'businessDirection', label: 'businessDirection' },
+  { key: 'vendorName', label: 'vendorName' },
+  { key: 'customerName', label: 'customerName' },
+  { key: 'documentNumber', label: 'documentNumber' },
+  { key: 'documentDate', label: 'documentDate', type: 'date' },
+  { key: 'serviceDateOrPeriod', label: 'serviceDateOrPeriod' },
+  { key: 'netAmount', label: 'netAmount' },
+  { key: 'vatRate', label: 'vatRate' },
+  { key: 'vatAmount', label: 'vatAmount' },
+  { key: 'grossAmount', label: 'grossAmount' },
+  { key: 'currency', label: 'currency' },
+  { key: 'accountingCategory', label: 'accountingCategory' },
+  { key: 'businessPurpose', label: 'businessPurpose' },
+  { key: 'paymentMethod', label: 'paymentMethod' },
+  { key: 'taxTreatment', label: 'taxTreatment' },
+];
+
+const DEFAULT_RECHECK_REASON = 'Corrected OCR fields before draft';
 
 const withStartupTimeout = (promise, label) => {
   let timeoutId;
@@ -143,6 +163,10 @@ const AIAssistant = () => {
   const [recordingError, setRecordingError] = useState(null);
   const [documentIntakeProgress, setDocumentIntakeProgress] = useState(null);
   const [draftCreationStatus, setDraftCreationStatus] = useState(null);
+  const [documentReviewOpen, setDocumentReviewOpen] = useState({});
+  const [documentReviewForms, setDocumentReviewForms] = useState({});
+  const [documentReviewReasons, setDocumentReviewReasons] = useState({});
+  const [documentRecheckStatus, setDocumentRecheckStatus] = useState({});
   const initialMessageSent = useRef(false);
   const lastLoadedCompanyIdRef = useRef(null);
   const streamAbortRef = useRef(null);
@@ -299,6 +323,10 @@ const AIAssistant = () => {
     setRecordingSeconds(0);
     setRecordingError(null);
     setDocumentIntakeProgress(null);
+    setDocumentReviewOpen({});
+    setDocumentReviewForms({});
+    setDocumentReviewReasons({});
+    setDocumentRecheckStatus({});
   };
 
   useEffect(() => {
@@ -1167,8 +1195,224 @@ const AIAssistant = () => {
     }
   };
 
+  const normalizeReviewFormValue = (value) => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
 
-  const renderDocumentAnalysis = (analysis) => {
+  const getReviewSourceValues = (analysis) =>
+    analysis?.editablePayload?.reviewedValues ||
+    analysis?.lifecycle?.editablePayload?.reviewedValues ||
+    analysis?.editablePayload?.aiExtractedValues ||
+    analysis?.lifecycle?.editablePayload?.aiExtractedValues ||
+    analysis?.extracted ||
+    {};
+
+  const buildDocumentReviewForm = (analysis) => {
+    const source = getReviewSourceValues(analysis);
+    return DOCUMENT_REVIEW_FIELDS.reduce((acc, field) => {
+      const fallback =
+        field.key === 'businessDirection'
+          ? analysis?.classification?.direction
+          : field.key === 'accountingCategory'
+            ? analysis?.classification?.category
+            : null;
+      acc[field.key] = normalizeReviewFormValue(source[field.key] ?? fallback);
+      return acc;
+    }, {});
+  };
+
+  const openDocumentReview = (messageId, analysis) => {
+    setDocumentReviewOpen((prev) => ({ ...prev, [messageId]: true }));
+    setDocumentReviewForms((prev) => ({
+      ...prev,
+      [messageId]: prev[messageId] || buildDocumentReviewForm(analysis),
+    }));
+    setDocumentReviewReasons((prev) => ({
+      ...prev,
+      [messageId]: prev[messageId] || DEFAULT_RECHECK_REASON,
+    }));
+  };
+
+  const handleDocumentReviewFieldChange = (messageId, field, value) => {
+    setDocumentReviewForms((prev) => ({
+      ...prev,
+      [messageId]: {
+        ...(prev[messageId] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const compactReviewedValues = (values = {}) =>
+    Object.fromEntries(
+      Object.entries(values).filter(([, value]) => value !== null && value !== undefined && value !== ''),
+    );
+
+  const handleRecheckDocument = async (messageId, analysis) => {
+    const documentId = analysis?.document?.id;
+    if (!documentId) {
+      setDocumentRecheckStatus((prev) => ({
+        ...prev,
+        [messageId]: { type: 'error', message: 'Document reference is missing.' },
+      }));
+      return;
+    }
+
+    const reviewedValues = compactReviewedValues(
+      documentReviewForms[messageId] || buildDocumentReviewForm(analysis),
+    );
+    const changeReason = documentReviewReasons[messageId] || DEFAULT_RECHECK_REASON;
+    setDocumentRecheckStatus((prev) => ({
+      ...prev,
+      [messageId]: { type: 'loading', message: 'Re-check document' },
+    }));
+
+    try {
+      const result = await recheckIntakeDocument(
+        documentId,
+        {
+          reviewedValues,
+          changeReason,
+          manualOverride: null,
+        },
+        { companyId: activeCompanyId },
+      );
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                documentAnalysis: result,
+                requestId: result?.requestId || msg.requestId || null,
+              }
+            : msg,
+        ),
+      );
+      setDocumentReviewForms((prev) => ({
+        ...prev,
+        [messageId]: buildDocumentReviewForm(result),
+      }));
+      setDocumentRecheckStatus((prev) => ({
+        ...prev,
+        [messageId]: { type: 'success', message: 'Recheck complete' },
+      }));
+    } catch (err) {
+      const message = formatApiError(err, 'Unable to re-check document.').message;
+      setDocumentRecheckStatus((prev) => ({
+        ...prev,
+        [messageId]: { type: 'error', message },
+      }));
+    }
+  };
+
+  const renderDocumentReviewForm = (analysis, messageId) => {
+    const isOpen = !!documentReviewOpen[messageId];
+    const formValues = documentReviewForms[messageId] || buildDocumentReviewForm(analysis);
+    const reasonValue = documentReviewReasons[messageId] || DEFAULT_RECHECK_REASON;
+    const recheckState = documentRecheckStatus[messageId];
+    const fieldChanges =
+      analysis?.editablePayload?.fieldChanges || analysis?.lifecycle?.editablePayload?.fieldChanges || [];
+
+    return (
+      <div className="mt-4 border-t border-blue-100 pt-4 dark:border-blue-900">
+        {!isOpen ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => openDocumentReview(messageId, analysis)}
+          >
+            Review extracted fields
+          </Button>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {DOCUMENT_REVIEW_FIELDS.map((field) => (
+                <label key={field.key} className="block text-xs font-semibold text-blue-800 dark:text-blue-100">
+                  <span>{field.label}</span>
+                  <input
+                    type={field.type || 'text'}
+                    value={formValues[field.key] || ''}
+                    onChange={(event) =>
+                      handleDocumentReviewFieldChange(messageId, field.key, event.target.value)
+                    }
+                    className="mt-1 w-full rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm font-normal text-gray-900 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-blue-900 dark:bg-slate-950 dark:text-gray-100"
+                  />
+                </label>
+              ))}
+            </div>
+            <label className="block text-xs font-semibold text-blue-800 dark:text-blue-100">
+              <span>changeReason</span>
+              <input
+                type="text"
+                value={reasonValue}
+                onChange={(event) =>
+                  setDocumentReviewReasons((prev) => ({
+                    ...prev,
+                    [messageId]: event.target.value,
+                  }))
+                }
+                className="mt-1 w-full rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm font-normal text-gray-900 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-blue-900 dark:bg-slate-950 dark:text-gray-100"
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={recheckState?.type === 'loading'}
+                onClick={() => handleRecheckDocument(messageId, analysis)}
+              >
+                Re-check document
+              </Button>
+              {recheckState?.message && (
+                <span className="text-xs text-blue-700 dark:text-blue-200">
+                  {recheckState.message}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!!fieldChanges.length && (
+          <div className="mt-4 space-y-2">
+            <div className="text-xs font-semibold uppercase text-blue-700 dark:text-blue-200">
+              Field changes
+            </div>
+            {fieldChanges.map((change) => (
+              <div
+                key={`${change.field}-${change.timestamp || change.correctedValue}`}
+                className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs dark:border-blue-900 dark:bg-slate-950"
+              >
+                <div className="font-semibold text-blue-700 dark:text-blue-200">{change.field}</div>
+                <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <span className="font-semibold">AI extracted value: </span>
+                    <span>{String(change.aiValue ?? '')}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Reviewed value: </span>
+                    <span>{String(change.correctedValue ?? '')}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderDocumentAnalysis = (analysis, messageId) => {
     if (!analysis) {
       return null;
     }
@@ -1236,43 +1480,10 @@ const AIAssistant = () => {
         {!!validation.missingFields?.length &&
           renderList('Missing fields', validation.missingFields)}
 
-        {!isReadOnly &&
-          ['create_expense_draft', 'create_invoice_draft'].includes(
-            analysis.classification?.suggestedAction,
-          ) && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {analysis.classification?.suggestedAction === 'create_expense_draft' && (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={isAsking || !!draftCreationStatus}
-                  onClick={() => handleCreateDraftFromAnalysis(analysis)}
-                >
-                  Confirm create expense draft
-                </Button>
-              )}
-              {analysis.classification?.suggestedAction === 'create_invoice_draft' && (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={isAsking || !!draftCreationStatus}
-                  onClick={() => handleCreateDraftFromAnalysis(analysis)}
-                >
-                  Confirm create invoice draft
-                </Button>
-              )}
-              <span className="self-center text-xs text-blue-700 dark:text-blue-200">
-                {draftCreationStatus || 'Draft only. Final posting still requires normal review.'}
-              </span>
-            </div>
-          )}
+        {!isReadOnly && renderDocumentReviewForm(analysis, messageId)}
 
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-          Advisory-only. Human confirmation is required before any invoice, expense, bank
-          transaction, posting, approval, deletion, or reconciliation. Review extracted fields
-          before creating any draft.
+          Advisory-only. Review extracted fields and use Re-check document before any draft step.
         </div>
       </div>
     );
@@ -1339,7 +1550,7 @@ const AIAssistant = () => {
           {isAssistant && renderList('Risks', message.risks)}
           {isAssistant && renderList('Suggested next steps', message.requiredActions)}
           {isAssistant && renderList('References', references)}
-          {isAssistant && renderDocumentAnalysis(message.documentAnalysis)}
+          {isAssistant && renderDocumentAnalysis(message.documentAnalysis, message.id)}
           {isAssistant && (message.confidence || message.contextSummary || message.meta) && (
             <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500 dark:bg-slate-900 dark:text-gray-400">
               {message.confidence && <span>Confidence: {message.confidence}. </span>}

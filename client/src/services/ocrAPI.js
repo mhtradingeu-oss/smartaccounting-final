@@ -54,10 +54,21 @@ export const analyzeIntake = async (file, options = {}) => {
   return response.data;
 };
 
+export const recheckIntakeDocument = async (documentId, payload = {}, options = {}) => {
+  const companyId = options.companyId || payload.companyId;
+  const { companyId: _companyId, ...body } = payload;
+  const response = await api.post(`/ocr/intake/${documentId}/recheck`, body, {
+    headers: companyId ? { 'X-Company-Id': companyId } : undefined,
+  });
+
+  return response.data;
+};
+
 const ocrAPI = {
   previewDocument,
   processDocument,
   analyzeIntake,
+  recheckIntakeDocument,
 };
 
 export default ocrAPI;
