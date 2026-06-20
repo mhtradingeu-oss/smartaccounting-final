@@ -9,6 +9,7 @@ const {
   sequelize,
 } = require('../../src/models');
 const accountingPostingService = require('../../src/services/accountingPostingService');
+const chartOfAccountsService = require('../../src/services/chartOfAccountsService');
 
 describe('accountingPostingService', () => {
   let company;
@@ -192,6 +193,55 @@ describe('accountingPostingService', () => {
     });
 
     expect(persistedLines).toHaveLength(3);
+  });
+
+  it('creates a draft journal entry using account roles', async () => {
+    const result = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'expense',
+      sourceId: 'expense-role-1',
+      description: 'Posting draft using account roles',
+      createdBy: user.id,
+      lines: [
+        {
+          accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.GENERAL_EXPENSE,
+          debit: 100,
+          credit: 0,
+          description: 'Net expense',
+        },
+        {
+          accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.INPUT_VAT_19,
+          debit: 19,
+          credit: 0,
+          taxCode: 'input_vat_19',
+          vatRate: 19,
+          description: 'Input VAT',
+        },
+        {
+          accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.ACCOUNTS_PAYABLE,
+          debit: 0,
+          credit: 119,
+          description: 'Payable',
+        },
+      ],
+    });
+
+    expect(result.journalEntry).toMatchObject({
+      companyId: company.id,
+      sourceType: 'expense',
+      sourceId: 'expense-role-1',
+      status: 'draft',
+    });
+
+    const persistedLines = await JournalEntryLine.findAll({
+      where: { journalEntryId: result.journalEntry.id, companyId: company.id },
+      include: [{ model: ChartAccount, as: 'account' }],
+      order: [['createdAt', 'ASC']],
+    });
+
+    expect(persistedLines).toHaveLength(3);
+    expect(persistedLines.map((line) => line.account.code).sort()).toEqual(['1576', '1600', '4930']);
   });
 
   it('rejects accounts outside the active company', async () => {

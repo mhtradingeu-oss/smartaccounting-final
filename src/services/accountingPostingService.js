@@ -1,6 +1,7 @@
 'use strict';
 
 const { ChartAccount, JournalEntry, JournalEntryLine, sequelize } = require('../models');
+const chartOfAccountsService = require('./chartOfAccountsService');
 
 const MONEY_SCALE = 2;
 
@@ -73,6 +74,36 @@ const normalizeJournalLine = ({ line, companyId, journalEntryId }) => ({
   metadata: line.metadata || null,
 });
 
+const resolveJournalLines = async ({ companyId, lines, transaction }) => {
+  const resolvedLines = [];
+
+  for (const line of lines) {
+    if (line.accountId) {
+      resolvedLines.push(line);
+      continue;
+    }
+
+    if (!line.accountRole) {
+      resolvedLines.push(line);
+      continue;
+    }
+
+    const account = await chartOfAccountsService.getAccountByRole({
+      companyId,
+      role: line.accountRole,
+      transaction,
+    });
+
+    resolvedLines.push({
+      ...line,
+      accountId: account.id,
+      accountCode: account.code,
+    });
+  }
+
+  return resolvedLines;
+};
+
 const ensureAccountsBelongToCompany = async ({ companyId, lines, transaction }) => {
   const accountIds = [...new Set(lines.map((line) => line.accountId))];
 
@@ -115,10 +146,12 @@ const createJournalEntryDraft = async ({
     throw new Error('sourceType is required');
   }
 
-  validateBalancedEntry(lines);
-
   return sequelize.transaction(async (transaction) => {
-    await ensureAccountsBelongToCompany({ companyId, lines, transaction });
+    const resolvedLines = await resolveJournalLines({ companyId, lines, transaction });
+
+    validateBalancedEntry(resolvedLines);
+
+    await ensureAccountsBelongToCompany({ companyId, lines: resolvedLines, transaction });
 
     const journalEntry = await JournalEntry.create(
       {
@@ -136,7 +169,7 @@ const createJournalEntryDraft = async ({
     );
 
     const journalLines = await JournalEntryLine.bulkCreate(
-      lines.map((line) =>
+      resolvedLines.map((line) =>
         normalizeJournalLine({
           line,
           companyId,
@@ -162,4 +195,5 @@ module.exports = {
   normalizeMoney,
   validateBalancedEntry,
   createJournalEntryDraft,
+  resolveJournalLines,
 };
