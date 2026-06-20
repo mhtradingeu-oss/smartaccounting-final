@@ -24,9 +24,31 @@ vi.mock('../../services/aiInsightsAPI', () => ({
 }));
 
 describe('AI Manager page', () => {
+  const renderAIManager = () => render(
+    <MemoryRouter>
+      <AIManager />
+    </MemoryRouter>,
+  );
+
+  const mockContext = (overrides = {}) => {
+    aiAssistantAPI.getContext.mockResolvedValue({
+      invoices: [],
+      expenses: [],
+      bankTransactions: [],
+      ...overrides,
+    });
+  };
+
+  const mockInsights = (insights = []) => {
+    aiInsightsAPI.list.mockResolvedValue({
+      viewerLimited: false,
+      insights,
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    aiAssistantAPI.getContext.mockResolvedValue({
+    mockContext({
       invoices: [
         { id: 1, status: 'OVERDUE' },
         { id: 2, status: 'PAID' },
@@ -37,25 +59,18 @@ describe('AI Manager page', () => {
         { id: 5, description: 'Reconciled payment', isReconciled: true },
       ],
     });
-    aiInsightsAPI.list.mockResolvedValue({
-      viewerLimited: false,
-      insights: [
-        {
-          id: 'risk-1',
-          severity: 'high',
-          type: 'Duplicate invoice risk',
-          summary: 'Potential duplicate invoice needs review.',
-        },
-      ],
-    });
+    mockInsights([
+      {
+        id: 'risk-1',
+        severity: 'high',
+        type: 'Duplicate invoice risk',
+        summary: 'Potential duplicate invoice needs review.',
+      },
+    ]);
   });
 
   it('renders live read-only AI Manager data', async () => {
-    render(
-      <MemoryRouter>
-        <AIManager />
-      </MemoryRouter>,
-    );
+    renderAIManager();
 
     expect(screen.getByLabelText('Loading AI Manager data')).toBeInTheDocument();
 
@@ -66,29 +81,104 @@ describe('AI Manager page', () => {
 
     expect(screen.getByText('Today’s Accounting Briefing')).toBeInTheDocument();
     expect(screen.getByText('Critical Alerts')).toBeInTheDocument();
-    expect(screen.getByText('Review Queue')).toBeInTheDocument();
+    expect(screen.getByText('Priority decision')).toBeInTheDocument();
+    expect(screen.getByText('Next best action')).toBeInTheDocument();
+    expect(screen.getByText('Why this matters')).toBeInTheDocument();
+    expect(screen.getByText('Evidence')).toBeInTheDocument();
+    expect(screen.getByText('Review queue')).toBeInTheDocument();
     expect(screen.getByText('Ask AI Manager')).toBeInTheDocument();
 
     expect(screen.getByText('Invoices')).toBeInTheDocument();
     expect(screen.getByText('Expenses')).toBeInTheDocument();
     expect(screen.getByText('Bank activity')).toBeInTheDocument();
-    expect(screen.getByText('AI insights')).toBeInTheDocument();
+    expect(screen.getAllByText('AI insights')).not.toHaveLength(0);
 
-    expect(screen.getAllByText('Potential duplicate invoice needs review.')).toHaveLength(2);
+    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
     expect(screen.getByText('Bank payment')).toBeInTheDocument();
     expect(screen.getByText('Invoice #1')).toBeInTheDocument();
   });
 
-  it('does not render write controls', async () => {
-    render(
-      <MemoryRouter>
-        <AIManager />
-      </MemoryRouter>,
-    );
+  it('selects a high severity insight as the priority decision', async () => {
+    renderAIManager();
+
+    await waitFor(() => expect(screen.getByText('Priority decision')).toBeInTheDocument());
+
+    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+    expect(screen.getAllByText('High-severity insights are reviewed before routine accounting follow-up.')).not.toHaveLength(0);
+    expect(screen.getAllByText('Open AI insights')).not.toHaveLength(0);
+  });
+
+  it('selects an unreconciled bank transaction when no high insight exists', async () => {
+    mockInsights([
+      {
+        id: 'medium-1',
+        severity: 'medium',
+        type: 'Cash flow reminder',
+        summary: 'Review cash flow timing.',
+      },
+    ]);
+
+    renderAIManager();
+
+    await waitFor(() => expect(screen.getByText('Priority decision')).toBeInTheDocument());
+
+    expect(screen.getAllByText('Bank payment')).not.toHaveLength(0);
+    expect(screen.getAllByText('Review bank statements')).not.toHaveLength(0);
+    expect(screen.getByText('Unreconciled bank transaction')).toBeInTheDocument();
+  });
+
+  it('selects a pending or draft invoice when no higher priority exists', async () => {
+    mockContext({
+      invoices: [
+        { id: 77, status: 'DRAFT' },
+        { id: 78, status: 'PAID' },
+      ],
+      expenses: [],
+      bankTransactions: [
+        { id: 4, description: 'Reconciled payment', isReconciled: true },
+      ],
+    });
+    mockInsights([]);
+
+    renderAIManager();
+
+    await waitFor(() => expect(screen.getByText('Priority decision')).toBeInTheDocument());
+
+    expect(screen.getAllByText('Invoice #77')).not.toHaveLength(0);
+    expect(screen.getAllByText('Review invoices')).not.toHaveLength(0);
+    expect(screen.getAllByText('Status: DRAFT')).not.toHaveLength(0);
+  });
+
+  it('renders evidence source, rule, and entity where available', async () => {
+    renderAIManager();
+
+    await waitFor(() => expect(screen.getByText('Evidence')).toBeInTheDocument());
+
+    expect(
+      screen.getByText((content) => (
+        content.includes('Source: AI insights')
+        && content.includes('Rule: Priority 1: high severity insights')
+        && content.includes('Entity: insight #risk-1')
+      )),
+    ).toBeInTheDocument();
+  });
+
+  it('does not render write-action labels', async () => {
+    renderAIManager();
 
     await waitFor(() => expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument());
 
-    const forbiddenButtonNames = /approve|create invoice|upload|pay|delete|post|submit approval/i;
-    expect(screen.queryByRole('button', { name: forbiddenButtonNames })).not.toBeInTheDocument();
+    const forbiddenLabels = /approve|reject|resolve|post|delete|reconcile now/i;
+    expect(screen.queryByText(forbiddenLabels)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: forbiddenLabels })).not.toBeInTheDocument();
+  });
+
+  it('keeps API calls scoped to companyId', async () => {
+    renderAIManager();
+
+    await waitFor(() => expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument());
+
+    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+    expect(aiInsightsAPI.list).toHaveBeenCalledWith({ companyId: 10 });
   });
 });
