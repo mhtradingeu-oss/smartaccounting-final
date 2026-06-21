@@ -32,6 +32,8 @@ module.exports = {
       'POST /api/expenses/:id/post',
       'PATCH /api/expenses/:id/status',
 
+      'GET /api/journal-entries',
+      'GET /api/journal-entries/:id',
       'POST /api/journal-entries/:id/reverse',
       'POST /api/journal-entries/*/reverse',
 
@@ -77,6 +79,8 @@ module.exports = {
       'GET /api/invoices/:id/payments',
       'GET /api/expenses',
       'GET /api/expenses/:id',
+      'GET /api/journal-entries',
+      'GET /api/journal-entries/:id',
       'GET /api/bank-statements',
       'GET /api/bank-statements/:id',
       'GET /api/bank-statements/:id/transactions',
@@ -107,6 +111,8 @@ module.exports = {
       'GET /api/invoices/:id/payments',
       'GET /api/expenses',
       'GET /api/expenses/:id',
+      'GET /api/journal-entries',
+      'GET /api/journal-entries/:id',
 
       'GET /api/telemetry/client-error',
       'GET /api/ai/insights',

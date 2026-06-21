@@ -121,6 +121,122 @@ describe('Journal entries API', () => {
     });
   };
 
+
+
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can list journal entries for the active company', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+    const postedEntry = await createPostedJournalEntry({ userId: session.user.id });
+
+    const response = await requestFor({
+      method: 'get',
+      url: '/api/journal-entries',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(Array.isArray(response.body.journalEntries)).toBe(true);
+    expect(response.body.journalEntries.some((entry) => entry.id === postedEntry.id)).toBe(true);
+    expect(response.body.pagination).toEqual(
+      expect.objectContaining({
+        total: expect.any(Number),
+        limit: expect.any(Number),
+        offset: expect.any(Number),
+      }),
+    );
+  });
+
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can get a same-company journal entry detail with lines', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+    const postedEntry = await createPostedJournalEntry({ userId: session.user.id });
+
+    const response = await requestFor({
+      method: 'get',
+      url: `/api/journal-entries/${postedEntry.id}`,
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.journalEntry.id).toBe(postedEntry.id);
+    expect(response.body.journalEntry.companyId).toBe(company.id);
+    expect(response.body.journalEntry.lines).toHaveLength(2);
+  });
+
+  it('filters journal entries by status and sourceType', async () => {
+    const postedEntry = await createPostedJournalEntry({ userId: accountant.user.id });
+
+    await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual_draft_filter',
+      sourceId: 'draft-filter-test',
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 50, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 50 },
+      ],
+    });
+
+    const response = await requestFor({
+      method: 'get',
+      url: '/api/journal-entries?status=posted&sourceType=manual',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.journalEntries.every((entry) => entry.status === 'posted')).toBe(true);
+    expect(response.body.journalEntries.every((entry) => entry.sourceType === 'manual')).toBe(true);
+    expect(response.body.journalEntries.some((entry) => entry.id === postedEntry.id)).toBe(true);
+  });
+
+  it('keeps journal entry detail scoped to the active company', async () => {
+    const otherAccountant = await createRoleSession('accountant', otherCompany.id);
+
+    const otherExpenseAccount = await ChartAccount.create({
+      companyId: otherCompany.id,
+      code: '4930',
+      name: 'Other read expenses',
+      type: 'expense',
+      normalBalance: 'debit',
+      isSystem: true,
+    });
+
+    const otherPayableAccount = await ChartAccount.create({
+      companyId: otherCompany.id,
+      code: '1600',
+      name: 'Other read payable',
+      type: 'liability',
+      normalBalance: 'credit',
+      isSystem: true,
+    });
+
+    const otherDraft = await accountingPostingService.createJournalEntryDraft({
+      companyId: otherCompany.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'other-company-read-test',
+      createdBy: otherAccountant.user.id,
+      lines: [
+        { accountId: otherExpenseAccount.id, debit: 100, credit: 0 },
+        { accountId: otherPayableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    const response = await requestFor({
+      method: 'get',
+      url: `/api/journal-entries/${otherDraft.journalEntry.id}`,
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(404);
+  });
+
+
   it('admin can reverse a posted journal entry', async () => {
     const postedEntry = await createPostedJournalEntry({ userId: admin.user.id });
 
