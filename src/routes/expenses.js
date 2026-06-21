@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticate, requireRole, requireCompany } = require('../middleware/authMiddleware');
 const expenseService = require('../services/expenseService');
+const accountingPostingService = require('../services/accountingPostingService');
 const { expenseSchema } = require('../validators/expenseValidator');
 const {
   normalizeExpensePayload,
@@ -96,6 +97,35 @@ router.post('/', requireRole(['admin', 'accountant']), async (req, res, next) =>
     });
   } catch (error) {
     next(error);
+  }
+});
+
+// Create accounting posting preview for an expense.
+// This is intentionally preview-only: it creates a draft journal entry and does not post/finalize the expense.
+router.post('/:expenseId/posting-preview', requireRole(['admin', 'accountant']), async (req, res, next) => {
+  try {
+    const result = await accountingPostingService.createExpensePostingPreview({
+      expenseId: req.params.expenseId,
+      companyId: req.companyId,
+      createdBy: req.user?.id || req.userId || null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Expense posting preview created',
+      journalEntry: result.journalEntry,
+      lines: result.lines,
+      previewOnly: true,
+    });
+  } catch (error) {
+    if (/expense not found/i.test(error.message)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found',
+      });
+    }
+
+    return next(error);
   }
 });
 

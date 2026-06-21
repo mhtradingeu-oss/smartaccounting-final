@@ -1,7 +1,7 @@
 process.env.API_BASE_URL = '/api';
 
 const app = require('../../src/app');
-const { AuditLog, Expense, FileAttachment } = require('../../src/models');
+const { AuditLog, Expense, FileAttachment, JournalEntry, JournalEntryLine, ChartAccount } = require('../../src/models');
 const buildSystemContext = require('../utils/buildSystemContext');
 const { buildExpensePayload } = require('../utils/buildPayload');
 
@@ -179,6 +179,192 @@ describe('Expenses API', () => {
         }),
       );
       expect(linkedDocument.companyId).toBe(user.companyId);
+    });
+  });
+
+  describe('posting preview', () => {
+    it('admin can create an expense posting preview without changing expense status', async () => {
+      const { user, token } = await createRoleSession('admin');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        expenseDate: new Date('2026-06-21'),
+        vendorName: 'Posting Preview Vendor',
+        description: 'Preview expense',
+        category: 'software',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const response = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          success: true,
+          previewOnly: true,
+          message: 'Expense posting preview created',
+          journalEntry: expect.objectContaining({
+            companyId: user.companyId,
+            sourceType: 'expense',
+            sourceId: String(expense.id),
+            status: 'draft',
+          }),
+          lines: expect.any(Array),
+        }),
+      );
+
+      const journalEntry = await JournalEntry.findByPk(response.body.journalEntry.id, {
+        include: [{ model: JournalEntryLine, as: 'lines' }],
+      });
+
+      expect(journalEntry).toBeTruthy();
+      expect(journalEntry.lines).toHaveLength(3);
+
+      const persistedLines = await JournalEntryLine.findAll({
+        where: { journalEntryId: journalEntry.id },
+        include: [{ model: ChartAccount, as: 'account' }],
+      });
+
+      expect(persistedLines.map((line) => line.account.code).sort()).toEqual(['1576', '1600', '4930']);
+
+      await expense.reload();
+      expect(expense.status).toBe('pending');
+    });
+
+    it('admin can create a restricted expense posting preview without input VAT', async () => {
+      const { user, token } = await createRoleSession('admin');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        expenseDate: new Date('2026-06-21'),
+        vendorName: 'Restricted Taxi Vendor',
+        description: 'Restricted taxi expense',
+        category: 'travel',
+        netAmount: 119,
+        vatRate: 0,
+        vatAmount: 0,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'ai_document_intake_reviewed',
+        taxTreatment: 'no_vorsteuer_allowed',
+        inputVatAllowed: false,
+        accountantReviewRequired: true,
+      });
+
+      const response = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+      expect(response.status).toBe(201);
+
+      const persistedLines = await JournalEntryLine.findAll({
+        where: { journalEntryId: response.body.journalEntry.id },
+        include: [{ model: ChartAccount, as: 'account' }],
+      });
+
+      expect(persistedLines).toHaveLength(2);
+      expect(persistedLines.map((line) => line.account.code).sort()).toEqual(['1600', '4930']);
+    });
+
+    it('auditor and viewer cannot create expense posting previews', async () => {
+      const { user: accountantUser } = await createRoleSession('accountant');
+      const expense = await Expense.create({
+        companyId: accountantUser.companyId,
+        userId: accountantUser.id,
+        createdByUserId: accountantUser.id,
+        date: new Date('2026-06-21'),
+        expenseDate: new Date('2026-06-21'),
+        vendorName: 'Read Only Vendor',
+        description: 'Read only preview expense',
+        category: 'software',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const auditor = await createRoleSession('auditor', accountantUser.companyId);
+      const viewer = await createRoleSession('viewer', accountantUser.companyId);
+
+      const auditorResponse = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token: auditor.token,
+        companyId: accountantUser.companyId,
+        body: {},
+      });
+
+      const viewerResponse = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token: viewer.token,
+        companyId: accountantUser.companyId,
+        body: {},
+      });
+
+      expect(auditorResponse.status).toBe(403);
+      expect(viewerResponse.status).toBe(403);
+    });
+
+    it('keeps expense posting preview scoped to the active company', async () => {
+      const companyA = await createRoleSession('accountant');
+      const companyB = await createRoleSession('accountant');
+
+      const expense = await Expense.create({
+        companyId: companyB.user.companyId,
+        userId: companyB.user.id,
+        createdByUserId: companyB.user.id,
+        date: new Date('2026-06-21'),
+        expenseDate: new Date('2026-06-21'),
+        vendorName: 'Other Company Vendor',
+        description: 'Other company expense',
+        category: 'software',
+        netAmount: 100,
+        vatRate: 0.19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const response = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token: companyA.token,
+        companyId: companyA.user.companyId,
+        body: {},
+      });
+      expect([403, 404]).toContain(response.status);
     });
   });
 
