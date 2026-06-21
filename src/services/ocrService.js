@@ -1,10 +1,19 @@
 /* eslint-disable no-useless-escape */
 const Tesseract = require('tesseract.js');
 const sharp = require('sharp');
-const pdfParseModule = require('pdf-parse');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+
+let pdfParseModule;
+
+const getPdfParseModule = () => {
+  if (!pdfParseModule) {
+    pdfParseModule = require('pdf-parse');
+  }
+  return pdfParseModule;
+};
+
 const { FileAttachment } = require('../models');
 const { checkTableAndColumns } = require('./guards/schemaGuard');
 const { Op } = require('sequelize');
@@ -20,16 +29,18 @@ const DOCUMENT_TYPE_LABELS = {
 };
 
 async function parseDigitalPdfBuffer(buffer) {
-  if (typeof pdfParseModule === 'function') {
-    return pdfParseModule(buffer);
+  const pdfParser = getPdfParseModule();
+
+  if (typeof pdfParser === 'function') {
+    return pdfParser(buffer);
   }
 
-  if (typeof pdfParseModule.default === 'function') {
-    return pdfParseModule.default(buffer);
+  if (typeof pdfParser.default === 'function') {
+    return pdfParser.default(buffer);
   }
 
-  if (pdfParseModule.PDFParse) {
-    const parser = new pdfParseModule.PDFParse({ data: buffer });
+  if (pdfParser.PDFParse) {
+    const parser = new pdfParser.PDFParse({ data: buffer });
     try {
       const result = await parser.getText();
       return {

@@ -1,6 +1,9 @@
 'use strict';
 
-const isTestEnvironment = process.env.NODE_ENV === 'test';
+const isTestEnvironment =
+  process.env.NODE_ENV === 'test' ||
+  process.env.JEST_WORKER_ID !== undefined ||
+  process.env.USE_SQLITE === 'true';
 const environment = process.env.NODE_ENV || 'development';
 
 const logger = require('../logger');
@@ -51,6 +54,7 @@ const noopCache = {
     memorySize: 0,
     redisStatus: 'not_configured',
   }),
+  close: async () => undefined,
 };
 
 /* ----------------------------------
@@ -253,7 +257,7 @@ class CacheManager {
   }
 }
 
-const cacheManager = new CacheManager();
+const cacheManager = isTestEnvironment ? null : new CacheManager();
 
 /* ----------------------------------
  * Conditional export ONLY
