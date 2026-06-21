@@ -239,6 +239,78 @@ describe('Journal entries API', () => {
 
 
 
+
+
+  it.each(['admin', 'accountant', 'auditor'])('%s can export journal entries as JSON', async (role) => {
+    const session = { admin, accountant, auditor }[role];
+    const postedEntry = await createPostedJournalEntry({ userId: accountant.user.id });
+
+    const response = await requestFor({
+      method: 'get',
+      url: '/api/journal-entries/export?format=json&status=posted',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.meta).toEqual(
+      expect.objectContaining({
+        companyId: company.id,
+        count: expect.any(Number),
+        format: 'json',
+      }),
+    );
+    expect(Array.isArray(response.body.rows)).toBe(true);
+    expect(response.body.rows.some((row) => row.journalEntryId === postedEntry.id)).toBe(true);
+    expect(response.body.rows.every((row) => row.companyId === company.id)).toBe(true);
+  });
+
+  it('exports journal entries as CSV for auditors', async () => {
+    const postedEntry = await createPostedJournalEntry({ userId: accountant.user.id });
+
+    const response = await requestFor({
+      method: 'get',
+      url: '/api/journal-entries/export?format=csv&status=posted',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.res.getHeader('Content-Type')).toMatch(/text\/csv/);
+
+    const csvBody = Buffer.isBuffer(response.body)
+      ? response.body.toString('utf8')
+      : response.text || String(response.body || '');
+
+    expect(csvBody).toContain('journalEntryId,companyId,entryDate,status');
+    expect(csvBody).toContain(postedEntry.id);
+  });
+
+  it('viewer cannot export journal entries', async () => {
+    const response = await requestFor({
+      method: 'get',
+      url: '/api/journal-entries/export?format=json',
+      token: viewer.token,
+      companyId: viewer.user.companyId,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects unsupported journal export format', async () => {
+    const response = await requestFor({
+      method: 'get',
+      url: '/api/journal-entries/export?format=xlsx',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+  });
+
+
   it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read same-company journal entry audit log', async (role) => {
     const session = { admin, accountant, auditor, viewer }[role];
     const postedEntry = await createPostedJournalEntry({ userId: accountant.user.id });

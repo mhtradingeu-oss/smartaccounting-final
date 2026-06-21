@@ -33,6 +33,7 @@ module.exports = {
       'PATCH /api/expenses/:id/status',
 
       'GET /api/journal-entries',
+      'GET /api/journal-entries/export',
       'GET /api/journal-entries/:id',
       'GET /api/journal-entries/:id/audit-log',
       'POST /api/journal-entries/:id/reverse',
@@ -81,6 +82,7 @@ module.exports = {
       'GET /api/expenses',
       'GET /api/expenses/:id',
       'GET /api/journal-entries',
+      'GET /api/journal-entries/export',
       'GET /api/journal-entries/:id',
       'GET /api/journal-entries/:id/audit-log',
       'GET /api/bank-statements',

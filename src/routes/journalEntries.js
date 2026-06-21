@@ -1,4 +1,5 @@
 const express = require('express');
+const { Op } = require('sequelize');
 const { requireRole, requireCompany } = require('../middleware/authMiddleware');
 const accountingPostingService = require('../services/accountingPostingService');
 const { JournalEntry, JournalEntryLine, ChartAccount, AuditLog } = require('../models');
@@ -39,6 +40,104 @@ const parsePagination = (query = {}) => {
 
   return { limit, offset };
 };
+
+
+const escapeCsvValue = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return `"${String(value).replace(/"/g, '""')}"`;
+};
+
+const flattenJournalEntriesForExport = (journalEntries = []) => {
+  const rows = [];
+
+  for (const entry of journalEntries) {
+    const plainEntry = typeof entry.get === 'function' ? entry.get({ plain: true }) : entry;
+    const lines = Array.isArray(plainEntry.lines) ? plainEntry.lines : [];
+
+    for (const line of lines) {
+      rows.push({
+        journalEntryId: plainEntry.id,
+        companyId: plainEntry.companyId,
+        entryDate: plainEntry.entryDate,
+        status: plainEntry.status,
+        sourceType: plainEntry.sourceType,
+        sourceId: plainEntry.sourceId,
+        description: plainEntry.description,
+        currency: plainEntry.currency,
+        postedAt: plainEntry.postedAt,
+        reversedAt: plainEntry.reversedAt,
+        reversalOfId: plainEntry.reversalOfId,
+        lineId: line.id,
+        accountId: line.accountId,
+        accountCode: line.account?.code || '',
+        accountName: line.account?.name || '',
+        debit: line.debit,
+        credit: line.credit,
+        taxCode: line.taxCode,
+        vatRate: line.vatRate,
+        counterpartyName: line.counterpartyName,
+        lineDescription: line.description,
+      });
+    }
+  }
+
+  return rows;
+};
+
+const buildJournalExportWhere = ({ companyId, query = {} }) => {
+  const where = buildJournalEntryWhere({ companyId, query });
+
+  if (query.from || query.to) {
+    where.entryDate = {};
+
+    if (query.from) {
+      where.entryDate[Op.gte] = String(query.from);
+    }
+
+    if (query.to) {
+      where.entryDate[Op.lte] = String(query.to);
+    }
+  }
+
+  return where;
+};
+
+const toJournalExportCsv = (rows = []) => {
+  const columns = [
+    'journalEntryId',
+    'companyId',
+    'entryDate',
+    'status',
+    'sourceType',
+    'sourceId',
+    'description',
+    'currency',
+    'postedAt',
+    'reversedAt',
+    'reversalOfId',
+    'lineId',
+    'accountId',
+    'accountCode',
+    'accountName',
+    'debit',
+    'credit',
+    'taxCode',
+    'vatRate',
+    'counterpartyName',
+    'lineDescription',
+  ];
+
+  const header = columns.join(',');
+  const body = rows
+    .map((row) => columns.map((column) => escapeCsvValue(row[column])).join(','))
+    .join('\n');
+
+  return body ? `${header}\n${body}` : `${header}\n`;
+};
+
 
 const journalEntryInclude = [
   {
@@ -82,6 +181,59 @@ router.get('/', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async
         limit,
         offset,
       },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+
+
+router.get('/export', requireRole(['admin', 'accountant', 'auditor']), async (req, res, next) => {
+  try {
+    const format = String(req.query.format || 'json').toLowerCase();
+
+    if (!['json', 'csv'].includes(format)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported export format',
+      });
+    }
+
+    const journalEntries = await JournalEntry.findAll({
+      where: buildJournalExportWhere({
+        companyId: req.companyId,
+        query: req.query,
+      }),
+      include: journalEntryInclude,
+      order: [
+        ['entryDate', 'ASC'],
+        ['createdAt', 'ASC'],
+      ],
+    });
+
+    const rows = flattenJournalEntriesForExport(journalEntries);
+
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment;filename="journal-entries.csv"');
+      return res.status(200).send(toJournalExportCsv(rows));
+    }
+
+    return res.status(200).json({
+      success: true,
+      meta: {
+        companyId: req.companyId,
+        count: rows.length,
+        format,
+        filters: {
+          status: req.query.status || null,
+          sourceType: req.query.sourceType || null,
+          from: req.query.from || null,
+          to: req.query.to || null,
+        },
+      },
+      rows,
     });
   } catch (error) {
     return next(error);
