@@ -739,6 +739,201 @@ describe('accountingPostingService', () => {
     expect(entries).toHaveLength(1);
   });
 
+
+
+  it('reverses a posted journal entry with compensating lines', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'Reversal Vendor',
+      description: 'Reversal service test',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const posted = await accountingPostingService.finalizeExpensePosting({
+      expenseId: expense.id,
+      companyId: company.id,
+      postedBy: user.id,
+    });
+
+    const result = await accountingPostingService.reverseJournalEntry({
+      journalEntryId: posted.journalEntry.id,
+      companyId: company.id,
+      reversedBy: user.id,
+    });
+
+    expect(result.reversed).toBe(true);
+    expect(result.originalEntry.id).toBe(posted.journalEntry.id);
+    expect(result.originalEntry.reversedAt).toBeTruthy();
+
+    expect(result.reversalEntry).toEqual(
+      expect.objectContaining({
+        companyId: company.id,
+        status: 'posted',
+        sourceType: 'journal_reversal',
+        sourceId: String(posted.journalEntry.id),
+        reversalOfId: posted.journalEntry.id,
+        postedBy: user.id,
+      }),
+    );
+
+    const originalLines = await JournalEntryLine.findAll({
+      where: { journalEntryId: posted.journalEntry.id },
+      order: [['createdAt', 'ASC']],
+    });
+
+    const reversalLines = await JournalEntryLine.findAll({
+      where: { journalEntryId: result.reversalEntry.id },
+      order: [['createdAt', 'ASC']],
+    });
+
+    expect(reversalLines).toHaveLength(originalLines.length);
+
+    originalLines.forEach((line) => {
+      const matching = reversalLines.find(
+        (reversalLine) => reversalLine.accountId === line.accountId
+          && Number(reversalLine.debit) === Number(line.credit)
+          && Number(reversalLine.credit) === Number(line.debit),
+      );
+      expect(matching).toBeTruthy();
+    });
+
+    const auditLog = await AuditLog.findOne({
+      where: {
+        action: 'journal_entry_reversed',
+        resourceType: 'JournalEntry',
+        resourceId: String(posted.journalEntry.id),
+        companyId: company.id,
+        userId: user.id,
+      },
+    });
+
+    expect(auditLog).toBeTruthy();
+    expect(auditLog.immutable).toBe(true);
+    expect(auditLog.newValues).toEqual(
+      expect.objectContaining({
+        journalEntryId: posted.journalEntry.id,
+        reversalJournalEntryId: result.reversalEntry.id,
+        reversalOfId: posted.journalEntry.id,
+        reversedBy: user.id,
+        linesCount: 3,
+      }),
+    );
+  });
+
+  it('rejects reversing a draft journal entry', async () => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'draft-reversal-test',
+      createdBy: user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 100, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    await expect(
+      accountingPostingService.reverseJournalEntry({
+        journalEntryId: draft.journalEntry.id,
+        companyId: company.id,
+        reversedBy: user.id,
+      }),
+    ).rejects.toMatchObject({
+      code: 'JOURNAL_ENTRY_NOT_POSTED',
+      status: 409,
+    });
+  });
+
+  it('prevents duplicate journal entry reversals', async () => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'duplicate-reversal-test',
+      createdBy: user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 100, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    await draft.journalEntry.update({
+      status: 'posted',
+      postedAt: new Date(),
+      postedBy: user.id,
+    });
+
+    const first = await accountingPostingService.reverseJournalEntry({
+      journalEntryId: draft.journalEntry.id,
+      companyId: company.id,
+      reversedBy: user.id,
+    });
+
+    expect(first.reversalEntry.reversalOfId).toBe(draft.journalEntry.id);
+
+    await expect(
+      accountingPostingService.reverseJournalEntry({
+        journalEntryId: draft.journalEntry.id,
+        companyId: company.id,
+        reversedBy: user.id,
+      }),
+    ).rejects.toMatchObject({
+      code: 'JOURNAL_ENTRY_ALREADY_REVERSED',
+      status: 409,
+    });
+  });
+
+  it('rejects reversing journal entries across company boundary', async () => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: otherCompany.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'cross-company-reversal-test',
+      createdBy: otherCompanyUser.id,
+      lines: [
+        { accountId: otherCompanyAccount.id, debit: 100, credit: 0 },
+        { accountId: otherCompanyAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    await draft.journalEntry.update({
+      status: 'posted',
+      postedAt: new Date(),
+      postedBy: otherCompanyUser.id,
+    });
+
+    await expect(
+      accountingPostingService.reverseJournalEntry({
+        journalEntryId: draft.journalEntry.id,
+        companyId: company.id,
+        reversedBy: user.id,
+      }),
+    ).rejects.toMatchObject({
+      code: 'JOURNAL_ENTRY_NOT_FOUND',
+      status: 404,
+    });
+  });
+
+
   it('rejects expense posting preview across company boundary', async () => {
     const expense = await Expense.create({
       companyId: otherCompany.id,

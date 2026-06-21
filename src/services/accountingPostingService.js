@@ -534,6 +534,214 @@ const finalizeExpensePosting = async ({ expenseId, companyId, postedBy = null } 
   };
 };
 
+
+const appendJournalEntryReversedAuditLog = async ({
+  originalEntry,
+  reversalEntry,
+  reversalLines = [],
+  companyId,
+  reversedBy = null,
+}) => {
+  await AuditLogService.appendEntry({
+    action: 'journal_entry_reversed',
+    resourceType: 'JournalEntry',
+    resourceId: originalEntry?.id ? String(originalEntry.id) : null,
+    userId: reversedBy,
+    companyId,
+    oldValues: {
+      journalEntryId: originalEntry?.id || null,
+      status: originalEntry?.status || null,
+      reversedAt: null,
+    },
+    newValues: {
+      journalEntryId: originalEntry?.id || null,
+      reversalJournalEntryId: reversalEntry?.id || null,
+      reversalOfId: reversalEntry?.reversalOfId || null,
+      status: originalEntry?.status || null,
+      reversedAt: originalEntry?.reversedAt || null,
+      reversedBy,
+      linesCount: Array.isArray(reversalLines) ? reversalLines.length : 0,
+    },
+    reason: 'Posted journal entry reversed by compensating reversal entry',
+  });
+};
+
+const reverseJournalEntry = async ({ journalEntryId, companyId, reversedBy = null } = {}) => {
+  if (!journalEntryId) {
+    throw new Error('journalEntryId is required');
+  }
+
+  if (!companyId) {
+    throw new Error('companyId is required');
+  }
+
+  const result = await sequelize.transaction(async (transaction) => {
+    const originalEntry = await JournalEntry.findOne({
+      where: {
+        id: journalEntryId,
+        companyId,
+      },
+      include: [{ model: JournalEntryLine, as: 'lines' }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!originalEntry) {
+      const error = new Error('Journal entry not found');
+      error.code = 'JOURNAL_ENTRY_NOT_FOUND';
+      error.status = 404;
+      throw error;
+    }
+
+    if (originalEntry.status !== 'posted') {
+      const error = new Error('Only posted journal entries can be reversed');
+      error.code = 'JOURNAL_ENTRY_NOT_POSTED';
+      error.status = 409;
+      throw error;
+    }
+
+    if (originalEntry.reversalOfId) {
+      const error = new Error('Reversal journal entries cannot be reversed');
+      error.code = 'JOURNAL_ENTRY_IS_REVERSAL';
+      error.status = 409;
+      throw error;
+    }
+
+    if (originalEntry.reversedAt) {
+      const error = new Error('Journal entry has already been reversed');
+      error.code = 'JOURNAL_ENTRY_ALREADY_REVERSED';
+      error.status = 409;
+      throw error;
+    }
+
+    const existingReversal = await JournalEntry.findOne({
+      where: {
+        companyId,
+        reversalOfId: originalEntry.id,
+      },
+      transaction,
+    });
+
+    if (existingReversal) {
+      const error = new Error('Journal entry has already been reversed');
+      error.code = 'JOURNAL_ENTRY_ALREADY_REVERSED';
+      error.status = 409;
+      error.reversalEntry = existingReversal;
+      throw error;
+    }
+
+    const originalLines = originalEntry.lines || [];
+    if (!originalLines.length) {
+      const error = new Error('Journal entry has no lines to reverse');
+      error.code = 'JOURNAL_ENTRY_HAS_NO_LINES';
+      error.status = 409;
+      throw error;
+    }
+
+    const reversalLinesInput = originalLines.map((line) => ({
+      accountId: line.accountId,
+      debit: normalizeMoney(line.credit),
+      credit: normalizeMoney(line.debit),
+      currency: line.currency || originalEntry.currency || 'EUR',
+      taxCode: line.taxCode || null,
+      vatRate: line.vatRate ?? null,
+      counterpartyName: line.counterpartyName || null,
+      description: line.description
+        ? `Reversal: ${line.description}`
+        : `Reversal of journal entry ${originalEntry.id}`,
+      metadata: {
+        ...(line.metadata || {}),
+        reversalOfLineId: line.id,
+        reversalOfJournalEntryId: originalEntry.id,
+      },
+    }));
+
+    validateBalancedEntry(reversalLinesInput);
+
+    await ensureAccountsBelongToCompany({
+      companyId,
+      lines: reversalLinesInput,
+      transaction,
+    });
+
+    const reversedAt = new Date();
+
+    const reversalEntry = await JournalEntry.create(
+      {
+        companyId,
+        entryDate: new Date().toISOString().slice(0, 10),
+        sourceType: 'journal_reversal',
+        sourceId: String(originalEntry.id),
+        status: 'posted',
+        description: `Reversal of journal entry ${originalEntry.id}`,
+        currency: originalEntry.currency || 'EUR',
+        createdBy: reversedBy,
+        postedBy: reversedBy,
+        postedAt: reversedAt,
+        reversalOfId: originalEntry.id,
+        metadata: {
+          reversal: true,
+          reversalOfJournalEntryId: originalEntry.id,
+          originalSourceType: originalEntry.sourceType || null,
+          originalSourceId: originalEntry.sourceId || null,
+        },
+      },
+      { transaction },
+    );
+
+    const reversalLines = await JournalEntryLine.bulkCreate(
+      reversalLinesInput.map((line) =>
+        normalizeJournalLine({
+          line,
+          companyId,
+          journalEntryId: reversalEntry.id,
+        }),
+      ),
+      { transaction },
+    );
+
+    await originalEntry.update(
+      {
+        reversedAt,
+        metadata: {
+          ...(originalEntry.metadata || {}),
+          reversed: true,
+          reversedAt: reversedAt.toISOString(),
+          reversalJournalEntryId: reversalEntry.id,
+        },
+      },
+      { transaction },
+    );
+
+    const reloadedOriginal = await JournalEntry.findByPk(originalEntry.id, {
+      include: [{ model: JournalEntryLine, as: 'lines' }],
+      transaction,
+    });
+
+    const reloadedReversal = await JournalEntry.findByPk(reversalEntry.id, {
+      include: [{ model: JournalEntryLine, as: 'lines' }],
+      transaction,
+    });
+
+    return {
+      originalEntry: reloadedOriginal || originalEntry,
+      reversalEntry: reloadedReversal || reversalEntry,
+      reversalLines,
+      reversed: true,
+    };
+  });
+
+  await appendJournalEntryReversedAuditLog({
+    originalEntry: result.originalEntry,
+    reversalEntry: result.reversalEntry,
+    reversalLines: result.reversalEntry?.lines || result.reversalLines || [],
+    companyId,
+    reversedBy,
+  });
+
+  return result;
+};
+
 const createJournalEntryDraft = async ({
   companyId,
   entryDate,
@@ -612,4 +820,5 @@ module.exports = {
   findPostedExpenseJournalEntry,
   createExpensePostingPreview,
   finalizeExpensePosting,
+  reverseJournalEntry,
 };
