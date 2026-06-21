@@ -108,6 +108,7 @@ const exportRoutes = require('./routes/exports');
 const emailTestRoutes = require('./routes/emailTest');
 const germanTaxComplianceRoutes = require('./routes/germanTaxCompliance');
 const expenseRoutes = require('./routes/expenses');
+const journalEntryRoutes = require('./routes/journalEntries');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
@@ -311,6 +312,7 @@ app.use(`${API_PREFIX}/logs`, logRoutes);
 app.use(`${API_PREFIX}/exports`, exportRoutes);
 app.use(`${API_PREFIX}/email-test`, emailTestRoutes);
 app.use(`${API_PREFIX}/expenses`, expenseRoutes);
+app.use(`${API_PREFIX}/journal-entries`, journalEntryRoutes);
 app.get(`${API_PREFIX}/ai/suggest`, (req, res, next) => {
   return next(new ApiError(501, 'AI_SUGGEST_NOT_READY', 'AI suggestions are not production-ready'));
 });

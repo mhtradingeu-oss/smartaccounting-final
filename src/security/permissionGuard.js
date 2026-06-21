@@ -2,7 +2,9 @@ const permissions = require('./permissions');
 const ApiError = require('../lib/errors/apiError');
 
 const normalizePath = (path) => {
-  return path.replace(/\/\d+/g, '/:id').replace(/\/[a-f0-9-]{36}/gi, '/:id');
+  return path
+    .replace(/\/[a-f0-9-]{36}(?=\/|$)/gi, '/:id')
+    .replace(/\/\d+(?=\/|$)/g, '/:id');
 };
 
 const matchRule = (rule, method, path) => {

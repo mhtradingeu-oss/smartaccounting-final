@@ -32,6 +32,9 @@ module.exports = {
       'POST /api/expenses/:id/post',
       'PATCH /api/expenses/:id/status',
 
+      'POST /api/journal-entries/:id/reverse',
+      'POST /api/journal-entries/*/reverse',
+
       'GET /api/bank-statements',
       'GET /api/bank-statements/:id',
       'GET /api/bank-statements/:id/transactions',
