@@ -6,6 +6,7 @@ const {
   Expense,
   JournalEntry,
   JournalEntryLine,
+  AuditLog,
   User,
   sequelize,
 } = require('../../src/models');
@@ -27,6 +28,7 @@ describe('accountingPostingService', () => {
   });
 
   beforeEach(async () => {
+    await AuditLog.destroy({ where: {}, force: true });
     await JournalEntryLine.destroy({ where: {}, force: true });
     await JournalEntry.destroy({ where: {}, force: true });
     await Expense.destroy({ where: {}, force: true });
@@ -416,9 +418,63 @@ describe('accountingPostingService', () => {
   });
 
 
+
+  it('writes an audit log when creating an expense posting preview', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'Audit Preview Vendor',
+      description: 'Audit preview creation',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    const result = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const auditLog = await AuditLog.findOne({
+      where: {
+        action: 'expense_posting_preview_created',
+        resourceType: 'JournalEntry',
+        resourceId: String(result.journalEntry.id),
+        companyId: company.id,
+        userId: user.id,
+      },
+    });
+
+    expect(auditLog).toBeTruthy();
+    expect(auditLog.immutable).toBe(true);
+    expect(auditLog.newValues).toEqual(
+      expect.objectContaining({
+        expenseId: expense.id,
+        journalEntryId: result.journalEntry.id,
+        previewOnly: true,
+        reusedPreview: false,
+        linesCount: 3,
+      }),
+    );
+  });
+
   it('reuses an existing expense posting preview instead of duplicating it', async () => {
     const expense = await Expense.create({
       companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
       vendorName: 'Duplicate Preview Vendor',
       description: 'Duplicate preview prevention',
       expenseDate: '2026-06-21',
@@ -465,6 +521,65 @@ describe('accountingPostingService', () => {
 
     expect(entries).toHaveLength(1);
     expect(lines).toHaveLength(3);
+  });
+
+
+  it('writes an audit log when reusing an existing expense posting preview', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'Audit Reuse Preview Vendor',
+      description: 'Audit preview reuse',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    const first = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const second = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    expect(second.reusedPreview).toBe(true);
+    expect(second.journalEntry.id).toBe(first.journalEntry.id);
+
+    const auditLog = await AuditLog.findOne({
+      where: {
+        action: 'expense_posting_preview_reused',
+        resourceType: 'JournalEntry',
+        resourceId: String(first.journalEntry.id),
+        companyId: company.id,
+        userId: user.id,
+      },
+    });
+
+    expect(auditLog).toBeTruthy();
+    expect(auditLog.immutable).toBe(true);
+    expect(auditLog.newValues).toEqual(
+      expect.objectContaining({
+        expenseId: expense.id,
+        journalEntryId: first.journalEntry.id,
+        previewOnly: true,
+        reusedPreview: true,
+        linesCount: 3,
+      }),
+    );
   });
 
   it('rejects expense posting preview across company boundary', async () => {

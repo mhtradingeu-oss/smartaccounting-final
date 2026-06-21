@@ -296,6 +296,10 @@ describe('Expenses API', () => {
 
       const expense = await Expense.create({
         companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        category: 'office',
         vendorName: 'Route Duplicate Preview Vendor',
         description: 'Route duplicate preview prevention',
         expenseDate: '2026-06-21',

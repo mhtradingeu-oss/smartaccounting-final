@@ -2,6 +2,7 @@
 
 const { ChartAccount, Expense, JournalEntry, JournalEntryLine, sequelize } = require('../models');
 const chartOfAccountsService = require('./chartOfAccountsService');
+const AuditLogService = require('./auditLogService');
 
 const MONEY_SCALE = 2;
 
@@ -240,6 +241,41 @@ const findExistingExpensePostingPreview = async ({ expenseId, companyId, transac
   return candidates.find(isExpensePostingPreviewEntry) || null;
 };
 
+
+const appendExpensePostingPreviewAuditLog = async ({
+  action,
+  expense,
+  journalEntry,
+  lines = [],
+  companyId,
+  createdBy = null,
+  reusedPreview = false,
+}) => {
+  await AuditLogService.appendEntry({
+    action,
+    resourceType: 'JournalEntry',
+    resourceId: journalEntry?.id ? String(journalEntry.id) : null,
+    userId: createdBy,
+    companyId,
+    oldValues: null,
+    newValues: {
+      expenseId: expense?.id || null,
+      journalEntryId: journalEntry?.id || null,
+      sourceType: journalEntry?.sourceType || 'expense',
+      sourceId: journalEntry?.sourceId || (expense?.id ? String(expense.id) : null),
+      previewOnly: true,
+      reusedPreview,
+      linesCount: Array.isArray(lines) ? lines.length : 0,
+      expenseStatus: expense?.status || null,
+      taxTreatment: expense?.taxTreatment || null,
+      inputVatAllowed: expense?.inputVatAllowed ?? null,
+    },
+    reason: reusedPreview
+      ? 'Existing expense posting preview reused'
+      : 'Expense posting preview created',
+  });
+};
+
 const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = null } = {}) => {
   if (!expenseId) {
     throw new Error('expenseId is required');
@@ -266,9 +302,21 @@ const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = n
   });
 
   if (existingPreview) {
+    const existingLines = existingPreview.lines || [];
+
+    await appendExpensePostingPreviewAuditLog({
+      action: 'expense_posting_preview_reused',
+      expense,
+      journalEntry: existingPreview,
+      lines: existingLines,
+      companyId,
+      createdBy,
+      reusedPreview: true,
+    });
+
     return {
       journalEntry: existingPreview,
-      lines: existingPreview.lines || [],
+      lines: existingLines,
       previewOnly: true,
       reusedPreview: true,
     };
@@ -293,6 +341,16 @@ const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = n
       inputVatAllowed: expense.inputVatAllowed ?? null,
     },
     lines,
+  });
+
+  await appendExpensePostingPreviewAuditLog({
+    action: 'expense_posting_preview_created',
+    expense,
+    journalEntry: result.journalEntry,
+    lines: result.lines,
+    companyId,
+    createdBy,
+    reusedPreview: false,
   });
 
   return {
