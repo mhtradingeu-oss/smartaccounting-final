@@ -1,7 +1,7 @@
 const express = require('express');
 const { requireRole, requireCompany } = require('../middleware/authMiddleware');
 const accountingPostingService = require('../services/accountingPostingService');
-const { JournalEntry, JournalEntryLine, ChartAccount } = require('../models');
+const { JournalEntry, JournalEntryLine, ChartAccount, AuditLog } = require('../models');
 
 const router = express.Router();
 
@@ -87,6 +87,47 @@ router.get('/', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async
     return next(error);
   }
 });
+
+
+router.get('/:journalEntryId/audit-log', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+  try {
+    const journalEntry = await JournalEntry.findOne({
+      where: {
+        id: req.params.journalEntryId,
+        companyId: req.companyId,
+      },
+      attributes: ['id', 'companyId'],
+    });
+
+    if (!journalEntry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Journal entry not found',
+      });
+    }
+
+    const auditLog = await AuditLog.findAll({
+      where: {
+        resourceType: 'JournalEntry',
+        resourceId: String(req.params.journalEntryId),
+        companyId: req.companyId,
+      },
+      order: [
+        ['timestamp', 'ASC'],
+        ['createdAt', 'ASC'],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      journalEntryId: req.params.journalEntryId,
+      auditLog,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 
 router.get('/:journalEntryId', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
   try {

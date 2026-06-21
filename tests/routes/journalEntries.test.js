@@ -237,6 +237,80 @@ describe('Journal entries API', () => {
   });
 
 
+
+
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read same-company journal entry audit log', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+    const postedEntry = await createPostedJournalEntry({ userId: accountant.user.id });
+
+    await requestFor({
+      url: `/api/journal-entries/${postedEntry.id}/reverse`,
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+      body: {},
+    });
+
+    const response = await requestFor({
+      method: 'get',
+      url: `/api/journal-entries/${postedEntry.id}/audit-log`,
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.journalEntryId).toBe(postedEntry.id);
+    expect(Array.isArray(response.body.auditLog)).toBe(true);
+    expect(response.body.auditLog.some((log) => log.action === 'journal_entry_reversed')).toBe(true);
+    expect(response.body.auditLog.every((log) => log.resourceType === 'JournalEntry')).toBe(true);
+    expect(response.body.auditLog.every((log) => log.resourceId === postedEntry.id)).toBe(true);
+    expect(response.body.auditLog.every((log) => log.companyId === company.id)).toBe(true);
+  });
+
+  it('keeps journal entry audit log scoped to the active company', async () => {
+    const otherAccountant = await createRoleSession('accountant', otherCompany.id);
+
+    const otherExpenseAccount = await ChartAccount.create({
+      companyId: otherCompany.id,
+      code: '4930',
+      name: 'Other audit expenses',
+      type: 'expense',
+      normalBalance: 'debit',
+      isSystem: true,
+    });
+
+    const otherPayableAccount = await ChartAccount.create({
+      companyId: otherCompany.id,
+      code: '1600',
+      name: 'Other audit payable',
+      type: 'liability',
+      normalBalance: 'credit',
+      isSystem: true,
+    });
+
+    const otherDraft = await accountingPostingService.createJournalEntryDraft({
+      companyId: otherCompany.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'other-company-audit-log-test',
+      createdBy: otherAccountant.user.id,
+      lines: [
+        { accountId: otherExpenseAccount.id, debit: 100, credit: 0 },
+        { accountId: otherPayableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    const response = await requestFor({
+      method: 'get',
+      url: `/api/journal-entries/${otherDraft.journalEntry.id}/audit-log`,
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(404);
+  });
+
+
   it('admin can reverse a posted journal entry', async () => {
     const postedEntry = await createPostedJournalEntry({ userId: admin.user.id });
 

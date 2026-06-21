@@ -34,6 +34,7 @@ module.exports = {
 
       'GET /api/journal-entries',
       'GET /api/journal-entries/:id',
+      'GET /api/journal-entries/:id/audit-log',
       'POST /api/journal-entries/:id/reverse',
       'POST /api/journal-entries/*/reverse',
 
@@ -81,6 +82,7 @@ module.exports = {
       'GET /api/expenses/:id',
       'GET /api/journal-entries',
       'GET /api/journal-entries/:id',
+      'GET /api/journal-entries/:id/audit-log',
       'GET /api/bank-statements',
       'GET /api/bank-statements/:id',
       'GET /api/bank-statements/:id/transactions',
@@ -113,6 +115,7 @@ module.exports = {
       'GET /api/expenses/:id',
       'GET /api/journal-entries',
       'GET /api/journal-entries/:id',
+      'GET /api/journal-entries/:id/audit-log',
 
       'GET /api/telemetry/client-error',
       'GET /api/ai/insights',
