@@ -290,6 +290,66 @@ describe('Expenses API', () => {
       expect(persistedLines.map((line) => line.account.code).sort()).toEqual(['1600', '4930']);
     });
 
+
+    it('reuses an existing expense posting preview when called twice', async () => {
+      const { token, user } = await createRoleSession('admin');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        vendorName: 'Route Duplicate Preview Vendor',
+        description: 'Route duplicate preview prevention',
+        expenseDate: '2026-06-21',
+        amount: 119,
+        grossAmount: 119,
+        netAmount: 100,
+        vatAmount: 19,
+        vatRate: 19,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const first = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      const second = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(200);
+      expect(first.body.reusedPreview).toBe(false);
+      expect(second.body.reusedPreview).toBe(true);
+      expect(second.body.journalEntry.id).toBe(first.body.journalEntry.id);
+
+      const entries = await JournalEntry.findAll({
+        where: {
+          companyId: user.companyId,
+          sourceType: 'expense',
+          sourceId: String(expense.id),
+          status: 'draft',
+        },
+      });
+
+      const lines = await JournalEntryLine.findAll({
+        where: {
+          journalEntryId: first.body.journalEntry.id,
+        },
+      });
+
+      expect(entries).toHaveLength(1);
+      expect(lines).toHaveLength(3);
+    });
+
     it('auditor and viewer cannot create expense posting previews', async () => {
       const { user: accountantUser } = await createRoleSession('accountant');
       const expense = await Expense.create({

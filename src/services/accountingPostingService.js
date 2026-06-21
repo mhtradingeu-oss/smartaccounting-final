@@ -210,6 +210,36 @@ const ensureAccountsBelongToCompany = async ({ companyId, lines, transaction }) 
   return accounts;
 };
 
+
+const isExpensePostingPreviewEntry = (entry) => {
+  const metadata = entry?.metadata || {};
+  return metadata.previewOnly === true && metadata.source === 'expense_posting_preview';
+};
+
+const findExistingExpensePostingPreview = async ({ expenseId, companyId, transaction = null } = {}) => {
+  if (!expenseId) {
+    throw new Error('expenseId is required');
+  }
+
+  if (!companyId) {
+    throw new Error('companyId is required');
+  }
+
+  const candidates = await JournalEntry.findAll({
+    where: {
+      companyId,
+      sourceType: 'expense',
+      sourceId: String(expenseId),
+      status: 'draft',
+    },
+    include: [{ model: JournalEntryLine, as: 'lines' }],
+    order: [['createdAt', 'ASC']],
+    transaction,
+  });
+
+  return candidates.find(isExpensePostingPreviewEntry) || null;
+};
+
 const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = null } = {}) => {
   if (!expenseId) {
     throw new Error('expenseId is required');
@@ -230,9 +260,23 @@ const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = n
     throw new Error('Expense not found');
   }
 
+  const existingPreview = await findExistingExpensePostingPreview({
+    expenseId: expense.id,
+    companyId,
+  });
+
+  if (existingPreview) {
+    return {
+      journalEntry: existingPreview,
+      lines: existingPreview.lines || [],
+      previewOnly: true,
+      reusedPreview: true,
+    };
+  }
+
   const lines = buildExpensePostingLines(expense.get ? expense.get({ plain: true }) : expense);
 
-  return createJournalEntryDraft({
+  const result = await createJournalEntryDraft({
     companyId,
     entryDate: expense.expenseDate || expense.date || new Date(),
     sourceType: 'expense',
@@ -250,6 +294,12 @@ const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = n
     },
     lines,
   });
+
+  return {
+    ...result,
+    previewOnly: true,
+    reusedPreview: false,
+  };
 };
 
 const createJournalEntryDraft = async ({
@@ -326,5 +376,6 @@ module.exports = {
   createJournalEntryDraft,
   resolveJournalLines,
   buildExpensePostingLines,
+  findExistingExpensePostingPreview,
   createExpensePostingPreview,
 };

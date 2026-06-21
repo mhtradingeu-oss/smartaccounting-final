@@ -110,12 +110,15 @@ router.post('/:expenseId/posting-preview', requireRole(['admin', 'accountant']),
       createdBy: req.user?.id || req.userId || null,
     });
 
-    return res.status(201).json({
+    return res.status(result.reusedPreview ? 200 : 201).json({
       success: true,
-      message: 'Expense posting preview created',
+      message: result.reusedPreview
+        ? 'Existing expense posting preview reused'
+        : 'Expense posting preview created',
       journalEntry: result.journalEntry,
       lines: result.lines,
       previewOnly: true,
+      reusedPreview: result.reusedPreview === true,
     });
   } catch (error) {
     if (/expense not found/i.test(error.message)) {

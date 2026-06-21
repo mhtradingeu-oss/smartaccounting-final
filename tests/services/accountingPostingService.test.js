@@ -415,6 +415,58 @@ describe('accountingPostingService', () => {
     expect(lines.reduce((sum, line) => sum + Number(line.credit), 0)).toBe(119);
   });
 
+
+  it('reuses an existing expense posting preview instead of duplicating it', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      vendorName: 'Duplicate Preview Vendor',
+      description: 'Duplicate preview prevention',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    const first = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const second = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    expect(first.reusedPreview).toBe(false);
+    expect(second.reusedPreview).toBe(true);
+    expect(second.journalEntry.id).toBe(first.journalEntry.id);
+
+    const entries = await JournalEntry.findAll({
+      where: {
+        companyId: company.id,
+        sourceType: 'expense',
+        sourceId: String(expense.id),
+        status: 'draft',
+      },
+    });
+
+    const lines = await JournalEntryLine.findAll({
+      where: {
+        journalEntryId: first.journalEntry.id,
+      },
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(lines).toHaveLength(3);
+  });
+
   it('rejects expense posting preview across company boundary', async () => {
     const expense = await Expense.create({
       companyId: otherCompany.id,
