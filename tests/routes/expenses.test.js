@@ -1,7 +1,7 @@
 process.env.API_BASE_URL = '/api';
 
 const app = require('../../src/app');
-const { AuditLog, Expense, FileAttachment, JournalEntry, JournalEntryLine, ChartAccount } = require('../../src/models');
+const { AuditLog, Expense, FileAttachment, JournalEntry, JournalEntryLine, ChartAccount, Company } = require('../../src/models');
 const buildSystemContext = require('../utils/buildSystemContext');
 const { buildExpensePayload } = require('../utils/buildPayload');
 
@@ -425,6 +425,53 @@ describe('Expenses API', () => {
       expect(auditLog.immutable).toBe(true);
     });
 
+
+    it('accountant can finalize an expense posting preview', async () => {
+      const { user, token } = await createRoleSession('accountant');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        category: 'office',
+        vendorName: 'Accountant Final Posting Vendor',
+        description: 'Accountant final posting test',
+        expenseDate: '2026-06-21',
+        netAmount: 100,
+        vatRate: 19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const preview = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(preview.status).toBe(201);
+
+      const response = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.posted).toBe(true);
+      expect(response.body.finalizedFromPreview).toBe(true);
+      expect(response.body.journalEntry.status).toBe('posted');
+    });
+
     it('rejects final expense posting when no preview exists', async () => {
       const { user, token } = await createRoleSession('admin');
 
@@ -619,7 +666,21 @@ describe('Expenses API', () => {
 
     it('keeps expense posting preview scoped to the active company', async () => {
       const companyA = await createRoleSession('accountant');
-      const companyB = await createRoleSession('accountant');
+
+      const otherCompany = await Company.create({
+        name: `Other Expense Preview Company ${Date.now()}`,
+        taxId: `DE${Math.random().toString().slice(2, 11)}`,
+        address: 'Other Test Address 123',
+        city: 'Berlin',
+        postalCode: '10115',
+        country: 'DE',
+        vatNumber: `DE${Math.random().toString().slice(2, 11)}`,
+        subscriptionStatus: 'active',
+        subscriptionPlan: 'basic',
+        userId: null,
+      });
+
+      const companyB = await createRoleSession('accountant', otherCompany.id);
 
       const expense = await Expense.create({
         companyId: companyB.user.companyId,

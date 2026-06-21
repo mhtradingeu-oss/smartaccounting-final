@@ -28,6 +28,8 @@ module.exports = {
       'GET /api/expenses',
       'GET /api/expenses/:id',
       'POST /api/expenses',
+      'POST /api/expenses/:id/posting-preview',
+      'POST /api/expenses/:id/post',
       'PATCH /api/expenses/:id/status',
 
       'GET /api/bank-statements',
