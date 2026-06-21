@@ -354,6 +354,225 @@ describe('Expenses API', () => {
       expect(lines).toHaveLength(3);
     });
 
+
+    it('admin can finalize an expense posting preview', async () => {
+      const { user, token } = await createRoleSession('admin');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        category: 'office',
+        vendorName: 'Route Final Posting Vendor',
+        description: 'Route final posting test',
+        expenseDate: '2026-06-21',
+        netAmount: 100,
+        vatRate: 19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const preview = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(preview.status).toBe(201);
+
+      const response = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          success: true,
+          message: 'Expense posting finalized',
+          posted: true,
+          finalizedFromPreview: true,
+        }),
+      );
+      expect(response.body.journalEntry.id).toBe(preview.body.journalEntry.id);
+      expect(response.body.journalEntry.status).toBe('posted');
+      expect(response.body.lines).toHaveLength(3);
+
+      await expense.reload();
+      expect(expense.status).toBe('pending');
+
+      const auditLog = await AuditLog.findOne({
+        where: {
+          action: 'expense_posting_finalized',
+          resourceType: 'JournalEntry',
+          resourceId: String(response.body.journalEntry.id),
+          companyId: user.companyId,
+          userId: user.id,
+        },
+      });
+
+      expect(auditLog).toBeTruthy();
+      expect(auditLog.immutable).toBe(true);
+    });
+
+    it('rejects final expense posting when no preview exists', async () => {
+      const { user, token } = await createRoleSession('admin');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        category: 'office',
+        vendorName: 'Route No Preview Vendor',
+        description: 'Route no preview final posting test',
+        expenseDate: '2026-06-21',
+        netAmount: 100,
+        vatRate: 19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      const response = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(response.status).toBe(409);
+      expect(response.body.errorCode).toBe('EXPENSE_POSTING_PREVIEW_REQUIRED');
+    });
+
+    it('prevents duplicate final expense posting through the route', async () => {
+      const { user, token } = await createRoleSession('admin');
+
+      const expense = await Expense.create({
+        companyId: user.companyId,
+        userId: user.id,
+        createdByUserId: user.id,
+        date: new Date('2026-06-21'),
+        category: 'office',
+        vendorName: 'Route Duplicate Final Vendor',
+        description: 'Route duplicate final posting test',
+        expenseDate: '2026-06-21',
+        netAmount: 100,
+        vatRate: 19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      const first = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      const second = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token,
+        companyId: user.companyId,
+        body: {},
+      });
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(409);
+      expect(second.body.errorCode).toBe('EXPENSE_POSTING_ALREADY_FINALIZED');
+
+      const entries = await JournalEntry.findAll({
+        where: {
+          companyId: user.companyId,
+          sourceType: 'expense',
+          sourceId: String(expense.id),
+        },
+      });
+
+      expect(entries).toHaveLength(1);
+    });
+
+    it('auditor and viewer cannot finalize expense postings', async () => {
+      const { user: accountantUser, token: accountantToken } = await createRoleSession('accountant');
+
+      const expense = await Expense.create({
+        companyId: accountantUser.companyId,
+        userId: accountantUser.id,
+        createdByUserId: accountantUser.id,
+        date: new Date('2026-06-21'),
+        category: 'office',
+        vendorName: 'Forbidden Final Posting Vendor',
+        description: 'Forbidden final posting test',
+        expenseDate: '2026-06-21',
+        netAmount: 100,
+        vatRate: 19,
+        vatAmount: 19,
+        grossAmount: 119,
+        amount: 119,
+        currency: 'EUR',
+        status: 'pending',
+        source: 'manual',
+      });
+
+      await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/posting-preview`,
+        token: accountantToken,
+        companyId: accountantUser.companyId,
+        body: {},
+      });
+
+      const auditor = await createRoleSession('auditor', accountantUser.companyId);
+      const viewer = await createRoleSession('viewer', accountantUser.companyId);
+
+      const auditorResponse = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token: auditor.token,
+        companyId: accountantUser.companyId,
+        body: {},
+      });
+
+      const viewerResponse = await requestFor({
+        method: 'post',
+        url: `/api/expenses/${expense.id}/post`,
+        token: viewer.token,
+        companyId: accountantUser.companyId,
+        body: {},
+      });
+
+      expect(auditorResponse.status).toBe(403);
+      expect(viewerResponse.status).toBe(403);
+    });
+
     it('auditor and viewer cannot create expense posting previews', async () => {
       const { user: accountantUser } = await createRoleSession('accountant');
       const expense = await Expense.create({

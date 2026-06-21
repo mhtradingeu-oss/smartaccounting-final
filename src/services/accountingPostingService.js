@@ -360,6 +360,180 @@ const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = n
   };
 };
 
+
+const findPostedExpenseJournalEntry = async ({ expenseId, companyId, transaction = null } = {}) => {
+  if (!expenseId) {
+    throw new Error('expenseId is required');
+  }
+
+  if (!companyId) {
+    throw new Error('companyId is required');
+  }
+
+  return JournalEntry.findOne({
+    where: {
+      companyId,
+      sourceType: 'expense',
+      sourceId: String(expenseId),
+      status: 'posted',
+    },
+    include: [{ model: JournalEntryLine, as: 'lines' }],
+    order: [['postedAt', 'DESC']],
+    transaction,
+  });
+};
+
+const appendExpensePostingFinalizedAuditLog = async ({
+  expense,
+  journalEntry,
+  lines = [],
+  companyId,
+  postedBy = null,
+}) => {
+  await AuditLogService.appendEntry({
+    action: 'expense_posting_finalized',
+    resourceType: 'JournalEntry',
+    resourceId: journalEntry?.id ? String(journalEntry.id) : null,
+    userId: postedBy,
+    companyId,
+    oldValues: {
+      status: 'draft',
+      previewOnly: true,
+    },
+    newValues: {
+      expenseId: expense?.id || null,
+      journalEntryId: journalEntry?.id || null,
+      sourceType: journalEntry?.sourceType || 'expense',
+      sourceId: journalEntry?.sourceId || (expense?.id ? String(expense.id) : null),
+      status: 'posted',
+      previewOnly: false,
+      finalizedFromPreview: true,
+      postedAt: journalEntry?.postedAt || null,
+      postedBy,
+      linesCount: Array.isArray(lines) ? lines.length : 0,
+      expenseStatus: expense?.status || null,
+      taxTreatment: expense?.taxTreatment || null,
+      inputVatAllowed: expense?.inputVatAllowed ?? null,
+    },
+    reason: 'Expense posting finalized from reviewed posting preview',
+  });
+};
+
+const finalizeExpensePosting = async ({ expenseId, companyId, postedBy = null } = {}) => {
+  if (!expenseId) {
+    throw new Error('expenseId is required');
+  }
+
+  if (!companyId) {
+    throw new Error('companyId is required');
+  }
+
+  const expense = await Expense.findOne({
+    where: {
+      id: expenseId,
+      companyId,
+    },
+  });
+
+  if (!expense) {
+    throw new Error('Expense not found');
+  }
+
+  const alreadyPosted = await findPostedExpenseJournalEntry({
+    expenseId: expense.id,
+    companyId,
+  });
+
+  if (alreadyPosted) {
+    const error = new Error('Expense posting already finalized');
+    error.code = 'EXPENSE_POSTING_ALREADY_FINALIZED';
+    error.status = 409;
+    error.journalEntry = alreadyPosted;
+    throw error;
+  }
+
+  const preview = await findExistingExpensePostingPreview({
+    expenseId: expense.id,
+    companyId,
+  });
+
+  if (!preview) {
+    const error = new Error('Expense posting preview is required before final posting');
+    error.code = 'EXPENSE_POSTING_PREVIEW_REQUIRED';
+    error.status = 409;
+    throw error;
+  }
+
+  const postedAt = new Date();
+  const currentMetadata = preview.metadata || {};
+  const nextMetadata = {
+    ...currentMetadata,
+    previewOnly: false,
+    finalizedFromPreview: true,
+    finalizedAt: postedAt.toISOString(),
+  };
+
+  const postedEntry = await sequelize.transaction(async (transaction) => {
+    const lockedPreview = await JournalEntry.findOne({
+      where: {
+        id: preview.id,
+        companyId,
+        status: 'draft',
+      },
+      include: [{ model: JournalEntryLine, as: 'lines' }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!lockedPreview) {
+      const error = new Error('Expense posting preview is no longer available for final posting');
+      error.code = 'EXPENSE_POSTING_PREVIEW_NOT_AVAILABLE';
+      error.status = 409;
+      throw error;
+    }
+
+    validateBalancedEntry(
+      (lockedPreview.lines || []).map((line) => ({
+        accountId: line.accountId,
+        debit: line.debit,
+        credit: line.credit,
+      })),
+    );
+
+    await lockedPreview.update(
+      {
+        status: 'posted',
+        postedAt,
+        postedBy,
+        metadata: nextMetadata,
+      },
+      { transaction },
+    );
+
+    return JournalEntry.findByPk(lockedPreview.id, {
+      include: [{ model: JournalEntryLine, as: 'lines' }],
+      transaction,
+    });
+  });
+
+  const lines = postedEntry?.lines || [];
+
+  await appendExpensePostingFinalizedAuditLog({
+    expense,
+    journalEntry: postedEntry,
+    lines,
+    companyId,
+    postedBy,
+  });
+
+  return {
+    journalEntry: postedEntry,
+    lines,
+    posted: true,
+    finalizedFromPreview: true,
+  };
+};
+
 const createJournalEntryDraft = async ({
   companyId,
   entryDate,
@@ -435,5 +609,7 @@ module.exports = {
   resolveJournalLines,
   buildExpensePostingLines,
   findExistingExpensePostingPreview,
+  findPostedExpenseJournalEntry,
   createExpensePostingPreview,
+  finalizeExpensePosting,
 };

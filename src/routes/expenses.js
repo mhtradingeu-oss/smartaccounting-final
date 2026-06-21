@@ -132,6 +132,51 @@ router.post('/:expenseId/posting-preview', requireRole(['admin', 'accountant']),
   }
 });
 
+
+// Finalize accounting posting for an expense.
+// This converts an existing draft posting preview into a posted journal entry.
+// It does not create a second journal entry and does not mutate posted entries.
+router.post('/:expenseId/post', requireRole(['admin', 'accountant']), async (req, res, next) => {
+  try {
+    const result = await accountingPostingService.finalizeExpensePosting({
+      expenseId: req.params.expenseId,
+      companyId: req.companyId,
+      postedBy: req.user?.id || req.userId || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Expense posting finalized',
+      journalEntry: result.journalEntry,
+      lines: result.lines,
+      posted: true,
+      finalizedFromPreview: true,
+    });
+  } catch (error) {
+    if (/expense not found/i.test(error.message)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found',
+      });
+    }
+
+    if (
+      error.code === 'EXPENSE_POSTING_ALREADY_FINALIZED' ||
+      error.code === 'EXPENSE_POSTING_PREVIEW_REQUIRED' ||
+      error.code === 'EXPENSE_POSTING_PREVIEW_NOT_AVAILABLE'
+    ) {
+      return res.status(error.status || 409).json({
+        success: false,
+        message: error.message,
+        errorCode: error.code,
+      });
+    }
+
+    return next(error);
+  }
+});
+
+
 // Patch expense status (status transition)
 router.patch('/:expenseId/status', requireRole(['admin', 'accountant']), async (req, res, next) => {
   try {

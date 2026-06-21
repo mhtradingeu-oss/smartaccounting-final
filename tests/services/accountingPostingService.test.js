@@ -582,6 +582,163 @@ describe('accountingPostingService', () => {
     );
   });
 
+
+  it('finalizes an existing expense posting preview into a posted journal entry', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'Final Posting Vendor',
+      description: 'Final posting service test',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    const preview = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const result = await accountingPostingService.finalizeExpensePosting({
+      expenseId: expense.id,
+      companyId: company.id,
+      postedBy: user.id,
+    });
+
+    expect(result.posted).toBe(true);
+    expect(result.finalizedFromPreview).toBe(true);
+    expect(result.journalEntry.id).toBe(preview.journalEntry.id);
+    expect(result.journalEntry.status).toBe('posted');
+    expect(result.journalEntry.postedBy).toBe(user.id);
+    expect(result.journalEntry.postedAt).toBeTruthy();
+    expect(result.lines).toHaveLength(3);
+
+    await expense.reload();
+    expect(expense.status).toBe('pending');
+
+    const auditLog = await AuditLog.findOne({
+      where: {
+        action: 'expense_posting_finalized',
+        resourceType: 'JournalEntry',
+        resourceId: String(result.journalEntry.id),
+        companyId: company.id,
+        userId: user.id,
+      },
+    });
+
+    expect(auditLog).toBeTruthy();
+    expect(auditLog.immutable).toBe(true);
+    expect(auditLog.newValues).toEqual(
+      expect.objectContaining({
+        expenseId: expense.id,
+        journalEntryId: result.journalEntry.id,
+        status: 'posted',
+        previewOnly: false,
+        finalizedFromPreview: true,
+        postedBy: user.id,
+        linesCount: 3,
+      }),
+    );
+  });
+
+  it('rejects final expense posting when no preview exists', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'No Preview Vendor',
+      description: 'No preview final posting service test',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    await expect(
+      accountingPostingService.finalizeExpensePosting({
+        expenseId: expense.id,
+        companyId: company.id,
+        postedBy: user.id,
+      }),
+    ).rejects.toMatchObject({
+      code: 'EXPENSE_POSTING_PREVIEW_REQUIRED',
+      status: 409,
+    });
+  });
+
+  it('prevents duplicate final expense posting', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'Duplicate Final Posting Vendor',
+      description: 'Duplicate final posting service test',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const first = await accountingPostingService.finalizeExpensePosting({
+      expenseId: expense.id,
+      companyId: company.id,
+      postedBy: user.id,
+    });
+
+    expect(first.journalEntry.status).toBe('posted');
+
+    await expect(
+      accountingPostingService.finalizeExpensePosting({
+        expenseId: expense.id,
+        companyId: company.id,
+        postedBy: user.id,
+      }),
+    ).rejects.toMatchObject({
+      code: 'EXPENSE_POSTING_ALREADY_FINALIZED',
+      status: 409,
+    });
+
+    const entries = await JournalEntry.findAll({
+      where: {
+        companyId: company.id,
+        sourceType: 'expense',
+        sourceId: String(expense.id),
+      },
+    });
+
+    expect(entries).toHaveLength(1);
+  });
+
   it('rejects expense posting preview across company boundary', async () => {
     const expense = await Expense.create({
       companyId: otherCompany.id,
