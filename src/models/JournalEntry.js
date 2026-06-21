@@ -67,6 +67,44 @@ module.exports = (sequelize, DataTypes) => {
     {
       tableName: 'journal_entries',
       timestamps: true,
+      hooks: {
+        beforeUpdate: (entry, options = {}) => {
+          if (options.allowPostedJournalEntryMutation === true) {
+            return;
+          }
+
+          const previousStatus = entry.previous('status');
+          const nextStatus = entry.status;
+
+          const isDraftToPostedTransition = previousStatus === 'draft' && nextStatus === 'posted';
+          if (isDraftToPostedTransition) {
+            return;
+          }
+
+          const wasPosted = previousStatus === 'posted';
+          const remainsPosted = nextStatus === 'posted';
+
+          if (wasPosted || remainsPosted) {
+            const error = new Error('Posted journal entries are immutable. Use reversal entries for corrections.');
+            error.code = 'POSTED_JOURNAL_ENTRY_IMMUTABLE';
+            error.status = 409;
+            throw error;
+          }
+        },
+
+        beforeDestroy: (entry, options = {}) => {
+          if (options.allowPostedJournalEntryMutation === true) {
+            return;
+          }
+
+          if (entry.status === 'posted') {
+            const error = new Error('Posted journal entries cannot be deleted. Use reversal entries for corrections.');
+            error.code = 'POSTED_JOURNAL_ENTRY_IMMUTABLE';
+            error.status = 409;
+            throw error;
+          }
+        },
+      },
     },
   );
 

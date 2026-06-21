@@ -60,6 +60,43 @@ module.exports = (sequelize, DataTypes) => {
     {
       tableName: 'journal_entry_lines',
       timestamps: true,
+      hooks: {
+        beforeUpdate: async (line, options = {}) => {
+          if (options.allowPostedJournalEntryMutation === true) {
+            return;
+          }
+
+          const JournalEntry = line.sequelize.models.JournalEntry;
+          const journalEntry = await JournalEntry.findByPk(line.journalEntryId, {
+            transaction: options.transaction,
+          });
+
+          if (journalEntry?.status === 'posted') {
+            const error = new Error('Posted journal entry lines are immutable. Use reversal entries for corrections.');
+            error.code = 'POSTED_JOURNAL_ENTRY_LINE_IMMUTABLE';
+            error.status = 409;
+            throw error;
+          }
+        },
+
+        beforeDestroy: async (line, options = {}) => {
+          if (options.allowPostedJournalEntryMutation === true) {
+            return;
+          }
+
+          const JournalEntry = line.sequelize.models.JournalEntry;
+          const journalEntry = await JournalEntry.findByPk(line.journalEntryId, {
+            transaction: options.transaction,
+          });
+
+          if (journalEntry?.status === 'posted') {
+            const error = new Error('Posted journal entry lines cannot be deleted. Use reversal entries for corrections.');
+            error.code = 'POSTED_JOURNAL_ENTRY_LINE_IMMUTABLE';
+            error.status = 409;
+            throw error;
+          }
+        },
+      },
     },
   );
 

@@ -710,7 +710,10 @@ const reverseJournalEntry = async ({ journalEntryId, companyId, reversedBy = nul
           reversalJournalEntryId: reversalEntry.id,
         },
       },
-      { transaction },
+      {
+        transaction,
+        allowPostedJournalEntryMutation: true,
+      },
     );
 
     const reloadedOriginal = await JournalEntry.findByPk(originalEntry.id, {

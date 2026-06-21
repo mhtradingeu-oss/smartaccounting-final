@@ -934,6 +934,100 @@ describe('accountingPostingService', () => {
   });
 
 
+
+
+  it('prevents direct mutation of a posted journal entry', async () => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'posted-entry-immutability-test',
+      createdBy: user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 100, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    await draft.journalEntry.update({
+      status: 'posted',
+      postedAt: new Date(),
+      postedBy: user.id,
+    });
+
+    await expect(
+      draft.journalEntry.update({
+        description: 'Illegal direct posted mutation',
+      }),
+    ).rejects.toMatchObject({
+      code: 'POSTED_JOURNAL_ENTRY_IMMUTABLE',
+      status: 409,
+    });
+  });
+
+  it('prevents direct mutation of posted journal entry lines', async () => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'posted-line-immutability-test',
+      createdBy: user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 100, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    await draft.journalEntry.update({
+      status: 'posted',
+      postedAt: new Date(),
+      postedBy: user.id,
+    });
+
+    const line = await JournalEntryLine.findOne({
+      where: { journalEntryId: draft.journalEntry.id },
+    });
+
+    await expect(
+      line.update({
+        debit: 200,
+      }),
+    ).rejects.toMatchObject({
+      code: 'POSTED_JOURNAL_ENTRY_LINE_IMMUTABLE',
+      status: 409,
+    });
+  });
+
+  it('prevents deleting posted journal entry lines directly', async () => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'posted-line-delete-immutability-test',
+      createdBy: user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 100, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 100 },
+      ],
+    });
+
+    await draft.journalEntry.update({
+      status: 'posted',
+      postedAt: new Date(),
+      postedBy: user.id,
+    });
+
+    const line = await JournalEntryLine.findOne({
+      where: { journalEntryId: draft.journalEntry.id },
+    });
+
+    await expect(line.destroy()).rejects.toMatchObject({
+      code: 'POSTED_JOURNAL_ENTRY_LINE_IMMUTABLE',
+      status: 409,
+    });
+  });
+
+
   it('rejects expense posting preview across company boundary', async () => {
     const expense = await Expense.create({
       companyId: otherCompany.id,
