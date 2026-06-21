@@ -1,6 +1,6 @@
 'use strict';
 
-const { ChartAccount, JournalEntry, JournalEntryLine, sequelize } = require('../models');
+const { ChartAccount, Expense, JournalEntry, JournalEntryLine, sequelize } = require('../models');
 const chartOfAccountsService = require('./chartOfAccountsService');
 
 const MONEY_SCALE = 2;
@@ -104,6 +104,93 @@ const resolveJournalLines = async ({ companyId, lines, transaction }) => {
   return resolvedLines;
 };
 
+const hasInputVat = (expense) => {
+  const vatAmount = normalizeMoney(expense?.vatAmount);
+  const vatRate = Number(expense?.vatRate ?? 0);
+  const inputVatAllowed = expense?.inputVatAllowed;
+
+  if (String(expense?.taxTreatment || '').toLowerCase() === 'no_vorsteuer_allowed') {
+    return false;
+  }
+
+  if (inputVatAllowed === false) {
+    return false;
+  }
+
+  return vatAmount > 0 || vatRate > 0;
+};
+
+const getExpenseGrossAmount = (expense) => {
+  const gross = normalizeMoney(expense?.grossAmount ?? expense?.amount);
+  if (gross <= 0) {
+    throw new Error('Expense gross amount must be greater than zero');
+  }
+  return gross;
+};
+
+const getExpenseNetAmount = (expense) => {
+  const net = normalizeMoney(expense?.netAmount);
+  if (net <= 0) {
+    throw new Error('Expense net amount must be greater than zero');
+  }
+  return net;
+};
+
+const buildExpensePostingLines = (expense) => {
+  if (!expense) {
+    throw new Error('expense is required');
+  }
+
+  const grossAmount = getExpenseGrossAmount(expense);
+
+  if (!hasInputVat(expense)) {
+    return [
+      {
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.GENERAL_EXPENSE,
+        debit: grossAmount,
+        credit: 0,
+        description: expense.description || expense.vendorName || 'Expense without input VAT',
+      },
+      {
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.ACCOUNTS_PAYABLE,
+        debit: 0,
+        credit: grossAmount,
+        description: expense.vendorName || 'Accounts payable',
+      },
+    ];
+  }
+
+  const netAmount = getExpenseNetAmount(expense);
+  const vatAmount = normalizeMoney(expense.vatAmount);
+
+  if (vatAmount <= 0) {
+    throw new Error('Input VAT expense requires a VAT amount greater than zero');
+  }
+
+  return [
+    {
+      accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.GENERAL_EXPENSE,
+      debit: netAmount,
+      credit: 0,
+      description: expense.description || expense.vendorName || 'Expense net amount',
+    },
+    {
+      accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.INPUT_VAT_19,
+      debit: vatAmount,
+      credit: 0,
+      taxCode: 'input_vat_19',
+      vatRate: Number(expense.vatRate ?? 19),
+      description: 'Input VAT',
+    },
+    {
+      accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.ACCOUNTS_PAYABLE,
+      debit: 0,
+      credit: grossAmount,
+      description: expense.vendorName || 'Accounts payable',
+    },
+  ];
+};
+
 const ensureAccountsBelongToCompany = async ({ companyId, lines, transaction }) => {
   const accountIds = [...new Set(lines.map((line) => line.accountId))];
 
@@ -121,6 +208,48 @@ const ensureAccountsBelongToCompany = async ({ companyId, lines, transaction }) 
   }
 
   return accounts;
+};
+
+const createExpensePostingPreview = async ({ expenseId, companyId, createdBy = null } = {}) => {
+  if (!expenseId) {
+    throw new Error('expenseId is required');
+  }
+
+  if (!companyId) {
+    throw new Error('companyId is required');
+  }
+
+  const expense = await Expense.findOne({
+    where: {
+      id: expenseId,
+      companyId,
+    },
+  });
+
+  if (!expense) {
+    throw new Error('Expense not found');
+  }
+
+  const lines = buildExpensePostingLines(expense.get ? expense.get({ plain: true }) : expense);
+
+  return createJournalEntryDraft({
+    companyId,
+    entryDate: expense.expenseDate || expense.date || new Date(),
+    sourceType: 'expense',
+    sourceId: String(expense.id),
+    description: `Expense posting preview: ${expense.vendorName || expense.description || expense.id}`,
+    currency: expense.currency || 'EUR',
+    createdBy,
+    metadata: {
+      previewOnly: true,
+      source: 'expense_posting_preview',
+      expenseId: expense.id,
+      expenseStatus: expense.status || null,
+      taxTreatment: expense.taxTreatment || null,
+      inputVatAllowed: expense.inputVatAllowed ?? null,
+    },
+    lines,
+  });
 };
 
 const createJournalEntryDraft = async ({
@@ -196,4 +325,6 @@ module.exports = {
   validateBalancedEntry,
   createJournalEntryDraft,
   resolveJournalLines,
+  buildExpensePostingLines,
+  createExpensePostingPreview,
 };

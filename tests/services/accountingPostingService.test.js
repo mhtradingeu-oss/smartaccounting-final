@@ -3,6 +3,7 @@
 const {
   ChartAccount,
   Company,
+  Expense,
   JournalEntry,
   JournalEntryLine,
   User,
@@ -15,6 +16,7 @@ describe('accountingPostingService', () => {
   let company;
   let otherCompany;
   let user;
+  let otherCompanyUser;
   let expenseAccount;
   let inputVatAccount;
   let payableAccount;
@@ -27,6 +29,7 @@ describe('accountingPostingService', () => {
   beforeEach(async () => {
     await JournalEntryLine.destroy({ where: {}, force: true });
     await JournalEntry.destroy({ where: {}, force: true });
+    await Expense.destroy({ where: {}, force: true });
     await ChartAccount.destroy({ where: {}, force: true });
     await User.destroy({ where: {}, force: true });
     await Company.destroy({ where: {}, force: true });
@@ -56,6 +59,15 @@ describe('accountingPostingService', () => {
       lastName: 'Tester',
       role: 'accountant',
       companyId: company.id,
+    });
+
+    otherCompanyUser = await User.create({
+      email: `other-posting-${Date.now()}-${Math.random()}@example.com`,
+      password: 'hashed-password',
+      firstName: 'Other',
+      lastName: 'Tester',
+      role: 'accountant',
+      companyId: otherCompany.id,
     });
 
     expenseAccount = await ChartAccount.create({
@@ -157,6 +169,72 @@ describe('accountingPostingService', () => {
     ).toThrow(/cannot be negative/i);
   });
 
+  it('builds expense posting lines with input VAT', () => {
+    const lines = accountingPostingService.buildExpensePostingLines({
+      description: 'Hosting',
+      vendorName: 'Hosting Vendor',
+      netAmount: 100,
+      vatRate: 0.19,
+      vatAmount: 19,
+      grossAmount: 119,
+      currency: 'EUR',
+    });
+
+    expect(lines).toEqual([
+      expect.objectContaining({
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.GENERAL_EXPENSE,
+        debit: 100,
+        credit: 0,
+      }),
+      expect.objectContaining({
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.INPUT_VAT_19,
+        debit: 19,
+        credit: 0,
+        taxCode: 'input_vat_19',
+      }),
+      expect.objectContaining({
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.ACCOUNTS_PAYABLE,
+        debit: 0,
+        credit: 119,
+      }),
+    ]);
+
+    expect(accountingPostingService.validateBalancedEntry(
+      lines.map((line, index) => ({ ...line, accountId: index + 1 })),
+    )).toEqual(expect.objectContaining({ balanced: true }));
+  });
+
+  it('builds restricted expense posting lines without input VAT', () => {
+    const lines = accountingPostingService.buildExpensePostingLines({
+      description: 'Taxi',
+      vendorName: 'Taxi Berlin GmbH',
+      netAmount: 119,
+      vatRate: 0,
+      vatAmount: 0,
+      grossAmount: 119,
+      currency: 'EUR',
+      taxTreatment: 'no_vorsteuer_allowed',
+      inputVatAllowed: false,
+    });
+
+    expect(lines).toEqual([
+      expect.objectContaining({
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.GENERAL_EXPENSE,
+        debit: 119,
+        credit: 0,
+      }),
+      expect.objectContaining({
+        accountRole: chartOfAccountsService.DEFAULT_ACCOUNT_ROLES.ACCOUNTS_PAYABLE,
+        debit: 0,
+        credit: 119,
+      }),
+    ]);
+
+    expect(accountingPostingService.validateBalancedEntry(
+      lines.map((line, index) => ({ ...line, accountId: index + 1 })),
+    )).toEqual(expect.objectContaining({ balanced: true }));
+  });
+
   it('creates a draft journal entry with balanced lines', async () => {
     const result = await accountingPostingService.createJournalEntryDraft({
       companyId: company.id,
@@ -242,6 +320,128 @@ describe('accountingPostingService', () => {
 
     expect(persistedLines).toHaveLength(3);
     expect(persistedLines.map((line) => line.account.code).sort()).toEqual(['1576', '1600', '4930']);
+  });
+
+  it('creates an expense posting preview for a VAT expense', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      vendorName: 'Hosting Vendor',
+      description: 'Hosting invoice',
+      expenseDate: new Date('2026-06-21'),
+      category: 'software',
+      netAmount: 100,
+      vatRate: 0.19,
+      vatAmount: 19,
+      grossAmount: 119,
+      amount: 119,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    const result = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    expect(result.journalEntry).toMatchObject({
+      companyId: company.id,
+      sourceType: 'expense',
+      sourceId: String(expense.id),
+      status: 'draft',
+    });
+
+    expect(result.journalEntry.metadata).toEqual(
+      expect.objectContaining({
+        previewOnly: true,
+        source: 'expense_posting_preview',
+        expenseId: expense.id,
+      }),
+    );
+
+    const lines = await JournalEntryLine.findAll({
+      where: { journalEntryId: result.journalEntry.id },
+      include: [{ model: ChartAccount, as: 'account' }],
+    });
+
+    expect(lines).toHaveLength(3);
+    expect(lines.map((line) => line.account.code).sort()).toEqual(['1576', '1600', '4930']);
+
+    await expense.reload();
+    expect(expense.status).toBe('pending');
+  });
+
+  it('creates an expense posting preview without input VAT for restricted expense', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      vendorName: 'Taxi Berlin GmbH',
+      description: 'Taxi receipt',
+      expenseDate: new Date('2026-06-21'),
+      category: 'travel',
+      netAmount: 119,
+      vatRate: 0,
+      vatAmount: 0,
+      grossAmount: 119,
+      amount: 119,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'ai_document_intake_reviewed',
+      taxTreatment: 'no_vorsteuer_allowed',
+      inputVatAllowed: false,
+      accountantReviewRequired: true,
+    });
+
+    const result = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    const lines = await JournalEntryLine.findAll({
+      where: { journalEntryId: result.journalEntry.id },
+      include: [{ model: ChartAccount, as: 'account' }],
+    });
+
+    expect(lines).toHaveLength(2);
+    expect(lines.map((line) => line.account.code).sort()).toEqual(['1600', '4930']);
+    expect(lines.reduce((sum, line) => sum + Number(line.debit), 0)).toBe(119);
+    expect(lines.reduce((sum, line) => sum + Number(line.credit), 0)).toBe(119);
+  });
+
+  it('rejects expense posting preview across company boundary', async () => {
+    const expense = await Expense.create({
+      companyId: otherCompany.id,
+      userId: otherCompanyUser.id,
+      createdByUserId: otherCompanyUser.id,
+      date: new Date('2026-06-21'),
+      vendorName: 'Other Vendor',
+      description: 'Other expense',
+      expenseDate: new Date('2026-06-21'),
+      category: 'software',
+      netAmount: 100,
+      vatRate: 0.19,
+      vatAmount: 19,
+      grossAmount: 119,
+      amount: 119,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    await expect(
+      accountingPostingService.createExpensePostingPreview({
+        expenseId: expense.id,
+        companyId: company.id,
+        createdBy: user.id,
+      }),
+    ).rejects.toThrow(/expense not found/i);
   });
 
   it('rejects accounts outside the active company', async () => {
