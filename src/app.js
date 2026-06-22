@@ -38,6 +38,7 @@ const { sequelize } = require('./models');
 
 const app = express();
 const API_PREFIX = process.env.API_BASE_URL || '/api';
+const EXPRESS_API_PREFIX = '/api';
 app.set('apiPrefix', API_PREFIX);
 const normalizedApiPrefix = API_PREFIX.replace(/\/$/, '');
 
@@ -109,6 +110,7 @@ const emailTestRoutes = require('./routes/emailTest');
 const germanTaxComplianceRoutes = require('./routes/germanTaxCompliance');
 const expenseRoutes = require('./routes/expenses');
 const journalEntryRoutes = require('./routes/journalEntries');
+const reportRoutes = require('./routes/reports');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
@@ -150,7 +152,7 @@ app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || '1
 // --------------------------------------------------
 
 // Swagger docs
-const swaggerDocsPath = `${API_PREFIX}/docs`;
+const swaggerDocsPath = `${EXPRESS_API_PREFIX}/docs`;
 app.use(swaggerDocsPath, serve, setup(specs, swaggerOptions));
 
 const healthHandler = async (req, res) => {
@@ -219,7 +221,7 @@ const readyHandler = async (req, res) => {
   }
 };
 
-app.use(`${API_PREFIX}/public`, publicRoutes);
+app.use(`${EXPRESS_API_PREFIX}/public`, publicRoutes);
 
 const metricsHandler = (req, res) => {
   const metrics = performanceMonitor.getMetrics();
@@ -273,47 +275,48 @@ registerPublicMonitorEndpoint('/metrics', metricsHandler);
 // --------------------------------------------------
 
 // Timeout only for API
-app.use(API_PREFIX, createApiTimeoutMiddleware());
+app.use(EXPRESS_API_PREFIX, createApiTimeoutMiddleware());
 
 // Mount public auth routes BEFORE authentication middleware
-app.use(`${API_PREFIX}/auth`, authRoutes);
+app.use(`${EXPRESS_API_PREFIX}/auth`, authRoutes);
 
 // Authentication & RBAC (protect all other /api routes)
-app.use(API_PREFIX, authMiddleware.authenticate);
-app.use(API_PREFIX, permissionGuard());
-app.use(API_PREFIX, maintenanceMiddleware);
+app.use(EXPRESS_API_PREFIX, authMiddleware.authenticate);
+app.use(EXPRESS_API_PREFIX, permissionGuard());
+app.use(EXPRESS_API_PREFIX, maintenanceMiddleware);
 
 // --------------------------------------------------
 // API Routes
 // --------------------------------------------------
 const invoiceImportRoutes = require('./routes/invoiceImport');
 const vatRoutes = require('./routes/vat');
-app.use(`${API_PREFIX}/invoice-import`, invoiceImportRoutes);
-app.use(`${API_PREFIX}/vat`, vatRoutes);
-app.use(`${API_PREFIX}/telemetry`, telemetryRoutes);
-app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
-app.use(`${API_PREFIX}/invoices`, invoiceRoutes);
-app.use(`${API_PREFIX}/bank-statements`, bankStatementRoutes);
-app.use(`${API_PREFIX}/german-tax`, germanTaxRoutes);
-app.use(`${API_PREFIX}/stripe`, stripeRoutes);
-app.use(`${API_PREFIX}/users`, userRoutes);
-app.use(`${API_PREFIX}/companies`, companyRoutes);
-app.use(`${API_PREFIX}/tax-reports`, taxReportRoutes);
-app.use(`${API_PREFIX}/compliance`, complianceRoutes);
-app.use(`${API_PREFIX}/german-tax-compliance`, germanTaxComplianceRoutes);
-app.use(`${API_PREFIX}/elster`, elsterRoutes);
-app.use(`${API_PREFIX}/ai`, aiRoutes);
-app.use(`${API_PREFIX}/admin`, adminRoutes);
-app.use(`${API_PREFIX}/gdpr`, gdprRoutes);
-app.use(`${API_PREFIX}/ocr`, ocrRoutes);
-app.use(`${API_PREFIX}/system`, systemRoutes);
-app.use(`${API_PREFIX}/monitoring`, monitoringRoutes);
-app.use(`${API_PREFIX}/logs`, logRoutes);
-app.use(`${API_PREFIX}/exports`, exportRoutes);
-app.use(`${API_PREFIX}/email-test`, emailTestRoutes);
-app.use(`${API_PREFIX}/expenses`, expenseRoutes);
-app.use(`${API_PREFIX}/journal-entries`, journalEntryRoutes);
-app.get(`${API_PREFIX}/ai/suggest`, (req, res, next) => {
+app.use(`${EXPRESS_API_PREFIX}/invoice-import`, invoiceImportRoutes);
+app.use(`${EXPRESS_API_PREFIX}/vat`, vatRoutes);
+app.use(`${EXPRESS_API_PREFIX}/telemetry`, telemetryRoutes);
+app.use(`${EXPRESS_API_PREFIX}/dashboard`, dashboardRoutes);
+app.use(`${EXPRESS_API_PREFIX}/invoices`, invoiceRoutes);
+app.use(`${EXPRESS_API_PREFIX}/bank-statements`, bankStatementRoutes);
+app.use(`${EXPRESS_API_PREFIX}/german-tax`, germanTaxRoutes);
+app.use(`${EXPRESS_API_PREFIX}/stripe`, stripeRoutes);
+app.use(`${EXPRESS_API_PREFIX}/users`, userRoutes);
+app.use(`${EXPRESS_API_PREFIX}/companies`, companyRoutes);
+app.use(`${EXPRESS_API_PREFIX}/tax-reports`, taxReportRoutes);
+app.use(`${EXPRESS_API_PREFIX}/compliance`, complianceRoutes);
+app.use(`${EXPRESS_API_PREFIX}/german-tax-compliance`, germanTaxComplianceRoutes);
+app.use(`${EXPRESS_API_PREFIX}/elster`, elsterRoutes);
+app.use(`${EXPRESS_API_PREFIX}/ai`, aiRoutes);
+app.use(`${EXPRESS_API_PREFIX}/admin`, adminRoutes);
+app.use(`${EXPRESS_API_PREFIX}/gdpr`, gdprRoutes);
+app.use(`${EXPRESS_API_PREFIX}/ocr`, ocrRoutes);
+app.use(`${EXPRESS_API_PREFIX}/system`, systemRoutes);
+app.use(`${EXPRESS_API_PREFIX}/monitoring`, monitoringRoutes);
+app.use(`${EXPRESS_API_PREFIX}/logs`, logRoutes);
+app.use(`${EXPRESS_API_PREFIX}/exports`, exportRoutes);
+app.use(`${EXPRESS_API_PREFIX}/email-test`, emailTestRoutes);
+app.use(`${EXPRESS_API_PREFIX}/expenses`, expenseRoutes);
+app.use(`${EXPRESS_API_PREFIX}/journal-entries`, journalEntryRoutes);
+app.use(`${EXPRESS_API_PREFIX}/reports`, reportRoutes);
+app.get(`${EXPRESS_API_PREFIX}/ai/suggest`, (req, res, next) => {
   return next(new ApiError(501, 'AI_SUGGEST_NOT_READY', 'AI suggestions are not production-ready'));
 });
 
