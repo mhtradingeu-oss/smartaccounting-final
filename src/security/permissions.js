@@ -12,6 +12,7 @@ module.exports = {
       'POST /api/auth/refresh',
 
       'GET /api/companies',
+      'GET /api/dashboard/stats',
 
       'GET /api/invoices',
       'GET /api/invoices/:id',
@@ -81,6 +82,7 @@ module.exports = {
       'POST /api/auth/logout',
 
       'GET /api/companies',
+      'GET /api/dashboard/stats',
 
       'GET /api/invoices',
       'GET /api/invoices/:id',
@@ -123,6 +125,7 @@ module.exports = {
       'POST /api/auth/logout',
 
       'GET /api/companies',
+      'GET /api/dashboard/stats',
       'GET /api/invoices',
       'GET /api/invoices/:id',
       'GET /api/invoices/:id/audit-log',
