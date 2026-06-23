@@ -13,6 +13,8 @@ describe('Financial reports API', () => {
   let expenseAccount;
   let payableAccount;
   let revenueAccount;
+  let assetAccount;
+  let equityAccount;
 
   const createRoleSession = async (role, companyId = company.id) => {
     const session = await global.testUtils.createTestUserAndLogin({
@@ -113,6 +115,38 @@ describe('Financial reports API', () => {
     );
   };
 
+
+  const createPostedBalanceSheetEntry = async ({
+    entryDate = '2026-06-21',
+    assetAmount = 500,
+    liabilityAmount = 200,
+    equityAmount = 300,
+  } = {}) => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate,
+      sourceType: 'manual',
+      sourceId: `balance-sheet-${Date.now()}-${Math.random()}`,
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: assetAccount.id, debit: assetAmount, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: liabilityAmount },
+        { accountId: equityAccount.id, debit: 0, credit: equityAmount },
+      ],
+    });
+
+    await draft.journalEntry.update(
+      {
+        status: 'posted',
+        postedAt: new Date(),
+        postedBy: accountant.user.id,
+      },
+      { allowPostedJournalEntryMutation: true },
+    );
+
+    return draft.journalEntry;
+  };
+
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
@@ -168,6 +202,24 @@ describe('Financial reports API', () => {
       code: '8400',
       name: 'Sales revenue',
       type: 'revenue',
+      normalBalance: 'credit',
+      isSystem: true,
+    });
+
+    assetAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: '1200',
+      name: 'Bank',
+      type: 'asset',
+      normalBalance: 'debit',
+      isSystem: true,
+    });
+
+    equityAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: '3000',
+      name: 'Owner equity',
+      type: 'equity',
       normalBalance: 'credit',
       isSystem: true,
     });
@@ -373,6 +425,137 @@ describe('Financial reports API', () => {
 
     const response = await requestFor({
       url: '/api/reports/profit-loss',
+      token: accountant.token,
+      companyId: otherCompany.id,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read the balance sheet report', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+
+    await createPostedBalanceSheetEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/balance-sheet',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.report.companyId).toBe(company.id);
+    expect(response.body.report.assets.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '1200',
+          debitTotal: 500,
+          balance: 500,
+        }),
+      ]),
+    );
+    expect(response.body.report.liabilities.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '1600',
+          creditTotal: 200,
+          balance: 200,
+        }),
+      ]),
+    );
+    expect(response.body.report.equity.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '3000',
+          creditTotal: 300,
+          balance: 300,
+        }),
+      ]),
+    );
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        totalAssets: 500,
+        totalLiabilities: 200,
+        totalEquity: 300,
+        liabilitiesAndEquity: 500,
+        accountingEquationDifference: 0,
+        isBalanced: true,
+      }),
+    );
+  });
+
+  it('uses only posted journal entries in balance sheet report', async () => {
+    await createPostedBalanceSheetEntry();
+
+    await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'draft-balance-sheet-should-not-count',
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: assetAccount.id, debit: 999, credit: 0 },
+        { accountId: equityAccount.id, debit: 0, credit: 999 },
+      ],
+    });
+
+    const response = await requestFor({
+      url: '/api/reports/balance-sheet',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals.totalAssets).toBe(500);
+    expect(response.body.report.totals.liabilitiesAndEquity).toBe(500);
+    expect(response.body.report.totals.isBalanced).toBe(true);
+  });
+
+  it('filters balance sheet by asOf date', async () => {
+    await createPostedBalanceSheetEntry({
+      entryDate: '2026-06-01',
+      assetAmount: 100,
+      liabilityAmount: 40,
+      equityAmount: 60,
+    });
+    await createPostedBalanceSheetEntry({
+      entryDate: '2026-07-01',
+      assetAmount: 500,
+      liabilityAmount: 200,
+      equityAmount: 300,
+    });
+
+    const response = await requestFor({
+      url: '/api/reports/balance-sheet?asOf=2026-06-30',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        totalAssets: 100,
+        totalLiabilities: 40,
+        totalEquity: 60,
+        liabilitiesAndEquity: 100,
+        accountingEquationDifference: 0,
+        isBalanced: true,
+      }),
+    );
+    expect(response.body.report.filters).toEqual(
+      expect.objectContaining({
+        asOf: '2026-06-30',
+        status: 'posted',
+      }),
+    );
+  });
+
+  it('prevents cross-company balance sheet access', async () => {
+    await createPostedBalanceSheetEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/balance-sheet',
       token: accountant.token,
       companyId: otherCompany.id,
     });

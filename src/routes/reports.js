@@ -41,4 +41,21 @@ router.get('/profit-loss', requireRole(['admin', 'accountant', 'auditor', 'viewe
   }
 });
 
+
+router.get('/balance-sheet', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+  try {
+    const report = await financialReportService.getBalanceSheet({
+      companyId: req.companyId,
+      asOf: req.query.asOf || req.query.to || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      report,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 module.exports = router;

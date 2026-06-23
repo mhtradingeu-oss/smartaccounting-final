@@ -35,6 +35,7 @@ module.exports = {
       'GET /api/journal-entries',
       'GET /api/reports/trial-balance',
       'GET /api/reports/profit-loss',
+      'GET /api/reports/balance-sheet',
       'GET /api/journal-entries/export',
       'GET /api/journal-entries/:id',
       'GET /api/journal-entries/:id/audit-log',
@@ -86,6 +87,7 @@ module.exports = {
       'GET /api/journal-entries',
       'GET /api/reports/trial-balance',
       'GET /api/reports/profit-loss',
+      'GET /api/reports/balance-sheet',
       'GET /api/journal-entries/export',
       'GET /api/journal-entries/:id',
       'GET /api/journal-entries/:id/audit-log',
@@ -122,6 +124,7 @@ module.exports = {
       'GET /api/journal-entries',
       'GET /api/reports/trial-balance',
       'GET /api/reports/profit-loss',
+      'GET /api/reports/balance-sheet',
       'GET /api/journal-entries/:id',
       'GET /api/journal-entries/:id/audit-log',
 
