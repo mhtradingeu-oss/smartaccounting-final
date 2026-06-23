@@ -147,6 +147,39 @@ describe('Financial reports API', () => {
     return draft.journalEntry;
   };
 
+
+  const createPostedLedgerEntry = async ({
+    entryDate = '2026-06-21',
+    sourceType = 'manual',
+    sourceId = `general-ledger-${Date.now()}-${Math.random()}`,
+    debitAccountId = expenseAccount.id,
+    creditAccountId = payableAccount.id,
+    amount = 100,
+  } = {}) => {
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate,
+      sourceType,
+      sourceId,
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: debitAccountId, debit: amount, credit: 0 },
+        { accountId: creditAccountId, debit: 0, credit: amount },
+      ],
+    });
+
+    await draft.journalEntry.update(
+      {
+        status: 'posted',
+        postedAt: new Date(),
+        postedBy: accountant.user.id,
+      },
+      { allowPostedJournalEntryMutation: true },
+    );
+
+    return draft.journalEntry;
+  };
+
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
@@ -556,6 +589,130 @@ describe('Financial reports API', () => {
 
     const response = await requestFor({
       url: '/api/reports/balance-sheet',
+      token: accountant.token,
+      companyId: otherCompany.id,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read the general ledger report', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+
+    await createPostedLedgerEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/general-ledger',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.report.companyId).toBe(company.id);
+    expect(response.body.report.accounts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '4930',
+          debitTotal: 100,
+          creditTotal: 0,
+          closingBalance: 100,
+        }),
+        expect.objectContaining({
+          accountCode: '1600',
+          debitTotal: 0,
+          creditTotal: 100,
+          closingBalance: 100,
+        }),
+      ]),
+    );
+  });
+
+  it('calculates opening and closing balances for general ledger date range', async () => {
+    await createPostedLedgerEntry({ entryDate: '2026-05-31', amount: 50 });
+    await createPostedLedgerEntry({ entryDate: '2026-06-15', amount: 100 });
+    await createPostedLedgerEntry({ entryDate: '2026-07-01', amount: 999 });
+
+    const response = await requestFor({
+      url: '/api/reports/general-ledger?from=2026-06-01&to=2026-06-30&accountCode=4930',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.accounts).toHaveLength(1);
+    expect(response.body.report.accounts[0]).toEqual(
+      expect.objectContaining({
+        accountCode: '4930',
+        openingBalance: 50,
+        debitTotal: 100,
+        creditTotal: 0,
+        closingBalance: 150,
+      }),
+    );
+    expect(response.body.report.accounts[0].movements).toHaveLength(1);
+  });
+
+  it('filters general ledger by sourceType', async () => {
+    await createPostedLedgerEntry({ sourceType: 'manual', amount: 100 });
+    await createPostedLedgerEntry({ sourceType: 'expense', amount: 250 });
+
+    const response = await requestFor({
+      url: '/api/reports/general-ledger?sourceType=expense&accountCode=4930',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.accounts).toHaveLength(1);
+    expect(response.body.report.accounts[0]).toEqual(
+      expect.objectContaining({
+        accountCode: '4930',
+        debitTotal: 250,
+        closingBalance: 250,
+      }),
+    );
+    expect(response.body.report.accounts[0].movements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceType: 'expense',
+          debit: 250,
+        }),
+      ]),
+    );
+  });
+
+  it('uses only posted journal entries in general ledger report', async () => {
+    await createPostedLedgerEntry({ amount: 100 });
+
+    await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'draft-general-ledger-should-not-count',
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: 999, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: 999 },
+      ],
+    });
+
+    const response = await requestFor({
+      url: '/api/reports/general-ledger?accountCode=4930',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.accounts[0].debitTotal).toBe(100);
+    expect(response.body.report.accounts[0].closingBalance).toBe(100);
+  });
+
+  it('prevents cross-company general ledger access', async () => {
+    await createPostedLedgerEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/general-ledger',
       token: accountant.token,
       companyId: otherCompany.id,
     });

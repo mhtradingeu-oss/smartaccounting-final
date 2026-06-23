@@ -346,8 +346,252 @@ async function getBalanceSheet({ companyId, asOf = null }) {
   };
 }
 
+const buildGeneralLedgerEntryWhere = ({ companyId, from, to, sourceType, beforeDate = null }) => {
+  const where = {
+    companyId,
+    status: 'posted',
+  };
+
+  if (beforeDate) {
+    where.entryDate = { [Op.lt]: String(beforeDate) };
+
+    if (sourceType) {
+      where.sourceType = String(sourceType);
+    }
+
+    return where;
+  }
+
+  if (from || to) {
+    where.entryDate = {};
+
+    if (from) {
+      where.entryDate[Op.gte] = String(from);
+    }
+
+    if (to) {
+      where.entryDate[Op.lte] = String(to);
+    }
+  }
+
+  if (sourceType) {
+    where.sourceType = String(sourceType);
+  }
+
+  return where;
+};
+
+const createLedgerAccountRow = (account) => ({
+  accountId: account.id,
+  accountCode: account.code,
+  accountName: account.name,
+  accountType: account.type,
+  normalBalance: account.normalBalance,
+  openingBalance: 0,
+  movements: [],
+  debitTotal: 0,
+  creditTotal: 0,
+  closingBalance: 0,
+});
+
+const applyAmountToBalance = ({ normalBalance, debit, credit }) => {
+  return normalBalance === 'credit' ? credit - debit : debit - credit;
+};
+
+async function getGeneralLedger({
+  companyId,
+  from = null,
+  to = null,
+  accountId = null,
+  accountCode = null,
+  sourceType = null,
+}) {
+  let targetAccount = null;
+
+  if (accountId || accountCode) {
+    targetAccount = await ChartAccount.findOne({
+      where: {
+        companyId,
+        ...(accountId ? { id: accountId } : {}),
+        ...(accountCode ? { code: String(accountCode) } : {}),
+      },
+      attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+    });
+
+    if (!targetAccount) {
+      return {
+        companyId,
+        filters: {
+          from,
+          to,
+          accountId,
+          accountCode,
+          sourceType,
+          status: 'posted',
+        },
+        accounts: [],
+        totals: {
+          openingBalance: 0,
+          debitTotal: 0,
+          creditTotal: 0,
+          closingBalance: 0,
+        },
+      };
+    }
+  }
+
+  const lineWhere = {
+    companyId,
+    ...(targetAccount ? { accountId: targetAccount.id } : {}),
+  };
+
+  const fetchEntries = (where) =>
+    JournalEntry.findAll({
+      where,
+      include: [
+        {
+          model: JournalEntryLine,
+          as: 'lines',
+          required: true,
+          where: lineWhere,
+          include: [
+            {
+              model: ChartAccount,
+              as: 'account',
+              required: true,
+              attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+            },
+          ],
+        },
+      ],
+      order: [
+        ['entryDate', 'ASC'],
+        ['createdAt', 'ASC'],
+      ],
+    });
+
+  const openingEntries = from
+    ? await fetchEntries(
+        buildGeneralLedgerEntryWhere({
+          companyId,
+          from: null,
+          to: null,
+          sourceType,
+          beforeDate: from,
+        }),
+      )
+    : [];
+
+  const periodEntries = await fetchEntries(
+    buildGeneralLedgerEntryWhere({
+      companyId,
+      from,
+      to,
+      sourceType,
+    }),
+  );
+
+  const accountMap = new Map();
+
+  const ensureRow = (account) => {
+    if (!accountMap.has(account.id)) {
+      accountMap.set(account.id, createLedgerAccountRow(account));
+    }
+
+    return accountMap.get(account.id);
+  };
+
+  for (const entry of openingEntries) {
+    for (const line of entry.lines || []) {
+      const account = line.account;
+      if (!account) {
+        continue;
+      }
+
+      const row = ensureRow(account);
+      row.openingBalance += applyAmountToBalance({
+        normalBalance: account.normalBalance,
+        debit: toNumber(line.debit),
+        credit: toNumber(line.credit),
+      });
+    }
+  }
+
+  for (const entry of periodEntries) {
+    for (const line of entry.lines || []) {
+      const account = line.account;
+      if (!account) {
+        continue;
+      }
+
+      const row = ensureRow(account);
+      const debit = toNumber(line.debit);
+      const credit = toNumber(line.credit);
+
+      row.debitTotal += debit;
+      row.creditTotal += credit;
+
+      row.movements.push({
+        journalEntryId: entry.id,
+        journalEntryLineId: line.id,
+        entryDate: entry.entryDate,
+        sourceType: entry.sourceType,
+        sourceId: entry.sourceId,
+        description: line.description || entry.description || null,
+        debit: roundMoney(debit),
+        credit: roundMoney(credit),
+        balanceImpact: roundMoney(
+          applyAmountToBalance({
+            normalBalance: account.normalBalance,
+            debit,
+            credit,
+          }),
+        ),
+      });
+    }
+  }
+
+  const accounts = Array.from(accountMap.values())
+    .map((row) => {
+      const periodImpact = applyAmountToBalance({
+        normalBalance: row.normalBalance,
+        debit: row.debitTotal,
+        credit: row.creditTotal,
+      });
+
+      return {
+        ...row,
+        openingBalance: roundMoney(row.openingBalance),
+        debitTotal: roundMoney(row.debitTotal),
+        creditTotal: roundMoney(row.creditTotal),
+        closingBalance: roundMoney(row.openingBalance + periodImpact),
+      };
+    })
+    .sort((a, b) => String(a.accountCode).localeCompare(String(b.accountCode)));
+
+  return {
+    companyId,
+    filters: {
+      from,
+      to,
+      accountId,
+      accountCode,
+      sourceType,
+      status: 'posted',
+    },
+    accounts,
+    totals: {
+      openingBalance: roundMoney(accounts.reduce((sum, account) => sum + account.openingBalance, 0)),
+      debitTotal: roundMoney(accounts.reduce((sum, account) => sum + account.debitTotal, 0)),
+      creditTotal: roundMoney(accounts.reduce((sum, account) => sum + account.creditTotal, 0)),
+      closingBalance: roundMoney(accounts.reduce((sum, account) => sum + account.closingBalance, 0)),
+    },
+  };
+}
+
 module.exports = {
   getTrialBalance,
   getProfitAndLoss,
   getBalanceSheet,
+  getGeneralLedger,
 };
