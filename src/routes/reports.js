@@ -23,4 +23,22 @@ router.get('/trial-balance', requireRole(['admin', 'accountant', 'auditor', 'vie
   }
 });
 
+
+router.get('/profit-loss', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+  try {
+    const report = await financialReportService.getProfitAndLoss({
+      companyId: req.companyId,
+      from: req.query.from || null,
+      to: req.query.to || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      report,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 module.exports = router;

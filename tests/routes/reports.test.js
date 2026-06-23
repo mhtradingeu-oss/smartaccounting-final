@@ -12,6 +12,7 @@ describe('Financial reports API', () => {
   let viewer;
   let expenseAccount;
   let payableAccount;
+  let revenueAccount;
 
   const createRoleSession = async (role, companyId = company.id) => {
     const session = await global.testUtils.createTestUserAndLogin({
@@ -63,6 +64,55 @@ describe('Financial reports API', () => {
     return draft.journalEntry;
   };
 
+
+  const createPostedProfitLossEntries = async ({
+    entryDate = '2026-06-21',
+    revenue = 300,
+    expenses = 100,
+  } = {}) => {
+    const revenueDraft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate,
+      sourceType: 'manual',
+      sourceId: `profit-loss-revenue-${Date.now()}-${Math.random()}`,
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: payableAccount.id, debit: revenue, credit: 0 },
+        { accountId: revenueAccount.id, debit: 0, credit: revenue },
+      ],
+    });
+
+    await revenueDraft.journalEntry.update(
+      {
+        status: 'posted',
+        postedAt: new Date(),
+        postedBy: accountant.user.id,
+      },
+      { allowPostedJournalEntryMutation: true },
+    );
+
+    const expenseDraft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate,
+      sourceType: 'manual',
+      sourceId: `profit-loss-expense-${Date.now()}-${Math.random()}`,
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: expenses, credit: 0 },
+        { accountId: payableAccount.id, debit: 0, credit: expenses },
+      ],
+    });
+
+    await expenseDraft.journalEntry.update(
+      {
+        status: 'posted',
+        postedAt: new Date(),
+        postedBy: accountant.user.id,
+      },
+      { allowPostedJournalEntryMutation: true },
+    );
+  };
+
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
@@ -109,6 +159,15 @@ describe('Financial reports API', () => {
       code: '1600',
       name: 'Trade payables',
       type: 'liability',
+      normalBalance: 'credit',
+      isSystem: true,
+    });
+
+    revenueAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: '8400',
+      name: 'Sales revenue',
+      type: 'revenue',
       normalBalance: 'credit',
       isSystem: true,
     });
@@ -213,4 +272,112 @@ describe('Financial reports API', () => {
 
     expect(response.status).toBe(403);
   });
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read the profit and loss report', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+
+    await createPostedProfitLossEntries();
+
+    const response = await requestFor({
+      url: '/api/reports/profit-loss',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.report.companyId).toBe(company.id);
+    expect(response.body.report.revenue.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '8400',
+          creditTotal: 300,
+          balance: 300,
+        }),
+      ]),
+    );
+    expect(response.body.report.expenses.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '4930',
+          debitTotal: 100,
+          balance: 100,
+        }),
+      ]),
+    );
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        totalRevenue: 300,
+        totalExpenses: 100,
+        netProfit: 200,
+        isProfit: true,
+      }),
+    );
+  });
+
+  it('uses only posted journal entries in profit and loss report', async () => {
+    await createPostedProfitLossEntries();
+
+    await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'draft-profit-loss-should-not-count',
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: payableAccount.id, debit: 999, credit: 0 },
+        { accountId: revenueAccount.id, debit: 0, credit: 999 },
+      ],
+    });
+
+    const response = await requestFor({
+      url: '/api/reports/profit-loss',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals.totalRevenue).toBe(300);
+    expect(response.body.report.totals.totalExpenses).toBe(100);
+    expect(response.body.report.totals.netProfit).toBe(200);
+  });
+
+  it('filters profit and loss by date range', async () => {
+    await createPostedProfitLossEntries({ entryDate: '2026-06-01', revenue: 500, expenses: 400 });
+    await createPostedProfitLossEntries({ entryDate: '2026-07-01', revenue: 300, expenses: 100 });
+
+    const response = await requestFor({
+      url: '/api/reports/profit-loss?from=2026-07-01&to=2026-07-31',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        totalRevenue: 300,
+        totalExpenses: 100,
+        netProfit: 200,
+      }),
+    );
+    expect(response.body.report.filters).toEqual(
+      expect.objectContaining({
+        from: '2026-07-01',
+        to: '2026-07-31',
+        status: 'posted',
+      }),
+    );
+  });
+
+  it('prevents cross-company profit and loss access', async () => {
+    await createPostedProfitLossEntries();
+
+    const response = await requestFor({
+      url: '/api/reports/profit-loss',
+      token: accountant.token,
+      companyId: otherCompany.id,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
 });

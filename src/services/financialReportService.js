@@ -5,7 +5,7 @@ const toNumber = (value) => Number.parseFloat(value || 0);
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
-const buildTrialBalanceWhere = ({ companyId, from, to }) => {
+const buildPostedJournalEntryWhere = ({ companyId, from, to }) => {
   const where = {
     companyId,
     status: 'posted',
@@ -28,7 +28,7 @@ const buildTrialBalanceWhere = ({ companyId, from, to }) => {
 
 async function getTrialBalance({ companyId, from = null, to = null }) {
   const journalEntries = await JournalEntry.findAll({
-    where: buildTrialBalanceWhere({ companyId, from, to }),
+    where: buildPostedJournalEntryWhere({ companyId, from, to }),
     include: [
       {
         model: JournalEntryLine,
@@ -115,6 +115,113 @@ async function getTrialBalance({ companyId, from = null, to = null }) {
   };
 }
 
+async function getProfitAndLoss({ companyId, from = null, to = null }) {
+  const journalEntries = await JournalEntry.findAll({
+    where: buildPostedJournalEntryWhere({ companyId, from, to }),
+    include: [
+      {
+        model: JournalEntryLine,
+        as: 'lines',
+        required: true,
+        include: [
+          {
+            model: ChartAccount,
+            as: 'account',
+            required: true,
+            attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['entryDate', 'ASC'],
+      ['createdAt', 'ASC'],
+    ],
+  });
+
+  const groups = {
+    revenue: new Map(),
+    expenses: new Map(),
+  };
+
+  for (const entry of journalEntries) {
+    for (const line of entry.lines || []) {
+      const account = line.account;
+      if (!account || !['revenue', 'expense'].includes(account.type)) {
+        continue;
+      }
+
+      const groupName = account.type === 'revenue' ? 'revenue' : 'expenses';
+      const group = groups[groupName];
+
+      if (!group.has(account.id)) {
+        group.set(account.id, {
+          accountId: account.id,
+          accountCode: account.code,
+          accountName: account.name,
+          accountType: account.type,
+          normalBalance: account.normalBalance,
+          debitTotal: 0,
+          creditTotal: 0,
+          balance: 0,
+        });
+      }
+
+      const row = group.get(account.id);
+      row.debitTotal += toNumber(line.debit);
+      row.creditTotal += toNumber(line.credit);
+    }
+  }
+
+  const normalizeRows = (rows, balanceDirection) =>
+    Array.from(rows.values())
+      .map((row) => {
+        const rawBalance =
+          balanceDirection === 'credit'
+            ? row.creditTotal - row.debitTotal
+            : row.debitTotal - row.creditTotal;
+
+        return {
+          ...row,
+          debitTotal: roundMoney(row.debitTotal),
+          creditTotal: roundMoney(row.creditTotal),
+          balance: roundMoney(rawBalance),
+        };
+      })
+      .sort((a, b) => String(a.accountCode).localeCompare(String(b.accountCode)));
+
+  const revenueRows = normalizeRows(groups.revenue, 'credit');
+  const expenseRows = normalizeRows(groups.expenses, 'debit');
+
+  const totalRevenue = roundMoney(revenueRows.reduce((sum, row) => sum + row.balance, 0));
+  const totalExpenses = roundMoney(expenseRows.reduce((sum, row) => sum + row.balance, 0));
+  const netProfit = roundMoney(totalRevenue - totalExpenses);
+
+  return {
+    companyId,
+    filters: {
+      from,
+      to,
+      status: 'posted',
+    },
+    revenue: {
+      rows: revenueRows,
+      total: totalRevenue,
+    },
+    expenses: {
+      rows: expenseRows,
+      total: totalExpenses,
+    },
+    totals: {
+      totalRevenue,
+      totalExpenses,
+      netProfit,
+      isProfit: netProfit >= 0,
+    },
+  };
+}
+
 module.exports = {
   getTrialBalance,
+  getProfitAndLoss,
 };
