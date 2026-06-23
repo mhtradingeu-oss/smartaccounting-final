@@ -1054,4 +1054,112 @@ describe('Financial reports API', () => {
     expect(response.status).toBe(403);
   });
 
+  it('exports trial balance report as JSON', async () => {
+    await createPostedJournalEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=trial-balance&format=json',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.meta).toEqual(
+      expect.objectContaining({
+        reportType: 'trial-balance',
+        format: 'json',
+      }),
+    );
+    expect(response.body.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: '4930',
+        }),
+      ]),
+    );
+  });
+
+  it('exports VAT summary report as CSV', async () => {
+    await createPostedVatSummaryEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=vat-summary&format=csv',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.text).toContain('journalEntryId');
+    expect(response.text).toContain('taxCode');
+    expect(response.text).toContain('DE_19');
+  });
+
+  it('exports account ledger report with required account filter', async () => {
+    await createPostedLedgerEntry({ amount: 125 });
+
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=account-ledger&format=json&accountCode=4930',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta).toEqual(
+      expect.objectContaining({
+        reportType: 'account-ledger',
+        format: 'json',
+        count: 1,
+      }),
+    );
+    expect(response.body.rows[0]).toEqual(
+      expect.objectContaining({
+        accountCode: '4930',
+        debit: 125,
+      }),
+    );
+  });
+
+  it('rejects unsupported report export format', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=trial-balance&format=xlsx',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        errorCode: 'UNSUPPORTED_EXPORT_FORMAT',
+      }),
+    );
+  });
+
+  it('rejects unsupported report type', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=unknown&format=json',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: true,
+        errorCode: 'UNSUPPORTED_REPORT_TYPE',
+      }),
+    );
+  });
+
+  it('prevents viewer from exporting financial reports', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=trial-balance&format=json',
+      token: viewer.token,
+      companyId: viewer.user.companyId,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
 });
