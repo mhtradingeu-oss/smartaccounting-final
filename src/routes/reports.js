@@ -13,13 +13,108 @@ const escapeCsvValue = (value) => {
   return `\"${String(value).replace(/"/g, '""')}\"`;
 };
 
-const toCsv = (rows = []) => {
-  const columns = Array.from(
+const REPORT_EXPORT_COLUMNS = {
+  'trial-balance': [
+    'accountId',
+    'accountCode',
+    'accountName',
+    'accountType',
+    'normalBalance',
+    'debitTotal',
+    'creditTotal',
+    'balance',
+  ],
+  'profit-loss': [
+    'section',
+    'accountId',
+    'accountCode',
+    'accountName',
+    'accountType',
+    'debitTotal',
+    'creditTotal',
+    'balance',
+  ],
+  'balance-sheet': [
+    'section',
+    'accountId',
+    'accountCode',
+    'accountName',
+    'accountType',
+    'debitTotal',
+    'creditTotal',
+    'balance',
+  ],
+  'general-ledger': [
+    'accountId',
+    'accountCode',
+    'accountName',
+    'accountType',
+    'normalBalance',
+    'openingBalance',
+    'closingBalance',
+    'journalEntryId',
+    'journalEntryLineId',
+    'entryDate',
+    'sourceType',
+    'sourceId',
+    'description',
+    'debit',
+    'credit',
+    'balanceImpact',
+  ],
+  'account-ledger': [
+    'accountId',
+    'accountCode',
+    'accountName',
+    'accountType',
+    'normalBalance',
+    'openingBalance',
+    'closingBalance',
+    'journalEntryId',
+    'journalEntryLineId',
+    'entryDate',
+    'sourceType',
+    'sourceId',
+    'description',
+    'debit',
+    'credit',
+    'balanceImpact',
+  ],
+  'vat-summary': [
+    'journalEntryId',
+    'journalEntryLineId',
+    'entryDate',
+    'sourceType',
+    'sourceId',
+    'accountId',
+    'accountCode',
+    'accountName',
+    'accountType',
+    'taxCategory',
+    'vatDirection',
+    'taxCode',
+    'vatRate',
+    'debit',
+    'credit',
+    'amount',
+    'description',
+  ],
+};
+
+const getReportExportColumns = (reportType, rows = []) => {
+  const configuredColumns = REPORT_EXPORT_COLUMNS[reportType] || [];
+  const dynamicColumns = Array.from(
     rows.reduce((set, row) => {
       Object.keys(row || {}).forEach((key) => set.add(key));
       return set;
     }, new Set()),
   );
+
+  return Array.from(new Set([...configuredColumns, ...dynamicColumns]));
+};
+
+const toCsv = (rows = [], reportType = null) => {
+  const columns = getReportExportColumns(reportType, rows);
 
   const header = columns.join(',');
   const body = rows
@@ -162,6 +257,7 @@ router.get('/export', requireRole(['admin', 'accountant', 'auditor']), async (re
     if (!reportType) {
       return res.status(400).json({
         success: false,
+        error: true,
         message: 'reportType is required',
         errorCode: 'REPORT_TYPE_REQUIRED',
       });
@@ -170,6 +266,7 @@ router.get('/export', requireRole(['admin', 'accountant', 'auditor']), async (re
     if (!['json', 'csv'].includes(format)) {
       return res.status(400).json({
         success: false,
+        error: true,
         message: 'Unsupported export format',
         errorCode: 'UNSUPPORTED_EXPORT_FORMAT',
       });
@@ -186,7 +283,7 @@ router.get('/export', requireRole(['admin', 'accountant', 'auditor']), async (re
     if (format === 'csv') {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment;filename="${reportType}.csv"`);
-      return res.status(200).send(toCsv(rows));
+      return res.status(200).send(toCsv(rows, reportType));
     }
 
     return res.status(200).json({

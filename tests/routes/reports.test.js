@@ -1162,4 +1162,66 @@ describe('Financial reports API', () => {
     expect(response.status).toBe(403);
   });
 
+  it('requires reportType when exporting financial reports', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?format=json',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: false,
+        error: true,
+        errorCode: 'REPORT_TYPE_REQUIRED',
+      }),
+    );
+  });
+
+  it('returns stable CSV headers for empty trial balance export', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=trial-balance&format=csv',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.text).toContain('accountCode');
+    expect(response.text).toContain('debitTotal');
+    expect(response.text).toContain('creditTotal');
+  });
+
+  it('returns stable CSV headers for empty VAT summary export', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=vat-summary&format=csv',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.text).toContain('journalEntryId');
+    expect(response.text).toContain('taxCode');
+    expect(response.text).toContain('vatRate');
+    expect(response.text).toContain('amount');
+  });
+
+  it('propagates account ledger export account requirement', async () => {
+    const response = await requestFor({
+      url: '/api/reports/export?reportType=account-ledger&format=json',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: true,
+        errorCode: 'ACCOUNT_LEDGER_ACCOUNT_REQUIRED',
+      }),
+    );
+  });
+
 });
