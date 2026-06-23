@@ -180,6 +180,78 @@ describe('Financial reports API', () => {
     return draft.journalEntry;
   };
 
+
+  const createPostedVatSummaryEntry = async ({
+    entryDate = '2026-06-21',
+    inputVatAmount = 19,
+    outputVatAmount = 38,
+    taxCode = 'DE_19',
+    vatRate = 19,
+  } = {}) => {
+    const inputVatAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: `1576-${Date.now()}-${Math.random()}`,
+      name: 'Input VAT 19%',
+      type: 'tax',
+      normalBalance: 'debit',
+      taxCategory: 'input_vat',
+      isSystem: true,
+    });
+
+    const outputVatAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: `1776-${Date.now()}-${Math.random()}`,
+      name: 'Output VAT 19%',
+      type: 'tax',
+      normalBalance: 'credit',
+      taxCategory: 'output_vat',
+      isSystem: true,
+    });
+
+    const draft = await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate,
+      sourceType: 'manual',
+      sourceId: `vat-summary-${Date.now()}-${Math.random()}`,
+      createdBy: accountant.user.id,
+      lines: [
+        {
+          accountId: inputVatAccount.id,
+          debit: inputVatAmount,
+          credit: 0,
+          taxCode,
+          vatRate,
+          description: 'Input VAT test line',
+        },
+        {
+          accountId: outputVatAccount.id,
+          debit: 0,
+          credit: outputVatAmount,
+          taxCode,
+          vatRate,
+          description: 'Output VAT test line',
+        },
+        {
+          accountId: outputVatAmount >= inputVatAmount ? expenseAccount.id : payableAccount.id,
+          debit: outputVatAmount >= inputVatAmount ? outputVatAmount - inputVatAmount : 0,
+          credit: inputVatAmount > outputVatAmount ? inputVatAmount - outputVatAmount : 0,
+          description: 'VAT summary balancing line',
+        },
+      ],
+    });
+
+    await draft.journalEntry.update(
+      {
+        status: 'posted',
+        postedAt: new Date(),
+        postedBy: accountant.user.id,
+      },
+      { allowPostedJournalEntryMutation: true },
+    );
+
+    return draft.journalEntry;
+  };
+
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
@@ -838,6 +910,143 @@ describe('Financial reports API', () => {
 
     const response = await requestFor({
       url: '/api/reports/account-ledger?accountCode=4930',
+      token: accountant.token,
+      companyId: otherCompany.id,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read the VAT summary report', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+
+    await createPostedVatSummaryEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/vat-summary',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.report.companyId).toBe(company.id);
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        inputVatTotal: 19,
+        outputVatTotal: 38,
+        netVatPayable: 19,
+        isPayable: true,
+      }),
+    );
+    expect(response.body.report.inputVat.rows).toHaveLength(1);
+    expect(response.body.report.outputVat.rows).toHaveLength(1);
+  });
+
+  it('uses only posted journal entries in VAT summary report', async () => {
+    await createPostedVatSummaryEntry();
+
+    const inputVatAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: '1576-DRAFT',
+      name: 'Draft Input VAT',
+      type: 'tax',
+      normalBalance: 'debit',
+      taxCategory: 'input_vat',
+      isSystem: true,
+    });
+
+    const outputVatAccount = await ChartAccount.create({
+      companyId: company.id,
+      code: '1776-DRAFT',
+      name: 'Draft Output VAT',
+      type: 'tax',
+      normalBalance: 'credit',
+      taxCategory: 'output_vat',
+      isSystem: true,
+    });
+
+    await accountingPostingService.createJournalEntryDraft({
+      companyId: company.id,
+      entryDate: '2026-06-21',
+      sourceType: 'manual',
+      sourceId: 'draft-vat-summary-should-not-count',
+      createdBy: accountant.user.id,
+      lines: [
+        { accountId: inputVatAccount.id, debit: 999, credit: 0, taxCode: 'DE_19', vatRate: 19 },
+        { accountId: outputVatAccount.id, debit: 0, credit: 999, taxCode: 'DE_19', vatRate: 19 },
+      ],
+    });
+
+    const response = await requestFor({
+      url: '/api/reports/vat-summary',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        inputVatTotal: 19,
+        outputVatTotal: 38,
+        netVatPayable: 19,
+      }),
+    );
+  });
+
+  it('filters VAT summary by date range', async () => {
+    await createPostedVatSummaryEntry({ entryDate: '2026-06-01', inputVatAmount: 7, outputVatAmount: 14 });
+    await createPostedVatSummaryEntry({ entryDate: '2026-07-01', inputVatAmount: 19, outputVatAmount: 38 });
+
+    const response = await requestFor({
+      url: '/api/reports/vat-summary?from=2026-07-01&to=2026-07-31',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        inputVatTotal: 19,
+        outputVatTotal: 38,
+        netVatPayable: 19,
+      }),
+    );
+  });
+
+  it('filters VAT summary by taxCode and vatRate', async () => {
+    await createPostedVatSummaryEntry({ taxCode: 'DE_19', vatRate: 19, inputVatAmount: 19, outputVatAmount: 38 });
+    await createPostedVatSummaryEntry({ taxCode: 'DE_7', vatRate: 7, inputVatAmount: 7, outputVatAmount: 14 });
+
+    const response = await requestFor({
+      url: '/api/reports/vat-summary?taxCode=DE_7&vatRate=7',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.totals).toEqual(
+      expect.objectContaining({
+        inputVatTotal: 7,
+        outputVatTotal: 14,
+        netVatPayable: 7,
+      }),
+    );
+    expect(response.body.report.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          taxCode: 'DE_7',
+          vatRate: 7,
+        }),
+      ]),
+    );
+  });
+
+  it('prevents cross-company VAT summary access', async () => {
+    await createPostedVatSummaryEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/vat-summary',
       token: accountant.token,
       companyId: otherCompany.id,
     });

@@ -658,10 +658,133 @@ async function getAccountLedger({
   };
 }
 
+const buildVatSummaryLineWhere = ({ companyId, taxCode, vatRate }) => {
+  const where = { companyId };
+
+  if (taxCode) {
+    where.taxCode = String(taxCode);
+  }
+
+  if (vatRate !== null && vatRate !== undefined && vatRate !== '') {
+    where.vatRate = vatRate;
+  }
+
+  return where;
+};
+
+async function getVatSummary({ companyId, from = null, to = null, taxCode = null, vatRate = null }) {
+  const journalEntries = await JournalEntry.findAll({
+    where: buildPostedJournalEntryWhere({ companyId, from, to }),
+    include: [
+      {
+        model: JournalEntryLine,
+        as: 'lines',
+        required: true,
+        where: buildVatSummaryLineWhere({ companyId, taxCode, vatRate }),
+        include: [
+          {
+            model: ChartAccount,
+            as: 'account',
+            required: true,
+            attributes: ['id', 'code', 'name', 'type', 'normalBalance', 'taxCategory'],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['entryDate', 'ASC'],
+      ['createdAt', 'ASC'],
+    ],
+  });
+
+  const rows = [];
+  let inputVatTotal = 0;
+  let outputVatTotal = 0;
+
+  for (const entry of journalEntries) {
+    for (const line of entry.lines || []) {
+      const account = line.account;
+      if (!account || account.type !== 'tax') {
+        continue;
+      }
+
+      const debit = toNumber(line.debit);
+      const credit = toNumber(line.credit);
+      const taxCategory = account.taxCategory || null;
+
+      let vatDirection = 'other';
+      let amount = 0;
+
+      if (taxCategory === 'input_vat') {
+        vatDirection = 'input';
+        amount = debit - credit;
+        inputVatTotal += amount;
+      } else if (taxCategory === 'output_vat') {
+        vatDirection = 'output';
+        amount = credit - debit;
+        outputVatTotal += amount;
+      } else {
+        amount = account.normalBalance === 'credit' ? credit - debit : debit - credit;
+      }
+
+      rows.push({
+        journalEntryId: entry.id,
+        journalEntryLineId: line.id,
+        entryDate: entry.entryDate,
+        sourceType: entry.sourceType,
+        sourceId: entry.sourceId,
+        accountId: account.id,
+        accountCode: account.code,
+        accountName: account.name,
+        accountType: account.type,
+        taxCategory,
+        vatDirection,
+        taxCode: line.taxCode || null,
+        vatRate: line.vatRate === null || line.vatRate === undefined ? null : toNumber(line.vatRate),
+        debit: roundMoney(debit),
+        credit: roundMoney(credit),
+        amount: roundMoney(amount),
+        description: line.description || entry.description || null,
+      });
+    }
+  }
+
+  const roundedInputVatTotal = roundMoney(inputVatTotal);
+  const roundedOutputVatTotal = roundMoney(outputVatTotal);
+  const netVatPayable = roundMoney(roundedOutputVatTotal - roundedInputVatTotal);
+
+  return {
+    companyId,
+    filters: {
+      from,
+      to,
+      taxCode,
+      vatRate,
+      status: 'posted',
+    },
+    inputVat: {
+      total: roundedInputVatTotal,
+      rows: rows.filter((row) => row.vatDirection === 'input'),
+    },
+    outputVat: {
+      total: roundedOutputVatTotal,
+      rows: rows.filter((row) => row.vatDirection === 'output'),
+    },
+    rows,
+    totals: {
+      inputVatTotal: roundedInputVatTotal,
+      outputVatTotal: roundedOutputVatTotal,
+      netVatPayable,
+      isPayable: netVatPayable >= 0,
+    },
+  };
+}
+
 module.exports = {
   getTrialBalance,
   getProfitAndLoss,
   getBalanceSheet,
   getGeneralLedger,
   getAccountLedger,
+  getVatSummary,
 };

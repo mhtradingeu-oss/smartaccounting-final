@@ -100,4 +100,24 @@ router.get('/account-ledger', requireRole(['admin', 'accountant', 'auditor', 'vi
   }
 });
 
+
+router.get('/vat-summary', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+  try {
+    const report = await financialReportService.getVatSummary({
+      companyId: req.companyId,
+      from: req.query.from || null,
+      to: req.query.to || null,
+      taxCode: req.query.taxCode || null,
+      vatRate: req.query.vatRate || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      report,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 module.exports = router;
