@@ -589,9 +589,79 @@ async function getGeneralLedger({
   };
 }
 
+async function getAccountLedger({
+  companyId,
+  from = null,
+  to = null,
+  accountId = null,
+  accountCode = null,
+  sourceType = null,
+}) {
+  if (!accountId && !accountCode) {
+    const error = new Error('accountId or accountCode is required for account ledger report.');
+    error.status = 400;
+    error.code = 'ACCOUNT_LEDGER_ACCOUNT_REQUIRED';
+    throw error;
+  }
+
+  const ledger = await getGeneralLedger({
+    companyId,
+    from,
+    to,
+    accountId,
+    accountCode,
+    sourceType,
+  });
+
+  const account = ledger.accounts[0] || null;
+
+  if (!account) {
+    return {
+      companyId,
+      filters: ledger.filters,
+      account: null,
+      openingBalance: 0,
+      movements: [],
+      debitTotal: 0,
+      creditTotal: 0,
+      closingBalance: 0,
+      totals: {
+        openingBalance: 0,
+        debitTotal: 0,
+        creditTotal: 0,
+        closingBalance: 0,
+      },
+    };
+  }
+
+  return {
+    companyId,
+    filters: ledger.filters,
+    account: {
+      accountId: account.accountId,
+      accountCode: account.accountCode,
+      accountName: account.accountName,
+      accountType: account.accountType,
+      normalBalance: account.normalBalance,
+    },
+    openingBalance: account.openingBalance,
+    movements: account.movements,
+    debitTotal: account.debitTotal,
+    creditTotal: account.creditTotal,
+    closingBalance: account.closingBalance,
+    totals: {
+      openingBalance: account.openingBalance,
+      debitTotal: account.debitTotal,
+      creditTotal: account.creditTotal,
+      closingBalance: account.closingBalance,
+    },
+  };
+}
+
 module.exports = {
   getTrialBalance,
   getProfitAndLoss,
   getBalanceSheet,
   getGeneralLedger,
+  getAccountLedger,
 };

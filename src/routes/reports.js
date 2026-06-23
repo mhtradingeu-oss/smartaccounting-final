@@ -79,4 +79,25 @@ router.get('/general-ledger', requireRole(['admin', 'accountant', 'auditor', 'vi
   }
 });
 
+
+router.get('/account-ledger', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+  try {
+    const report = await financialReportService.getAccountLedger({
+      companyId: req.companyId,
+      from: req.query.from || null,
+      to: req.query.to || null,
+      accountId: req.query.accountId || null,
+      accountCode: req.query.accountCode || null,
+      sourceType: req.query.sourceType || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      report,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 module.exports = router;

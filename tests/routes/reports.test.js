@@ -720,4 +720,129 @@ describe('Financial reports API', () => {
     expect(response.status).toBe(403);
   });
 
+  it.each(['admin', 'accountant', 'auditor', 'viewer'])('%s can read the account ledger report', async (role) => {
+    const session = { admin, accountant, auditor, viewer }[role];
+
+    await createPostedLedgerEntry({ amount: 125 });
+
+    const response = await requestFor({
+      url: '/api/reports/account-ledger?accountCode=4930',
+      token: session.token,
+      companyId: session.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.report.companyId).toBe(company.id);
+    expect(response.body.report.account).toEqual(
+      expect.objectContaining({
+        accountCode: '4930',
+        accountName: 'Office expenses',
+        accountType: 'expense',
+        normalBalance: 'debit',
+      }),
+    );
+    expect(response.body.report).toEqual(
+      expect.objectContaining({
+        openingBalance: 0,
+        debitTotal: 125,
+        creditTotal: 0,
+        closingBalance: 125,
+      }),
+    );
+    expect(response.body.report.movements).toHaveLength(1);
+  });
+
+  it('requires accountId or accountCode for account ledger report', async () => {
+    const response = await requestFor({
+      url: '/api/reports/account-ledger',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: true,
+        errorCode: 'ACCOUNT_LEDGER_ACCOUNT_REQUIRED',
+      }),
+    );
+  });
+
+  it('calculates account ledger opening and closing balances by date range', async () => {
+    await createPostedLedgerEntry({ entryDate: '2026-05-31', amount: 50 });
+    await createPostedLedgerEntry({ entryDate: '2026-06-15', amount: 100 });
+    await createPostedLedgerEntry({ entryDate: '2026-07-01', amount: 999 });
+
+    const response = await requestFor({
+      url: '/api/reports/account-ledger?from=2026-06-01&to=2026-06-30&accountCode=4930',
+      token: auditor.token,
+      companyId: auditor.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.account).toEqual(
+      expect.objectContaining({
+        accountCode: '4930',
+      }),
+    );
+    expect(response.body.report).toEqual(
+      expect.objectContaining({
+        openingBalance: 50,
+        debitTotal: 100,
+        creditTotal: 0,
+        closingBalance: 150,
+      }),
+    );
+    expect(response.body.report.movements).toHaveLength(1);
+  });
+
+  it('filters account ledger by sourceType', async () => {
+    await createPostedLedgerEntry({ sourceType: 'manual', amount: 100 });
+    await createPostedLedgerEntry({ sourceType: 'expense', amount: 250 });
+
+    const response = await requestFor({
+      url: '/api/reports/account-ledger?sourceType=expense&accountCode=4930',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.debitTotal).toBe(250);
+    expect(response.body.report.closingBalance).toBe(250);
+    expect(response.body.report.movements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceType: 'expense',
+          debit: 250,
+        }),
+      ]),
+    );
+  });
+
+  it('returns an empty account ledger for missing same-company account', async () => {
+    const response = await requestFor({
+      url: '/api/reports/account-ledger?accountCode=9999',
+      token: accountant.token,
+      companyId: accountant.user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.report.account).toBeNull();
+    expect(response.body.report.movements).toEqual([]);
+    expect(response.body.report.closingBalance).toBe(0);
+  });
+
+  it('prevents cross-company account ledger access', async () => {
+    await createPostedLedgerEntry();
+
+    const response = await requestFor({
+      url: '/api/reports/account-ledger?accountCode=4930',
+      token: accountant.token,
+      companyId: otherCompany.id,
+    });
+
+    expect(response.status).toBe(403);
+  });
+
 });
