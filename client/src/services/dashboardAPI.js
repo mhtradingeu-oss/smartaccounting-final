@@ -10,17 +10,36 @@ const toNumber = (value) => {
   return Number.isFinite(num) ? num : null;
 };
 
-const resolveCurrency = (stats, invoiceStats) =>
-  stats?.revenue?.currency || stats?.currency || invoiceStats?.latestInvoice?.currency || null;
+const resolveCurrency = (stats, invoiceStats, financialOverview) =>
+  financialOverview?.currency ||
+  stats?.revenue?.currency ||
+  stats?.currency ||
+  invoiceStats?.latestInvoice?.currency ||
+  null;
 
-const buildMetricsFromStats = (stats = {}, invoiceStats = {}) => {
-  const currency = resolveCurrency(stats, invoiceStats);
+const isFinancialOverviewAvailable = (financialOverview) =>
+  financialOverview &&
+  typeof financialOverview === 'object' &&
+  financialOverview.source === 'posted_journal_entries' &&
+  financialOverview.status !== 'unavailable';
+
+const buildMetricsFromStats = (stats = {}, invoiceStats = {}, financialOverview = null) => {
+  const hasFinancialOverview = isFinancialOverviewAvailable(financialOverview);
+  const currency = resolveCurrency(stats, invoiceStats, financialOverview);
   const metrics = [];
   const totalRevenue = toNumber(
-    stats.totalRevenue ?? stats.revenue?.total ?? stats.revenue ?? invoiceStats.totalRevenue,
+    hasFinancialOverview
+      ? financialOverview.revenue
+      : stats.totalRevenue ?? stats.revenue?.total ?? stats.revenue ?? invoiceStats.totalRevenue,
   );
-  const totalExpenses = toNumber(stats.totalExpenses ?? stats.expenses?.total ?? stats.expenses);
-  const netProfit = toNumber(stats.netProfit ?? stats.profit);
+  const totalExpenses = toNumber(
+    hasFinancialOverview
+      ? financialOverview.expenses
+      : stats.totalExpenses ?? stats.expenses?.total ?? stats.expenses,
+  );
+  const netProfit = toNumber(
+    hasFinancialOverview ? financialOverview.netIncome : stats.netProfit ?? stats.profit,
+  );
   const invoiceCount = toNumber(
     stats.invoiceCount ?? stats.invoices?.total ?? stats.invoicesCount ?? invoiceStats.invoiceCount,
   );
@@ -34,7 +53,9 @@ const buildMetricsFromStats = (stats = {}, invoiceStats = {}) => {
       value: totalRevenue,
       format: 'currency',
       currency,
-      description: 'Paid invoice revenue',
+      description: hasFinancialOverview
+        ? 'Accounting revenue from posted journal entries'
+        : 'Paid invoice revenue',
       priority: 'primary',
     });
   }
@@ -45,7 +66,9 @@ const buildMetricsFromStats = (stats = {}, invoiceStats = {}) => {
       value: totalExpenses,
       format: 'currency',
       currency,
-      description: 'Booked expenses',
+      description: hasFinancialOverview
+        ? 'Accounting expenses from posted journal entries'
+        : 'Booked expenses',
       priority: 'primary',
     });
   }
@@ -56,7 +79,9 @@ const buildMetricsFromStats = (stats = {}, invoiceStats = {}) => {
       value: netProfit,
       format: 'currency',
       currency,
-      description: 'Revenue minus expenses',
+      description: hasFinancialOverview
+        ? 'Accounting net income from posted journal entries'
+        : 'Revenue minus expenses',
       priority: 'primary',
     });
   }
@@ -115,17 +140,22 @@ const normalizeStatsPayload = (payload) => {
     payload.invoiceStats ?? payload.data?.invoiceStats ?? payload.details ?? payload.data?.details;
   const monthlyData =
     payload.monthlyData ?? payload.data?.monthlyData ?? payload.monthly ?? payload.data?.monthly;
+  const financialOverview =
+    payload.financialOverview ?? payload.data?.financialOverview ?? payload.accountingOverview ?? null;
 
   const safeStats = stats && typeof stats === 'object' ? stats : {};
   const safeInvoiceStats = invoiceStats && typeof invoiceStats === 'object' ? invoiceStats : {};
-  const metrics = buildMetricsFromStats(safeStats, safeInvoiceStats);
-  const currency = resolveCurrency(safeStats, safeInvoiceStats);
+  const safeFinancialOverview =
+    financialOverview && typeof financialOverview === 'object' ? financialOverview : null;
+  const metrics = buildMetricsFromStats(safeStats, safeInvoiceStats, safeFinancialOverview);
+  const currency = resolveCurrency(safeStats, safeInvoiceStats, safeFinancialOverview);
   const normalized = {
     ...(safeStats && !Array.isArray(safeStats) ? safeStats : {}),
     companyId: payload.companyId ?? payload.data?.companyId ?? null,
     currency,
     metrics,
     monthlyData,
+    financialOverview: safeFinancialOverview,
     statusBreakdown:
       safeInvoiceStats?.statusBreakdown ?? safeStats?.statusBreakdown ?? payload.statusBreakdown ?? null,
     latestInvoice:

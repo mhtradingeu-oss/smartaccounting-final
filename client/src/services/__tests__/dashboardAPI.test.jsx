@@ -43,6 +43,73 @@ describe('dashboardAPI', () => {
     expect(api.get).toHaveBeenCalledTimes(1);
   });
 
+  it('prefers financialOverview for accounting KPI metrics while preserving operational details', async () => {
+    api.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        companyId: 99,
+        stats: {
+          totalRevenue: 119,
+          totalExpenses: 59.5,
+          netProfit: 59.5,
+          invoiceCount: 2,
+          overdue: 1,
+          users: { active: 3 },
+        },
+        invoiceStats: {
+          totalRevenue: 119,
+          invoiceCount: 2,
+          statusBreakdown: { PAID: 1, OVERDUE: 1 },
+          latestInvoice: {
+            invoiceNumber: 'INV-FO-1',
+            amount: 119,
+            currency: 'EUR',
+          },
+        },
+        financialOverview: {
+          source: 'posted_journal_entries',
+          revenue: 700,
+          expenses: 200,
+          netIncome: 500,
+          isProfit: true,
+        },
+        monthlyData: [{ month: 'Jan', revenue: 119, invoices: 2 }],
+      },
+    });
+
+    const response = await dashboardAPI.getStats({ companyId: 99 });
+
+    expect(response.data.financialOverview).toMatchObject({
+      source: 'posted_journal_entries',
+      revenue: 700,
+      expenses: 200,
+      netIncome: 500,
+    });
+
+    expect(response.data.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'total-revenue',
+          value: 700,
+          description: 'Accounting revenue from posted journal entries',
+        }),
+        expect.objectContaining({
+          id: 'total-expenses',
+          value: 200,
+          description: 'Accounting expenses from posted journal entries',
+        }),
+        expect.objectContaining({
+          id: 'net-profit',
+          value: 500,
+          description: 'Accounting net income from posted journal entries',
+        }),
+        expect.objectContaining({ id: 'invoices-count', value: 2 }),
+        expect.objectContaining({ id: 'overdue-invoices', value: 1 }),
+        expect.objectContaining({ id: 'active-users', value: 3 }),
+      ]),
+    );
+  });
+
   it('normalizes dashboard payloads with stats, invoiceStats, and monthlyData', async () => {
     api.get.mockResolvedValueOnce({
       data: {
