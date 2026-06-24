@@ -189,9 +189,10 @@ class DashboardService {
    */
   static async getFinancialOverview(companyId, { from = null, to = null, asOf = null } = {}) {
     try {
-      const [profitLoss, balanceSheet] = await Promise.all([
+      const [profitLoss, balanceSheet, vatSummary] = await Promise.all([
         financialReportService.getProfitAndLoss({ companyId, from, to }),
         financialReportService.getBalanceSheet({ companyId, asOf: asOf || to || null }),
+        financialReportService.getVatSummary({ companyId, from, to }),
       ]);
 
       return {
@@ -210,6 +211,12 @@ class DashboardService {
           liabilities: balanceSheet?.totals?.totalLiabilities || 0,
           equity: balanceSheet?.totals?.totalEquity || 0,
           isBalanced: Boolean(balanceSheet?.totals?.isBalanced),
+        },
+        vatSummary: {
+          inputVat: vatSummary?.totals?.inputVatTotal || 0,
+          outputVat: vatSummary?.totals?.outputVatTotal || 0,
+          netVatPayable: vatSummary?.totals?.netVatPayable || 0,
+          isPayable: Boolean(vatSummary?.totals?.isPayable),
         },
       };
     } catch (error) {

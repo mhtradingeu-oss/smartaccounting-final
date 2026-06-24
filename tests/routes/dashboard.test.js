@@ -81,6 +81,68 @@ const postJournalDraft = async (draft, user) => {
   return draft.journalEntry;
 };
 
+const createPostedVatSummaryEntryFor = async (
+  user,
+  { inputVatAmount = 19, outputVatAmount = 38 } = {},
+) => {
+  const inputVatAccount = await createAccountFor(user, {
+    code: `1576-DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard input VAT',
+    type: 'tax',
+    normalBalance: 'debit',
+    taxCategory: 'input_vat',
+  });
+
+  const outputVatAccount = await createAccountFor(user, {
+    code: `1776-DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard output VAT',
+    type: 'tax',
+    normalBalance: 'credit',
+    taxCategory: 'output_vat',
+  });
+
+  const balancingAccount = await createAccountFor(user, {
+    code: `1200-VAT-DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard VAT clearing account',
+    type: outputVatAmount >= inputVatAmount ? 'asset' : 'liability',
+    normalBalance: outputVatAmount >= inputVatAmount ? 'debit' : 'credit',
+  });
+
+  const draft = await accountingPostingService.createJournalEntryDraft({
+    companyId: user.companyId,
+    entryDate: '2026-06-23',
+    sourceType: 'manual',
+    sourceId: `dashboard-vat-${Date.now()}-${Math.random()}`,
+    createdBy: user.id,
+    lines: [
+      {
+        accountId: inputVatAccount.id,
+        debit: inputVatAmount,
+        credit: 0,
+        taxCode: 'DE_19',
+        vatRate: 19,
+        description: 'Dashboard input VAT test line',
+      },
+      {
+        accountId: outputVatAccount.id,
+        debit: 0,
+        credit: outputVatAmount,
+        taxCode: 'DE_19',
+        vatRate: 19,
+        description: 'Dashboard output VAT test line',
+      },
+      {
+        accountId: balancingAccount.id,
+        debit: outputVatAmount >= inputVatAmount ? outputVatAmount - inputVatAmount : 0,
+        credit: inputVatAmount > outputVatAmount ? inputVatAmount - outputVatAmount : 0,
+        description: 'Dashboard VAT balancing line',
+      },
+    ],
+  });
+
+  await postJournalDraft(draft, user);
+};
+
 const createPostedFinancialOverviewEntries = async (user, { revenue = 700, expenses = 200 } = {}) => {
   const bankAccount = await createAccountFor(user, {
     code: `1200-DASH-${Date.now()}-${Math.random()}`,
@@ -213,6 +275,10 @@ describe('Dashboard stats API', () => {
       revenue: 700,
       expenses: 200,
     });
+    await createPostedVatSummaryEntryFor(user, {
+      inputVatAmount: 19,
+      outputVatAmount: 38,
+    });
 
     const response = await requestFor({
       token,
@@ -236,6 +302,12 @@ describe('Dashboard stats API', () => {
         expenses: 200,
         netIncome: 500,
         isProfit: true,
+        vatSummary: expect.objectContaining({
+          inputVat: 19,
+          outputVat: 38,
+          netVatPayable: 19,
+          isPayable: true,
+        }),
       }),
     );
   });
