@@ -1,5 +1,6 @@
 const { Invoice, User, Transaction, TaxReport, Expense, BankTransaction } = require('../models');
 const logger = require('../lib/logger');
+const financialReportService = require('./financialReportService');
 
 // Import Op for Sequelize operations
 const { Op } = require('sequelize');
@@ -180,6 +181,44 @@ class DashboardService {
     } catch (error) {
       logger.error('Dashboard stats error:', error);
       throw new Error('Failed to fetch dashboard statistics');
+    }
+  }
+
+  /**
+   * Get accounting-authoritative financial overview from posted journal entries.
+   */
+  static async getFinancialOverview(companyId, { from = null, to = null, asOf = null } = {}) {
+    try {
+      const [profitLoss, balanceSheet] = await Promise.all([
+        financialReportService.getProfitAndLoss({ companyId, from, to }),
+        financialReportService.getBalanceSheet({ companyId, asOf: asOf || to || null }),
+      ]);
+
+      return {
+        source: 'posted_journal_entries',
+        filters: {
+          from,
+          to,
+          asOf: asOf || to || null,
+        },
+        revenue: profitLoss?.totals?.totalRevenue || 0,
+        expenses: profitLoss?.totals?.totalExpenses || 0,
+        netIncome: profitLoss?.totals?.netProfit || 0,
+        isProfit: Boolean(profitLoss?.totals?.isProfit),
+        balanceSheet: {
+          assets: balanceSheet?.totals?.totalAssets || 0,
+          liabilities: balanceSheet?.totals?.totalLiabilities || 0,
+          equity: balanceSheet?.totals?.totalEquity || 0,
+          isBalanced: Boolean(balanceSheet?.totals?.isBalanced),
+        },
+      };
+    } catch (error) {
+      logger.error('Dashboard financial overview error:', error);
+      return {
+        source: 'posted_journal_entries',
+        status: 'unavailable',
+        reason: 'financial_overview_failed',
+      };
     }
   }
 

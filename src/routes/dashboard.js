@@ -10,10 +10,15 @@ router.use(requireCompany);
 
 router.get('/stats', async (req, res, next) => {
   try {
-    const [stats, invoiceStats, monthlyData] = await Promise.all([
+    const [stats, invoiceStats, monthlyData, financialOverview] = await Promise.all([
       dashboardService.getStats(req.companyId),
       analyticsService.getInvoiceStats(req.companyId),
       dashboardService.getMonthlyData(req.companyId),
+      dashboardService.getFinancialOverview(req.companyId, {
+        from: req.query.from || null,
+        to: req.query.to || null,
+        asOf: req.query.asOf || req.query.to || null,
+      }),
     ]);
     res.status(200).json({
       success: true,
@@ -21,6 +26,7 @@ router.get('/stats', async (req, res, next) => {
       stats,
       invoiceStats,
       monthlyData,
+      financialOverview,
     });
   } catch (error) {
     next(error);

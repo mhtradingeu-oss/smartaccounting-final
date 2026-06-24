@@ -1,7 +1,8 @@
 process.env.API_BASE_URL = '/api';
 
 const app = require('../../src/app');
-const { Company, Expense, Invoice, User, sequelize } = require('../../src/models');
+const { Company, Expense, Invoice, User, ChartAccount, JournalEntry, JournalEntryLine, sequelize } = require('../../src/models');
+const accountingPostingService = require('../../src/services/accountingPostingService');
 const { buildExpensePayload, buildInvoicePayload } = require('../utils/buildPayload');
 
 const authHeaders = ({ token, companyId }) => ({
@@ -56,12 +57,90 @@ const createExpenseFor = (user, overrides = {}) =>
     }),
   );
 
+const createAccountFor = (user, overrides = {}) =>
+  ChartAccount.create({
+    companyId: user.companyId,
+    code: `DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard test account',
+    type: 'asset',
+    normalBalance: 'debit',
+    isSystem: true,
+    ...overrides,
+  });
+
+const postJournalDraft = async (draft, user) => {
+  await draft.journalEntry.update(
+    {
+      status: 'posted',
+      postedAt: new Date(),
+      postedBy: user.id,
+    },
+    { allowPostedJournalEntryMutation: true },
+  );
+
+  return draft.journalEntry;
+};
+
+const createPostedFinancialOverviewEntries = async (user, { revenue = 700, expenses = 200 } = {}) => {
+  const bankAccount = await createAccountFor(user, {
+    code: `1200-DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard bank',
+    type: 'asset',
+    normalBalance: 'debit',
+  });
+
+  const revenueAccount = await createAccountFor(user, {
+    code: `8400-DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard revenue',
+    type: 'revenue',
+    normalBalance: 'credit',
+  });
+
+  const expenseAccount = await createAccountFor(user, {
+    code: `4930-DASH-${Date.now()}-${Math.random()}`,
+    name: 'Dashboard expenses',
+    type: 'expense',
+    normalBalance: 'debit',
+  });
+
+  const revenueDraft = await accountingPostingService.createJournalEntryDraft({
+    companyId: user.companyId,
+    entryDate: '2026-06-23',
+    sourceType: 'manual',
+    sourceId: `dashboard-revenue-${Date.now()}-${Math.random()}`,
+    createdBy: user.id,
+    lines: [
+      { accountId: bankAccount.id, debit: revenue, credit: 0 },
+      { accountId: revenueAccount.id, debit: 0, credit: revenue },
+    ],
+  });
+
+  await postJournalDraft(revenueDraft, user);
+
+  const expenseDraft = await accountingPostingService.createJournalEntryDraft({
+    companyId: user.companyId,
+    entryDate: '2026-06-23',
+    sourceType: 'manual',
+    sourceId: `dashboard-expense-${Date.now()}-${Math.random()}`,
+    createdBy: user.id,
+    lines: [
+      { accountId: expenseAccount.id, debit: expenses, credit: 0 },
+      { accountId: bankAccount.id, debit: 0, credit: expenses },
+    ],
+  });
+
+  await postJournalDraft(expenseDraft, user);
+};
+
 describe('Dashboard stats API', () => {
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
 
   beforeEach(async () => {
+    await JournalEntryLine.destroy({ where: {}, force: true });
+    await JournalEntry.destroy({ where: {}, force: true });
+    await ChartAccount.destroy({ where: {}, force: true });
     await Expense.destroy({ where: {}, force: true });
     await Invoice.destroy({ where: {}, force: true });
     await User.destroy({ where: {}, force: true });
@@ -90,6 +169,12 @@ describe('Dashboard stats API', () => {
     expect(response.body).toHaveProperty('stats');
     expect(response.body).toHaveProperty('invoiceStats');
     expect(response.body).toHaveProperty('monthlyData');
+    expect(response.body).toHaveProperty('financialOverview');
+    expect(response.body.financialOverview).toEqual(
+      expect.objectContaining({
+        source: 'posted_journal_entries',
+      }),
+    );
 
     expect(response.body.stats).toEqual(
       expect.objectContaining({
@@ -108,6 +193,51 @@ describe('Dashboard stats API', () => {
     );
 
     expect(Array.isArray(response.body.monthlyData)).toBe(true);
+  });
+
+  it('uses posted journal entries for financialOverview independently from operational stats', async () => {
+    const { user, token } = await createRoleSession('accountant');
+
+    await createInvoiceFor(user, {
+      invoiceNumber: 'DASH-OPERATIONAL-001',
+      subtotal: 100,
+      amount: 119,
+      total: 119,
+    });
+    await createExpenseFor(user, {
+      grossAmount: 59.5,
+      amount: 59.5,
+    });
+
+    await createPostedFinancialOverviewEntries(user, {
+      revenue: 700,
+      expenses: 200,
+    });
+
+    const response = await requestFor({
+      token,
+      companyId: user.companyId,
+    });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.stats).toEqual(
+      expect.objectContaining({
+        totalRevenue: 119,
+        totalExpenses: 59.5,
+        netProfit: 59.5,
+      }),
+    );
+
+    expect(response.body.financialOverview).toEqual(
+      expect.objectContaining({
+        source: 'posted_journal_entries',
+        revenue: 700,
+        expenses: 200,
+        netIncome: 500,
+        isProfit: true,
+      }),
+    );
   });
 
   it('does not include another company totals in dashboard stats', async () => {
