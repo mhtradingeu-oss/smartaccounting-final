@@ -260,6 +260,9 @@ const Dashboard = () => {
   }, [dashboardData?.statusBreakdown]);
 
   const latestInvoice = dashboardData?.latestInvoice;
+  const hasAccountingTruth =
+    dashboardData?.financialOverview?.source === 'posted_journal_entries' &&
+    dashboardData?.financialOverview?.status !== 'unavailable';
 
   const hasMetrics = displayMetrics.length > 0;
   const hasTrends = trendSeries.some(
@@ -497,7 +500,14 @@ const Dashboard = () => {
         </section>
 
         <section>
-          <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Executive KPIs</h2>
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Executive KPIs</h2>
+            {hasAccountingTruth && (
+              <span className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+                Accounting truth: posted journal entries
+              </span>
+            )}
+          </div>
           {displayMetrics.length ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {displayMetrics.map((metric) => {

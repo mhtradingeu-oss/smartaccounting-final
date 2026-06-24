@@ -52,6 +52,12 @@ describe('Dashboard', () => {
     };
     dashboardAPI.getStats.mockResolvedValue({
       data: {
+        financialOverview: {
+          source: 'posted_journal_entries',
+          revenue: 120000,
+          expenses: 45000,
+          netIncome: 75000,
+        },
         metrics: [
           {
             id: 'total-revenue',
