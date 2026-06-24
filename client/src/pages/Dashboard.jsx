@@ -263,12 +263,19 @@ const Dashboard = () => {
   const hasAccountingTruth =
     dashboardData?.financialOverview?.source === 'posted_journal_entries' &&
     dashboardData?.financialOverview?.status !== 'unavailable';
+  const vatSummary = dashboardData?.financialOverview?.vatSummary || null;
+  const hasVatSummary =
+    hasAccountingTruth &&
+    vatSummary &&
+    ['inputVat', 'outputVat', 'netVatPayable'].some((key) =>
+      Number.isFinite(Number(vatSummary[key])),
+    );
 
   const hasMetrics = displayMetrics.length > 0;
   const hasTrends = trendSeries.some(
     (point) => (Number(point.revenue) || 0) > 0 || (Number(point.invoices) || 0) > 0,
   );
-  const hasDetails = statusEntries.length > 0 || latestInvoice;
+  const hasDetails = statusEntries.length > 0 || latestInvoice || hasVatSummary;
 
   const handleLoadDemoData = async () => {
     setDemoLoading(true);
@@ -660,6 +667,39 @@ const Dashboard = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {hasVatSummary && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                <h3 className="mb-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                  VAT / Compliance summary
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-700 dark:text-emerald-200">Input VAT</span>
+                    <span className="font-semibold text-emerald-950 dark:text-white">
+                      {formatCurrency(Number(vatSummary.inputVat) || 0, dashboardData.currency || 'EUR')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-700 dark:text-emerald-200">Output VAT</span>
+                    <span className="font-semibold text-emerald-950 dark:text-white">
+                      {formatCurrency(Number(vatSummary.outputVat) || 0, dashboardData.currency || 'EUR')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-emerald-200 pt-3 dark:border-emerald-900/60">
+                    <span className="text-emerald-700 dark:text-emerald-200">
+                      {vatSummary.isPayable ? 'Net VAT payable' : 'Net VAT refundable'}
+                    </span>
+                    <span className="font-semibold text-emerald-950 dark:text-white">
+                      {formatCurrency(Math.abs(Number(vatSummary.netVatPayable) || 0), dashboardData.currency || 'EUR')}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-4 text-xs text-emerald-700 dark:text-emerald-300">
+                  Source: posted journal entries
+                </p>
               </div>
             )}
 

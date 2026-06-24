@@ -57,6 +57,12 @@ describe('Dashboard', () => {
           revenue: 120000,
           expenses: 45000,
           netIncome: 75000,
+          vatSummary: {
+            inputVat: 1900,
+            outputVat: 3800,
+            netVatPayable: 1900,
+            isPayable: true,
+          },
         },
         metrics: [
           {
@@ -116,6 +122,11 @@ describe('Dashboard', () => {
     expect(screen.getByText('Invoice status mix')).toBeInTheDocument();
     expect(screen.getByText('Latest invoice')).toBeInTheDocument();
     expect(screen.getByText('Operational signals')).toBeInTheDocument();
+    expect(screen.getByText('VAT / Compliance summary')).toBeInTheDocument();
+    expect(screen.getByText('Input VAT')).toBeInTheDocument();
+    expect(screen.getByText('Output VAT')).toBeInTheDocument();
+    expect(screen.getByText('Net VAT payable')).toBeInTheDocument();
+    expect(screen.getByText('Source: posted journal entries')).toBeInTheDocument();
     expect(screen.getByText('Total revenue')).toBeInTheDocument();
     expect(screen.getByText('Active users')).toBeInTheDocument();
   });
