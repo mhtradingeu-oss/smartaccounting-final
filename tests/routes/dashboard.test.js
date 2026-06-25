@@ -232,9 +232,17 @@ describe('Dashboard stats API', () => {
     expect(response.body).toHaveProperty('invoiceStats');
     expect(response.body).toHaveProperty('monthlyData');
     expect(response.body).toHaveProperty('financialOverview');
+    expect(response.body).toHaveProperty('auditReadiness');
     expect(response.body.financialOverview).toEqual(
       expect.objectContaining({
         source: 'posted_journal_entries',
+      }),
+    );
+    expect(response.body.auditReadiness).toEqual(
+      expect.objectContaining({
+        source: 'deterministic_dashboard_rules',
+        status: expect.any(String),
+        signals: expect.any(Array),
       }),
     );
 
@@ -308,6 +316,27 @@ describe('Dashboard stats API', () => {
           netVatPayable: 19,
           isPayable: true,
         }),
+      }),
+    );
+
+    expect(response.body.auditReadiness).toEqual(
+      expect.objectContaining({
+        source: 'deterministic_dashboard_rules',
+        status: 'warning',
+        signals: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'accounting-truth-available',
+            severity: 'low',
+          }),
+          expect.objectContaining({
+            id: 'balance-sheet-not-balanced',
+            severity: 'high',
+          }),
+          expect.objectContaining({
+            id: 'vat-position-present',
+            severity: 'low',
+          }),
+        ]),
       }),
     );
   });

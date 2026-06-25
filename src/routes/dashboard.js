@@ -20,6 +20,11 @@ router.get('/stats', async (req, res, next) => {
         asOf: req.query.asOf || req.query.to || null,
       }),
     ]);
+    const auditReadiness = dashboardService.getAuditReadiness({
+      stats,
+      financialOverview,
+    });
+
     res.status(200).json({
       success: true,
       companyId: req.companyId,
@@ -27,6 +32,7 @@ router.get('/stats', async (req, res, next) => {
       invoiceStats,
       monthlyData,
       financialOverview,
+      auditReadiness,
     });
   } catch (error) {
     next(error);

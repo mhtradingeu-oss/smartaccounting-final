@@ -185,6 +185,74 @@ class DashboardService {
   }
 
   /**
+   * Build deterministic audit readiness signals without invoking AI/LLM.
+   */
+  static getAuditReadiness({ stats = {}, financialOverview = {} } = {}) {
+    const signals = [];
+
+    if (financialOverview?.status === 'unavailable') {
+      signals.push({
+        id: 'accounting-overview-unavailable',
+        severity: 'warning',
+        title: 'Accounting overview unavailable',
+        description: 'Posted journal entry based financial overview could not be calculated.',
+        recommendedAction: 'Review journal entry/report service availability before relying on dashboard KPIs.',
+      });
+    }
+
+    if (financialOverview?.source === 'posted_journal_entries') {
+      signals.push({
+        id: 'accounting-truth-available',
+        severity: 'low',
+        title: 'Accounting truth available',
+        description: 'Dashboard financial KPIs are backed by posted journal entries.',
+        recommendedAction: 'Use the accounting KPIs for management review and reconcile operational differences when needed.',
+      });
+    }
+
+    if (financialOverview?.balanceSheet?.isBalanced === false) {
+      signals.push({
+        id: 'balance-sheet-not-balanced',
+        severity: 'high',
+        title: 'Balance sheet is not balanced',
+        description: 'Assets do not equal liabilities plus equity in the current posted-journal snapshot.',
+        recommendedAction: 'Review posted journal entries and balance sheet report before closing or exporting reports.',
+      });
+    }
+
+    const overdueInvoices = Number(stats?.overdue ?? stats?.invoices?.overdue ?? 0);
+    if (Number.isFinite(overdueInvoices) && overdueInvoices > 0) {
+      signals.push({
+        id: 'overdue-invoices-present',
+        severity: overdueInvoices > 5 ? 'medium' : 'low',
+        title: 'Overdue invoices present',
+        description: `${overdueInvoices} overdue invoice${overdueInvoices === 1 ? '' : 's'} found in operational dashboard data.`,
+        recommendedAction: 'Review overdue invoices and follow up before cash-flow planning.',
+      });
+    }
+
+    const netVatPayable = Number(financialOverview?.vatSummary?.netVatPayable ?? 0);
+    if (Number.isFinite(netVatPayable) && netVatPayable !== 0) {
+      signals.push({
+        id: 'vat-position-present',
+        severity: 'low',
+        title: financialOverview?.vatSummary?.isPayable ? 'VAT payable position' : 'VAT refundable position',
+        description: `Current VAT position is ${Math.abs(netVatPayable).toFixed(2)} based on posted journal entries.`,
+        recommendedAction: 'Review VAT summary details before preparing VAT filing or payment decisions.',
+      });
+    }
+
+    const hasHigh = signals.some((signal) => signal.severity === 'high');
+    const hasWarning = signals.some((signal) => ['high', 'medium', 'warning'].includes(signal.severity));
+
+    return {
+      source: 'deterministic_dashboard_rules',
+      status: hasHigh ? 'warning' : hasWarning ? 'warning' : 'good',
+      signals,
+    };
+  }
+
+  /**
    * Get accounting-authoritative financial overview from posted journal entries.
    */
   static async getFinancialOverview(companyId, { from = null, to = null, asOf = null } = {}) {
