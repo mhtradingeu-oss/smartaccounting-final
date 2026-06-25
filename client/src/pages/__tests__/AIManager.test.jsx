@@ -94,6 +94,12 @@ describe('AI Manager page', () => {
     expect(screen.getByText('DATEV & audit readiness')).toBeInTheDocument();
     expect(screen.getByText(/qualified Steuerberater/i)).toBeInTheDocument();
 
+    expect(screen.getByText('Smart prompts to try')).toBeInTheDocument();
+    expect(screen.getByText('What should I review today?')).toBeInTheDocument();
+    expect(screen.getByText('Show VAT evidence gaps')).toBeInTheDocument();
+    expect(screen.getByText('Check DATEV readiness')).toBeInTheDocument();
+    expect(screen.getByText('Show audit readiness risks')).toBeInTheDocument();
+
     expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Expenses').length).toBeGreaterThan(0);
     expect(screen.getByText('Bank activity')).toBeInTheDocument();

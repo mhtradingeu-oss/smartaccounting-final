@@ -502,6 +502,37 @@ export default function AIManager() {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none" aria-label="AI Manager prompt starters">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Smart prompts to try</h2>
+            <p className="mt-1 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+              Start with a focused read-only question. AI Manager will use company context, AI insights, and accounting evidence where available.
+            </p>
+          </div>
+          <AIBadge label="Prompt starters" />
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            'What should I review today?',
+            'Show VAT evidence gaps',
+            'Explain unreconciled bank transactions',
+            'Check DATEV readiness',
+            'Show audit readiness risks',
+            'Summarize missing documents',
+          ].map((prompt) => (
+            <Link
+              key={prompt}
+              to="/ai-assistant"
+              className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 dark:border-gray-800 dark:bg-gray-950/70 dark:text-gray-100 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/30"
+            >
+              {prompt}
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-3" aria-label="AI Manager briefing summary">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
