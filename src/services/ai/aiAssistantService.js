@@ -5,6 +5,7 @@ const { checkProviderBudget } = require('./providerBudgetGuard');
 const { getProviderConfig, isProviderEnabled } = require('./providers/providerConfig');
 const { getAIProvider, getProviderMetadata } = require('./providers');
 const promptRegistry = require('./promptRegistry');
+const { getAssistantCapabilityContract } = require('./assistantCapabilityContract');
 const { Company, Invoice, Expense, BankTransaction, AIInsight } = require('../../models');
 
 const MAX_ITEMS = 5;
@@ -973,9 +974,11 @@ async function answerIntentComplianceWithProvider({
     const safePrompt = sanitizeText(prompt || '', MAX_PROMPT_CHARS);
     const normalizedContext = normalizeContext(context);
     const accountingBrief = redactContextValue(buildAccountingSnapshot(normalizedContext));
+    const assistantCapabilities = redactContextValue(getAssistantCapabilityContract());
     const safeContext = {
       ...sanitizeContext(redactContextValue(normalizedContext)),
       accountingBrief,
+      assistantCapabilities,
     };
     const registryEntry = promptRegistry.getPromptMeta
       ? promptRegistry.getPromptMeta('assistant_general')
