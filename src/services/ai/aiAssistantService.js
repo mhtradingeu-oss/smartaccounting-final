@@ -597,6 +597,7 @@ function buildNextBestActions(context, intent) {
   }
 
   actions.push('Keep the assistant read-only; make any record changes only through the normal reviewed accounting workflow.');
+  actions.push('Escalate compliance-critical German tax, VAT filing, payment, or legal conclusions to a qualified Steuerberater.');
 
   return sanitizeList(actions, MAX_ITEM_CHARS, MAX_LIST_ITEMS);
 }

@@ -351,3 +351,107 @@ describe('AI Assistant compliance wrapper', () => {
     expect(response.sanitizedPrompt).not.toContain('DE89370400440532013000');
   });
 });
+
+  it('keeps assistant actions read-only and escalates German tax conclusions', () => {
+    const response = answerIntentCompliance({
+      intent: 'review',
+      context: {
+        company: { id: 1, name: 'Boundary GmbH' },
+        invoices: [
+          {
+            id: 101,
+            status: 'SENT',
+            total: 1190,
+            currency: 'EUR',
+            dueDate: '2026-06-30',
+          },
+        ],
+        expenses: [
+          {
+            id: 202,
+            status: 'pending',
+            grossAmount: 238,
+            vatAmount: 38,
+            currency: 'EUR',
+          },
+        ],
+        bankTransactions: [
+          {
+            id: 303,
+            amount: 1190,
+            currency: 'EUR',
+            transactionDate: '2026-06-21',
+            isReconciled: false,
+          },
+        ],
+        insights: [
+          {
+            id: 404,
+            entityType: 'expense',
+            entityId: 202,
+            type: 'vat_risk',
+            severity: 'high',
+            summary: 'Input VAT evidence requires review.',
+            why: 'VAT treatment depends on source document readiness.',
+            evidence: ['Expense 202 has pending review state'],
+            legalContext: 'UStG §14, §15',
+            ruleId: 'VAT_REVIEW_REQUIRED',
+            confidenceScore: 0.84,
+          },
+        ],
+      },
+      targetInsightId: null,
+      prompt: 'Can I file VAT and claim input VAT now?',
+    });
+
+    const actions = response.requiredActions.join(' ');
+
+    expect(actions).toMatch(/Keep the assistant read-only/i);
+    expect(actions).toMatch(/normal reviewed accounting workflow/i);
+    expect(actions).toMatch(/qualified Steuerberater/i);
+    expect(actions).toMatch(/German tax, VAT filing, payment, or legal conclusions/i);
+
+    expect(actions).not.toMatch(/\b(file|submit|pay|post|create|delete|change)\b.*\bnow\b/i);
+    expect(JSON.stringify(response)).toMatch(/UStG §14, §15|VAT/i);
+  });
+
+  it('does not invent tax amounts when VAT evidence is missing', () => {
+    const response = answerIntentCompliance({
+      intent: 'review',
+      context: {
+        company: { id: 1, name: 'Missing VAT GmbH' },
+        invoices: [],
+        expenses: [],
+        bankTransactions: [],
+        insights: [
+          {
+            id: 505,
+            entityType: 'document',
+            entityId: 'doc-505',
+            type: 'missing_document',
+            severity: 'high',
+            summary: 'VAT amount was not detected.',
+            why: 'Source document does not contain enough VAT evidence.',
+            evidence: [],
+            legalContext: 'UStG §14',
+            ruleId: 'VAT_EVIDENCE_MISSING',
+            confidenceScore: 0.7,
+          },
+        ],
+      },
+      targetInsightId: null,
+      prompt: 'Calculate the VAT amount and tell me what to pay',
+    });
+
+    expect(response.summary).toMatch(/data not available/i);
+    expect(response.dataGaps).toEqual(
+      expect.arrayContaining([
+        'Invoices data not available',
+        'Expenses data not available',
+        'Bank transactions data not available',
+      ]),
+    );
+
+    expect(response.summary).not.toMatch(/\b(19|7)\s?%.*(pay|file|submit)/i);
+    expect(response.requiredActions.join(' ')).toMatch(/Steuerberater/i);
+  });
