@@ -29,6 +29,21 @@ const QUICK_PROMPTS = [
     intent: 'explain_page',
     prompt: 'Explain the current accounting page and what I should pay attention to.',
   },
+  {
+    label: 'Show VAT gaps',
+    intent: 'vat',
+    prompt: 'Show VAT evidence gaps for the active company.',
+  },
+  {
+    label: 'Check DATEV readiness',
+    intent: 'datev_readiness',
+    prompt: 'Check DATEV export readiness and missing evidence for the active company.',
+  },
+  {
+    label: 'Find missing evidence',
+    intent: 'audit_readiness',
+    prompt: 'Find missing accounting evidence and audit readiness risks for the active company.',
+  },
 ];
 
 const getAnswerText = (response) =>

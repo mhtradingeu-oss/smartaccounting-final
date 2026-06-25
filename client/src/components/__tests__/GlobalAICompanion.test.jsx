@@ -77,6 +77,26 @@ describe('GlobalAICompanion in authenticated layout', () => {
     expect(screen.queryByText('AI Accounting Manager')).not.toBeInTheDocument();
   });
 
+  it('sends accounting-specific quick prompts through the assistant API', async () => {
+    renderLayout();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open AI Manager' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Show VAT gaps/i }));
+    });
+
+    await waitFor(() => {
+      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+        intent: 'vat',
+        prompt: 'Show VAT evidence gaps for the active company.',
+        sessionId: null,
+        companyId: 10,
+      });
+    });
+  });
+
   it('sends quick prompts through the assistant API', async () => {
     renderLayout();
 
