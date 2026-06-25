@@ -64,6 +64,18 @@ describe('Dashboard', () => {
             isPayable: true,
           },
         },
+        auditReadiness: {
+          source: 'deterministic_dashboard_rules',
+          status: 'warning',
+          signals: [
+            {
+              id: 'balance-sheet-not-balanced',
+              severity: 'high',
+              title: 'Balance sheet is not balanced',
+              description: 'Assets do not equal liabilities plus equity.',
+            },
+          ],
+        },
         metrics: [
           {
             id: 'total-revenue',

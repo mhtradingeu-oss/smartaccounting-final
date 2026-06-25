@@ -142,11 +142,15 @@ const normalizeStatsPayload = (payload) => {
     payload.monthlyData ?? payload.data?.monthlyData ?? payload.monthly ?? payload.data?.monthly;
   const financialOverview =
     payload.financialOverview ?? payload.data?.financialOverview ?? payload.accountingOverview ?? null;
+  const auditReadiness =
+    payload.auditReadiness ?? payload.data?.auditReadiness ?? payload.readiness ?? null;
 
   const safeStats = stats && typeof stats === 'object' ? stats : {};
   const safeInvoiceStats = invoiceStats && typeof invoiceStats === 'object' ? invoiceStats : {};
   const safeFinancialOverview =
     financialOverview && typeof financialOverview === 'object' ? financialOverview : null;
+  const safeAuditReadiness =
+    auditReadiness && typeof auditReadiness === 'object' ? auditReadiness : null;
   const metrics = buildMetricsFromStats(safeStats, safeInvoiceStats, safeFinancialOverview);
   const currency = resolveCurrency(safeStats, safeInvoiceStats, safeFinancialOverview);
   const normalized = {
@@ -156,6 +160,7 @@ const normalizeStatsPayload = (payload) => {
     metrics,
     monthlyData,
     financialOverview: safeFinancialOverview,
+    auditReadiness: safeAuditReadiness,
     statusBreakdown:
       safeInvoiceStats?.statusBreakdown ?? safeStats?.statusBreakdown ?? payload.statusBreakdown ?? null,
     latestInvoice:
@@ -166,7 +171,13 @@ const normalizeStatsPayload = (payload) => {
       safeStats?.totalRevenue ?? safeStats?.revenue?.total ?? safeInvoiceStats?.totalRevenue ?? null,
   };
 
-  if (!metrics.length && !normalized.statusBreakdown && !normalized.latestInvoice && !monthlyData) {
+  if (
+    !metrics.length &&
+    !normalized.statusBreakdown &&
+    !normalized.latestInvoice &&
+    !normalized.auditReadiness &&
+    !monthlyData
+  ) {
     return null;
   }
 

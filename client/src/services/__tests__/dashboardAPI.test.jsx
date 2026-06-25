@@ -73,6 +73,11 @@ describe('dashboardAPI', () => {
           netIncome: 500,
           isProfit: true,
         },
+        auditReadiness: {
+          source: 'deterministic_dashboard_rules',
+          status: 'warning',
+          signals: [{ id: 'balance-sheet-not-balanced', severity: 'high', title: 'Balance sheet is not balanced' }],
+        },
         monthlyData: [{ month: 'Jan', revenue: 119, invoices: 2 }],
       },
     });
@@ -84,6 +89,10 @@ describe('dashboardAPI', () => {
       revenue: 700,
       expenses: 200,
       netIncome: 500,
+    });
+    expect(response.data.auditReadiness).toMatchObject({
+      source: 'deterministic_dashboard_rules',
+      status: 'warning',
     });
 
     expect(response.data.metrics).toEqual(

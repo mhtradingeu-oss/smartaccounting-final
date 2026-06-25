@@ -270,12 +270,15 @@ const Dashboard = () => {
     ['inputVat', 'outputVat', 'netVatPayable'].some((key) =>
       Number.isFinite(Number(vatSummary[key])),
     );
+  const auditReadiness = dashboardData?.auditReadiness || null;
+  const auditSignals = Array.isArray(auditReadiness?.signals) ? auditReadiness.signals : [];
+  const hasAuditReadiness = auditReadiness && auditSignals.length > 0;
 
   const hasMetrics = displayMetrics.length > 0;
   const hasTrends = trendSeries.some(
     (point) => (Number(point.revenue) || 0) > 0 || (Number(point.invoices) || 0) > 0,
   );
-  const hasDetails = statusEntries.length > 0 || latestInvoice || hasVatSummary;
+  const hasDetails = statusEntries.length > 0 || latestInvoice || hasVatSummary || hasAuditReadiness;
 
   const handleLoadDemoData = async () => {
     setDemoLoading(true);
@@ -667,6 +670,41 @@ const Dashboard = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {hasAuditReadiness && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-900/60 dark:bg-amber-950/30">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    Audit readiness
+                  </h3>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase text-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                    {auditReadiness.status || 'review'}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {auditSignals.slice(0, 4).map((signal) => (
+                    <div key={signal.id || signal.title} className="rounded-lg bg-white/70 p-3 dark:bg-amber-950/40">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-amber-950 dark:text-white">
+                          {signal.title}
+                        </p>
+                        <span className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-200">
+                          {signal.severity || 'info'}
+                        </span>
+                      </div>
+                      {signal.description && (
+                        <p className="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-200">
+                          {signal.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs text-amber-700 dark:text-amber-300">
+                  Source: deterministic dashboard rules
+                </p>
               </div>
             )}
 
