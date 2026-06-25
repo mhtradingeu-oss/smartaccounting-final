@@ -111,6 +111,12 @@ describe('AI Manager page', () => {
     expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
     expect(screen.getByText('Bank payment')).toBeInTheDocument();
     expect(screen.getByText('Invoice #1')).toBeInTheDocument();
+
+    expect(screen.getAllByText('AI insights').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Expenses').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bank reconciliation').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Unreconciled bank activity/i)).toBeInTheDocument();
   });
 
   it('selects a high severity insight as the priority decision', async () => {
@@ -139,7 +145,7 @@ describe('AI Manager page', () => {
 
     expect(screen.getAllByText('Bank payment')).not.toHaveLength(0);
     expect(screen.getAllByText('Review bank statements')).not.toHaveLength(0);
-    expect(screen.getByText('Unreconciled bank transaction')).toBeInTheDocument();
+    expect(screen.getAllByText(/Unreconciled bank transaction/i).length).toBeGreaterThan(0);
   });
 
   it('selects a pending or draft invoice when no higher priority exists', async () => {

@@ -376,6 +376,37 @@ export default function AIManager() {
     [context, insights],
   );
 
+  const groupedReviewQueue = useMemo(() => {
+    const groups = [
+      {
+        id: 'ai-insights',
+        title: 'AI insights',
+        description: 'High and medium priority AI findings that need human review.',
+        items: reviewQueue.filter((item) => item.source === 'AI insights' || item.entityType === 'insight'),
+      },
+      {
+        id: 'invoices',
+        title: 'Invoices',
+        description: 'Overdue, draft, or pending invoice records that may need follow-up.',
+        items: reviewQueue.filter((item) => item.entityType === 'invoice' || String(item.id || '').startsWith('invoice-')),
+      },
+      {
+        id: 'expenses',
+        title: 'Expenses',
+        description: 'Pending expenses and VAT evidence checks that may need review.',
+        items: reviewQueue.filter((item) => item.entityType === 'expense' || String(item.id || '').startsWith('expense-')),
+      },
+      {
+        id: 'bank-reconciliation',
+        title: 'Bank reconciliation',
+        description: 'Unreconciled bank activity that may need matching or explanation.',
+        items: reviewQueue.filter((item) => ['bank_transaction', 'bankTransaction', 'bank'].includes(item.entityType) || String(item.id || '').startsWith('bank-')),
+      },
+    ];
+
+    return groups.filter((group) => group.items.length > 0);
+  }, [reviewQueue]);
+
   if (!activeCompanyId) {
     return (
       <EmptyState
@@ -657,23 +688,39 @@ export default function AIManager() {
             <AIBadge label="Review" />
           </div>
 
-          {reviewQueue.length ? (
-            <ul className="space-y-2 text-sm text-gray-700">
-              {reviewQueue.map((item) => (
-                <li key={item.id} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-950/70">
-                  <div className="flex items-start justify-between gap-3">
+          {groupedReviewQueue.length ? (
+            <div className="space-y-4">
+              {groupedReviewQueue.map((group) => (
+                <section key={group.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/70">
+                  <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-gray-950 dark:text-white">{item.title}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.reason}</p>
-                      <Link className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300" to={item.route}>
-                        {item.actionLabel}
-                      </Link>
+                      <h3 className="text-sm font-bold text-gray-950 dark:text-white">{group.title}</h3>
+                      <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">{group.description}</p>
                     </div>
-                    <AISeverityPill severity={item.severity} />
+                    <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                      {group.items.length}
+                    </span>
                   </div>
-                </li>
+
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    {group.items.map((item) => (
+                      <li key={item.id} className="rounded-xl border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900/80">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-gray-950 dark:text-white">{item.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{item.reason}</p>
+                            <Link className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300" to={item.route}>
+                              {item.actionLabel}
+                            </Link>
+                          </div>
+                          <AISeverityPill severity={item.severity} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           ) : (
             <p className="text-sm text-gray-600 dark:text-gray-300">
               No review queue items are visible in the current read-only context.
