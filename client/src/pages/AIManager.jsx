@@ -470,6 +470,38 @@ export default function AIManager() {
         />
       </header>
 
+      <section className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/20" aria-label="AI Manager capabilities">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-950 dark:text-white">What AI can help with</h2>
+            <p className="mt-1 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+              SmartAccounting AI can read, analyze, explain, and suggest safe next steps from company-scoped accounting evidence.
+            </p>
+          </div>
+          <AIBadge label="Read-only" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            ['Invoices', 'Review overdue, pending, and missing-evidence invoices.'],
+            ['Expenses', 'Check VAT evidence, categories, attachments, and draft readiness.'],
+            ['Bank reconciliation', 'Highlight unreconciled transactions and possible review paths.'],
+            ['VAT / Umsatzsteuer', 'Explain input VAT, output VAT, and missing VAT evidence from supplied data.'],
+            ['Reports & journal entries', 'Explain posted accounting truth, balances, and report gaps.'],
+            ['DATEV & audit readiness', 'Review export readiness, GoBD evidence, and audit signals.'],
+          ].map(([title, description]) => (
+            <div key={title} className="rounded-xl border border-blue-100 bg-white px-4 py-3 dark:border-blue-900/40 dark:bg-gray-900/80">
+              <p className="text-sm font-semibold text-gray-950 dark:text-white">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">{description}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-4 text-xs leading-5 text-gray-500 dark:text-gray-400">
+          Advisory only: AI does not post, pay, file, delete, reconcile, or certify records. Compliance-critical German tax, VAT filing, payment, or legal decisions must be reviewed by a qualified Steuerberater.
+        </p>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-3" aria-label="AI Manager briefing summary">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">

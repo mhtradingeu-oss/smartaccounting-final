@@ -88,8 +88,14 @@ describe('AI Manager page', () => {
     expect(screen.getByText('Review queue')).toBeInTheDocument();
     expect(screen.getByText('Ask AI Manager')).toBeInTheDocument();
 
-    expect(screen.getByText('Invoices')).toBeInTheDocument();
-    expect(screen.getByText('Expenses')).toBeInTheDocument();
+    expect(screen.getByText('What AI can help with')).toBeInTheDocument();
+    expect(screen.getByText(/SmartAccounting AI can read, analyze, explain/i)).toBeInTheDocument();
+    expect(screen.getByText('VAT / Umsatzsteuer')).toBeInTheDocument();
+    expect(screen.getByText('DATEV & audit readiness')).toBeInTheDocument();
+    expect(screen.getByText(/qualified Steuerberater/i)).toBeInTheDocument();
+
+    expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Expenses').length).toBeGreaterThan(0);
     expect(screen.getByText('Bank activity')).toBeInTheDocument();
     expect(screen.getAllByText('AI insights')).not.toHaveLength(0);
 
@@ -168,9 +174,8 @@ describe('AI Manager page', () => {
 
     await waitFor(() => expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument());
 
-    const forbiddenLabels = /approve|reject|resolve|post|delete|reconcile now/i;
-    expect(screen.queryByText(forbiddenLabels)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: forbiddenLabels })).not.toBeInTheDocument();
+    const forbiddenActionButtons = /approve|reject|resolve|post|delete|reconcile now/i;
+    expect(screen.queryByRole('button', { name: forbiddenActionButtons })).not.toBeInTheDocument();
   });
 
   it('keeps API calls scoped to companyId', async () => {
