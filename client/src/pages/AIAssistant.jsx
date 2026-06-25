@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowUpIcon,
@@ -148,6 +148,7 @@ const AIAssistant = () => {
   const { activeCompany } = useCompany();
   const activeCompanyId = activeCompany?.id;
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [context, setContext] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -184,6 +185,7 @@ const AIAssistant = () => {
   const recordingChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const aiAssistantEnabled = isAIAssistantEnabled();
+  const queryPrompt = new URLSearchParams(location.search).get('prompt')?.slice(0, MAX_PROMPT_LENGTH) || '';
   const userRole = user?.role || 'viewer';
   const isSystemAdmin =
     userRole === 'admin' && (user?.companyId === null || user?.companyId === undefined);
@@ -323,8 +325,9 @@ const AIAssistant = () => {
 
     setContextError(null);
     setIsAsking(false);
-    setDraftMessage('');
+    setDraftMessage(queryPrompt);
     setInputError(null);
+    setUserTyping(Boolean(queryPrompt));
     setAttachments([]);
     setIsRecording(false);
     setRecordingSeconds(0);

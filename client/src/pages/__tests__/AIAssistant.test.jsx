@@ -96,7 +96,7 @@ const contextPayload = {
   insights: [],
 };
 
-const renderAssistant = async () => {
+const renderAssistant = async (initialEntry = '/ai-assistant') => {
   window.fetch = vi.fn();
   window.ReadableStream = undefined;
   delete window.MediaRecorder;
@@ -104,7 +104,7 @@ const renderAssistant = async () => {
   aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
 
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <TestCompanyProvider initialCompany={{ id: 1, name: 'TraceCo' }}>
         <AIAssistant />
       </TestCompanyProvider>
@@ -180,6 +180,15 @@ describe('AI Assistant ChatGPT-like experience', () => {
         expect.objectContaining({ intent: 'risks' }),
       ),
     );
+  });
+
+  it('pre-fills composer from AI Manager prompt query', async () => {
+    await renderAssistant('/ai-assistant?prompt=Show%20VAT%20evidence%20gaps');
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Type your question')).toHaveValue('Show VAT evidence gaps'),
+    );
+    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
   });
 
   it('composer supports typing and sending', async () => {

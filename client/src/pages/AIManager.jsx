@@ -524,7 +524,7 @@ export default function AIManager() {
           ].map((prompt) => (
             <Link
               key={prompt}
-              to="/ai-assistant"
+              to={`/ai-assistant?prompt=${encodeURIComponent(prompt)}`}
               className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 dark:border-gray-800 dark:bg-gray-950/70 dark:text-gray-100 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/30"
             >
               {prompt}

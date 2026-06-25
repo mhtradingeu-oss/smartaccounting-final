@@ -96,7 +96,10 @@ describe('AI Manager page', () => {
 
     expect(screen.getByText('Smart prompts to try')).toBeInTheDocument();
     expect(screen.getByText('What should I review today?')).toBeInTheDocument();
-    expect(screen.getByText('Show VAT evidence gaps')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Show VAT evidence gaps' })).toHaveAttribute(
+      'href',
+      '/ai-assistant?prompt=Show%20VAT%20evidence%20gaps',
+    );
     expect(screen.getByText('Check DATEV readiness')).toBeInTheDocument();
     expect(screen.getByText('Show audit readiness risks')).toBeInTheDocument();
 
