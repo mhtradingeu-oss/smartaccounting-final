@@ -117,6 +117,12 @@ describe('AI Manager page', () => {
     expect(screen.getAllByText('Expenses').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Bank reconciliation').length).toBeGreaterThan(0);
     expect(screen.getByText(/Unreconciled bank activity/i)).toBeInTheDocument();
+
+    expect(screen.getAllByText('Source: AI insights').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Source: Assistant context').length).toBeGreaterThan(0);
+    expect(screen.getByText('Entity: insight #risk-1')).toBeInTheDocument();
+    expect(screen.getByText('Entity: bankTransaction #4')).toBeInTheDocument();
+    expect(screen.getByText('Evidence: Unreconciled bank transaction')).toBeInTheDocument();
   });
 
   it('selects a high severity insight as the priority decision', async () => {

@@ -709,6 +709,18 @@ export default function AIManager() {
                           <div>
                             <p className="font-medium text-gray-950 dark:text-white">{item.title}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{item.reason}</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5" aria-label={'Evidence tags for ' + item.title}>
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                Source: {item.source}
+                              </span>
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                Entity: {item.entityType}
+                                {item.entityId ? ` #${item.entityId}` : ''}
+                              </span>
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                Evidence: {item.reason}
+                              </span>
+                            </div>
                             <Link className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300" to={item.route}>
                               {item.actionLabel}
                             </Link>
