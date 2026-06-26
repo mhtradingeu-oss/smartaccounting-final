@@ -6,7 +6,7 @@ const { cleanEnv, str, num } = require('envalid');
 const envSpec = {
   NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
   API_BASE_URL: str({ default: '/api' }),
-  PORT: num({ default: 3000 }),
+  PORT: num({ default: 5000 }),
   DB_HOST: str({ default: 'localhost' }),
   DB_USER: str({ default: 'testuser' }),
   DB_PASS: str({ default: 'testpass' }),
