@@ -5,7 +5,7 @@ import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 const shouldAnalyze = process.env.ANALYZE === 'true';
-const serverPort = Number(process.env.VITE_DEV_PORT || 3000);
+const serverPort = Number(process.env.VITE_DEV_PORT || 5173);
 const devServerHost = process.env.VITE_DEV_HOST || '0.0.0.0';
 const hmrHost = process.env.VITE_HMR_HOST;
 const hmrClientPort = Number(process.env.VITE_HMR_CLIENT_PORT || serverPort);

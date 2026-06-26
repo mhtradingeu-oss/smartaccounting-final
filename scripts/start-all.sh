@@ -26,16 +26,31 @@ echo "✔ Docker is running"
 echo ""
 echo "🧹 Cleaning frontend port..."
 
+FRONTEND_PID_FILE="logs/frontend.pid"
 pid=$(lsof -ti:5173 || true)
 
 if [ -n "$pid" ]; then
-  echo "   killing frontend port 5173 (PID $pid)"
-  kill -9 $pid 2>/dev/null || true
+  if [ -f "$FRONTEND_PID_FILE" ] && grep -qx "$pid" "$FRONTEND_PID_FILE"; then
+    echo "   stopping previous SmartAccounting frontend on port 5173 (PID $pid)"
+    kill "$pid" 2>/dev/null || true
+    sleep 1
+
+    if ps -p "$pid" >/dev/null 2>&1; then
+      echo "   previous frontend still running, forcing stop PID $pid"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+
+    rm -f "$FRONTEND_PID_FILE"
+  else
+    echo "❌ Port 5173 is already in use by PID $pid, but it is not tracked as SmartAccounting frontend."
+    echo "   To protect other projects, start-all.sh will not kill it automatically."
+    echo "   Please stop that process manually or choose another VITE_DEV_PORT."
+    exit 1
+  fi
 else
   echo "   port 5173 already free"
+  rm -f "$FRONTEND_PID_FILE"
 fi
-
-pkill -f "vite" >/dev/null 2>&1 || true
 
 echo "✔ Frontend environment cleaned"
 
@@ -89,9 +104,11 @@ echo "🌐 Starting Frontend (Vite)..."
 mkdir -p logs
 
 cd client
-npm run dev -- --port 5173 > ../logs/frontend.log 2>&1 &
+VITE_DEV_PORT=5173 VITE_HMR_CLIENT_PORT=5173 npm run dev -- --port 5173 > ../logs/frontend.log 2>&1 &
 FRONTEND_PID=$!
 cd ..
+
+echo "$FRONTEND_PID" > logs/frontend.pid
 
 # -----------------------------
 # 6. SYSTEM DASHBOARD
