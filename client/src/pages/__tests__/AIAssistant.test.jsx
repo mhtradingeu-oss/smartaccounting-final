@@ -188,6 +188,8 @@ describe('AI Assistant ChatGPT-like experience', () => {
     await waitFor(() =>
       expect(screen.getByLabelText('Type your question')).toHaveValue('Show VAT evidence gaps'),
     );
+    expect(screen.getByText('Review context from AI Manager')).toBeInTheDocument();
+    expect(screen.getByText(/prepared from a review queue item/i)).toBeInTheDocument();
     expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
   });
 

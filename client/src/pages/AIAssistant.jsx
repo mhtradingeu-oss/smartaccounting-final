@@ -186,6 +186,7 @@ const AIAssistant = () => {
   const recordingTimerRef = useRef(null);
   const aiAssistantEnabled = isAIAssistantEnabled();
   const queryPrompt = new URLSearchParams(location.search).get('prompt')?.slice(0, MAX_PROMPT_LENGTH) || '';
+  const hasQueryPrompt = Boolean(queryPrompt);
   const userRole = user?.role || 'viewer';
   const isSystemAdmin =
     userRole === 'admin' && (user?.companyId === null || user?.companyId === undefined);
@@ -2025,6 +2026,16 @@ const AIAssistant = () => {
           </div>
         </div>
         <AITrustBanner summary={trustSummary} items={trustItems} />
+
+        {hasQueryPrompt && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+            <div className="font-semibold">Review context from AI Manager</div>
+            <p className="mt-1">
+              This assistant prompt was prepared from a review queue item. Review it first,
+              then send it when ready. The assistant remains read-only and advisory.
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card>
