@@ -123,6 +123,16 @@ describe('AI Manager page', () => {
     expect(screen.getByText('Entity: insight #risk-1')).toBeInTheDocument();
     expect(screen.getByText('Entity: bankTransaction #4')).toBeInTheDocument();
     expect(screen.getByText('Evidence: Unreconciled bank transaction')).toBeInTheDocument();
+
+    const askAiLinks = screen.getAllByRole('link', { name: /Ask AI about this/i });
+    expect(askAiLinks.length).toBeGreaterThan(0);
+    expect(askAiLinks[0]).toHaveAttribute(
+      'href',
+      expect.stringContaining('/ai-assistant?prompt='),
+    );
+    expect(decodeURIComponent(askAiLinks[0].getAttribute('href'))).toContain(
+      'Review this accounting item:',
+    );
   });
 
   it('selects a high severity insight as the priority decision', async () => {

@@ -721,9 +721,17 @@ export default function AIManager() {
                                 Evidence: {item.reason}
                               </span>
                             </div>
-                            <Link className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300" to={item.route}>
-                              {item.actionLabel}
-                            </Link>
+                            <div className="mt-2 flex flex-wrap gap-3">
+                              <Link className="inline-flex text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300" to={item.route}>
+                                {item.actionLabel}
+                              </Link>
+                              <Link
+                                className="inline-flex text-xs font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-300"
+                                to={`/ai-assistant?prompt=${encodeURIComponent(`Review this accounting item: Entity ${item.entityType}${item.entityId ? ` #${item.entityId}` : ''}. Issue: ${item.title}. Evidence: ${item.reason}. Source: ${item.source}. Give me a read-only explanation, evidence checklist, and safest next review step.`)}`}
+                              >
+                                Ask AI about this
+                              </Link>
+                            </div>
                           </div>
                           <AISeverityPill severity={item.severity} />
                         </div>
