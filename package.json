@@ -19,7 +19,7 @@
     "seed:demo:prod": "node scripts/seed-demo-prod.js",
     "deploy:prod": "npm run migrate:prod && npm run smoke:frontend && docker build --tag smartaccounting:prod .",
     "db:migrate": "npx sequelize-cli db:migrate",
-    "db:verify": "node scripts/check-migrations.js",
+    "db:verify": "npm run db:verify:postgres",
     "db:rollback": "npx sequelize-cli db:migrate:undo",
     "db:seed": "npx sequelize-cli db:seed:all",
     "db:seed:undo": "npx sequelize-cli db:seed:undo",
@@ -34,7 +34,8 @@
     "test:sqlite": "USE_SQLITE=true jest",
     "test:postgres": "docker compose -f docker-compose.test.yml up -d --build db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"CI=true NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && CI=true NODE_ENV=test USE_SQLITE=false npx jest --runInBand --ci tests/postgres/complianceConstraints.test.js\" && docker compose -f docker-compose.test.yml down -v",
     "migrate:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate\" && docker compose -f docker-compose.test.yml down",
-    "seed:demo:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"DEMO_MODE=true ALLOW_DEMO_SEED=true NODE_ENV=test USE_SQLITE=false node scripts/seed-demo-prod.js\" && docker compose -f docker-compose.test.yml down"
+    "seed:demo:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"DEMO_MODE=true ALLOW_DEMO_SEED=true NODE_ENV=test USE_SQLITE=false node scripts/seed-demo-prod.js\" && docker compose -f docker-compose.test.yml down",
+    "db:verify:postgres": "docker compose -f docker-compose.test.yml up -d --build db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"CI=true NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && CI=true NODE_ENV=test USE_SQLITE=false node scripts/check-migrations.js\" && docker compose -f docker-compose.test.yml down -v"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
