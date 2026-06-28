@@ -60,23 +60,27 @@ const formatMetricValue = (metric) => {
 const QUICK_ACTIONS = [
   {
     title: 'Create invoice',
-    description: 'Issue a new invoice and keep revenue tracking up to date.',
+    description: 'Issue compliant invoices and keep revenue, VAT, and audit signals current.',
     to: '/invoices/create',
+    tag: 'Revenue',
   },
   {
     title: 'Add expense',
-    description: 'Record costs and keep profit metrics accurate.',
+    description: 'Record costs with VAT awareness and keep profitability accurate.',
     to: '/expenses/create',
+    tag: 'Costs',
   },
   {
     title: 'Import bank statement',
-    description: 'Upload transactions for reconciliation and audit readiness.',
+    description: 'Upload transactions for reconciliation, matching, and audit readiness.',
     to: '/bank-statements/import',
+    tag: 'Bank',
   },
   {
     title: 'Ask AI Assistant',
-    description: 'Use AI to understand financial activity and next actions.',
+    description: 'Ask for read-only, company-scoped analysis of KPIs, VAT gaps, and next actions.',
     to: '/ai-assistant',
+    tag: 'AI',
   },
 ];
 
@@ -376,17 +380,17 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+        <div className="grid gap-6 lg:grid-cols-[1fr_280px] lg:items-start">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-300">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-300">
               Accounting command center
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white">
               {t('navigation.dashboard')}
             </h1>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                   <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-200">
                     What needs attention today
                   </p>
@@ -394,12 +398,20 @@ const Dashboard = () => {
                     Accounting health: live company KPIs, VAT, audit signals, and invoice activity.
                   </p>
                 </div>
-                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900/60 dark:bg-blue-950/30">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/80 px-4 py-4 dark:border-blue-900/60 dark:bg-blue-950/30">
                   <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-200">
                     AI-safe assistant
                   </p>
                   <p className="mt-1 text-sm text-blue-950 dark:text-blue-100">
                     Read-only, company-scoped analysis with review required before accounting changes.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-4 dark:border-violet-900/60 dark:bg-violet-950/30">
+                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 dark:text-violet-200">
+                    Compliance cockpit
+                  </p>
+                  <p className="mt-1 text-sm text-violet-950 dark:text-violet-100">
+                    VAT, audit trail, bank reconciliation, and export readiness stay visible.
                   </p>
                 </div>
               </div>
@@ -408,9 +420,19 @@ const Dashboard = () => {
               bank activity, and operational signals in one place.
             </p>
           </div>
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
-            <div className="font-semibold">Company scope</div>
-            <div>{activeCompany.name}</div>
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-100">
+            <div className="text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-200">
+              Company scope
+            </div>
+            <div className="mt-2 font-semibold">{activeCompany.name}</div>
+            <div className="mt-4 grid gap-2 text-xs font-semibold">
+              <span className="rounded-full bg-white/80 px-3 py-1 text-blue-700 dark:bg-blue-950/60 dark:text-blue-200">
+                AI-safe · audit-aware
+              </span>
+              <span className="rounded-full bg-white/80 px-3 py-1 text-emerald-700 dark:bg-blue-950/60 dark:text-emerald-200">
+                Accounting truth enabled
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -514,14 +536,22 @@ const Dashboard = () => {
               <Link
                 key={action.to}
                 to={action.to}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-950 dark:hover:border-blue-700"
+                className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-950 dark:hover:border-blue-700"
               >
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {action.title}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {action.title}
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-950/50 dark:text-blue-200">
+                    {action.tag}
+                  </span>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                  <p className="mt-3 min-h-12 text-xs leading-5 text-gray-500 dark:text-gray-400">
                   {action.description}
                 </p>
+                <span className="mt-4 inline-flex text-xs font-semibold text-blue-700 group-hover:text-blue-600 dark:text-blue-300">
+                  Continue →
+                </span>
               </Link>
             ))}
           </div>
