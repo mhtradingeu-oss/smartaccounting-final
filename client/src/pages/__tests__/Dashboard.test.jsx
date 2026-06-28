@@ -141,6 +141,10 @@ describe('Dashboard', () => {
     expect(screen.getByText('Source: posted journal entries')).toBeInTheDocument();
     expect(screen.getByText('Total revenue')).toBeInTheDocument();
     expect(screen.getByText('Active users')).toBeInTheDocument();
+    expect(screen.getByText('Accounting command center')).toBeInTheDocument();
+    expect(screen.getByText('What needs attention today')).toBeInTheDocument();
+    expect(screen.getByText('AI-safe assistant')).toBeInTheDocument();
+    expect(screen.getByText(/Accounting health:/)).toBeInTheDocument();
   });
 
   it('shows a company selection empty state when no active company is set', async () => {

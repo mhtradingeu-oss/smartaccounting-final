@@ -380,11 +380,29 @@ const Dashboard = () => {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-300">
-              Executive Command Center
+              Accounting command center
             </p>
             <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
               {t('navigation.dashboard')}
             </h1>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-200">
+                    What needs attention today
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-emerald-950 dark:text-white">
+                    Accounting health: live company KPIs, VAT, audit signals, and invoice activity.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900/60 dark:bg-blue-950/30">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-200">
+                    AI-safe assistant
+                  </p>
+                  <p className="mt-1 text-sm text-blue-950 dark:text-blue-100">
+                    Read-only, company-scoped analysis with review required before accounting changes.
+                  </p>
+                </div>
+              </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300">
               Live financial overview for {activeCompany.name}: revenue, expenses, invoice status,
               bank activity, and operational signals in one place.
