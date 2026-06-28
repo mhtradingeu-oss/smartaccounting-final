@@ -93,7 +93,7 @@ const DashboardSkeleton = () => (
 
     <section className="space-y-4">
       <Skeleton className="h-6 w-36" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={`metric-skeleton-${index}`}
@@ -109,7 +109,7 @@ const DashboardSkeleton = () => (
 
     <section className="space-y-4">
       <Skeleton className="h-6 w-28" />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
           <div
             key={`trend-skeleton-${index}`}
@@ -130,7 +130,7 @@ const DashboardSkeleton = () => (
 
     <section className="space-y-4">
       <Skeleton className="h-6 w-32" />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
           <div
             key={`detail-skeleton-${index}`}
@@ -567,20 +567,20 @@ const Dashboard = () => {
             )}
           </div>
           {displayMetrics.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {displayMetrics.map((metric) => {
                 const formattedValue = formatMetricValue(metric);
                 return (
                   <div
                     key={metric.id}
-                    className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950"
+                    className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-950"
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="text-base font-medium text-gray-600 dark:text-gray-300">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
                         {metric.label}
                       </span>
                       <span
-                        className="text-2xl font-bold text-blue-700 dark:text-blue-300"
+                        className="text-3xl font-extrabold tracking-tight text-blue-700 dark:text-blue-300"
                         data-raw={metric.value}
                         data-format={metric.format || 'number'}
                         data-currency={metric.currency || undefined}
@@ -589,7 +589,7 @@ const Dashboard = () => {
                       </span>
                     </div>
                     {metric.description && (
-                      <span className="mt-2 block text-xs text-gray-500 dark:text-gray-400">
+                      <span className="mt-4 block text-xs leading-5 text-gray-500 dark:text-gray-400">
                         {metric.description}
                       </span>
                     )}
@@ -603,22 +603,22 @@ const Dashboard = () => {
         </section>
 
         <section>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Trends</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
-              <div className="flex items-center justify-between mb-4">
+          <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">Trends</h2>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+              <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Revenue trend</h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</span>
               </div>
               {hasTrends ? (
                 <div className="space-y-4">
-                  <div className="flex items-end gap-2 h-24">
+                  <div className="flex h-28 items-end gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
                     {trendSeries.map((point) => {
                       const height = maxRevenue > 0 ? Math.max(6, (point.revenue / maxRevenue) * 96) : 6;
                       return (
                         <div key={`rev-${point.month}`} className="flex-1">
                           <div
-                            className="rounded bg-primary-200"
+                            className="rounded-t-lg bg-blue-300 dark:bg-blue-700"
                             style={{ height: `${height}px` }}
                             title={formatNumber(point.revenue, { maximumFractionDigits: 2 })}
                           />
@@ -633,27 +633,27 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-32 text-center text-gray-500">
-                  <ChartBarIcon className="h-10 w-10 text-gray-300 mb-2" />
-                  <p className="text-sm">No revenue trend data yet.</p>
+                <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 text-center text-gray-500 dark:border-gray-800 dark:bg-gray-900/50">
+                  <ChartBarIcon className="mb-3 h-10 w-10 text-gray-300 dark:text-gray-700" />
+                  <p className="text-sm font-medium">No revenue trend data yet.</p>
                 </div>
               )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
-              <div className="flex items-center justify-between mb-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+              <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Invoice volume</h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</span>
               </div>
               {hasTrends ? (
                 <div className="space-y-4">
-                  <div className="flex items-end gap-2 h-24">
+                  <div className="flex h-28 items-end gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
                     {trendSeries.map((point) => {
                       const height = maxInvoices > 0 ? Math.max(6, (point.invoices / maxInvoices) * 96) : 6;
                       return (
                         <div key={`inv-${point.month}`} className="flex-1">
                           <div
-                            className="rounded bg-amber-200"
+                            className="rounded-t-lg bg-amber-300 dark:bg-amber-700"
                             style={{ height: `${height}px` }}
                             title={formatNumber(point.invoices)}
                           />
@@ -668,9 +668,9 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-32 text-center text-gray-500">
-                  <ChartBarIcon className="h-10 w-10 text-gray-300 mb-2" />
-                  <p className="text-sm">No invoice trend data yet.</p>
+                <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 text-center text-gray-500 dark:border-gray-800 dark:bg-gray-900/50">
+                  <ChartBarIcon className="mb-3 h-10 w-10 text-gray-300 dark:text-gray-700" />
+                  <p className="text-sm font-medium">No invoice trend data yet.</p>
                 </div>
               )}
             </div>
@@ -684,7 +684,7 @@ const Dashboard = () => {
               secondaryMetrics.length ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
             } gap-6`}
           >
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
               <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Invoice status mix</h3>
               {statusEntries.length ? (
                 <div className="space-y-3">
@@ -701,7 +701,7 @@ const Dashboard = () => {
             </div>
 
             {secondaryMetrics.length > 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                 <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Operational signals</h3>
                 <div className="space-y-3">
                   {secondaryMetrics.map((metric) => (
@@ -789,7 +789,7 @@ const Dashboard = () => {
               </div>
             )}
 
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-950">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
               <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Latest invoice</h3>
               {latestInvoice ? (
                 <div className="space-y-2 text-sm text-gray-600">
