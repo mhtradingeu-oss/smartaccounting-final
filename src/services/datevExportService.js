@@ -155,6 +155,7 @@ async function buildDatevExport({ companyId, from, to, kontenrahmen }) {
   const { kontenrahmen: kontenrahmenLabel, accounts } = resolveAccountSchema(kontenrahmen);
   const invoiceWhere = {
     companyId,
+    status: { [Op.in]: ['SENT', 'PAID', 'OVERDUE', 'PARTIALLY_PAID'] },
     ...buildDateWhere('date', from, to),
   };
   const expenseWhere = {

@@ -1,58 +1,72 @@
+const { Op } = require('sequelize');
 const { Invoice, Expense } = require('../../models');
 
 /**
- * Aggregates VAT from LOCKED invoices & expenses only
+ * Aggregates VAT from company-scoped invoices and expenses in a period.
+ *
+ * This utility is used by the demo UStVA endpoint. It must not depend on
+ * obsolete model columns such as `locked`; period locking is handled separately
+ * by the VAT demo flow.
  */
 async function aggregateVAT({ companyId, periodFrom, periodTo }) {
-  // Fetch locked invoices and expenses for the period
+  const dateRange = {
+    [Op.gte]: periodFrom,
+    [Op.lte]: periodTo,
+  };
+
   const invoices = await Invoice.findAll({
     where: {
       companyId,
-      locked: true,
-      date: { $gte: periodFrom, $lte: periodTo },
-    },
-  });
-  const expenses = await Expense.findAll({
-    where: {
-      companyId,
-      locked: true,
-      date: { $gte: periodFrom, $lte: periodTo },
+      date: dateRange,
     },
   });
 
-  // Initialize VAT totals
+  const expenses = await Expense.findAll({
+    where: {
+      companyId,
+      [Op.or]: [
+        { expenseDate: dateRange },
+        { date: dateRange },
+      ],
+    },
+  });
+
   const totals = {
     outputVAT: { 19: 0, 7: 0, reverseCharge: 0, eu: 0 },
     inputVAT: { 19: 0, 7: 0, reverseCharge: 0, eu: 0 },
   };
   const breakdown = [];
 
-  // Helper to add VAT by rate
+  function normalizeRate(rate) {
+    if (rate === 0.19 || rate === '0.19') return '19';
+    if (rate === 0.07 || rate === '0.07') return '7';
+    return String(rate);
+  }
+
   function addVAT(type, rate, amount) {
-    if (totals[type][rate] !== undefined) {
-      totals[type][rate] += amount;
+    const normalizedRate = normalizeRate(rate);
+    if (Object.prototype.hasOwnProperty.call(totals[type], normalizedRate)) {
+      totals[type][normalizedRate] += Number(amount || 0);
     }
   }
 
-  // Aggregate output VAT from invoices
-  for (const inv of invoices) {
-    // Assume inv.vatRate is one of: 19, 7, 'reverseCharge', 'eu'
-    const rate = inv.vatRate;
-    addVAT('outputVAT', rate, Number(inv.vatAmount || 0));
-    breakdown.push({ type: 'invoice', id: inv.id, rate, vat: inv.vatAmount });
+  for (const invoice of invoices) {
+    const rate = normalizeRate(invoice.vatRate ?? 19);
+    const vatAmount = Number(invoice.vatAmount ?? invoice.taxAmount ?? 0);
+    addVAT('outputVAT', rate, vatAmount);
+    breakdown.push({ type: 'invoice', id: invoice.id, rate, vat: vatAmount });
   }
 
-  // Aggregate input VAT from expenses
-  for (const exp of expenses) {
-    const rate = exp.vatRate;
-    addVAT('inputVAT', rate, Number(exp.vatAmount || 0));
-    breakdown.push({ type: 'expense', id: exp.id, rate, vat: exp.vatAmount });
+  for (const expense of expenses) {
+    const rate = normalizeRate(expense.vatRate ?? 19);
+    const vatAmount = Number(expense.vatAmount ?? 0);
+    addVAT('inputVAT', rate, vatAmount);
+    breakdown.push({ type: 'expense', id: expense.id, rate, vat: vatAmount });
   }
 
-  // Round totals to 2 decimals
-  Object.keys(totals.outputVAT).forEach((r) => {
-    totals.outputVAT[r] = Math.round(totals.outputVAT[r] * 100) / 100;
-    totals.inputVAT[r] = Math.round(totals.inputVAT[r] * 100) / 100;
+  Object.keys(totals.outputVAT).forEach((rate) => {
+    totals.outputVAT[rate] = Math.round(totals.outputVAT[rate] * 100) / 100;
+    totals.inputVAT[rate] = Math.round(totals.inputVAT[rate] * 100) / 100;
   });
 
   return { totals, breakdown };
