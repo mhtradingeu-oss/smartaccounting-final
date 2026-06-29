@@ -43,10 +43,10 @@ const getInvoiceSeverity = (invoice) => (
 
 const buildEntityLink = (item) => {
   const entityType = item?.entityType || item?.type;
-  if (entityType === 'invoice') return '/invoices';
-  if (entityType === 'bankTransaction') return '/bank-statements';
-  if (entityType === 'expense') return '/expenses';
-  if (entityType === 'insight') return '/ai-advisor';
+  if (entityType === 'invoice') {return '/invoices';}
+  if (entityType === 'bankTransaction') {return '/bank-statements';}
+  if (entityType === 'expense') {return '/expenses';}
+  if (entityType === 'insight') {return '/ai-advisor';}
   return '/ai-assistant';
 };
 

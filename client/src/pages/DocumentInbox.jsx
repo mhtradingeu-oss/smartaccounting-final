@@ -40,9 +40,9 @@ const STATUS_META = {
 const normalizeText = (value) => String(value || '').replace(/_/g, ' ');
 
 const formatDate = (value) => {
-  if (!value) return '—';
+  if (!value) {return '—';}
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) {return '—';}
   return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -50,8 +50,8 @@ const formatDate = (value) => {
 };
 
 const formatBoolean = (value) => {
-  if (value === true) return 'Yes';
-  if (value === false) return 'No';
+  if (value === true) {return 'Yes';}
+  if (value === false) {return 'No';}
   return '—';
 };
 
@@ -81,7 +81,7 @@ const DocumentInbox = () => {
   );
 
   const loadDocuments = useCallback(async () => {
-    if (!activeCompanyId) return;
+    if (!activeCompanyId) {return;}
 
     setStatus('loading');
     setErrorMessage('');

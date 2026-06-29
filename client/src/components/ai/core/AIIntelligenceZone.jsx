@@ -1,5 +1,5 @@
-import AIDecisionLayer from "../AIDecisionLayer";
-import AIFinancialControlPanel from "../AIFinancialControlPanel";
+import AIDecisionLayer from '../AIDecisionLayer';
+import AIFinancialControlPanel from '../AIFinancialControlPanel';
 
 export default function AIIntelligenceZone() {
   return (

@@ -6,9 +6,9 @@ import { formatApiError, SKIP_FORCE_LOGOUT_ON_401_FLAG } from '../services/api';
 import api from '../services/api';
 
 const formatDateTime = (value) => {
-  if (!value) return 'Not available';
+  if (!value) {return 'Not available';}
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Not available';
+  if (Number.isNaN(date.getTime())) {return 'Not available';}
   return date.toLocaleString();
 };
 
