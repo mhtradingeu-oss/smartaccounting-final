@@ -1,39 +1,40 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { ChartBarIcon } from '@heroicons/react/24/outline';
-import { useAuth } from '../context/AuthContext';
-import { useCompany } from '../context/CompanyContext';
-import { dashboardAPI } from '../services/dashboardAPI';
-import api, { formatApiError } from '../services/api';
-import { Button } from '../components/ui/Button';
-import Card from '../components/Card';
-import { Modal } from '../components/ui/Modal';
-import { PageEmptyState, PageErrorState } from '../components/ui/PageStates';
-import { EmptyState } from '../components/ui/EmptyState';
-import { Skeleton } from '../components/ui/Skeleton';
-import ReadOnlyBanner from '../components/ReadOnlyBanner';
-import { isReadOnlyRole } from '../lib/permissions';
-import { formatDate } from '../lib/utils/formatting';
-
-const statusLabel = (status = '') =>
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { ChartBarIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "../context/AuthContext";
+import { useCompany } from "../context/CompanyContext";
+import { dashboardAPI } from "../services/dashboardAPI";
+import api, { formatApiError } from "../services/api";
+import { Button } from "../components/ui/Button";
+import Card from "../components/Card";
+import { Modal } from "../components/ui/Modal";
+import { PageEmptyState, PageErrorState } from "../components/ui/PageStates";
+import { EmptyState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
+import ReadOnlyBanner from "../components/ReadOnlyBanner";
+import { isReadOnlyRole } from "../lib/permissions";
+import { formatDate } from "../lib/utils/formatting";
+import AIDecisionLayer from "../components/ai/AIDecisionLayer";
+import AIFinancialControlPanel from "../components/ai/AIFinancialControlPanel";
+const statusLabel = (status = "") =>
   status
     .toString()
     .split(/[\s_-]/)
     .filter(Boolean)
     .map((segment) => segment[0].toUpperCase() + segment.slice(1).toLowerCase())
-    .join(' ');
+    .join(" ");
 
 const formatNumber = (value, options = {}) => {
-  const formatter = new Intl.NumberFormat('en-US', {
+  const formatter = new Intl.NumberFormat("en-US", {
     maximumFractionDigits: options.maximumFractionDigits ?? 0,
   });
   return formatter.format(value);
 };
 
 const formatCurrency = (value, currency) => {
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency,
     maximumFractionDigits: 2,
   });
@@ -43,15 +44,15 @@ const formatCurrency = (value, currency) => {
 const formatMetricValue = (metric) => {
   const numericValue = Number(metric.value);
   if (!Number.isFinite(numericValue)) {
-    return '--';
+    return "--";
   }
-  if (metric.format === 'currency' && metric.currency) {
+  if (metric.format === "currency" && metric.currency) {
     return formatCurrency(numericValue, metric.currency);
   }
-  if (metric.format === 'percent') {
+  if (metric.format === "percent") {
     return `${formatNumber(numericValue, { maximumFractionDigits: 2 })}%`;
   }
-  if (metric.format === 'number') {
+  if (metric.format === "number") {
     return formatNumber(numericValue);
   }
   return formatNumber(numericValue, { maximumFractionDigits: 2 });
@@ -59,28 +60,28 @@ const formatMetricValue = (metric) => {
 
 const QUICK_ACTIONS = [
   {
-    title: 'Create invoice',
-    description: 'Issue compliant invoices and keep revenue, VAT, and audit signals current.',
-    to: '/invoices/create',
-    tag: 'Revenue',
+    title: "Create invoice",
+    description: "Issue compliant invoices and keep revenue, VAT, and audit signals current.",
+    to: "/invoices/create",
+    tag: "Revenue",
   },
   {
-    title: 'Add expense',
-    description: 'Record costs with VAT awareness and keep profitability accurate.',
-    to: '/expenses/create',
-    tag: 'Costs',
+    title: "Add expense",
+    description: "Record costs with VAT awareness and keep profitability accurate.",
+    to: "/expenses/create",
+    tag: "Costs",
   },
   {
-    title: 'Import bank statement',
-    description: 'Upload transactions for reconciliation, matching, and audit readiness.',
-    to: '/bank-statements/import',
-    tag: 'Bank',
+    title: "Import bank statement",
+    description: "Upload transactions for reconciliation, matching, and audit readiness.",
+    to: "/bank-statements/import",
+    tag: "Bank",
   },
   {
-    title: 'Ask AI Assistant',
-    description: 'Ask for read-only, company-scoped analysis of KPIs, VAT gaps, and next actions.',
-    to: '/ai-assistant',
-    tag: 'AI',
+    title: "Ask AI Assistant",
+    description: "Ask for read-only, company-scoped analysis of KPIs, VAT gaps, and next actions.",
+    to: "/ai-assistant",
+    tag: "AI",
   },
 ];
 
@@ -153,10 +154,10 @@ const Dashboard = () => {
   const { activeCompany } = useCompany();
 
   // Only show demo UI if explicitly enabled
-  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
   const isReadOnly = isReadOnlyRole(user?.role);
-  const canViewInvestorDashboard = ['auditor', 'accountant', 'admin'].includes(user?.role);
+  const canViewInvestorDashboard = ["auditor", "accountant", "admin"].includes(user?.role);
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -199,12 +200,12 @@ const Dashboard = () => {
         setDisabled(false);
         setDashboardData(null);
         if (err?.rateLimited || err?.status === 429) {
-          setRateLimitMessage(err.message || 'Too many requests. Please try again shortly.');
+          setRateLimitMessage(err.message || "Too many requests. Please try again shortly.");
           setTimeNow(Date.now());
           setCooldownExpiresAt(Date.now() + (err.cooldownMs || 60000));
           return;
         }
-        setError(formatApiError(err, 'Unable to load dashboard metrics.'));
+        setError(formatApiError(err, "Unable to load dashboard metrics."));
       } finally {
         setLoading(false);
       }
@@ -241,13 +242,11 @@ const Dashboard = () => {
   }, [cooldownExpiresAt, timeNow]);
 
   const metrics = dashboardData?.metrics || [];
-  const primaryMetrics = metrics.filter((metric) => metric.priority === 'primary');
-  const secondaryMetrics = metrics.filter((metric) => metric.priority === 'secondary');
+  const primaryMetrics = metrics.filter((metric) => metric.priority === "primary");
+  const secondaryMetrics = metrics.filter((metric) => metric.priority === "secondary");
   const displayMetrics = primaryMetrics.length ? primaryMetrics : metrics;
 
-  const monthlySeries = Array.isArray(dashboardData?.monthlyData)
-    ? dashboardData.monthlyData
-    : [];
+  const monthlySeries = Array.isArray(dashboardData?.monthlyData) ? dashboardData.monthlyData : [];
   const trendSeries = monthlySeries.slice(-6);
   const maxRevenue = Math.max(...trendSeries.map((item) => Number(item.revenue) || 0), 0);
   const maxInvoices = Math.max(...trendSeries.map((item) => Number(item.invoices) || 0), 0);
@@ -265,13 +264,13 @@ const Dashboard = () => {
 
   const latestInvoice = dashboardData?.latestInvoice;
   const hasAccountingTruth =
-    dashboardData?.financialOverview?.source === 'posted_journal_entries' &&
-    dashboardData?.financialOverview?.status !== 'unavailable';
+    dashboardData?.financialOverview?.source === "posted_journal_entries" &&
+    dashboardData?.financialOverview?.status !== "unavailable";
   const vatSummary = dashboardData?.financialOverview?.vatSummary || null;
   const hasVatSummary =
     hasAccountingTruth &&
     vatSummary &&
-    ['inputVat', 'outputVat', 'netVatPayable'].some((key) =>
+    ["inputVat", "outputVat", "netVatPayable"].some((key) =>
       Number.isFinite(Number(vatSummary[key])),
     );
   const auditReadiness = dashboardData?.auditReadiness || null;
@@ -282,7 +281,8 @@ const Dashboard = () => {
   const hasTrends = trendSeries.some(
     (point) => (Number(point.revenue) || 0) > 0 || (Number(point.invoices) || 0) > 0,
   );
-  const hasDetails = statusEntries.length > 0 || latestInvoice || hasVatSummary || hasAuditReadiness;
+  const hasDetails =
+    statusEntries.length > 0 || latestInvoice || hasVatSummary || hasAuditReadiness;
 
   const handleLoadDemoData = async () => {
     setDemoLoading(true);
@@ -290,11 +290,11 @@ const Dashboard = () => {
     setDemoSuccess(false);
 
     try {
-      const response = await api.post('/admin/demo-data/load');
+      const response = await api.post("/admin/demo-data/load");
       const data = response?.data || response;
 
       if (!data?.success) {
-        throw new Error(data?.message || 'Failed to load demo data');
+        throw new Error(data?.message || "Failed to load demo data");
       }
 
       setDemoSuccess(true);
@@ -316,7 +316,7 @@ const Dashboard = () => {
         title="Select a company to view the dashboard"
         description="Executive metrics are scoped to the active company. Choose a company to load live KPIs, trends, and details."
         action={
-          <Button variant="primary" onClick={() => navigate('/companies')}>
+          <Button variant="primary" onClick={() => navigate("/companies")}>
             Select company
           </Button>
         }
@@ -329,7 +329,12 @@ const Dashboard = () => {
   }
 
   if (error) {
-    return <PageErrorState message={error?.message} onRetry={() => fetchDashboardData({ force: true })} />;
+    return (
+      <PageErrorState
+        message={error?.message}
+        onRetry={() => fetchDashboardData({ force: true })}
+      />
+    );
   }
 
   if (rateLimitMessage) {
@@ -343,7 +348,7 @@ const Dashboard = () => {
         <p className="text-sm text-amber-900">{rateLimitMessage}</p>
         {cooldownRemaining > 0 && (
           <p className="text-xs text-amber-700">
-            Cooldown resets in {cooldownRemaining} second{cooldownRemaining !== 1 ? 's' : ''}
+            Cooldown resets in {cooldownRemaining} second{cooldownRemaining !== 1 ? "s" : ""}
           </p>
         )}
         <Button
@@ -370,7 +375,7 @@ const Dashboard = () => {
         action={
           <Link to="/invoices">
             <Button variant="primary" size="small">
-              {t('states.empty.action')}
+              {t("states.empty.action")}
             </Button>
           </Link>
         }
@@ -387,34 +392,37 @@ const Dashboard = () => {
               Accounting command center
             </p>
             <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white">
-              {t('navigation.dashboard')}
+              {t("navigation.dashboard")}
             </h1>
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-200">
-                    What needs attention today
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-emerald-950 dark:text-white">
-                    Accounting health: live company KPIs, VAT, audit signals, and invoice activity.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-blue-200 bg-blue-50/80 px-4 py-4 dark:border-blue-900/60 dark:bg-blue-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-200">
-                    AI-safe assistant
-                  </p>
-                  <p className="mt-1 text-sm text-blue-950 dark:text-blue-100">
-                    Read-only, company-scoped analysis with review required before accounting changes.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-4 dark:border-violet-900/60 dark:bg-violet-950/30">
-                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 dark:text-violet-200">
-                    Compliance cockpit
-                  </p>
-                  <p className="mt-1 text-sm text-violet-950 dark:text-violet-100">
-                    VAT, audit trail, bank reconciliation, and export readiness stay visible.
-                  </p>
-                </div>
+
+            <AIFinancialControlPanel />
+
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-200">
+                  What needs attention today
+                </p>
+                <p className="mt-1 text-sm font-semibold text-emerald-950 dark:text-white">
+                  Accounting health: live company KPIs, VAT, audit signals, and invoice activity.
+                </p>
               </div>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/80 px-4 py-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+                <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-200">
+                  AI-safe assistant
+                </p>
+                <p className="mt-1 text-sm text-blue-950 dark:text-blue-100">
+                  Read-only, company-scoped analysis with review required before accounting changes.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-4 dark:border-violet-900/60 dark:bg-violet-950/30">
+                <p className="text-xs font-bold uppercase tracking-widest text-violet-700 dark:text-violet-200">
+                  Compliance cockpit
+                </p>
+                <p className="mt-1 text-sm text-violet-950 dark:text-violet-100">
+                  VAT, audit trail, bank reconciliation, and export readiness stay visible.
+                </p>
+              </div>
+            </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300">
               Live financial overview for {activeCompany.name}: revenue, expenses, invoice status,
               bank activity, and operational signals in one place.
@@ -437,7 +445,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {isDemoMode && user?.role === 'admin' && (
+      {isDemoMode && user?.role === "admin" && (
         <>
           <div className="flex justify-end mb-4">
             <Button
@@ -489,7 +497,7 @@ const Dashboard = () => {
                   onClick={handleLoadDemoData}
                   disabled={demoLoading || demoSuccess}
                 >
-                  {demoLoading ? 'Loading...' : 'Confirm'}
+                  {demoLoading ? "Loading..." : "Confirm"}
                 </Button>
               </div>
             </Modal>
@@ -499,7 +507,7 @@ const Dashboard = () => {
 
       <div className="space-y-12">
         {isReadOnly && (
-          <ReadOnlyBanner mode="Viewer" message={t('states.read_only.dashboard_notice')} />
+          <ReadOnlyBanner mode="Viewer" message={t("states.read_only.dashboard_notice")} />
         )}
 
         {canViewInvestorDashboard && (
@@ -546,7 +554,7 @@ const Dashboard = () => {
                     {action.tag}
                   </span>
                 </div>
-                  <p className="mt-3 min-h-12 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                <p className="mt-3 min-h-12 text-xs leading-5 text-gray-500 dark:text-gray-400">
                   {action.description}
                 </p>
                 <span className="mt-4 inline-flex text-xs font-semibold text-blue-700 group-hover:text-blue-600 dark:text-blue-300">
@@ -582,7 +590,7 @@ const Dashboard = () => {
                       <span
                         className="text-3xl font-extrabold tracking-tight text-blue-700 dark:text-blue-300"
                         data-raw={metric.value}
-                        data-format={metric.format || 'number'}
+                        data-format={metric.format || "number"}
                         data-currency={metric.currency || undefined}
                       >
                         {formattedValue}
@@ -607,14 +615,17 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Revenue trend</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  Revenue trend
+                </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</span>
               </div>
               {hasTrends ? (
                 <div className="space-y-4">
                   <div className="flex h-28 items-end gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
                     {trendSeries.map((point) => {
-                      const height = maxRevenue > 0 ? Math.max(6, (point.revenue / maxRevenue) * 96) : 6;
+                      const height =
+                        maxRevenue > 0 ? Math.max(6, (point.revenue / maxRevenue) * 96) : 6;
                       return (
                         <div key={`rev-${point.month}`} className="flex-1">
                           <div
@@ -642,14 +653,17 @@ const Dashboard = () => {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Invoice volume</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  Invoice volume
+                </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</span>
               </div>
               {hasTrends ? (
                 <div className="space-y-4">
                   <div className="flex h-28 items-end gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900/60">
                     {trendSeries.map((point) => {
-                      const height = maxInvoices > 0 ? Math.max(6, (point.invoices / maxInvoices) * 96) : 6;
+                      const height =
+                        maxInvoices > 0 ? Math.max(6, (point.invoices / maxInvoices) * 96) : 6;
                       return (
                         <div key={`inv-${point.month}`} className="flex-1">
                           <div
@@ -681,28 +695,38 @@ const Dashboard = () => {
           <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Details</h2>
           <div
             className={`grid grid-cols-1 ${
-              secondaryMetrics.length ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+              secondaryMetrics.length ? "lg:grid-cols-3" : "lg:grid-cols-2"
             } gap-6`}
           >
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Invoice status mix</h3>
+              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                Invoice status mix
+              </h3>
               {statusEntries.length ? (
                 <div className="space-y-3">
                   {statusEntries.map(([status, count]) => (
                     <div key={status} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-300">{statusLabel(status)}</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{formatNumber(count)}</span>
+                      <span className="text-gray-600 dark:text-gray-300">
+                        {statusLabel(status)}
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatNumber(count)}
+                      </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No invoice status data yet.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No invoice status data yet.
+                </p>
               )}
             </div>
 
             {secondaryMetrics.length > 0 && (
               <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-                <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Operational signals</h3>
+                <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  Operational signals
+                </h3>
                 <div className="space-y-3">
                   {secondaryMetrics.map((metric) => (
                     <div key={metric.id} className="flex items-center justify-between text-sm">
@@ -710,7 +734,7 @@ const Dashboard = () => {
                       <span
                         className="font-semibold text-gray-900 dark:text-white"
                         data-raw={metric.value}
-                        data-format={metric.format || 'number'}
+                        data-format={metric.format || "number"}
                         data-currency={metric.currency || undefined}
                       >
                         {formatMetricValue(metric)}
@@ -728,18 +752,21 @@ const Dashboard = () => {
                     Audit readiness
                   </h3>
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase text-amber-700 dark:bg-amber-950 dark:text-amber-200">
-                    {auditReadiness.status || 'review'}
+                    {auditReadiness.status || "review"}
                   </span>
                 </div>
                 <div className="space-y-3">
                   {auditSignals.slice(0, 4).map((signal) => (
-                    <div key={signal.id || signal.title} className="rounded-lg bg-white/70 p-3 dark:bg-amber-950/40">
+                    <div
+                      key={signal.id || signal.title}
+                      className="rounded-lg bg-white/70 p-3 dark:bg-amber-950/40"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-amber-950 dark:text-white">
                           {signal.title}
                         </p>
                         <span className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-200">
-                          {signal.severity || 'info'}
+                          {signal.severity || "info"}
                         </span>
                       </div>
                       {signal.description && (
@@ -765,21 +792,30 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-emerald-700 dark:text-emerald-200">Input VAT</span>
                     <span className="font-semibold text-emerald-950 dark:text-white">
-                      {formatCurrency(Number(vatSummary.inputVat) || 0, dashboardData.currency || 'EUR')}
+                      {formatCurrency(
+                        Number(vatSummary.inputVat) || 0,
+                        dashboardData.currency || "EUR",
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-emerald-700 dark:text-emerald-200">Output VAT</span>
                     <span className="font-semibold text-emerald-950 dark:text-white">
-                      {formatCurrency(Number(vatSummary.outputVat) || 0, dashboardData.currency || 'EUR')}
+                      {formatCurrency(
+                        Number(vatSummary.outputVat) || 0,
+                        dashboardData.currency || "EUR",
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-emerald-200 pt-3 dark:border-emerald-900/60">
                     <span className="text-emerald-700 dark:text-emerald-200">
-                      {vatSummary.isPayable ? 'Net VAT payable' : 'Net VAT refundable'}
+                      {vatSummary.isPayable ? "Net VAT payable" : "Net VAT refundable"}
                     </span>
                     <span className="font-semibold text-emerald-950 dark:text-white">
-                      {formatCurrency(Math.abs(Number(vatSummary.netVatPayable) || 0), dashboardData.currency || 'EUR')}
+                      {formatCurrency(
+                        Math.abs(Number(vatSummary.netVatPayable) || 0),
+                        dashboardData.currency || "EUR",
+                      )}
                     </span>
                   </div>
                 </div>
@@ -790,7 +826,9 @@ const Dashboard = () => {
             )}
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
-              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Latest invoice</h3>
+              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                Latest invoice
+              </h3>
               {latestInvoice ? (
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center justify-between">
@@ -812,7 +850,7 @@ const Dashboard = () => {
                         ? latestInvoice.currency
                           ? formatCurrency(latestInvoice.amount, latestInvoice.currency)
                           : formatNumber(latestInvoice.amount, { maximumFractionDigits: 2 })
-                        : '--'}
+                        : "--"}
                     </span>
                   </div>
                   {latestInvoice.createdAt && (
