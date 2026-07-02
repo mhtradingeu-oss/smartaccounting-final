@@ -1,0 +1,539 @@
+================================================================
+PHASE 0 — BASELINE LOCK / SOURCE OF TRUTH
+SCAN ONLY - NO PATCH - NO STAGE - NO COMMIT
+Timestamp: 20260703_005129
+================================================================
+
+1. GIT TRUTH
+## main...origin/main
+?? docs/AUDIT/PHASE_0_BASELINE_LOCK_20260703_005129.txt
+main
+bc8dd44 (HEAD -> main, origin/main) Merge pull request #28 from mhtradingeu-oss/cleanup/final-clean-architecture
+ddbeed9 (origin/cleanup/final-clean-architecture, cleanup/final-clean-architecture) fix: sync client package lock for CI
+5b12ba1 ci: stabilize postgres test workflow
+c0a149c ci: add postgres test diagnostics
+960404b fix: resolve test docker voice orchestrator path
+55c9d25 fix: resolve lint blockers for PR guard
+d815d07 (tag: safety-main-cleanup-d815d07, backup/local-main-after-cleanup-d815d07) docs: add frontend readiness audit report
+f486647 fix: stabilize frontend routing auth and company state
+253935a refactor: route voice through AI orchestrator
+510afcb chore: lock runtime environment and voice guards
+da1c7a7 (tag: safety-snapshot-before-cleanup-da1c7a7) chore: safety snapshot before architecture cleanup
+40afbdc (origin/backup/current-state-before-cleanup, backup/current-state-before-cleanup) feat: UI-4C real-time backend-to-frontend AI streaming integration
+
+HEAD:
+bc8dd44d2c2b659398f37d416c2805d891218af8
+
+origin/main:
+bc8dd44d2c2b659398f37d416c2805d891218af8
+
+diff local vs origin/main:
+
+untracked:
+docs/AUDIT/PHASE_0_BASELINE_LOCK_20260703_005129.txt
+
+modified:
+
+staged:
+
+2. MERGE / PR TRUTH
+bc8dd44 (HEAD -> main, origin/main) Merge pull request #28 from mhtradingeu-oss/cleanup/final-clean-architecture
+979dd0a Merge pull request #27 from mhtradingeu-oss/pr/fix-system-admin-route-access
+22a5165 Merge pull request #26 from mhtradingeu-oss/pr/align-demo-invoice-number-normalizer
+791bbe0 Merge pull request #25 from mhtradingeu-oss/pr/clean-local-generated-ignore-rules
+8492f5e Merge pull request #24 from mhtradingeu-oss/pr/extend-api-timeout-in-dev
+
+  audit/snapshot-before-fixes                bfabb95 fix: restore backend startup and compliance test flow
+  backup/current-state-before-cleanup        40afbdc [origin/backup/current-state-before-cleanup] feat: UI-4C real-time backend-to-frontend AI streaming integration
+  backup/local-main-after-cleanup-d815d07    d815d07 docs: add frontend readiness audit report
+  chore/local-docker-smoke-verify            14c5d57 chore(release): finalize v1.0.0 stability, audit, demo seed and docs
+  cleanup/final-clean-architecture           ddbeed9 [origin/cleanup/final-clean-architecture] fix: sync client package lock for CI
+  fix/error-handler-and-ai-guard-260111-main 345739d [origin/fix/error-handler-and-ai-guard-260111-main] chore: remove dev-dryrun artifacts
+* main                                       bc8dd44 [origin/main] Merge pull request #28 from mhtradingeu-oss/cleanup/final-clean-architecture
+  production-ready                           69c2d69 chore(env): remove prod env files, enforce runtime config & hardening
+  release/production                         c80841e [origin/release/production: gone] chore(db): unify sequelize config and sqlite/postgres parity
+
+3. REQUIRED SCRIPTS
+{
+  "start": "npm run start:all",
+  "dev": "npm run start:all",
+  "startAll": "bash scripts/start-all.sh",
+  "stopAll": "bash scripts/stop-all.sh",
+  "lint": "eslint .",
+  "testPostgres": "bash scripts/ci-postgres-test.sh",
+  "runtime": "node scripts/runtime-guard.js",
+  "env": "node scripts/env-guard.js",
+  "voice": "node scripts/voice-guard.js"
+}
+
+4. CI FILE
+.github/workflows/ci.yml
+name: CI – Validate, Lint & Test
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release/*
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: ["22.x"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  test:
+    name: Test
+    needs: lint
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: ["22.x"]
+    env:
+      NODE_ENV: test
+      JWT_SECRET: test-jwt-secret-32-char-placeholder
+      FRONTEND_URL: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⚠️ IMPORTANT:
+      # npm cache is intentionally DISABLED here to avoid Jest resolver issues
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies (clean)
+        run: npm ci
+
+      - name: Run Jest suites
+        run: npm run test:postgres
+      - name: Frontend build smoke check
+        run: npm run smoke:frontend
+
+  client:
+    name: Build client bundle
+    needs: test
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: ["22.x"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js for client
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Build client bundle
+        run: npm run build --prefix client
+
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Docker build
+    needs: client
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        run: docker build --tag smartaccounting:ci .
+
+5. QUALITY GATES
+
+> smartaccounting@1.0.0 runtime:check
+> node scripts/runtime-guard.js
+
+RUNTIME GUARD PASS: start:all / stop:all are the locked daily runtime.
+
+> smartaccounting@1.0.0 env:check
+> node scripts/env-guard.js
+
+ENV GUARD PASS: environment source of truth is locked.
+
+> smartaccounting@1.0.0 voice:check
+> node scripts/voice-guard.js
+
+VOICE GUARD PASS: voice is locked to /api/ai/voice and safe assistant flow.
+
+> smartaccounting@1.0.0 lint
+> eslint .
+
+
+/Users/nadeemnour/smartaccounting-final/client/src/navigation/sidebarNavigation.js
+   9:3   warning  'ShieldCheckIcon' is defined but never used       no-unused-vars
+  25:22  warning  'ShieldCheckIconSolid' is defined but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/AIAssistant.jsx
+  416:6  warning  React Hook useEffect has a missing dependency: 'resetAssistantState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/Companies.jsx
+  82:5  warning  React Hook useCallback has an unnecessary dependency: 'setCompanies'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/__tests__/AIAssistant.test.jsx
+  2:10  warning  'act' is defined but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/ai-hub/AiHub.jsx
+  5:10  warning  'aiAssistantAPI' is defined but never used            no-unused-vars
+  9:24  warning  'setSystemStatus' is assigned a value but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/client/src/services/ocrAPI.js
+  64:22  warning  '_companyId' is assigned a value but never used  no-unused-vars
+  74:22  warning  '_companyId' is assigned a value but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/services/ai/aiAssistantService.js
+  916:11  warning  'sanitizedPrompt' is assigned a value but never used  no-unused-vars
+  916:28  warning  'prompt' is assigned a value but never used           no-unused-vars
+  916:36  warning  'rawPrompt' is assigned a value but never used        no-unused-vars
+  916:47  warning  'stack' is assigned a value but never used            no-unused-vars
+  916:54  warning  'error' is assigned a value but never used            no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/services/bankImportService.js
+   5:23  warning  'xmlString' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+  11:21  warning  'mt940String' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  17:19  warning  'pdfBuffer' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/utils/bank/ocrStatementParser.js
+  2:7   warning  'BankTransaction' is assigned a value but never used                         no-unused-vars
+  4:28  warning  'pdfBuffer' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/utils/datev/datevValidators.js
+  4:40  warning  'records' is defined but never used. Allowed unused args must match /^_/u     no-unused-vars
+  9:36  warning  'records' is defined but never used. Allowed unused args must match /^_/u     no-unused-vars
+  9:45  warning  'fiscalYear' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+✖ 22 problems (0 errors, 22 warnings)
+
+
+> smart-accounting-frontend@0.0.0 build
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 919 modules transformed.
+Generated an empty chunk: "vendor".
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/nadeemnour/smartaccounting-final/client/src/components/ui/Modal.jsx is dynamically imported by /Users/nadeemnour/smartaccounting-final/client/src/components/ui/AsyncModal.jsx but also statically imported by /Users/nadeemnour/smartaccounting-final/client/src/components/ui/AsyncModal.jsx, /Users/nadeemnour/smartaccounting-final/client/src/pages/Dashboard.jsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                   0.68 kB │ gzip:   0.40 kB
+dist/assets/index-B3ZU8q0O.css  113.07 kB │ gzip:  16.00 kB
+dist/assets/vendor-l0sNRNKZ.js    0.00 kB │ gzip:   0.02 kB
+dist/assets/router-CbApHHoq.js  180.08 kB │ gzip:  59.27 kB
+dist/assets/index-D1y9Awyt.js   676.36 kB │ gzip: 173.46 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.19s
+
+> smartaccounting@1.0.0 test:postgres
+> bash scripts/ci-postgres-test.sh
+
+[ci-postgres-test] starting docker services
+#1 [internal] load local bake definitions
+#1 reading from stdin 571B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile.backend
+#2 transferring dockerfile: 371B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:20-bullseye
+#3 DONE 1.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 607B done
+#4 DONE 0.0s
+
+#5 [1/7] FROM docker.io/library/node:20-bullseye@sha256:c0122351f25f04facee976f9db7214789eabadb489f4e4aea9cd00a0d6af77c4
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 1.08MB 0.1s done
+#6 DONE 0.1s
+
+#7 [2/7] WORKDIR /usr/src/app
+#7 CACHED
+
+#8 [3/7] RUN apt-get update && apt-get install -y   python3   make   g++   curl   && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [4/7] COPY package.json package-lock.json ./
+#9 CACHED
+
+#10 [5/7] RUN npm ci
+#10 CACHED
+
+#11 [6/7] COPY . .
+#11 DONE 0.7s
+
+#12 [7/7] RUN mkdir -p logs uploads temp
+#12 DONE 0.3s
+
+#13 exporting to image
+#13 exporting layers 0.1s done
+#13 writing image sha256:7b2ac6c55a98e559bafff4ca74d91d2c210cb5b4b0c7fe18c6129647e66b6e82
+#13 writing image sha256:7b2ac6c55a98e559bafff4ca74d91d2c210cb5b4b0c7fe18c6129647e66b6e82 done
+#13 naming to docker.io/library/smartaccounting-final-backend done
+#13 DONE 0.1s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ smartaccounting-final-backend  Built
+ Volume smartaccounting-final_pgdata_test  Creating
+ Volume smartaccounting-final_pgdata_test  Created
+time="2026-07-03T00:51:45+02:00" level=warning msg="Found orphan containers ([smartaccounting-redis-dev]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container smartaccounting-db-dev  Recreate
+ Container smartaccounting-db-dev  Recreated
+ Container smartaccounting-backend-dev  Recreate
+ Container smartaccounting-backend-dev  Recreated
+ Container smartaccounting-db-test  Starting
+ Container smartaccounting-db-test  Started
+ Container smartaccounting-db-test  Waiting
+ Container smartaccounting-db-test  Healthy
+ Container smartaccounting-backend-test  Starting
+ Container smartaccounting-backend-test  Started
+[ci-postgres-test] waiting for postgres
+[wait-for-postgres] compose=docker-compose.test.yml service=db
+[wait-for-postgres] container found: 0f44590e40a405e38050d8879841f45dc9159cb4a2ac4cee5499e46448e125f6
+[wait-for-postgres] checking pg_isready (user=postgres, db=postgres)
+[wait-for-postgres] Postgres is READY
+[ci-postgres-test] allowing backend to settle
+[ci-postgres-test] docker status
+NAME                           IMAGE                           COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+smartaccounting-backend-test   smartaccounting-final-backend   "docker-entrypoint.s…"   backend   13 seconds ago   Up 5 seconds              5001/tcp
+smartaccounting-db-test        postgres:16                     "docker-entrypoint.s…"   db        13 seconds ago   Up 11 seconds (healthy)   0.0.0.0:5442->5432/tcp, [::]:5442->5432/tcp
+smartaccounting-redis-dev      redis:7-alpine                  "docker-entrypoint.s…"   redis     14 minutes ago   Up 14 minutes (healthy)   0.0.0.0:6381->6379/tcp, [::]:6381->6379/tcp
+[ci-postgres-test] backend status: running
+[ci-postgres-test] running migrations and postgres compliance tests
+
+[4mSequelize CLI [Node: 20.20.2, CLI: 6.6.3, ORM: 6.37.8][24m
+
+Loaded configuration file "config/sequelize.js".
+Using environment "test".
+== 20251225000100-create-companies: migrating =======
+== 20251225000100-create-companies: migrated (0.031s)
+
+== 20251225000200-create-users: migrating =======
+== 20251225000200-create-users: migrated (0.011s)
+
+== 20251225000300-create-revoked-tokens: migrating =======
+== 20251225000300-create-revoked-tokens: migrated (0.011s)
+
+== 20251225000400-create-audit-logs: migrating =======
+== 20251225000400-create-audit-logs: migrated (0.026s)
+
+== 20251225000500-create-invoices: migrating =======
+== 20251225000500-create-invoices: migrated (0.020s)
+
+== 20251225000600-create-invoice-items: migrating =======
+== 20251225000600-create-invoice-items: migrated (0.008s)
+
+== 20251225000700-create-expenses: migrating =======
+== 20251225000700-create-expenses: migrated (0.010s)
+
+== 20251225000800-create-bank-statements: migrating =======
+== 20251225000800-create-bank-statements: migrated (0.010s)
+
+== 20251225000900-create-bank-transactions: migrating =======
+== 20251225000900-create-bank-transactions: migrated (0.009s)
+
+== 20251225001000-create-tax-reports: migrating =======
+== 20251225001000-create-tax-reports: migrated (0.014s)
+
+== 20251225001300-create-active-tokens: migrating =======
+== 20251225001300-create-active-tokens: migrated (0.007s)
+
+== 20251227000000-extend-demo-schema: migrating =======
+== 20251227000000-extend-demo-schema: migrated (0.019s)
+
+== 20251227001000-create-file-attachments: migrating =======
+== 20251227001000-create-file-attachments: migrated (0.009s)
+
+== 20251228000100-create-transactions: migrating =======
+== 20251228000100-create-transactions: migrated (0.009s)
+
+== 20251228000200-update-tax-reports-schema: migrating =======
+== 20251228000200-update-tax-reports-schema: migrated (0.031s)
+
+== 20251228000300-extend-bank-transactions: migrating =======
+== 20251228000300-extend-bank-transactions: migrated (0.006s)
+
+== 20251228000400-add-ai-enabled-to-companies: migrating =======
+== 20251228000400-add-ai-enabled-to-companies: migrated (0.006s)
+
+== 20251228000500-create-bank-statement-import-dry-runs: migrating =======
+== 20251228000500-create-bank-statement-import-dry-runs: migrated (0.010s)
+
+== 20251229100000-add-missing-aiinsight-columns: migrating =======
+[SKIP] ai_insights table not found – skipping column additions
+== 20251229100000-add-missing-aiinsight-columns: migrated (0.009s)
+
+== 20251229101000-align-taxreport-id-type: migrating =======
+[INFO] tax_reports.id_new promoted to UUID PK (id_old retained)
+== 20251229101000-align-taxreport-id-type: migrated (0.014s)
+
+== 20251229102000-align-activetoken-revokedtoken-id: migrating =======
+== 20251229102000-align-activetoken-revokedtoken-id: migrated (0.013s)
+
+== 20251230100000-create-ai-insights: migrating =======
+== 20251230100000-create-ai-insights: migrated (0.021s)
+
+== 20260102000000-set-invoice-items-id-default: migrating =======
+== 20260102000000-set-invoice-items-id-default: migrated (0.003s)
+
+== 20260105000000-create-ai-insight-decisions: migrating =======
+== 20260105000000-create-ai-insight-decisions: migrated (0.010s)
+
+== 20260106000000-add-audit-log-immutable: migrating =======
+== 20260106000000-add-audit-log-immutable: migrated (0.003s)
+
+== 20260106160913-fix-file-attachments-missing-columns: migrating =======
+== 20260106160913-fix-file-attachments-missing-columns: migrated (0.032s)
+
+== 20260107000000-align-ai-insights-schema: migrating =======
+== 20260107000000-align-ai-insights-schema: migrated (0.019s)
+
+== 20260107_create_invoice_payments_and_paid_fields: migrating =======
+== 20260107_create_invoice_payments_and_paid_fields: migrated (0.007s)
+
+== 20260108001000-add-financial-integrity-checks: migrating =======
+== 20260108001000-add-financial-integrity-checks: migrated (0.005s)
+
+== 20260109000000-lock-expenses-accountability: migrating =======
+== 20260109000000-lock-expenses-accountability: migrated (0.020s)
+
+== 20260109001000-lock-audit-immutability: migrating =======
+== 20260109001000-lock-audit-immutability: migrated (0.013s)
+
+== 20260109002000-lock-tax-report-status: migrating =======
+== 20260109002000-lock-tax-report-status: migrated (0.006s)
+
+== 20260110000000-lock-expenses-accountability-and-vat: migrating =======
+== 20260110000000-lock-expenses-accountability-and-vat: migrated (0.008s)
+
+== 20260111002000-strengthen-status-and-enum-checks: migrating =======
+== 20260111002000-strengthen-status-and-enum-checks: migrated (0.010s)
+
+== 20260111003000-sqlite-parity-shims: migrating =======
+== 20260111003000-sqlite-parity-shims: migrated (0.002s)
+
+== 20260112000000-add-audit-log-company-requestid: migrating =======
+== 20260112000000-add-audit-log-company-requestid: migrated (0.025s)
+
+== 20260113000000-add-partially-paid-invoice-status: migrating =======
+== 20260113000000-add-partially-paid-invoice-status: migrated (0.003s)
+
+== 20260113120000-add-purpose-column-aiinsights: migrating =======
+== 20260113120000-add-purpose-column-aiinsights: migrated (0.014s)
+
+== 20260114_add_file_type_to_file_attachments: migrating =======
+== 20260114_add_file_type_to_file_attachments: migrated (0.007s)
+
+== 20260115_add_url_and_relations_to_file_attachments: migrating =======
+== 20260115_add_url_and_relations_to_file_attachments: migrated (0.016s)
+
+== 20260116_fix_attached_to_id_uuid: migrating =======
+== 20260116_fix_attached_to_id_uuid: migrated (0.007s)
+
+== 20260117000000-add-tts-enabled-to-companies: migrating =======
+== 20260117000000-add-tts-enabled-to-companies: migrated (0.002s)
+
+== 20260118000000-add-company-status-and-subscription-fields: migrating =======
+== 20260118000000-add-company-status-and-subscription-fields: migrated (0.004s)
+
+== 20260119000000-create-accounting-ledger: migrating =======
+== 20260119000000-create-accounting-ledger: migrated (0.020s)
+
+PASS tests/postgres/complianceConstraints.test.js
+  Postgres compliance gate
+    ✓ rejects expenses that violate the VAT math constraint (47 ms)
+    ✓ rejects invoice items that violate the VAT math constraint (9 ms)
+    ✓ rejects transactions that violate the VAT/debit math constraint (2 ms)
+    ✓ prevents toggling audit log immutability (6 ms)
+    ✓ requires requestId for new audit entries (2 ms)
+    ✓ enforces tax report statuses (1 ms)
+    ✓ bank statement dry run statuses must be known (1 ms)
+    ✓ audit_logs carry companyId and requestId at the schema level (5 ms)
+    ✓ ai insights severity is limited to the approved list (2 ms)
+    ✓ Postgres metadata declares compliance constraints (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        1.191 s
+Ran all test suites matching /tests\/postgres\/complianceConstraints.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+ Container smartaccounting-backend-test  Stopping
+ Container smartaccounting-backend-test  Stopped
+ Container smartaccounting-backend-test  Removing
+ Container smartaccounting-backend-test  Removed
+ Container smartaccounting-db-test  Stopping
+ Container smartaccounting-db-test  Stopped
+ Container smartaccounting-db-test  Removing
+ Container smartaccounting-db-test  Removed
+ Network smartaccounting-final_default  Removing
+ Volume smartaccounting-final_pgdata_test  Removing
+ Network smartaccounting-final_default  Resource is still in use
+ Volume smartaccounting-final_pgdata_test  Removed
+
+6. FINAL STATUS
+## main...origin/main
+?? docs/AUDIT/PHASE_0_BASELINE_LOCK_20260703_005129.txt
+
+================================================================
+PHASE 0 RESULT: READY FOR REVIEW
+Report: docs/AUDIT/PHASE_0_BASELINE_LOCK_20260703_005129.txt
+================================================================
