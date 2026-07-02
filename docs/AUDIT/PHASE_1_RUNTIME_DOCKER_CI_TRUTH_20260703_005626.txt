@@ -1,0 +1,3350 @@
+================================================================
+PHASE 1 — RUNTIME / DOCKER / ENV / CI TRUTH
+SCAN ONLY - NO PATCH - NO STAGE - NO COMMIT
+Timestamp: 20260703_005626
+================================================================
+
+================================================================
+1. GIT BASELINE
+================================================================
+## main...origin/main
+?? docs/AUDIT/PHASE_1_RUNTIME_DOCKER_CI_TRUTH_20260703_005626.txt
+main
+c881f58 (HEAD -> main, origin/main) docs: add phase 0 baseline lock audit
+bc8dd44 Merge pull request #28 from mhtradingeu-oss/cleanup/final-clean-architecture
+ddbeed9 (origin/cleanup/final-clean-architecture, cleanup/final-clean-architecture) fix: sync client package lock for CI
+5b12ba1 ci: stabilize postgres test workflow
+c0a149c ci: add postgres test diagnostics
+960404b fix: resolve test docker voice orchestrator path
+55c9d25 fix: resolve lint blockers for PR guard
+d815d07 (tag: safety-main-cleanup-d815d07, backup/local-main-after-cleanup-d815d07) docs: add frontend readiness audit report
+f486647 fix: stabilize frontend routing auth and company state
+253935a refactor: route voice through AI orchestrator
+
+HEAD:
+c881f584626d597b514de6a29c313d8cfd4c7976
+
+origin/main:
+c881f584626d597b514de6a29c313d8cfd4c7976
+
+untracked:
+docs/AUDIT/PHASE_1_RUNTIME_DOCKER_CI_TRUTH_20260703_005626.txt
+
+modified:
+
+staged:
+
+================================================================
+2. PACKAGE SCRIPT TRUTH
+================================================================
+--- root package scripts ---
+start: npm run start:all
+dev: npm run start:all
+start:all: bash scripts/start-all.sh
+stop:all: bash scripts/stop-all.sh
+lint: eslint .
+lint:fix: eslint . --fix
+format: prettier --write .
+build: npm run build --prefix client
+build:server: echo 'Backend build complete.'
+smoke:frontend: npm ci --prefix client && npm run build --prefix client
+smoke:dev: node scripts/dev-smoke.js
+migrate:prod: node scripts/migrate-prod.js
+seed:demo:prod: node scripts/seed-demo-prod.js
+deploy:prod: npm run migrate:prod && npm run smoke:frontend && docker build --tag smartaccounting:prod .
+db:migrate: npx sequelize-cli db:migrate
+db:verify: npm run db:verify:postgres
+db:rollback: npx sequelize-cli db:migrate:undo
+db:seed: npx sequelize-cli db:seed:all
+db:seed:undo: npx sequelize-cli db:seed:undo
+db:seed:demo: npx sequelize-cli db:seed --seed 20251226-demo-seed.js --seeders-path database/seeders/demo
+db:seed:demo:reset: npx sequelize-cli db:seed:undo --seed 20251226-demo-seed.js --seeders-path database/seeders/demo
+readiness:auth: node scripts/auth-readiness.js
+demo:verify: node scripts/demo-verify.js
+demo:integration-verify: node scripts/demo-integration-verify.js
+test: npm run test:postgres
+test:watch: npm run test:sqlite -- --watch
+test:coverage: npm run test:sqlite -- --coverage
+test:sqlite: USE_SQLITE=true jest
+test:postgres: bash scripts/ci-postgres-test.sh
+migrate:postgres: docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc "NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate" && docker compose -f docker-compose.test.yml down
+seed:demo:postgres: docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc "DEMO_MODE=true ALLOW_DEMO_SEED=true NODE_ENV=test USE_SQLITE=false node scripts/seed-demo-prod.js" && docker compose -f docker-compose.test.yml down
+db:verify:postgres: docker compose -f docker-compose.test.yml up -d --build db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc "CI=true NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && CI=true NODE_ENV=test USE_SQLITE=false node scripts/check-migrations.js" && docker compose -f docker-compose.test.yml down -v
+runtime:check: node scripts/runtime-guard.js
+env:check: node scripts/env-guard.js
+voice:check: node scripts/voice-guard.js
+backend:start: node src/server.js
+backend:dev: nodemon src/server.js
+
+--- client package scripts ---
+dev: vite --host 0.0.0.0
+build: vite build
+lint: eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0
+lint:fix: eslint . --ext js,jsx --fix
+format: prettier --write .
+format:check: prettier --check .
+preview: vite preview --host 0.0.0.0 --port 3000
+test: vitest run
+test:watch: vitest
+test:coverage: vitest run --coverage
+i18n:verify: node scripts/check-i18n.js
+test:ui: vitest --ui
+quality: npm run lint && npm run format:check
+quality:fix: npm run lint:fix && npm run format
+analyze: vite build --analyze
+clean: rm -rf dist node_modules
+
+================================================================
+3. RUNTIME GUARD FILES
+================================================================
+
+===== scripts/runtime-guard.js =====
+     1	const fs = require('fs');
+     2	
+     3	const forbiddenDailyCommands = [
+     4	  'node server/index.js',
+     5	  'node src/server.js',
+     6	  'cd client && npm run dev',
+     7	];
+     8	
+     9	const requiredScripts = ['start:all', 'stop:all'];
+    10	
+    11	const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    12	const scripts = pkg.scripts || {};
+    13	
+    14	let failed = false;
+    15	
+    16	for (const scriptName of requiredScripts) {
+    17	  if (!scripts[scriptName]) {
+    18	    console.error(`RUNTIME GUARD FAIL: missing package script ${scriptName}`);
+    19	    failed = true;
+    20	  }
+    21	}
+    22	
+    23	for (const cmd of forbiddenDailyCommands) {
+    24	  if (scripts.start === cmd || scripts.dev === cmd) {
+    25	    console.error(`RUNTIME GUARD FAIL: package script points to forbidden daily command: ${cmd}`);
+    26	    failed = true;
+    27	  }
+    28	}
+    29	
+    30	if (!fs.existsSync('scripts/start-all.sh')) {
+    31	  console.error('RUNTIME GUARD FAIL: scripts/start-all.sh missing');
+    32	  failed = true;
+    33	}
+    34	
+    35	if (!fs.existsSync('scripts/stop-all.sh')) {
+    36	  console.error('RUNTIME GUARD FAIL: scripts/stop-all.sh missing');
+    37	  failed = true;
+    38	}
+    39	
+    40	if (!fs.existsSync('docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md')) {
+    41	  console.error('RUNTIME GUARD FAIL: runtime lock document missing');
+    42	  failed = true;
+    43	}
+    44	
+    45	if (failed) {
+    46	  process.exit(1);
+    47	}
+    48	
+    49	console.log('RUNTIME GUARD PASS: start:all / stop:all are the locked daily runtime.');
+
+===== scripts/env-guard.js =====
+     1	const fs = require('fs');
+     2	const dotenv = require('dotenv');
+     3	
+     4	function readEnv(file) {
+     5	  if (!fs.existsSync(file)) {return {};}
+     6	  return dotenv.parse(fs.readFileSync(file));
+     7	}
+     8	
+     9	const root = readEnv('.env');
+    10	const client = readEnv('client/.env');
+    11	const clientLocal = readEnv('client/.env.local');
+    12	
+    13	let failed = false;
+    14	
+    15	function fail(message) {
+    16	  console.error(`ENV GUARD FAIL: ${message}`);
+    17	  failed = true;
+    18	}
+    19	
+    20	if (root.USE_SQLITE === 'true') {
+    21	  fail('root .env must not use USE_SQLITE=true for development runtime');
+    22	}
+    23	
+    24	if (!String(root.DATABASE_URL || '').includes('localhost:5441')) {
+    25	  fail('root .env DATABASE_URL must point to localhost:5441 for local CLI access');
+    26	}
+    27	
+    28	if (client.VITE_API_URL !== '/api') {
+    29	  fail('client/.env VITE_API_URL must be /api');
+    30	}
+    31	
+    32	if (clientLocal.VITE_WS_URL) {
+    33	  fail('client/.env.local must not enable VITE_WS_URL until realtime backend is official');
+    34	}
+    35	
+    36	if (!fs.existsSync('docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md')) {
+    37	  fail('environment lock document missing');
+    38	}
+    39	
+    40	if (failed) {process.exit(1);}
+    41	
+    42	console.log('ENV GUARD PASS: environment source of truth is locked.');
+
+===== scripts/voice-guard.js =====
+     1	const fs = require('fs');
+     2	
+     3	let failed = false;
+     4	
+     5	function fail(message) {
+     6	console.error('VOICE GUARD FAIL: ' + message);
+     7	failed = true;
+     8	}
+     9	
+    10	const app = fs.readFileSync('src/app.js', 'utf8');
+    11	const aiIndex = fs.readFileSync('src/routes/ai/index.js', 'utf8');
+    12	const voice = fs.readFileSync('src/routes/ai/voice.js', 'utf8');
+    13	
+    14	if (!aiIndex.includes("router.use('/voice', voiceRouter)")) {
+    15	fail('official /api/ai/voice mount missing from src/routes/ai/index.js');
+    16	}
+    17	
+    18	if (app.includes('${EXPRESS_API_PREFIX}/voice')) {
+    19	fail('duplicate /api/voice mount must not exist in src/app.js');
+    20	}
+    21	
+    22	if (voice.includes('safe.pipeline') || voice.includes('intent.engine') || voice.includes('safeExecutor')) {
+    23	fail('voice route must not use legacy execution pipeline');
+    24	}
+    25	
+    26	if (!voice.includes('aiReadGateway')) {
+    27	fail('voice route must go through aiReadGateway');
+    28	}
+    29	
+    30	if (!voice.includes('answerIntentComplianceWithProvider')) {
+    31	fail('voice route must use assistant compliance provider flow');
+    32	}
+    33	
+    34	if (!fs.existsSync('docs/ARCHITECTURE_LOCK/VOICE_SOURCE_OF_TRUTH.md')) {
+    35	fail('voice source of truth document missing');
+    36	}
+    37	
+    38	if (failed) {process.exit(1);}
+    39	
+    40	console.log('VOICE GUARD PASS: voice is locked to /api/ai/voice and safe assistant flow.');
+
+===== scripts/start-all.sh =====
+     1	#!/bin/bash
+     2	
+     3	set -e
+     4	
+     5	echo ""
+     6	echo "======================================"
+     7	echo "🚀 SMARTACCOUNTING ENTERPRISE CENTER"
+     8	echo "======================================"
+     9	echo ""
+    10	
+    11	# -----------------------------
+    12	# 1. VERIFY DOCKER
+    13	# -----------------------------
+    14	echo "🐳 Checking Docker..."
+    15	
+    16	if ! docker ps >/dev/null 2>&1; then
+    17	  echo "❌ Docker is not running. Start Docker Desktop first."
+    18	  exit 1
+    19	fi
+    20	
+    21	echo "✔ Docker is running"
+    22	
+    23	# -----------------------------
+    24	# 2. CLEAN ONLY LOCAL FRONTEND PORT
+    25	# -----------------------------
+    26	echo ""
+    27	echo "🧹 Cleaning frontend port..."
+    28	
+    29	FRONTEND_PID_FILE="logs/frontend.pid"
+    30	pid=$(lsof -tiTCP:5173 -sTCP:LISTEN || true)
+    31	
+    32	if [ -n "$pid" ]; then
+    33	  if [ -f "$FRONTEND_PID_FILE" ] && grep -qx "$pid" "$FRONTEND_PID_FILE"; then
+    34	    echo "   stopping previous SmartAccounting frontend on port 5173 (PID $pid)"
+    35	    kill "$pid" 2>/dev/null || true
+    36	    sleep 1
+    37	
+    38	    if ps -p "$pid" >/dev/null 2>&1; then
+    39	      echo "   previous frontend still running, forcing stop PID $pid"
+    40	      kill -9 "$pid" 2>/dev/null || true
+    41	    fi
+    42	
+    43	    rm -f "$FRONTEND_PID_FILE"
+    44	  else
+    45	    echo "❌ Port 5173 is already in use by PID $pid, but it is not tracked as SmartAccounting frontend."
+    46	    echo "   To protect other projects, start-all.sh will not kill it automatically."
+    47	    echo "   Please stop that process manually or choose another VITE_DEV_PORT."
+    48	    exit 1
+    49	  fi
+    50	else
+    51	  echo "   port 5173 already free"
+    52	  rm -f "$FRONTEND_PID_FILE"
+    53	fi
+    54	
+    55	echo "✔ Frontend environment cleaned"
+    56	
+    57	# -----------------------------
+    58	# 3. RESTART PROJECT DOCKER SERVICES SAFELY
+    59	# -----------------------------
+    60	echo ""
+    61	echo "🐳 Restarting SmartAccounting Docker Stack..."
+    62	
+    63	docker compose down
+    64	docker compose up -d db backend
+    65	
+    66	# -----------------------------
+    67	# 4. WAIT FOR BACKEND HEALTH
+    68	# -----------------------------
+    69	echo ""
+    70	echo "⏳ Waiting for backend health..."
+    71	
+    72	READY=false
+    73	
+    74	for i in {1..30}
+    75	do
+    76	  if curl -s http://localhost:5001/api/docs >/dev/null 2>&1; then
+    77	    echo "✔ Backend is READY"
+    78	    READY=true
+    79	    break
+    80	  fi
+    81	
+    82	  echo "   ...waiting ($i/30)"
+    83	  sleep 2
+    84	done
+    85	
+    86	if [ "$READY" = false ]; then
+    87	  echo ""
+    88	  echo "❌ Backend failed to start within timeout"
+    89	  echo ""
+    90	  echo "🔎 Backend status:"
+    91	  docker compose ps
+    92	  echo ""
+    93	  echo "🔎 Backend logs:"
+    94	  docker compose logs --tail=120 backend
+    95	  exit 1
+    96	fi
+    97	
+    98	# -----------------------------
+    99	# 5. START FRONTEND
+   100	# -----------------------------
+   101	echo ""
+   102	echo "🌐 Starting Frontend (Vite)..."
+   103	
+   104	mkdir -p logs
+   105	
+   106	cd client
+   107	VITE_DEV_PORT=5173 VITE_HMR_CLIENT_PORT=5173 npm run dev -- --port 5173 > ../logs/frontend.log 2>&1 &
+   108	FRONTEND_PID=$!
+   109	cd ..
+   110	
+   111	echo "$FRONTEND_PID" > logs/frontend.pid
+   112	
+   113	# -----------------------------
+   114	# 6. SYSTEM DASHBOARD
+   115	# -----------------------------
+   116	echo ""
+   117	echo "======================================"
+   118	echo "📊 ENTERPRISE CONTROL CENTER STATUS"
+   119	echo "======================================"
+   120	echo ""
+   121	echo "🟢 Frontend:"
+   122	echo "   http://localhost:5173"
+   123	echo ""
+   124	echo "🟢 Backend:"
+   125	echo "   http://localhost:5001"
+   126	echo "   http://localhost:5001/api/docs"
+   127	echo ""
+   128	echo "🟢 Database:"
+   129	echo "   localhost:5441"
+   130	echo ""
+   131	echo "🟡 Logs:"
+   132	echo "   logs/frontend.log"
+   133	echo ""
+   134	echo "======================================"
+   135	echo "✅ SYSTEM FULLY OPERATIONAL"
+   136	echo "======================================"
+   137	
+   138	wait $FRONTEND_PID
+===== scripts/stop-all.sh =====
+     1	#!/bin/bash
+     2	
+     3	set -e
+     4	
+     5	echo "🛑 STOPPING SMARTACCOUNTING ENTERPRISE SYSTEM..."
+     6	
+     7	PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+     8	FRONTEND_PID_FILE="$PROJECT_ROOT/logs/frontend.pid"
+     9	
+    10	echo ""
+    11	echo "🌐 Stopping SmartAccounting frontend..."
+    12	
+    13	if [ -f "$FRONTEND_PID_FILE" ]; then
+    14	  FRONTEND_PID="$(cat "$FRONTEND_PID_FILE" 2>/dev/null || true)"
+    15	
+    16	  if [ -n "$FRONTEND_PID" ] && ps -p "$FRONTEND_PID" >/dev/null 2>&1; then
+    17	    FRONTEND_CMD="$(ps -p "$FRONTEND_PID" -o command= 2>/dev/null || true)"
+    18	
+    19	    if echo "$FRONTEND_CMD" | grep -q "$PROJECT_ROOT/client"; then
+    20	      echo "   stopping frontend PID $FRONTEND_PID"
+    21	      kill "$FRONTEND_PID" 2>/dev/null || true
+    22	      sleep 1
+    23	
+    24	      if ps -p "$FRONTEND_PID" >/dev/null 2>&1; then
+    25	        echo "   frontend still running, forcing stop PID $FRONTEND_PID"
+    26	        kill -9 "$FRONTEND_PID" 2>/dev/null || true
+    27	      fi
+    28	    else
+    29	      echo "   PID file exists, but PID $FRONTEND_PID does not belong to this project. Skipping."
+    30	    fi
+    31	  else
+    32	    echo "   no running frontend PID found"
+    33	  fi
+    34	
+    35	  rm -f "$FRONTEND_PID_FILE"
+    36	else
+    37	  echo "   no frontend PID file found"
+    38	fi
+    39	
+    40	echo ""
+    41	echo "🐳 Stopping SmartAccounting Docker services..."
+    42	cd "$PROJECT_ROOT"
+    43	docker compose down
+    44	
+    45	echo ""
+    46	echo "✅ SMARTACCOUNTING SERVICES STOPPED CLEANLY"
+
+===== scripts/start.sh =====
+     1	#!/bin/bash
+     2	
+     3	echo "🧠 SMARTACCOUNTING ONE-CLICK START"
+     4	
+     5	# -------------------------
+     6	# CLEAN OLD PROCESSES
+     7	# -------------------------
+     8	echo "🧹 Stopping old processes..."
+     9	pkill -f node
+    10	pkill -f vite
+    11	
+    12	lsof -ti:5001 | xargs kill -9 2>/dev/null
+    13	lsof -ti:5173 | xargs kill -9 2>/dev/null
+    14	
+    15	# -------------------------
+    16	# BACKEND START
+    17	# -------------------------
+    18	echo "🚀 Starting backend..."
+    19	cd server
+    20	node index.js &
+    21	BACKEND_PID=$!
+    22	
+    23	cd ..
+    24	
+    25	# -------------------------
+    26	# FRONTEND START
+    27	# -------------------------
+    28	echo "🚀 Starting frontend..."
+    29	cd client
+    30	npm run dev &
+    31	FRONTEND_PID=$!
+    32	
+    33	cd ..
+    34	
+    35	# -------------------------
+    36	# STATUS
+    37	# -------------------------
+    38	echo "=================================="
+    39	echo "✅ SYSTEM RUNNING"
+    40	echo "Backend PID: $BACKEND_PID"
+    41	echo "Frontend PID: $FRONTEND_PID"
+    42	echo "=================================="
+    43	echo "🌐 Frontend: http://localhost:5173"
+    44	echo "🧠 Backend:  http://localhost:5001"
+
+===== scripts/stop.sh =====
+     1	#!/bin/bash
+     2	
+     3	echo "🛑 STOPPING SMARTACCOUNTING SYSTEM"
+     4	
+     5	pkill -f node
+     6	pkill -f vite
+     7	
+     8	lsof -ti:5001 | xargs kill -9 2>/dev/null
+     9	lsof -ti:5173 | xargs kill -9 2>/dev/null
+    10	
+    11	echo "✅ ALL SERVICES STOPPED"
+
+===== scripts/ci-postgres-test.sh =====
+     1	#!/usr/bin/env bash
+     2	set -u
+     3	
+     4	COMPOSE_FILE="docker-compose.test.yml"
+     5	
+     6	cleanup() {
+     7	  docker compose -f "$COMPOSE_FILE" down -v || true
+     8	}
+     9	trap cleanup EXIT
+    10	
+    11	echo "[ci-postgres-test] starting docker services"
+    12	docker compose -f "$COMPOSE_FILE" up -d --build db backend
+    13	
+    14	echo "[ci-postgres-test] waiting for postgres"
+    15	node scripts/wait-for-postgres.js "$COMPOSE_FILE" db
+    16	
+    17	echo "[ci-postgres-test] allowing backend to settle"
+    18	sleep 5
+    19	
+    20	echo "[ci-postgres-test] docker status"
+    21	docker compose -f "$COMPOSE_FILE" ps
+    22	
+    23	BACKEND_STATUS="$(docker compose -f "$COMPOSE_FILE" ps --format json backend 2>/dev/null | node -e "let data=''; process.stdin.on('data', c => data += c); process.stdin.on('end', () => { try { const rows = data.trim().split(/\n+/).filter(Boolean).map(JSON.parse); console.log(rows[0]?.State || rows[0]?.Status || ''); } catch { console.log(''); } });")"
+    24	
+    25	echo "[ci-postgres-test] backend status: ${BACKEND_STATUS}"
+    26	
+    27	if ! printf '%s' "$BACKEND_STATUS" | grep -Eiq 'running|up'; then
+    28	  echo "[ci-postgres-test] backend is not running; dumping logs"
+    29	  docker compose -f "$COMPOSE_FILE" logs --tail=240 backend || true
+    30	  exit 1
+    31	fi
+    32	
+    33	echo "[ci-postgres-test] running migrations and postgres compliance tests"
+    34	docker compose -f "$COMPOSE_FILE" exec -T backend sh -lc \
+    35	  "CI=true NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && CI=true NODE_ENV=test USE_SQLITE=false npx jest --runInBand --ci tests/postgres/complianceConstraints.test.js"
+
+================================================================
+4. ARCHITECTURE LOCK DOCS
+================================================================
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md
+docs/ARCHITECTURE_LOCK/VOICE_ENFORCEMENT.md
+docs/ARCHITECTURE_LOCK/VOICE_RULES.md
+docs/ARCHITECTURE_LOCK/VOICE_SOURCE_OF_TRUTH.md
+
+===== docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md =====
+# Environment Source of Truth — SmartAccounting
+
+## Daily runtime
+
+Daily runtime is Docker Compose via:
+
+```bash
+npm run start:all
+npm run stop:all
+Runtime environment source
+
+For daily runtime, docker-compose.yml is the source of truth.
+
+Local CLI environment
+
+Root .env is for local CLI tools only and must point to Docker-exposed local ports:
+
+Backend: localhost:5001
+Postgres: localhost:5441
+Redis: localhost:6381
+Rules
+USE_SQLITE=false for development runtime.
+SQLite is allowed only for tests that explicitly set USE_SQLITE=true.
+server/.env is legacy/debug only.
+Frontend API base must stay /api.
+VITE_WS_URL must remain disabled until realtime backend is officially implemented.
+
+===== docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md =====
+# Runtime Source of Truth — SmartAccounting
+
+## Official daily runtime
+
+Use only:
+
+```bash
+npm run start:all
+npm run stop:all
+Official runtime model
+Frontend: Vite via scripts/start-all.sh
+Backend: Docker Compose backend service
+Database: Docker Compose Postgres service
+Redis: Docker Compose Redis service
+Do not use for daily runtime
+node server/index.js
+node src/server.js
+cd client && npm run dev
+
+These commands are development/debug-only and must not be used as the normal system startup path.
+
+Current confirmed ports
+Frontend: 5173
+Backend: 5001
+Postgres: 5441
+Redis: 6381
+Rule
+
+Before changing runtime, Docker, DB boot, or voice/AI boot logic, run a truth scan first.
+
+===== docs/ARCHITECTURE_LOCK/VOICE_ENFORCEMENT.md =====
+# VOICE ENFORCEMENT RULE
+
+## RULE 1
+Voice must NOT perform:
+- intent detection
+- AI reasoning
+- execution
+- accounting decisions
+
+## RULE 2
+Voice is ONLY allowed to:
+- transcribe audio (Whisper)
+- forward text to AIOrchestrator
+
+## RULE 3
+All decisions MUST go through:
+src/services/ai/orchestrator
+
+## RULE 4
+Violation = architecture break
+
+===== docs/ARCHITECTURE_LOCK/VOICE_RULES.md =====
+# VOICE ARCHITECTURE RULES (STRICT)
+
+## RULE 1
+Voice system is INPUT ONLY
+
+## RULE 2
+No AI decision is allowed inside:
+- server/src/modules/voice
+
+## RULE 3
+All intents must go through:
+src/services/ai/orchestrator
+
+## RULE 4
+Execution is forbidden inside voice layer
+
+## RULE 5
+Voice is allowed to:
+- transcribe
+- normalize text
+- forward request
+
+===== docs/ARCHITECTURE_LOCK/VOICE_SOURCE_OF_TRUTH.md =====
+# Voice Source of Truth — SmartAccounting
+
+## Official voice route
+
+Voice assistant route is:
+
+```text
+/api/ai/voice/assistant
+
+It is mounted through:
+
+src/routes/ai/index.js
+→ src/routes/ai/voice.js
+Voice rules
+
+Voice is an input layer only.
+
+Allowed:
+
+transcript / prompt input
+safe assistant answer
+text response mode
+optional voice response mode only when TTS is explicitly enabled
+
+Forbidden:
+
+legacy server voice runtime
+direct accounting execution inside voice
+old intent engine
+old safe pipeline
+duplicate AI brain
+Legacy paths
+
+These are not official runtime paths:
+
+server/src/modules/voice/*
+server/src/modules/ai-brain/*
+server/index.js
+server/src/app.js
+
+
+================================================================
+5. DOCKER COMPOSE TRUTH
+================================================================
+
+===== docker-compose.yml =====
+     1	services:
+     2	  db:
+     3	    image: postgres:15-alpine
+     4	    container_name: smartaccounting-db-dev
+     5	
+     6	    environment:
+     7	      POSTGRES_DB: smartaccounting
+     8	      POSTGRES_USER: smart
+     9	      POSTGRES_PASSWORD: smartpass
+    10	
+    11	    ports:
+    12	      - "5441:5432"
+    13	
+    14	    volumes:
+    15	      - pgdata-dev:/var/lib/postgresql/data
+    16	
+    17	    healthcheck:
+    18	      test: ["CMD-SHELL", "pg_isready -U smart -d smartaccounting"]
+    19	      interval: 5s
+    20	      timeout: 5s
+    21	      retries: 15
+    22	      start_period: 10s
+    23	
+    24	    restart: unless-stopped
+    25	
+    26	  redis:
+    27	    image: redis:7-alpine
+    28	    container_name: smartaccounting-redis-dev
+    29	
+    30	    ports:
+    31	      - "6381:6379"
+    32	
+    33	    healthcheck:
+    34	      test: ["CMD", "redis-cli", "ping"]
+    35	      interval: 5s
+    36	      timeout: 3s
+    37	      retries: 10
+    38	      start_period: 5s
+    39	
+    40	    restart: unless-stopped
+    41	
+    42	  backend:
+    43	    build:
+    44	      context: .
+    45	      dockerfile: Dockerfile.backend
+    46	
+    47	    container_name: smartaccounting-backend-dev
+    48	
+    49	    environment:
+    50	      NODE_ENV: development
+    51	      PORT: 5001
+    52	      HOST: 0.0.0.0
+    53	      API_BASE_URL: /api
+    54	
+    55	      USE_SQLITE: "false"
+    56	      DATABASE_URL: postgres://smart:smartpass@db:5432/smartaccounting
+    57	      REDIS_URL: redis://redis:6379
+    58	      CACHE_TTL: "3600"
+    59	
+    60	      DEMO_MODE: "true"
+    61	      ALLOW_DEMO_SEED: "true"
+    62	      ALLOW_PROD_MIGRATION: "true"
+    63	
+    64	      FRONTEND_URL: http://localhost:5173
+    65	      CLIENT_URL: http://localhost:5173
+    66	      CORS_ORIGIN: http://localhost:5173
+    67	
+    68	      SECURE_COOKIES: "false"
+    69	      TRUST_PROXY: "false"
+    70	
+    71	      JWT_SECRET: dev_jwt_secret_please_change_later_123456
+    72	
+    73	      AI_ASSISTANT_ENABLED: "true"
+    74	      BANK_IMPORT_ENABLED: "true"
+    75	      EXPORTS_ENABLED: "true"
+    76	      OCR_PREVIEW_ENABLED: "true"
+    77	
+    78	      LOG_LEVEL: debug
+    79	      REQUEST_LOGGING: "true"
+    80	
+    81	      EMAIL_ENABLED: "false"
+    82	
+    83	    ports:
+    84	      - "5001:5001"
+    85	
+    86	    depends_on:
+    87	      db:
+    88	        condition: service_healthy
+    89	      redis:
+    90	        condition: service_healthy
+    91	
+    92	    volumes:
+    93	      - .:/usr/src/app
+    94	      - backend-node-modules:/usr/src/app/node_modules
+    95	      - ./logs:/usr/src/app/logs
+    96	      - ./uploads:/usr/src/app/uploads
+    97	      - ./temp:/usr/src/app/temp
+    98	
+    99	    restart: unless-stopped
+   100	
+   101	    command: >
+   102	      sh -lc "npm run db:migrate &&
+   103	              npm run seed:demo:prod &&
+   104	              npm run backend:dev"
+   105	
+   106	volumes:
+   107	  pgdata-dev:
+   108	  backend-node-modules:
+
+===== docker-compose.test.yml =====
+     1	services:
+     2	  db:
+     3	    image: postgres:16
+     4	    container_name: smartaccounting-db-test
+     5	
+     6	    environment:
+     7	      POSTGRES_DB: smartaccounting_test
+     8	      POSTGRES_USER: postgres
+     9	      POSTGRES_PASSWORD: postgres
+    10	
+    11	    ports:
+    12	      - "5442:5432"
+    13	
+    14	    healthcheck:
+    15	      test: ["CMD-SHELL", "pg_isready -U postgres"]
+    16	      interval: 5s
+    17	      timeout: 5s
+    18	      retries: 5
+    19	
+    20	    volumes:
+    21	      - pgdata_test:/var/lib/postgresql/data
+    22	
+    23	  backend:
+    24	    build:
+    25	      context: .
+    26	      dockerfile: Dockerfile.backend
+    27	
+    28	    container_name: smartaccounting-backend-test
+    29	
+    30	    depends_on:
+    31	      db:
+    32	        condition: service_healthy
+    33	
+    34	    environment:
+    35	      NODE_ENV: test
+    36	      PORT: 5001
+    37	      USE_SQLITE: "false"
+    38	
+    39	      DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting_test
+    40	
+    41	      API_BASE_URL: /api
+    42	
+    43	      # IMPORTANT FOR TEST STABILITY
+    44	      LOG_LEVEL: error
+    45	      REQUEST_LOGGING: "false"
+    46	
+    47	      # Disable external systems in tests
+    48	      AI_ASSISTANT_ENABLED: "false"
+    49	      BANK_IMPORT_ENABLED: "false"
+    50	      EXPORTS_ENABLED: "false"
+    51	
+    52	volumes:
+    53	  pgdata_test:
+
+===== docker-compose.prod.yml =====
+     1	services:
+     2	  db:
+     3	    image: postgres:16
+     4	    container_name: smartaccounting-db
+     5	
+     6	    environment:
+     7	      POSTGRES_DB: smartaccounting_prod
+     8	      POSTGRES_USER: smartaccounting
+     9	      POSTGRES_PASSWORD: CHANGE_ME_STRONG_PASSWORD
+    10	
+    11	    volumes:
+    12	      - pgdata:/var/lib/postgresql/data
+    13	
+    14	    healthcheck:
+    15	      test: ["CMD-SHELL", "pg_isready -U smartaccounting"]
+    16	      interval: 10s
+    17	      timeout: 5s
+    18	      retries: 5
+    19	
+    20	    restart: unless-stopped
+    21	
+    22	  backend:
+    23	    container_name: smartaccounting-backend
+    24	
+    25	    build:
+    26	      context: .
+    27	      dockerfile: Dockerfile.backend
+    28	
+    29	    env_file:
+    30	      - .env.production
+    31	
+    32	    environment:
+    33	      NODE_ENV: production
+    34	
+    35	    depends_on:
+    36	      db:
+    37	        condition: service_healthy
+    38	
+    39	    restart: unless-stopped
+    40	
+    41	    volumes:
+    42	      - ./uploads:/usr/src/app/uploads
+    43	      - ./logs:/usr/src/app/logs
+    44	      - ./temp:/usr/src/app/temp
+    45	
+    46	    healthcheck:
+    47	      test: ["CMD", "curl", "-f", "http://0.0.0.0:5001/health"]
+    48	      interval: 30s
+    49	      timeout: 10s
+    50	      retries: 3
+    51	
+    52	  frontend:
+    53	    container_name: smartaccounting-frontend
+    54	
+    55	    build:
+    56	      context: ./client
+    57	
+    58	    environment:
+    59	      VITE_API_URL: /api
+    60	
+    61	    depends_on:
+    62	      backend:
+    63	        condition: service_healthy
+    64	
+    65	    restart: unless-stopped
+    66	
+    67	    # ❌ DO NOT expose directly in real production
+    68	    # Use nginx or reverse proxy instead
+    69	    # ports:
+    70	    #   - "8080:80"
+    71	
+    72	volumes:
+    73	  pgdata:
+
+================================================================
+6. DOCKERFILE TRUTH
+================================================================
+
+===== Dockerfile =====
+     1	FROM node:20-bullseye-slim
+     2	
+     3	WORKDIR /usr/src/app
+     4	
+     5	# Default environment (can be overridden by docker-compose)
+     6	ENV NODE_ENV=development
+     7	
+     8	# =====================
+     9	# SYSTEM DEPENDENCIES
+    10	# =====================
+    11	RUN apt-get update && apt-get install -y \
+    12	  python3 \
+    13	  make \
+    14	  g++ \
+    15	  curl \
+    16	  && rm -rf /var/lib/apt/lists/*
+    17	
+    18	# =====================
+    19	# INSTALL DEPENDENCIES
+    20	# =====================
+    21	COPY package.json package-lock.json ./
+    22	RUN npm ci
+    23	
+    24	# =====================
+    25	# SOURCE CODE
+    26	# =====================
+    27	COPY .sequelizerc ./
+    28	COPY server ./server
+    29	COPY src ./src
+    30	COPY config ./config
+    31	COPY database ./database
+    32	COPY scripts ./scripts
+    33	COPY shared ./shared
+    34	COPY docs ./docs
+    35	
+    36	# =====================
+    37	# RUNTIME DIRECTORIES
+    38	# =====================
+    39	RUN mkdir -p logs uploads temp
+    40	
+    41	# =====================
+    42	# PORT
+    43	# =====================
+    44	EXPOSE 5001
+    45	
+    46	# =====================
+    47	# START COMMAND
+    48	# =====================
+    49	CMD ["node", "server/index.js"]
+
+===== Dockerfile.backend =====
+     1	FROM node:20-bullseye
+     2	
+     3	WORKDIR /usr/src/app
+     4	
+     5	ENV NODE_ENV=development
+     6	
+     7	RUN apt-get update && apt-get install -y \
+     8	  python3 \
+     9	  make \
+    10	  g++ \
+    11	  curl \
+    12	  && rm -rf /var/lib/apt/lists/*
+    13	
+    14	COPY package.json package-lock.json ./
+    15	RUN npm ci
+    16	
+    17	COPY . .
+    18	
+    19	RUN mkdir -p logs uploads temp
+    20	
+    21	EXPOSE 5001
+    22	
+    23	CMD ["node", "server/index.js"]
+
+===== client/Dockerfile =====
+     1	FROM node:20-bullseye-slim AS builder
+     2	WORKDIR /app
+     3	COPY package*.json ./
+     4	RUN npm ci --no-audit --no-fund
+     5	COPY . .
+     6	ARG VITE_API_URL
+     7	ENV VITE_API_URL=${VITE_API_URL:-/api}
+     8	RUN npm run build
+     9	
+    10	FROM nginx:1.25-alpine AS runner
+    11	
+    12	COPY --from=builder /app/dist /usr/share/nginx/html
+    13	COPY nginx.conf /etc/nginx/conf.d/default.conf
+    14	RUN apk add --no-cache curl
+    15	EXPOSE 80
+    16	CMD ["nginx", "-g", "daemon off;"]
+
+================================================================
+7. ENV SOURCE OF TRUTH
+================================================================
+
+===== .env.example =====
+
+# Environment variables (canonical examples)
+#
+# IMPORTANT:
+# - Local dev (no Docker): default to SQLite
+# - Docker local: values are injected by docker-compose.yml
+# - Docker tests: values are injected by docker-compose.test.yml
+#
+# Port mapping summary:
+# - Local backend process: PORT=5001
+# - Docker backend: host 5001 -> container 5001
+# - Frontend dev server: http://localhost:5173
+# - Docker Postgres: host 5441 -> container 5432
+# - Docker Redis: host 6381 -> container 6379
+#
+# DATABASE_URL for host Postgres:
+# postgres://smart:smartpass@localhost:5441/smartaccounting
+# DATABASE_URL for Docker container:
+# postgres://smart:smartpass@db:5432/smartaccounting
+
+NODE_ENV=development
+PORT=5001
+HOST=0.0.0.0
+API_BASE_URL=/api
+# Gate real bank statement imports (default off until rollout is ready).
+BANK_IMPORT_ENABLED=false
+# Enable the conversational AI assistant (read-only).
+AI_ASSISTANT_ENABLED=true
+# Enable AI voice input (transcription-based, no raw audio storage by default).
+AI_VOICE_ENABLED=false
+# Enable AI text-to-speech responses (plan/tenant gated).
+AI_TTS_ENABLED=false
+# Optional AI provider foundation. Defaults keep all AI deterministic/mock-only.
+AI_PROVIDER=mock
+AI_PROVIDER_ENABLED=false
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+AI_PROVIDER_TIMEOUT_MS=8000
+AI_PROVIDER_MAX_OUTPUT_TOKENS=900
+AI_PROVIDER_DAILY_BUDGET_CENTS=500
+# Cookies should be secure over HTTPS. Set to false for local HTTP testing.
+SECURE_COOKIES=false
+TRUST_PROXY=false
+
+CLIENT_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
+CORS_ORIGIN=http://localhost:5173
+
+# JWT configuration (required: replace with a securely generated 32+ character secret)
+JWT_SECRET=dev_super_secret_jwt_key_12345678901234567890
+JWT_EXPIRES_IN=24h
+JWT_REFRESH_SECRET=dev_super_refresh_secret_12345678901234567890
+JWT_REFRESH_EXPIRES_IN=7d
+
+# VITE_API_URL=/api
+# Never use docker service names in browser env!
+
+JSON_LIMIT=10mb
+
+# Logging & observability
+LOG_LEVEL=debug
+REQUEST_LOGGING=true
+METRICS_ENABLED=false
+LOG_SLOW_REQUEST_MS=1000
+METRICS_SNAPSHOT_INTERVAL_MS=60000
+
+# Database configuration
+USE_SQLITE=true
+DATABASE_URL=sqlite:./database/dev.sqlite
+SQLITE_STORAGE_PATH=database/dev.sqlite
+DB_POOL_MAX=10
+DB_POOL_MIN=0
+DB_POOL_ACQUIRE=30000
+DB_POOL_IDLE=10000
+DB_SSL=false
+SEQUELIZE_LOGGING=false
+
+# Initial administrator seed (no production credentials allowed here)
+ADMIN_EMAIL=admin@your-domain.test
+ADMIN_PASSWORD=replace_with_secure_password
+ADMIN_COMPANY_NAME=SmartAccounting HQ
+ADMIN_COMPANY_TAX_ID=DE000000001
+ADMIN_COMPANY_ADDRESS=1 Demo Lane
+ADMIN_COMPANY_CITY=Berlin
+ADMIN_COMPANY_POSTAL=10115
+ADMIN_COMPANY_COUNTRY=DE
+ADMIN_FIRST_NAME=System
+ADMIN_LAST_NAME=Admin
+
+JWT_SECRET_SALT=12
+
+# Email integration
+EMAIL_HOST=localhost
+EMAIL_PORT=1025
+EMAIL_USER=mailer@example.test
+EMAIL_PASS=replace_with_secure_email_password
+EMAIL_FROM="SmartAccounting <no-reply@example.test>"
+SAFE_MODE=false
+
+# Stripe credentials (leave blank if billing is disabled)
+STRIPE_SECRET_KEY=replace_with_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=replace_with_stripe_webhook_secret
+STRIPE_PUBLISHABLE_KEY=replace_with_stripe_publishable_key
+
+# German Tax / ELSTER integration (certificate is required for production)
+ELSTER_URL=https://www.elster.de/elsterweb/api
+ELSTER_CERTIFICATE_PATH=./certs/elster.pem
+
+# OCR helpers
+OCR_SERVICE_URL=http://localhost:8000
+OCR_API_KEY=replace_with_ocr_api_key
+OCR_PREVIEW_ENABLED=false
+
+# Cache settings
+REDIS_URL=redis://localhost:6379
+CACHE_TTL=3600
+
+# Upload handling
+UPLOAD_DIR=uploads
+MAX_FILE_SIZE=5000000
+
+RATE_LIMIT_WINDOW=60000
+RATE_LIMIT_MAX=100
+ALLOW_PROD_MIGRATION=true
+
+===== client/.env.example =====
+# Example environment variables for SmartAccounting Frontend
+# Copy to .env and adjust as needed
+
+
+# === FINAL APPROVED API STRATEGY ===
+#
+# DEV (Local, no Docker):
+# VITE_API_URL=/api
+#
+# DEV (Docker Compose):
+# VITE_API_URL=/api
+#
+# PROD (Reverse Proxy):
+# VITE_API_URL=/api
+#
+# ❌ Never use Docker service names in browser env!
+
+VITE_API_URL=/api
+VITE_APP_ENV=development
+VITE_AI_ASSISTANT_ENABLED=true
+VITE_AI_VOICE_ENABLED=true
+
+===== .env =====
+[PRIVATE ENV EXISTS - keys only]
+NODE_ENV=[REDACTED]
+PORT=[REDACTED]
+HOST=[REDACTED]
+
+# Local CLI access to Docker Postgres
+USE_SQLITE=[REDACTED]
+DATABASE_URL=[REDACTED]
+REDIS_URL=[REDACTED]
+
+JWT_SECRET=[REDACTED]
+
+FRONTEND_URL=[REDACTED]
+CLIENT_URL=[REDACTED]
+CORS_ORIGIN=[REDACTED]
+
+API_BASE_URL=[REDACTED]
+
+AI_ASSISTANT_ENABLED=[REDACTED]
+AI_VOICE_ENABLED=[REDACTED]
+AI_TTS_ENABLED=[REDACTED]
+
+BANK_IMPORT_ENABLED=[REDACTED]
+OCR_PREVIEW_ENABLED=[REDACTED]
+EXPORTS_ENABLED=[REDACTED]
+DEMO_MODE=[REDACTED]
+EMAIL_ENABLED=[REDACTED]
+SECURE_COOKIES=[REDACTED]
+TRUST_PROXY=[REDACTED]
+LOG_LEVEL=[REDACTED]
+
+===== client/.env =====
+[PRIVATE ENV EXISTS - keys only]
+VITE_API_URL=[REDACTED]
+
+===== server/.env =====
+[PRIVATE ENV EXISTS - keys only]
+# Legacy/debug only.
+# Daily runtime uses docker-compose.yml via npm run start:all.
+# Do not use node server/index.js as daily runtime.
+
+NODE_ENV=[REDACTED]
+PORT=[REDACTED]
+HOST=[REDACTED]
+
+USE_SQLITE=[REDACTED]
+DATABASE_URL=[REDACTED]
+REDIS_URL=[REDACTED]
+
+JWT_SECRET=[REDACTED]
+FRONTEND_URL=[REDACTED]
+CLIENT_URL=[REDACTED]
+CORS_ORIGIN=[REDACTED]
+API_BASE_URL=[REDACTED]
+
+================================================================
+8. CI WORKFLOW TRUTH
+================================================================
+.github/workflows/ci.yml
+
+===== .github/workflows/ci.yml =====
+     1	name: CI – Validate, Lint & Test
+     2	
+     3	on:
+     4	  push:
+     5	    branches:
+     6	      - main
+     7	      - develop
+     8	      - release/*
+     9	  pull_request:
+    10	    branches:
+    11	      - main
+    12	      - develop
+    13	
+    14	jobs:
+    15	  lint:
+    16	    name: Lint
+    17	    runs-on: ubuntu-22.04
+    18	    strategy:
+    19	      fail-fast: true
+    20	      matrix:
+    21	        node-version: ["22.x"]
+    22	    steps:
+    23	      - uses: actions/checkout@v4
+    24	
+    25	      - name: Setup Node.js ${{ matrix.node-version }}
+    26	        uses: actions/setup-node@v4
+    27	        with:
+    28	          node-version: ${{ matrix.node-version }}
+    29	          cache: npm
+    30	          cache-dependency-path: package-lock.json
+    31	
+    32	      - name: Install dependencies
+    33	        run: npm ci
+    34	
+    35	      - name: Run ESLint
+    36	        run: npm run lint
+    37	
+    38	  test:
+    39	    name: Test
+    40	    needs: lint
+    41	    runs-on: ubuntu-22.04
+    42	    strategy:
+    43	      fail-fast: true
+    44	      matrix:
+    45	        node-version: ["22.x"]
+    46	    env:
+    47	      NODE_ENV: test
+    48	      JWT_SECRET: test-jwt-secret-32-char-placeholder
+    49	      FRONTEND_URL: http://localhost:5173
+    50	    steps:
+    51	      - uses: actions/checkout@v4
+    52	
+    53	      # ⚠️ IMPORTANT:
+    54	      # npm cache is intentionally DISABLED here to avoid Jest resolver issues
+    55	      - name: Setup Node.js ${{ matrix.node-version }}
+    56	        uses: actions/setup-node@v4
+    57	        with:
+    58	          node-version: ${{ matrix.node-version }}
+    59	
+    60	      - name: Install dependencies (clean)
+    61	        run: npm ci
+    62	
+    63	      - name: Run Jest suites
+    64	        run: npm run test:postgres
+    65	      - name: Frontend build smoke check
+    66	        run: npm run smoke:frontend
+    67	
+    68	  client:
+    69	    name: Build client bundle
+    70	    needs: test
+    71	    runs-on: ubuntu-22.04
+    72	    strategy:
+    73	      fail-fast: true
+    74	      matrix:
+    75	        node-version: ["22.x"]
+    76	    steps:
+    77	      - uses: actions/checkout@v4
+    78	
+    79	      - name: Setup Node.js for client
+    80	        uses: actions/setup-node@v4
+    81	        with:
+    82	          node-version: ${{ matrix.node-version }}
+    83	          cache: npm
+    84	          cache-dependency-path: client/package-lock.json
+    85	
+    86	      - name: Install client dependencies
+    87	        run: npm ci --prefix client
+    88	
+    89	      - name: Build client bundle
+    90	        run: npm run build --prefix client
+    91	
+    92	  secret-scan:
+    93	    name: Secret Scan (Gitleaks)
+    94	    runs-on: ubuntu-22.04
+    95	    permissions:
+    96	      contents: read
+    97	      pull-requests: read
+    98	    steps:
+    99	      - uses: actions/checkout@v4
+   100	        with:
+   101	          fetch-depth: 0
+   102	
+   103	      - name: Scan for secrets with Gitleaks
+   104	        uses: gitleaks/gitleaks-action@v2
+   105	        env:
+   106	          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   107	        with:
+   108	          github_token: ${{ secrets.GITHUB_TOKEN }}
+   109	
+   110	  docker:
+   111	    name: Docker build
+   112	    needs: client
+   113	    runs-on: ubuntu-22.04
+   114	    steps:
+   115	      - uses: actions/checkout@v4
+   116	      - name: Set up Docker Buildx
+   117	        uses: docker/setup-buildx-action@v3
+   118	      - name: Build Docker image
+   119	        run: docker build --tag smartaccounting:ci .
+
+================================================================
+9. PORT / URL / ENV REFERENCES
+================================================================
+rg: workflows: No such file or directory (os error 2)
+Dockerfile.backend-19-RUN mkdir -p logs uploads temp
+Dockerfile.backend-20-
+Dockerfile.backend:21:EXPOSE 5001
+Dockerfile.backend-22-
+Dockerfile.backend-23-CMD ["node", "server/index.js"]
+--
+docker-compose.yml-10-
+docker-compose.yml-11-    ports:
+docker-compose.yml:12:      - "5441:5432"
+docker-compose.yml-13-
+docker-compose.yml-14-    volumes:
+--
+docker-compose.yml-29-
+docker-compose.yml-30-    ports:
+docker-compose.yml:31:      - "6381:6379"
+docker-compose.yml-32-
+docker-compose.yml-33-    healthcheck:
+--
+docker-compose.yml-49-    environment:
+docker-compose.yml-50-      NODE_ENV: development
+docker-compose.yml:51:      PORT: 5001
+docker-compose.yml:52:      HOST: 0.0.0.0
+docker-compose.yml:53:      API_BASE_URL: /api
+docker-compose.yml-54-
+docker-compose.yml-55-      USE_SQLITE: "false"
+docker-compose.yml:56:      DATABASE_URL: postgres://smart:smartpass@db:5432/smartaccounting
+docker-compose.yml:57:      REDIS_URL: redis://redis:6379
+docker-compose.yml-58-      CACHE_TTL: "3600"
+docker-compose.yml-59-
+--
+docker-compose.yml-62-      ALLOW_PROD_MIGRATION: "true"
+docker-compose.yml-63-
+docker-compose.yml:64:      FRONTEND_URL: http://localhost:5173
+docker-compose.yml:65:      CLIENT_URL: http://localhost:5173
+docker-compose.yml:66:      CORS_ORIGIN: http://localhost:5173
+docker-compose.yml-67-
+docker-compose.yml-68-      SECURE_COOKIES: "false"
+--
+docker-compose.yml-82-
+docker-compose.yml-83-    ports:
+docker-compose.yml:84:      - "5001:5001"
+docker-compose.yml-85-
+docker-compose.yml-86-    depends_on:
+--
+docker-compose.test.yml-10-
+docker-compose.test.yml-11-    ports:
+docker-compose.test.yml:12:      - "5442:5432"
+docker-compose.test.yml-13-
+docker-compose.test.yml-14-    healthcheck:
+--
+docker-compose.test.yml-34-    environment:
+docker-compose.test.yml-35-      NODE_ENV: test
+docker-compose.test.yml:36:      PORT: 5001
+docker-compose.test.yml-37-      USE_SQLITE: "false"
+docker-compose.test.yml-38-
+docker-compose.test.yml:39:      DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting_test
+docker-compose.test.yml-40-
+docker-compose.test.yml:41:      API_BASE_URL: /api
+docker-compose.test.yml-42-
+docker-compose.test.yml-43-      # IMPORTANT FOR TEST STABILITY
+--
+docker-compose.prod.yml-45-
+docker-compose.prod.yml-46-    healthcheck:
+docker-compose.prod.yml:47:      test: ["CMD", "curl", "-f", "http://0.0.0.0:5001/health"]
+docker-compose.prod.yml-48-      interval: 30s
+docker-compose.prod.yml-49-      timeout: 10s
+--
+docker-compose.prod.yml-57-
+docker-compose.prod.yml-58-    environment:
+docker-compose.prod.yml:59:      VITE_API_URL: /api
+docker-compose.prod.yml-60-
+docker-compose.prod.yml-61-    depends_on:
+--
+Dockerfile-42-# PORT
+Dockerfile-43-# =====================
+Dockerfile:44:EXPOSE 5001
+Dockerfile-45-
+Dockerfile-46-# =====================
+--
+client/Dockerfile-4-RUN npm ci --no-audit --no-fund
+client/Dockerfile-5-COPY . .
+client/Dockerfile:6:ARG VITE_API_URL
+client/Dockerfile:7:ENV VITE_API_URL=${VITE_API_URL:-/api}
+client/Dockerfile-8-RUN npm run build
+client/Dockerfile-9-
+--
+client/package.json-5-  "type": "module",
+client/package.json-6-  "scripts": {
+client/package.json:7:    "dev": "vite --host 0.0.0.0",
+client/package.json-8-    "build": "vite build",
+client/package.json-9-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+--
+client/package.json-11-    "format": "prettier --write .",
+client/package.json-12-    "format:check": "prettier --check .",
+client/package.json:13:    "preview": "vite preview --host 0.0.0.0 --port 3000",
+client/package.json-14-    "test": "vitest run",
+client/package.json-15-    "test:watch": "vitest",
+--
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-16-Root .env is for local CLI tools only and must point to Docker-exposed local ports:
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-17-
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md:18:Backend: localhost:5001
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md:19:Postgres: localhost:5441
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md:20:Redis: localhost:6381
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-21-Rules
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-22-USE_SQLITE=false for development runtime.
+--
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-24-server/.env is legacy/debug only.
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-25-Frontend API base must stay /api.
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md:26:VITE_WS_URL must remain disabled until realtime backend is officially implemented.
+--
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-21-
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-22-Current confirmed ports
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:23:Frontend: 5173
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:24:Backend: 5001
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:25:Postgres: 5441
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:26:Redis: 6381
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-27-Rule
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-28-
+--
+.github/workflows/ci.yml-47-      NODE_ENV: test
+.github/workflows/ci.yml-48-      JWT_SECRET: test-jwt-secret-32-char-placeholder
+.github/workflows/ci.yml:49:      FRONTEND_URL: http://localhost:5173
+.github/workflows/ci.yml-50-    steps:
+.github/workflows/ci.yml-51-      - uses: actions/checkout@v4
+--
+.github/workflows/ci.yml-47-      NODE_ENV: test
+.github/workflows/ci.yml-48-      JWT_SECRET: test-jwt-secret-32-char-placeholder
+.github/workflows/ci.yml:49:      FRONTEND_URL: http://localhost:5173
+.github/workflows/ci.yml-50-    steps:
+.github/workflows/ci.yml-51-      - uses: actions/checkout@v4
+--
+scripts/start.sh-10-pkill -f vite
+scripts/start.sh-11-
+scripts/start.sh:12:lsof -ti:5001 | xargs kill -9 2>/dev/null
+scripts/start.sh:13:lsof -ti:5173 | xargs kill -9 2>/dev/null
+scripts/start.sh-14-
+scripts/start.sh-15-# -------------------------
+--
+scripts/start.sh-41-echo "Frontend PID: $FRONTEND_PID"
+scripts/start.sh-42-echo "=================================="
+scripts/start.sh:43:echo "🌐 Frontend: http://localhost:5173"
+scripts/start.sh:44:echo "🧠 Backend:  http://localhost:5001"
+--
+scripts/stop.sh-6-pkill -f vite
+scripts/stop.sh-7-
+scripts/stop.sh:8:lsof -ti:5001 | xargs kill -9 2>/dev/null
+scripts/stop.sh:9:lsof -ti:5173 | xargs kill -9 2>/dev/null
+scripts/stop.sh-10-
+scripts/stop.sh-11-echo "✅ ALL SERVICES STOPPED"
+--
+client/src/components/DevHealthCheck.jsx-1-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+client/src/components/DevHealthCheck.jsx-2-import { useAuth } from '../context/AuthContext';
+client/src/components/DevHealthCheck.jsx:3:import { API_BASE_URL } from '../services/api';
+client/src/components/DevHealthCheck.jsx-4-
+client/src/components/DevHealthCheck.jsx-5-const HEALTH_PATH = '/health';
+--
+client/src/components/DevHealthCheck.jsx-38-  const isDev = import.meta.env.DEV;
+client/src/components/DevHealthCheck.jsx-39-  const { user } = useAuth();
+client/src/components/DevHealthCheck.jsx:40:  const displayBase = API_BASE_URL;
+client/src/components/DevHealthCheck.jsx:41:  const fetchBase = useMemo(() => resolveHealthBaseUrl(API_BASE_URL || '/api'), []);
+client/src/components/DevHealthCheck.jsx-42-  const [health, setHealth] = useState({ status: 'pending', message: 'awaiting check' });
+client/src/components/DevHealthCheck.jsx-43-  const [ready, setReady] = useState({ status: 'pending', message: 'awaiting check' });
+--
+client/src/components/RouteErrorBoundary.jsx-5-import { useTranslation } from 'react-i18next';
+client/src/components/RouteErrorBoundary.jsx-6-
+client/src/components/RouteErrorBoundary.jsx:7:const appVersion = import.meta.env.VITE_APP_VERSION || 'unknown';
+client/src/components/RouteErrorBoundary.jsx-8-
+client/src/components/RouteErrorBoundary.jsx-9-class RouteErrorBoundaryInner extends React.Component {
+--
+client/src/components/RouteErrorBoundary.jsx-23-      console.error('RouteErrorBoundary caught an error:', error, errorInfo);
+client/src/components/RouteErrorBoundary.jsx-24-    }
+client/src/components/RouteErrorBoundary.jsx:25:    if (import.meta.env.VITE_TELEMETRY_ENABLED === 'true') {
+client/src/components/RouteErrorBoundary.jsx-26-      try {
+client/src/components/RouteErrorBoundary.jsx-27-        const route = window.location.pathname;
+--
+client/src/services/api.js-2-import { getStoredActiveCompanyId } from '../lib/companyStorage';
+client/src/services/api.js-3-
+client/src/services/api.js:4:export const API_BASE_URL = '/api';
+client/src/services/api.js-5-export const AUTH_FORCE_LOGOUT_EVENT = 'AUTH_FORCE_LOGOUT';
+client/src/services/api.js-6-export const SKIP_FORCE_LOGOUT_ON_401_FLAG = '__skip_logout__';
+--
+client/src/services/api.js-17-
+client/src/services/api.js-18-const api = axios.create({
+client/src/services/api.js:19:  baseURL: API_BASE_URL,
+client/src/services/api.js-20-  withCredentials: true,
+client/src/services/api.js-21-  headers: {
+--
+scripts/ops/restore/full-restore.sh-15-
+scripts/ops/restore/full-restore.sh-16-# -------- Environment --------
+scripts/ops/restore/full-restore.sh:17:RESTORE_DATABASE_URL="${RESTORE_DATABASE_URL:-${DATABASE_URL:-}}"
+scripts/ops/restore/full-restore.sh-18-BACKUP_PASSPHRASE="${BACKUP_PASSPHRASE:-}"
+scripts/ops/restore/full-restore.sh-19-CONFIRM_RESTORE="${CONFIRM_RESTORE:-false}"
+--
+scripts/ops/restore/full-restore.sh-35-# -------- Preconditions --------
+scripts/ops/restore/full-restore.sh-36-[[ ! -f "$BACKUP_FILE" ]] && fail "Backup file not found: $BACKUP_FILE"
+scripts/ops/restore/full-restore.sh:37:[[ -z "$RESTORE_DATABASE_URL" ]] && fail "RESTORE_DATABASE_URL or DATABASE_URL must be set"
+scripts/ops/restore/full-restore.sh-38-[[ -z "$BACKUP_PASSPHRASE" ]] && fail "BACKUP_PASSPHRASE is required"
+scripts/ops/restore/full-restore.sh-39-
+--
+scripts/ops/restore/full-restore.sh-44-# -------- Safety barrier --------
+scripts/ops/restore/full-restore.sh-45-log "Target database:"
+scripts/ops/restore/full-restore.sh:46:log "  $RESTORE_DATABASE_URL"
+scripts/ops/restore/full-restore.sh-47-
+scripts/ops/restore/full-restore.sh-48-if [[ "$CONFIRM_RESTORE" != "true" ]]; then
+--
+scripts/ops/restore/full-restore.sh-52-# -------- Connectivity check --------
+scripts/ops/restore/full-restore.sh-53-log "Checking database connectivity"
+scripts/ops/restore/full-restore.sh:54:psql "$RESTORE_DATABASE_URL" -Atqc "SELECT 1;" >/dev/null \
+scripts/ops/restore/full-restore.sh-55-  || fail "Unable to connect to target database"
+scripts/ops/restore/full-restore.sh-56-
+--
+scripts/ops/restore/full-restore.sh-63-  -in "$BACKUP_FILE" \
+scripts/ops/restore/full-restore.sh-64-| gzip -dc \
+scripts/ops/restore/full-restore.sh:65:| psql "$RESTORE_DATABASE_URL"
+scripts/ops/restore/full-restore.sh-66-
+scripts/ops/restore/full-restore.sh-67-log "Restore completed successfully"
+--
+scripts/ops/backup/full-backup.sh-8-# -------- Configuration --------
+scripts/ops/backup/full-backup.sh-9-BACKUP_DIR="${BACKUP_DIR:-./backups/full}"
+scripts/ops/backup/full-backup.sh:10:DATABASE_URL="${DATABASE_URL:-}"
+scripts/ops/backup/full-backup.sh-11-BACKUP_PASSPHRASE="${BACKUP_PASSPHRASE:-}"
+scripts/ops/backup/full-backup.sh-12-OPENSSL_CIPHER="aes-256-cbc"
+--
+scripts/ops/backup/full-backup.sh-23-
+scripts/ops/backup/full-backup.sh-24-# -------- Preconditions --------
+scripts/ops/backup/full-backup.sh:25:[[ -z "$DATABASE_URL" ]] && fail "DATABASE_URL is required"
+scripts/ops/backup/full-backup.sh-26-[[ -z "$BACKUP_PASSPHRASE" ]] && fail "BACKUP_PASSPHRASE is required"
+scripts/ops/backup/full-backup.sh-27-
+--
+scripts/ops/backup/full-backup.sh-45-
+scripts/ops/backup/full-backup.sh-46-# -------- Backup Pipeline --------
+scripts/ops/backup/full-backup.sh:47:pg_dump "$DATABASE_URL" \
+scripts/ops/backup/full-backup.sh-48-  --format=plain \
+scripts/ops/backup/full-backup.sh-49-  --no-owner \
+--
+scripts/ops/backup/full-backup.sh-70-  "checksum_sha256": "${CHECKSUM}",
+scripts/ops/backup/full-backup.sh-71-  "file_size_bytes": ${FILE_SIZE},
+scripts/ops/backup/full-backup.sh:72:  "database_url_redacted": "$(echo "$DATABASE_URL" | sed 's#//.*@#//***@#')",
+scripts/ops/backup/full-backup.sh-73-  "type": "full-logical-backup"
+scripts/ops/backup/full-backup.sh-74-}
+--
+scripts/ops/backup/incremental-wal.sh-8-# -------- Configuration --------
+scripts/ops/backup/incremental-wal.sh-9-WAL_ARCHIVE_DIR="${WAL_ARCHIVE_DIR:-./backups/wal}"
+scripts/ops/backup/incremental-wal.sh:10:REPLICATION_URL="${REPLICATION_DATABASE_URL:-${DATABASE_URL:-}}"
+scripts/ops/backup/incremental-wal.sh-11-WAL_SLOT_NAME="${WAL_SLOT_NAME:-smartaccounting_slot}"
+scripts/ops/backup/incremental-wal.sh-12-CREATE_SLOT="${CREATE_WAL_SLOT:-false}"
+--
+scripts/ops/backup/incremental-wal.sh-30-
+scripts/ops/backup/incremental-wal.sh-31-# -------- Preconditions --------
+scripts/ops/backup/incremental-wal.sh:32:[[ -z "$REPLICATION_URL" ]] && fail "REPLICATION_DATABASE_URL or DATABASE_URL must be set"
+scripts/ops/backup/incremental-wal.sh-33-
+scripts/ops/backup/incremental-wal.sh-34-require pg_receivewal
+--
+scripts/clean.sh-13-
+scripts/clean.sh-14-# clear ports
+scripts/clean.sh:15:lsof -ti:5001 | xargs kill -9 2>/dev/null
+scripts/clean.sh:16:lsof -ti:5173 | xargs kill -9 2>/dev/null
+scripts/clean.sh-17-
+scripts/clean.sh-18-echo "✅ CLEAN COMPLETE"
+--
+client/src/pages/Pricing.jsx-7-import { fetchPublicPlans } from '../services/plansAPI';
+client/src/pages/Pricing.jsx-8-
+client/src/pages/Pricing.jsx:9:const stripeReady = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+client/src/pages/Pricing.jsx-10-
+client/src/pages/Pricing.jsx-11-const CheckMark = () => (
+--
+scripts/verify-production.sh-5-set -euo pipefail
+scripts/verify-production.sh-6-
+scripts/verify-production.sh:7:REPORT="verify-production-report.txt"
+scripts/verify-production.sh-8-START="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+scripts/verify-production.sh-9-
+--
+scripts/verify-production.sh-13-HOST_MARKER="/.dockerenv"
+scripts/verify-production.sh-14-
+scripts/verify-production.sh:15:DOCKER_URL="http://localhost:5000"
+scripts/verify-production.sh:16:HOST_URL="http://localhost:5001"
+scripts/verify-production.sh-17-
+scripts/verify-production.sh-18-BASE_URL="${PRODUCTION_VERIFY_BASE_URL:-}"
+--
+server/src/core/security/cors.js-8-
+server/src/core/security/cors.js-9-const allowedOrigins = new Set([
+server/src/core/security/cors.js:10:  ...parseOrigins(process.env.FRONTEND_URL),
+server/src/core/security/cors.js-11-  ...parseOrigins(process.env.CLIENT_URL),
+server/src/core/security/cors.js-12-  ...parseOrigins(process.env.CORS_ORIGIN),
+server/src/core/security/cors.js:13:  'http://localhost:5173',
+server/src/core/security/cors.js:14:  'http://localhost:5174',
+server/src/core/security/cors.js:15:  'http://localhost:5175',
+server/src/core/security/cors.js:16:  'http://localhost:5176',
+server/src/core/security/cors.js-17-]);
+server/src/core/security/cors.js-18-
+--
+server/.env-4-
+server/.env-5-NODE_ENV=development
+server/.env:6:PORT=5001
+server/.env:7:HOST=0.0.0.0
+server/.env-8-
+server/.env-9-USE_SQLITE=false
+server/.env:10:DATABASE_URL=postgres://smart:smartpass@localhost:5441/smartaccounting
+server/.env:11:REDIS_URL=redis://localhost:6381
+server/.env-12-
+server/.env-13-JWT_SECRET=dev_jwt_secret_please_change_later_123456
+server/.env:14:FRONTEND_URL=http://localhost:5173
+server/.env:15:CLIENT_URL=http://localhost:5173
+server/.env:16:CORS_ORIGIN=http://localhost:5173
+server/.env:17:API_BASE_URL=/api
+--
+server/index.js-4-const app = require('./src/app');
+server/index.js-5-
+server/index.js:6:const PORT = process.env.PORT || 5001;
+server/index.js-7-
+server/index.js-8-app.listen(PORT, () => {
+--
+scripts/env-guard.js-22-}
+scripts/env-guard.js-23-
+scripts/env-guard.js:24:if (!String(root.DATABASE_URL || '').includes('localhost:5441')) {
+scripts/env-guard.js:25:  fail('root .env DATABASE_URL must point to localhost:5441 for local CLI access');
+scripts/env-guard.js-26-}
+scripts/env-guard.js-27-
+scripts/env-guard.js:28:if (client.VITE_API_URL !== '/api') {
+scripts/env-guard.js:29:  fail('client/.env VITE_API_URL must be /api');
+scripts/env-guard.js-30-}
+scripts/env-guard.js-31-
+scripts/env-guard.js:32:if (clientLocal.VITE_WS_URL) {
+scripts/env-guard.js:33:  fail('client/.env.local must not enable VITE_WS_URL until realtime backend is official');
+scripts/env-guard.js-34-}
+scripts/env-guard.js-35-
+--
+server/src/core/db/index.js-2-
+server/src/core/db/index.js-3-const pool = new Pool({
+server/src/core/db/index.js:4:  connectionString: process.env.DATABASE_URL,
+server/src/core/db/index.js-5-});
+server/src/core/db/index.js-6-
+--
+src/services/elsterService.js-28-          'User-Agent': 'SmartAccounting/1.0',
+src/services/elsterService.js-29-        },
+src/services/elsterService.js:30:        timeout: 30000,
+src/services/elsterService.js-31-      });
+src/services/elsterService.js-32-
+--
+client/src/components/AppErrorBoundary.jsx-3-import ErrorBoundaryFallback from './ui/ErrorBoundaryFallback';
+client/src/components/AppErrorBoundary.jsx-4-
+client/src/components/AppErrorBoundary.jsx:5:const appVersion = import.meta.env.VITE_APP_VERSION || 'unknown';
+client/src/components/AppErrorBoundary.jsx-6-
+client/src/components/AppErrorBoundary.jsx-7-class AppErrorBoundary extends React.Component {
+--
+client/src/components/AppErrorBoundary.jsx-23-    }
+client/src/components/AppErrorBoundary.jsx-24-
+client/src/components/AppErrorBoundary.jsx:25:    if (import.meta.env.VITE_TELEMETRY_ENABLED === 'true') {
+client/src/components/AppErrorBoundary.jsx-26-      try {
+client/src/components/AppErrorBoundary.jsx-27-        const route = window.location.pathname;
+--
+scripts/demo-integration-verify.js-6-
+scripts/demo-integration-verify.js-7-const API_URL =
+scripts/demo-integration-verify.js:8:  (process.env.API_URL || 'http://localhost:5001/api').replace(/\/+$/, '');
+scripts/demo-integration-verify.js-9-const EMAIL = process.env.DEMO_ADMIN_EMAIL || process.env.DEMO_EMAIL || 'demo-admin@demo.com';
+scripts/demo-integration-verify.js-10-const PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
+--
+server/.env.backup.phase2-env-lock-1-NODE_ENV=development
+server/.env.backup.phase2-env-lock:2:PORT=5001
+server/.env.backup.phase2-env-lock-3-
+server/.env.backup.phase2-env-lock-4-# AI
+--
+server/.env.backup.phase2-env-lock-6-
+server/.env.backup.phase2-env-lock-7-# DATABASE
+server/.env.backup.phase2-env-lock:8:DATABASE_URL=postgres://user:password@localhost:5432/smartaccounting
+server/.env.backup.phase2-env-lock-9-
+server/.env.backup.phase2-env-lock-10-# SECURITY
+--
+src/server.js-4-
+src/server.js-5-const PORT = parseInt(process.env.PORT, 10) || 5000;
+src/server.js:6:const HOST = process.env.HOST || '0.0.0.0';
+src/server.js-7-const API_PREFIX = app.get('apiPrefix') || '/api';
+src/server.js-8-const swaggerDocsPath = `${API_PREFIX.replace(/\/$/, '')}/docs`;
+--
+src/server.js-63-      environment: process.env.NODE_ENV || 'development',
+src/server.js-64-    });
+src/server.js:65:    logger.info(`Swagger docs available at http://localhost:${PORT}${swaggerDocsPath}`);
+src/server.js-66-  });
+src/server.js-67-
+--
+scripts/verify-core-api.sh-4-set -euo pipefail
+scripts/verify-core-api.sh-5-
+scripts/verify-core-api.sh:6:REPORT="core-api-audit.txt"
+scripts/verify-core-api.sh:7:API_URL="${API_URL:-http://localhost:5001/api}"
+scripts/verify-core-api.sh:8:if [[ "$API_URL" == *"backend:"* ]] || [[ "$API_URL" != http://localhost* ]]; then
+scripts/verify-core-api.sh:9:  echo "❌ API_URL must point to localhost, never docker service name (backend:)."
+scripts/verify-core-api.sh-10-  exit 1
+scripts/verify-core-api.sh-11-fi
+--
+client/src/components/ProtectedRoute.jsx-8-  const location = useLocation();
+client/src/components/ProtectedRoute.jsx-9-
+client/src/components/ProtectedRoute.jsx:10:  if (import.meta.env.VITE_DISABLE_LOGIN === 'true') {
+client/src/components/ProtectedRoute.jsx-11-    return children;
+client/src/components/ProtectedRoute.jsx-12-  }
+--
+scripts/seed-demo-prod.js-100-    configureDemoPassword();
+scripts/seed-demo-prod.js-101-
+scripts/seed-demo-prod.js:102:    console.log(`[seed:demo:prod] Target DB: ${process.env.DATABASE_URL || 'sqlite'}`);
+scripts/seed-demo-prod.js-103-
+scripts/seed-demo-prod.js-104-    const { sequelize } = require('../src/models');
+--
+scripts/seed-demo-prod.js-130-    console.log('\n========================================');
+scripts/seed-demo-prod.js-131-    console.log('[seed:demo:prod] DEMO READY ✅');
+scripts/seed-demo-prod.js:132:    console.log('Frontend: http://localhost:3000');
+scripts/seed-demo-prod.js:133:    console.log('API:      http://localhost:5001/api');
+scripts/seed-demo-prod.js-134-    console.log('========================================\n');
+scripts/seed-demo-prod.js-135-
+--
+scripts/demo-verify.js-10-require('dotenv').config();
+scripts/demo-verify.js-11-
+scripts/demo-verify.js:12:const API_URL = (process.env.API_URL || 'http://localhost:5001/api').replace(/\/+$/, '');
+scripts/demo-verify.js-13-const EMAIL = process.env.DEMO_ADMIN_EMAIL || process.env.DEMO_EMAIL || 'demo-admin@demo.com';
+scripts/demo-verify.js-14-const PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
+--
+client/src/pages/Login.jsx-14-  const navigate = useNavigate();
+client/src/pages/Login.jsx-15-  const { login, loading, rateLimit, rateLimitMessage } = useAuth();
+client/src/pages/Login.jsx:16:  const loginDisabled = import.meta.env.VITE_DISABLE_LOGIN === 'true';
+client/src/pages/Login.jsx-17-  const [formData, setFormData] = useState({
+client/src/pages/Login.jsx-18-    email: '',
+--
+src/config/swagger.js-49-    servers: [
+src/config/swagger.js-50-      {
+src/config/swagger.js:51:        url: normalizeApiPrefix(process.env.API_BASE_URL),
+src/config/swagger.js-52-        description: 'Configurable API host (defaults to /api)',
+src/config/swagger.js-53-      },
+--
+scripts/dev-smoke.js-3-const { URLSearchParams } = require('url');
+scripts/dev-smoke.js-4-
+scripts/dev-smoke.js:5:const DEFAULT_BASE_URL = 'http://localhost:5001';
+scripts/dev-smoke.js-6-const baseUrl = (process.env.DEV_SMOKE_API_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
+scripts/dev-smoke.js-7-const client = axios.create({
+--
+scripts/system-audit.sh-29-log "2. Backend health check"
+scripts/system-audit.sh-30-sleep 5
+scripts/system-audit.sh:31:curl -fsS http://localhost:5001/health >/dev/null \
+scripts/system-audit.sh-32-  && pass "Backend /health OK" \
+scripts/system-audit.sh-33-  || fail "Backend /health failed"
+--
+scripts/system-audit.sh-35-# --------------------------------------------------
+scripts/system-audit.sh-36-log "3. Database connectivity"
+scripts/system-audit.sh:37:curl -fsS http://localhost:5001/health | grep -q '"db":{"status":"connected"' \
+scripts/system-audit.sh-38-  && pass "Database connected" \
+scripts/system-audit.sh-39-  || fail "Database NOT connected"
+--
+scripts/system-audit.sh-43-FRONTEND_OK=false
+scripts/system-audit.sh-44-for i in {1..15}; do
+scripts/system-audit.sh:45:  if curl -fsS http://localhost:3000 >/dev/null 2>&1; then
+scripts/system-audit.sh-46-    FRONTEND_OK=true
+scripts/system-audit.sh-47-    break
+--
+scripts/system-audit.sh-55-# --------------------------------------------------
+scripts/system-audit.sh-56-log "5. API reachable"
+scripts/system-audit.sh:57:curl -fsS http://localhost:5001/api/health >/dev/null \
+scripts/system-audit.sh-58-  && pass "API reachable" \
+scripts/system-audit.sh-59-  || pass "API health optional (skipped)"
+--
+client/src/pages/Dashboard.jsx-154-  const { activeCompany } = useCompany();
+client/src/pages/Dashboard.jsx-155-
+client/src/pages/Dashboard.jsx:156:  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+client/src/pages/Dashboard.jsx-157-
+client/src/pages/Dashboard.jsx-158-  const isReadOnly = isReadOnlyRole(user?.role);
+--
+scripts/start-all.sh-28-
+scripts/start-all.sh-29-FRONTEND_PID_FILE="logs/frontend.pid"
+scripts/start-all.sh:30:pid=$(lsof -tiTCP:5173 -sTCP:LISTEN || true)
+scripts/start-all.sh-31-
+scripts/start-all.sh-32-if [ -n "$pid" ]; then
+scripts/start-all.sh-33-  if [ -f "$FRONTEND_PID_FILE" ] && grep -qx "$pid" "$FRONTEND_PID_FILE"; then
+scripts/start-all.sh:34:    echo "   stopping previous SmartAccounting frontend on port 5173 (PID $pid)"
+scripts/start-all.sh-35-    kill "$pid" 2>/dev/null || true
+scripts/start-all.sh-36-    sleep 1
+--
+scripts/start-all.sh-43-    rm -f "$FRONTEND_PID_FILE"
+scripts/start-all.sh-44-  else
+scripts/start-all.sh:45:    echo "❌ Port 5173 is already in use by PID $pid, but it is not tracked as SmartAccounting frontend."
+scripts/start-all.sh-46-    echo "   To protect other projects, start-all.sh will not kill it automatically."
+scripts/start-all.sh:47:    echo "   Please stop that process manually or choose another VITE_DEV_PORT."
+scripts/start-all.sh-48-    exit 1
+scripts/start-all.sh-49-  fi
+scripts/start-all.sh-50-else
+scripts/start-all.sh:51:  echo "   port 5173 already free"
+scripts/start-all.sh-52-  rm -f "$FRONTEND_PID_FILE"
+scripts/start-all.sh-53-fi
+--
+scripts/start-all.sh-74-for i in {1..30}
+scripts/start-all.sh-75-do
+scripts/start-all.sh:76:  if curl -s http://localhost:5001/api/docs >/dev/null 2>&1; then
+scripts/start-all.sh-77-    echo "✔ Backend is READY"
+scripts/start-all.sh-78-    READY=true
+--
+scripts/start-all.sh-105-
+scripts/start-all.sh-106-cd client
+scripts/start-all.sh:107:VITE_DEV_PORT=5173 VITE_HMR_CLIENT_PORT=5173 npm run dev -- --port 5173 > ../logs/frontend.log 2>&1 &
+scripts/start-all.sh-108-FRONTEND_PID=$!
+scripts/start-all.sh-109-cd ..
+--
+scripts/start-all.sh-120-echo ""
+scripts/start-all.sh-121-echo "🟢 Frontend:"
+scripts/start-all.sh:122:echo "   http://localhost:5173"
+scripts/start-all.sh-123-echo ""
+scripts/start-all.sh-124-echo "🟢 Backend:"
+scripts/start-all.sh:125:echo "   http://localhost:5001"
+scripts/start-all.sh:126:echo "   http://localhost:5001/api/docs"
+scripts/start-all.sh-127-echo ""
+scripts/start-all.sh-128-echo "🟢 Database:"
+scripts/start-all.sh:129:echo "   localhost:5441"
+scripts/start-all.sh-130-echo ""
+scripts/start-all.sh-131-echo "🟡 Logs:"
+--
+src/config/database.js-76-  const forceSqlite =
+src/config/database.js-77-    process.env.USE_SQLITE !== undefined ? process.env.USE_SQLITE === 'true' : isTestEnv;
+src/config/database.js:78:  const databaseUrl = process.env.DATABASE_URL;
+src/config/database.js-79-  const storage =
+src/config/database.js-80-    process.env.SQLITE_STORAGE ||
+--
+src/config/database.js-138-  } else {
+src/config/database.js-139-    if (!dbConfig.databaseUrl) {
+src/config/database.js:140:      throw new Error('DATABASE_URL is not defined');
+src/config/database.js-141-    }
+src/config/database.js-142-
+--
+scripts/smoke-bank-statements.js-15- * -------------------------------------------------- */
+scripts/smoke-bank-statements.js-16-
+scripts/smoke-bank-statements.js:17:const API_BASE = process.env.API_URL || 'http://localhost:5001/api';
+scripts/smoke-bank-statements.js-18-const CONTRACT_PATH = path.join(__dirname, 'demo-contract.json');
+scripts/smoke-bank-statements.js-19-
+--
+src/app.js-6-const envSpec = {
+src/app.js-7-  NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
+src/app.js:8:  API_BASE_URL: str({ default: '/api' }),
+src/app.js:9:  PORT: num({ default: 5000 }),
+src/app.js:10:  DB_HOST: str({ default: 'localhost' }),
+src/app.js-11-  DB_USER: str({ default: 'testuser' }),
+src/app.js-12-  DB_PASS: str({ default: 'testpass' }),
+--
+src/app.js-45-  return prefixed.replace(/\/$/, '') || '/api';
+src/app.js-46-};
+src/app.js:47:const API_PREFIX = normalizeApiPrefix(process.env.API_BASE_URL);
+src/app.js-48-const EXPRESS_API_PREFIX = '/api';
+src/app.js-49-app.set('apiPrefix', API_PREFIX);
+--
+scripts/feature-audit.sh-2-set -euo pipefail
+scripts/feature-audit.sh-3-
+scripts/feature-audit.sh:4:REPORT="feature-audit-report.txt"
+scripts/feature-audit.sh:5:API="http://localhost:5001"
+scripts/feature-audit.sh:6:FRONT="http://localhost:3000"
+scripts/feature-audit.sh-7-
+scripts/feature-audit.sh-8-START="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+--
+scripts/run-fresh-demo.sh-33-# ---------------------------------------------
+scripts/run-fresh-demo.sh-34-echo "⏳ Waiting for backend health..."
+scripts/run-fresh-demo.sh:35:until curl -sf http://localhost:5001/api/health >/dev/null; do
+scripts/run-fresh-demo.sh-36-  sleep 2
+scripts/run-fresh-demo.sh-37-done
+--
+scripts/run-fresh-demo.sh-70-echo "==============================================="
+scripts/run-fresh-demo.sh-71-echo ""
+scripts/run-fresh-demo.sh:72:echo "🌐 Frontend (dev): http://localhost:5173"
+scripts/run-fresh-demo.sh:73:echo "🔌 Backend API   : http://localhost:5001/api"
+scripts/run-fresh-demo.sh-74-echo ""
+scripts/run-fresh-demo.sh-75-echo "👤 Demo Users (password: Demo123!)"
+--
+src/lib/cache/index.js-26-  COMPANY: 'company',
+src/lib/cache/index.js-27-  INVOICE: 'invoice',
+src/lib/cache/index.js:28:  TAX_REPORT: 'tax_report',
+src/lib/cache/index.js-29-  DASHBOARD: 'dashboard',
+src/lib/cache/index.js-30-  BANK_STATEMENT: 'bank_statement',
+--
+src/lib/cache/index.js-97-
+src/lib/cache/index.js-98-    if (environment !== 'test') {
+src/lib/cache/index.js:99:      const interval = setInterval(() => this.cleanup(), 300000);
+src/lib/cache/index.js-100-      if (typeof interval.unref === 'function') {
+src/lib/cache/index.js-101-        interval.unref();
+--
+client/src/lib/envGuards.js:1:const REQUIRED_CLIENT_ENV = ['VITE_APP_ENV'];
+client/src/lib/envGuards.js-2-const SENSITIVE_SERVER_ENV = [
+client/src/lib/envGuards.js-3-  'JWT_SECRET',
+client/src/lib/envGuards.js-4-  'JWT_REFRESH_SECRET',
+client/src/lib/envGuards.js:5:  'DATABASE_URL',
+client/src/lib/envGuards.js-6-  'STRIPE_SECRET_KEY',
+client/src/lib/envGuards.js-7-  'EMAIL_USER',
+--
+client/src/lib/envGuards.js-10-  'ELSTER_CERTIFICATE_PATH',
+client/src/lib/envGuards.js-11-  'CACHE_TTL',
+client/src/lib/envGuards.js:12:  'FRONTEND_URL',
+client/src/lib/envGuards.js-13-];
+client/src/lib/envGuards.js-14-
+--
+src/middleware/cors.js-2-const logger = require('../lib/logger'); // central logger lives under src/lib/logger
+src/middleware/cors.js-3-
+src/middleware/cors.js:4:const { FRONTEND_URL, CLIENT_URL, CORS_ORIGIN, NODE_ENV = 'development' } = process.env;
+src/middleware/cors.js-5-const isProduction = NODE_ENV === 'production';
+src/middleware/cors.js-6-
+src/middleware/cors.js-7-const defaultOrigins = [
+src/middleware/cors.js:8:  'http://localhost:3000',
+src/middleware/cors.js:9:  'http://localhost:3001',
+src/middleware/cors.js:10:  'http://localhost:5173',
+src/middleware/cors.js:11:  'https://localhost:3000',
+src/middleware/cors.js:12:  'https://localhost:3001',
+src/middleware/cors.js:13:  'https://localhost:5173',
+src/middleware/cors.js:14:  'http://host.docker.internal:3000',
+src/middleware/cors.js-15-  'http://host.docker.internal:3001',
+src/middleware/cors.js-16-];
+--
+src/middleware/cors.js-24-const allowedOrigins = new Set(
+src/middleware/cors.js-25-  [
+src/middleware/cors.js:26:    ...parseOrigins(FRONTEND_URL),
+src/middleware/cors.js-27-    ...parseOrigins(CLIENT_URL),
+src/middleware/cors.js-28-    ...parseOrigins(CORS_ORIGIN),
+--
+src/middleware/apiTimeout.js-10-};
+src/middleware/apiTimeout.js-11-
+src/middleware/apiTimeout.js:12:const API_PREFIX = normalizeApiPrefix(process.env.API_BASE_URL);
+src/middleware/apiTimeout.js-13-
+src/middleware/apiTimeout.js-14-const DEFAULT_TIMEOUT_MS = Number(process.env.API_REQUEST_TIMEOUT_MS) || 500;
+src/middleware/apiTimeout.js-15-const DASHBOARD_TIMEOUT_MS = Number(process.env.DASHBOARD_REQUEST_TIMEOUT_MS) || 800;
+src/middleware/apiTimeout.js:16:const OCR_TIMEOUT_MS = Number(process.env.OCR_REQUEST_TIMEOUT_MS) || 30000;
+src/middleware/apiTimeout.js-17-
+src/middleware/apiTimeout.js-18-const TIMEOUT_OVERRIDES = [
+--
+client/src/lib/telemetryClient.js-1-// Minimal telemetry client for fatal error reporting
+client/src/lib/telemetryClient.js-2-export function reportClientError({ route, version, requestId, errorType }) {
+client/src/lib/telemetryClient.js:3:  if (import.meta.env.VITE_TELEMETRY_ENABLED !== 'true') {
+client/src/lib/telemetryClient.js-4-    return;
+client/src/lib/telemetryClient.js-5-  }
+client/src/lib/telemetryClient.js-6-  try {
+client/src/lib/telemetryClient.js:7:    fetch(import.meta.env.VITE_TELEMETRY_ENDPOINT || '/telemetry/client-error', {
+client/src/lib/telemetryClient.js-8-      method: 'POST',
+client/src/lib/telemetryClient.js-9-      headers: { 'Content-Type': 'application/json' },
+--
+client/src/lib/featureFlags.js-6-};
+client/src/lib/featureFlags.js-7-
+client/src/lib/featureFlags.js:8:const DEFAULT_BANK_IMPORT_ENABLED = normalizeFlag(import.meta.env.VITE_BANK_IMPORT_ENABLED);
+client/src/lib/featureFlags.js-9-let bankImportEnabled = DEFAULT_BANK_IMPORT_ENABLED;
+client/src/lib/featureFlags.js-10-
+--
+client/src/lib/featureFlags.js-19-};
+client/src/lib/featureFlags.js-20-
+client/src/lib/featureFlags.js:21:const DEFAULT_OCR_PREVIEW_ENABLED = normalizeFlag(import.meta.env.VITE_OCR_PREVIEW_ENABLED);
+client/src/lib/featureFlags.js-22-let ocrPreviewEnabled = DEFAULT_OCR_PREVIEW_ENABLED;
+client/src/lib/featureFlags.js-23-
+--
+client/src/lib/featureFlags.js-32-};
+client/src/lib/featureFlags.js-33-
+client/src/lib/featureFlags.js:34:const DEFAULT_AI_ASSISTANT_ENABLED = normalizeFlag(import.meta.env.VITE_AI_ASSISTANT_ENABLED ?? 'true');
+client/src/lib/featureFlags.js-35-let aiAssistantEnabled = DEFAULT_AI_ASSISTANT_ENABLED;
+client/src/lib/featureFlags.js-36-
+--
+client/src/lib/featureFlags.js-45-};
+client/src/lib/featureFlags.js-46-
+client/src/lib/featureFlags.js:47:const DEFAULT_AI_VOICE_ENABLED = normalizeFlag(import.meta.env.VITE_AI_VOICE_ENABLED ?? 'false');
+client/src/lib/featureFlags.js-48-let aiVoiceEnabled = DEFAULT_AI_VOICE_ENABLED;
+client/src/lib/featureFlags.js-49-
+--
+client/src/lib/featureFlags.js-59-
+client/src/lib/featureFlags.js-60-const DEFAULT_AI_SUGGESTIONS_ENABLED = normalizeFlag(
+client/src/lib/featureFlags.js:61:  import.meta.env.VITE_AI_SUGGESTIONS_ENABLED ?? 'false',
+client/src/lib/featureFlags.js-62-);
+client/src/lib/featureFlags.js-63-let aiSuggestionsEnabled = DEFAULT_AI_SUGGESTIONS_ENABLED;
+--
+src/middleware/security.js-52-
+src/middleware/security.js-53-const NODE_ENV = process.env.NODE_ENV || 'development';
+src/middleware/security.js:54:const FRONTEND_URL = process.env.FRONTEND_URL;
+src/middleware/security.js-55-const isProduction = NODE_ENV === 'production';
+src/middleware/security.js-56-
+--
+src/middleware/security.js-132-
+src/middleware/security.js-133-const connectSrc = ["'self'"];
+src/middleware/security.js:134:if (FRONTEND_URL) {
+src/middleware/security.js:135:  connectSrc.push(FRONTEND_URL);
+src/middleware/security.js-136-}
+src/middleware/security.js-137-if (!isProduction) {
+--
+src/middleware/security.js-358-    (req, res, next) => {
+src/middleware/security.js-359-      if (req.path.includes('/upload')) {
+src/middleware/security.js:360:        req.setTimeout(300000);
+src/middleware/security.js-361-      } else {
+src/middleware/security.js:362:        req.setTimeout(30000);
+src/middleware/security.js-363-      }
+src/middleware/security.js-364-      next();
+--
+client/src/lib/demoMode.js-1-// Demo mode flag utility
+client/src/lib/demoMode.js:2:export const isDemoMode = () => import.meta.env.VITE_DEMO_MODE === 'true';
+client/src/lib/demoMode.js-3-
+client/src/lib/demoMode.js-4-// Example demo data for key entities
+--
+client/src/lib/logger.js:1:import { API_BASE_URL } from '../services/api';
+client/src/lib/logger.js-2-
+client/src/lib/logger.js:3:const LOG_ENDPOINT = `${API_BASE_URL}/logs`;
+client/src/lib/logger.js-4-
+client/src/lib/logger.js-5-class Logger {
+--
+client/src/main.jsx-5-    window.__vite_ws_protocol__ = 'wss:';
+client/src/main.jsx-6-    window.__vite_ws_host__ = window.location.hostname;
+client/src/main.jsx:7:    window.__vite_ws_port__ = 3000;
+client/src/main.jsx-8-  }
+client/src/main.jsx-9-}
+--
+src/routes/system.js-759-    config: {
+src/routes/system.js-760-      NODE_ENV: process.env.NODE_ENV || 'development',
+src/routes/system.js:761:      API_BASE_URL: process.env.API_BASE_URL || '/api',
+src/routes/system.js:762:      PORT: process.env.PORT || null,
+src/routes/system.js-763-      CLIENT_URL: process.env.CLIENT_URL || null,
+src/routes/system.js:764:      FRONTEND_URL: process.env.FRONTEND_URL || null,
+src/routes/system.js-765-      CORS_ORIGIN: process.env.CORS_ORIGIN || null,
+src/routes/system.js-766-      LOG_LEVEL: process.env.LOG_LEVEL || null,
+--
+src/utils/validateEnv.js-2-const logger = require('../lib/logger');
+src/utils/validateEnv.js-3-
+src/utils/validateEnv.js:4:const requiredEnvVars = ['NODE_ENV', 'PORT', 'DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL'];
+src/utils/validateEnv.js-5-
+src/utils/validateEnv.js-6-const optionalEnvVars = [
+--
+src/utils/validateEnv.js-73-        break;
+src/utils/validateEnv.js-74-      }
+src/utils/validateEnv.js:75:      case 'FRONTEND_URL': {
+src/utils/validateEnv.js-76-        try {
+src/utils/validateEnv.js-77-          validateUrl(varName, value);
+--
+src/utils/validateEnv.js-81-        break;
+src/utils/validateEnv.js-82-      }
+src/utils/validateEnv.js:83:      case 'DATABASE_URL': {
+src/utils/validateEnv.js-84-        // Accept sqlite:./path or sqlite://... or postgres://...
+src/utils/validateEnv.js-85-        if (!(value.startsWith('sqlite:') || value.includes('://'))) {
+src/utils/validateEnv.js-86-          errors.push(
+src/utils/validateEnv.js:87:            'DATABASE_URL must include a scheme (e.g. postgres:// or sqlite:). For SQLite, use sqlite:./path or sqlite://...',
+src/utils/validateEnv.js-88-          );
+src/utils/validateEnv.js-89-        }
+--
+src/services/emailService.js-366-        company: company?.name || 'Your Company',
+src/services/emailService.js-367-        role: user.role,
+src/services/emailService.js:368:        loginUrl: `${process.env.FRONTEND_URL}/login`,
+src/services/emailService.js-369-      },
+src/services/emailService.js-370-    });
+--
+src/services/emailService.js-378-      variables: {
+src/services/emailService.js-379-        name: user.firstName || user.email,
+src/services/emailService.js:380:        resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
+src/services/emailService.js-381-        timestamp: new Date().toISOString(),
+src/services/emailService.js-382-        ipAddress,
+--
+src/services/emailService.js-412-        status: report.status,
+src/services/emailService.js-413-        generatedDate: report.createdAt,
+src/services/emailService.js:414:        reportUrl: `${process.env.FRONTEND_URL}/tax-reports/${report.id}`,
+src/services/emailService.js-415-      },
+src/services/emailService.js-416-    });
+--
+src/services/taxAccountingEngine.js-39-        bank: '1200', 
+src/services/taxAccountingEngine.js-40-        receivables: '1400', 
+src/services/taxAccountingEngine.js:41:        inventory: '3000', 
+src/services/taxAccountingEngine.js-42-        equipment: '0600', 
+src/services/taxAccountingEngine.js-43-        buildings: '0200', 
+
+================================================================
+10. DOCKER CURRENT STATE BEFORE TEST
+================================================================
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+
+NAMES     IMAGE     STATUS    PORTS
+
+local     smartaccounting-final_backend-node-modules
+local     smartaccounting-final_client-node-modules
+local     smartaccounting-final_pgdata
+local     smartaccounting-final_pgdata-dev
+
+cc6a6af8d91e   smartaccounting-final_default   bridge    local
+
+================================================================
+11. QUALITY GATES BEFORE RUNTIME TEST
+================================================================
+--- runtime:check ---
+
+> smartaccounting@1.0.0 runtime:check
+> node scripts/runtime-guard.js
+
+RUNTIME GUARD PASS: start:all / stop:all are the locked daily runtime.
+
+--- env:check ---
+
+> smartaccounting@1.0.0 env:check
+> node scripts/env-guard.js
+
+ENV GUARD PASS: environment source of truth is locked.
+
+--- voice:check ---
+
+> smartaccounting@1.0.0 voice:check
+> node scripts/voice-guard.js
+
+VOICE GUARD PASS: voice is locked to /api/ai/voice and safe assistant flow.
+
+--- lint ---
+
+> smartaccounting@1.0.0 lint
+> eslint .
+
+
+/Users/nadeemnour/smartaccounting-final/client/src/navigation/sidebarNavigation.js
+   9:3   warning  'ShieldCheckIcon' is defined but never used       no-unused-vars
+  25:22  warning  'ShieldCheckIconSolid' is defined but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/AIAssistant.jsx
+  416:6  warning  React Hook useEffect has a missing dependency: 'resetAssistantState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/Companies.jsx
+  82:5  warning  React Hook useCallback has an unnecessary dependency: 'setCompanies'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/__tests__/AIAssistant.test.jsx
+  2:10  warning  'act' is defined but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/client/src/pages/ai-hub/AiHub.jsx
+  5:10  warning  'aiAssistantAPI' is defined but never used            no-unused-vars
+  9:24  warning  'setSystemStatus' is assigned a value but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/client/src/services/ocrAPI.js
+  64:22  warning  '_companyId' is assigned a value but never used  no-unused-vars
+  74:22  warning  '_companyId' is assigned a value but never used  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/services/ai/aiAssistantService.js
+  916:11  warning  'sanitizedPrompt' is assigned a value but never used  no-unused-vars
+  916:28  warning  'prompt' is assigned a value but never used           no-unused-vars
+  916:36  warning  'rawPrompt' is assigned a value but never used        no-unused-vars
+  916:47  warning  'stack' is assigned a value but never used            no-unused-vars
+  916:54  warning  'error' is assigned a value but never used            no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/services/bankImportService.js
+   5:23  warning  'xmlString' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+  11:21  warning  'mt940String' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  17:19  warning  'pdfBuffer' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/utils/bank/ocrStatementParser.js
+  2:7   warning  'BankTransaction' is assigned a value but never used                         no-unused-vars
+  4:28  warning  'pdfBuffer' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/Users/nadeemnour/smartaccounting-final/src/utils/datev/datevValidators.js
+  4:40  warning  'records' is defined but never used. Allowed unused args must match /^_/u     no-unused-vars
+  9:36  warning  'records' is defined but never used. Allowed unused args must match /^_/u     no-unused-vars
+  9:45  warning  'fiscalYear' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+✖ 22 problems (0 errors, 22 warnings)
+
+
+--- client build ---
+
+> smart-accounting-frontend@0.0.0 build
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 919 modules transformed.
+Generated an empty chunk: "vendor".
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/nadeemnour/smartaccounting-final/client/src/components/ui/Modal.jsx is dynamically imported by /Users/nadeemnour/smartaccounting-final/client/src/components/ui/AsyncModal.jsx but also statically imported by /Users/nadeemnour/smartaccounting-final/client/src/components/ui/AsyncModal.jsx, /Users/nadeemnour/smartaccounting-final/client/src/pages/Dashboard.jsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                   0.68 kB │ gzip:   0.40 kB
+dist/assets/index-B3ZU8q0O.css  113.07 kB │ gzip:  16.00 kB
+dist/assets/vendor-l0sNRNKZ.js    0.00 kB │ gzip:   0.02 kB
+dist/assets/router-CbApHHoq.js  180.08 kB │ gzip:  59.27 kB
+dist/assets/index-D1y9Awyt.js   676.36 kB │ gzip: 173.46 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.60s
+
+================================================================
+12. TEST COMPOSE ISOLATION CHECK
+================================================================
+--- docker compose test config normalized ---
+name: smartaccounting-final
+services:
+  backend:
+    build:
+      context: /Users/nadeemnour/smartaccounting-final
+      dockerfile: Dockerfile.backend
+    container_name: smartaccounting-backend-test
+    depends_on:
+      db:
+        condition: service_healthy
+        required: true
+    environment:
+      AI_ASSISTANT_ENABLED: "false"
+      API_BASE_URL: /api
+      BANK_IMPORT_ENABLED: "false"
+      DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting_test
+      EXPORTS_ENABLED: "false"
+      LOG_LEVEL: error
+      NODE_ENV: test
+      PORT: "5001"
+      REQUEST_LOGGING: "false"
+      USE_SQLITE: "false"
+    networks:
+      default: null
+  db:
+    container_name: smartaccounting-db-test
+    environment:
+      POSTGRES_DB: smartaccounting_test
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres
+      timeout: 5s
+      interval: 5s
+      retries: 5
+    image: postgres:16
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5442"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: pgdata_test
+        target: /var/lib/postgresql/data
+        volume: {}
+networks:
+  default:
+    name: smartaccounting-final_default
+volumes:
+  pgdata_test:
+    name: smartaccounting-final_pgdata_test
+
+--- run test:postgres ---
+
+> smartaccounting@1.0.0 test:postgres
+> bash scripts/ci-postgres-test.sh
+
+[ci-postgres-test] starting docker services
+#1 [internal] load local bake definitions
+#1 reading from stdin 571B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile.backend
+#2 transferring dockerfile: 371B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:20-bullseye
+#3 DONE 1.7s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 607B done
+#4 DONE 0.0s
+
+#5 [1/7] FROM docker.io/library/node:20-bullseye@sha256:c0122351f25f04facee976f9db7214789eabadb489f4e4aea9cd00a0d6af77c4
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 1.16MB 0.1s done
+#6 DONE 0.1s
+
+#7 [2/7] WORKDIR /usr/src/app
+#7 CACHED
+
+#8 [3/7] RUN apt-get update && apt-get install -y   python3   make   g++   curl   && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [4/7] COPY package.json package-lock.json ./
+#9 CACHED
+
+#10 [5/7] RUN npm ci
+#10 CACHED
+
+#11 [6/7] COPY . .
+#11 DONE 0.3s
+
+#12 [7/7] RUN mkdir -p logs uploads temp
+#12 DONE 0.2s
+
+#13 exporting to image
+#13 exporting layers 0.1s done
+#13 writing image sha256:56d2795cc32991b29d52d23744e7b8f254a24fad53d107b2bad9f711bd1cf1e2
+#13 writing image sha256:56d2795cc32991b29d52d23744e7b8f254a24fad53d107b2bad9f711bd1cf1e2 done
+#13 naming to docker.io/library/smartaccounting-final-backend done
+#13 DONE 0.1s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ smartaccounting-final-backend  Built
+ Volume smartaccounting-final_pgdata_test  Creating
+ Volume smartaccounting-final_pgdata_test  Created
+time="2026-07-03T00:56:44+02:00" level=warning msg="Found orphan containers ([smartaccounting-redis-dev]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container smartaccounting-db-test  Creating
+ Container smartaccounting-db-test  Created
+ Container smartaccounting-backend-test  Creating
+ Container smartaccounting-backend-test  Created
+ Container smartaccounting-db-test  Starting
+ Container smartaccounting-db-test  Started
+ Container smartaccounting-db-test  Waiting
+ Container smartaccounting-db-test  Healthy
+ Container smartaccounting-backend-test  Starting
+ Container smartaccounting-backend-test  Started
+[ci-postgres-test] waiting for postgres
+[wait-for-postgres] compose=docker-compose.test.yml service=db
+[wait-for-postgres] container found: 42b02783d23161256e7a3f9dc3d5ef64527e4efc141ef9168297a14147314ee6
+[wait-for-postgres] checking pg_isready (user=postgres, db=postgres)
+[wait-for-postgres] Postgres is READY
+[ci-postgres-test] allowing backend to settle
+[ci-postgres-test] docker status
+NAME                           IMAGE                           COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+smartaccounting-backend-test   smartaccounting-final-backend   "docker-entrypoint.s…"   backend   12 seconds ago   Up 5 seconds              5001/tcp
+smartaccounting-db-test        postgres:16                     "docker-entrypoint.s…"   db        12 seconds ago   Up 11 seconds (healthy)   0.0.0.0:5442->5432/tcp, [::]:5442->5432/tcp
+[ci-postgres-test] backend status: running
+[ci-postgres-test] running migrations and postgres compliance tests
+
+[4mSequelize CLI [Node: 20.20.2, CLI: 6.6.3, ORM: 6.37.8][24m
+
+Loaded configuration file "config/sequelize.js".
+Using environment "test".
+== 20251225000100-create-companies: migrating =======
+== 20251225000100-create-companies: migrated (0.012s)
+
+== 20251225000200-create-users: migrating =======
+== 20251225000200-create-users: migrated (0.010s)
+
+== 20251225000300-create-revoked-tokens: migrating =======
+== 20251225000300-create-revoked-tokens: migrated (0.006s)
+
+== 20251225000400-create-audit-logs: migrating =======
+== 20251225000400-create-audit-logs: migrated (0.028s)
+
+== 20251225000500-create-invoices: migrating =======
+== 20251225000500-create-invoices: migrated (0.015s)
+
+== 20251225000600-create-invoice-items: migrating =======
+== 20251225000600-create-invoice-items: migrated (0.010s)
+
+== 20251225000700-create-expenses: migrating =======
+== 20251225000700-create-expenses: migrated (0.009s)
+
+== 20251225000800-create-bank-statements: migrating =======
+== 20251225000800-create-bank-statements: migrated (0.005s)
+
+== 20251225000900-create-bank-transactions: migrating =======
+== 20251225000900-create-bank-transactions: migrated (0.006s)
+
+== 20251225001000-create-tax-reports: migrating =======
+== 20251225001000-create-tax-reports: migrated (0.011s)
+
+== 20251225001300-create-active-tokens: migrating =======
+== 20251225001300-create-active-tokens: migrated (0.006s)
+
+== 20251227000000-extend-demo-schema: migrating =======
+== 20251227000000-extend-demo-schema: migrated (0.013s)
+
+== 20251227001000-create-file-attachments: migrating =======
+== 20251227001000-create-file-attachments: migrated (0.010s)
+
+== 20251228000100-create-transactions: migrating =======
+== 20251228000100-create-transactions: migrated (0.008s)
+
+== 20251228000200-update-tax-reports-schema: migrating =======
+== 20251228000200-update-tax-reports-schema: migrated (0.028s)
+
+== 20251228000300-extend-bank-transactions: migrating =======
+== 20251228000300-extend-bank-transactions: migrated (0.005s)
+
+== 20251228000400-add-ai-enabled-to-companies: migrating =======
+== 20251228000400-add-ai-enabled-to-companies: migrated (0.005s)
+
+== 20251228000500-create-bank-statement-import-dry-runs: migrating =======
+== 20251228000500-create-bank-statement-import-dry-runs: migrated (0.006s)
+
+== 20251229100000-add-missing-aiinsight-columns: migrating =======
+[SKIP] ai_insights table not found – skipping column additions
+== 20251229100000-add-missing-aiinsight-columns: migrated (0.006s)
+
+== 20251229101000-align-taxreport-id-type: migrating =======
+[INFO] tax_reports.id_new promoted to UUID PK (id_old retained)
+== 20251229101000-align-taxreport-id-type: migrated (0.012s)
+
+== 20251229102000-align-activetoken-revokedtoken-id: migrating =======
+== 20251229102000-align-activetoken-revokedtoken-id: migrated (0.008s)
+
+== 20251230100000-create-ai-insights: migrating =======
+== 20251230100000-create-ai-insights: migrated (0.012s)
+
+== 20260102000000-set-invoice-items-id-default: migrating =======
+== 20260102000000-set-invoice-items-id-default: migrated (0.002s)
+
+== 20260105000000-create-ai-insight-decisions: migrating =======
+== 20260105000000-create-ai-insight-decisions: migrated (0.009s)
+
+== 20260106000000-add-audit-log-immutable: migrating =======
+== 20260106000000-add-audit-log-immutable: migrated (0.003s)
+
+== 20260106160913-fix-file-attachments-missing-columns: migrating =======
+== 20260106160913-fix-file-attachments-missing-columns: migrated (0.007s)
+
+== 20260107000000-align-ai-insights-schema: migrating =======
+== 20260107000000-align-ai-insights-schema: migrated (0.015s)
+
+== 20260107_create_invoice_payments_and_paid_fields: migrating =======
+== 20260107_create_invoice_payments_and_paid_fields: migrated (0.006s)
+
+== 20260108001000-add-financial-integrity-checks: migrating =======
+== 20260108001000-add-financial-integrity-checks: migrated (0.004s)
+
+== 20260109000000-lock-expenses-accountability: migrating =======
+== 20260109000000-lock-expenses-accountability: migrated (0.007s)
+
+== 20260109001000-lock-audit-immutability: migrating =======
+== 20260109001000-lock-audit-immutability: migrated (0.004s)
+
+== 20260109002000-lock-tax-report-status: migrating =======
+== 20260109002000-lock-tax-report-status: migrated (0.002s)
+
+== 20260110000000-lock-expenses-accountability-and-vat: migrating =======
+== 20260110000000-lock-expenses-accountability-and-vat: migrated (0.005s)
+
+== 20260111002000-strengthen-status-and-enum-checks: migrating =======
+== 20260111002000-strengthen-status-and-enum-checks: migrated (0.005s)
+
+== 20260111003000-sqlite-parity-shims: migrating =======
+== 20260111003000-sqlite-parity-shims: migrated (0.002s)
+
+== 20260112000000-add-audit-log-company-requestid: migrating =======
+== 20260112000000-add-audit-log-company-requestid: migrated (0.009s)
+
+== 20260113000000-add-partially-paid-invoice-status: migrating =======
+== 20260113000000-add-partially-paid-invoice-status: migrated (0.002s)
+
+== 20260113120000-add-purpose-column-aiinsights: migrating =======
+== 20260113120000-add-purpose-column-aiinsights: migrated (0.007s)
+
+== 20260114_add_file_type_to_file_attachments: migrating =======
+== 20260114_add_file_type_to_file_attachments: migrated (0.003s)
+
+== 20260115_add_url_and_relations_to_file_attachments: migrating =======
+== 20260115_add_url_and_relations_to_file_attachments: migrated (0.007s)
+
+== 20260116_fix_attached_to_id_uuid: migrating =======
+== 20260116_fix_attached_to_id_uuid: migrated (0.005s)
+
+== 20260117000000-add-tts-enabled-to-companies: migrating =======
+== 20260117000000-add-tts-enabled-to-companies: migrated (0.002s)
+
+== 20260118000000-add-company-status-and-subscription-fields: migrating =======
+== 20260118000000-add-company-status-and-subscription-fields: migrated (0.004s)
+
+== 20260119000000-create-accounting-ledger: migrating =======
+== 20260119000000-create-accounting-ledger: migrated (0.030s)
+
+PASS tests/postgres/complianceConstraints.test.js
+  Postgres compliance gate
+    ✓ rejects expenses that violate the VAT math constraint (58 ms)
+    ✓ rejects invoice items that violate the VAT math constraint (8 ms)
+    ✓ rejects transactions that violate the VAT/debit math constraint (3 ms)
+    ✓ prevents toggling audit log immutability (8 ms)
+    ✓ requires requestId for new audit entries (4 ms)
+    ✓ enforces tax report statuses (3 ms)
+    ✓ bank statement dry run statuses must be known (2 ms)
+    ✓ audit_logs carry companyId and requestId at the schema level (5 ms)
+    ✓ ai insights severity is limited to the approved list (2 ms)
+    ✓ Postgres metadata declares compliance constraints (5 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        1.859 s
+Ran all test suites matching /tests\/postgres\/complianceConstraints.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+ Container smartaccounting-backend-test  Stopping
+ Container smartaccounting-backend-test  Stopped
+ Container smartaccounting-backend-test  Removing
+ Container smartaccounting-backend-test  Removed
+ Container smartaccounting-db-test  Stopping
+ Container smartaccounting-db-test  Stopped
+ Container smartaccounting-db-test  Removing
+ Container smartaccounting-db-test  Removed
+ Volume smartaccounting-final_pgdata_test  Removing
+ Network smartaccounting-final_default  Removing
+ Volume smartaccounting-final_pgdata_test  Removed
+ Network smartaccounting-final_default  Removed
+
+--- docker state after test:postgres ---
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+
+NAMES     IMAGE     STATUS    PORTS
+
+local     smartaccounting-final_backend-node-modules
+local     smartaccounting-final_client-node-modules
+local     smartaccounting-final_pgdata
+local     smartaccounting-final_pgdata-dev
+
+
+================================================================
+13. LOCKED DAILY RUNTIME START CHECK
+================================================================
+--- stop existing runtime first ---
+
+> smartaccounting@1.0.0 stop:all
+> bash scripts/stop-all.sh
+
+🛑 STOPPING SMARTACCOUNTING ENTERPRISE SYSTEM...
+
+🌐 Stopping SmartAccounting frontend...
+   PID file exists, but PID 21477 does not belong to this project. Skipping.
+
+🐳 Stopping SmartAccounting Docker services...
+ Container smartaccounting-redis-dev  Stopping
+ Container smartaccounting-redis-dev  Stopped
+ Container smartaccounting-redis-dev  Removing
+ Container smartaccounting-redis-dev  Removed
+
+✅ SMARTACCOUNTING SERVICES STOPPED CLEANLY
+
+--- docker state after stop ---
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+NAMES     IMAGE     STATUS    PORTS
+
+--- start locked runtime ---
+start_pid=42725
+
+--- start log tail ---
+
+> smartaccounting@1.0.0 start
+> npm run start:all
+
+
+> smartaccounting@1.0.0 start:all
+> bash scripts/start-all.sh
+
+
+======================================
+🚀 SMARTACCOUNTING ENTERPRISE CENTER
+======================================
+
+🐳 Checking Docker...
+✔ Docker is running
+
+🧹 Cleaning frontend port...
+❌ Port 5173 is already in use by PID 21496, but it is not tracked as SmartAccounting frontend.
+   To protect other projects, start-all.sh will not kill it automatically.
+   Please stop that process manually or choose another VITE_DEV_PORT.
+
+--- docker state after start ---
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+NAMES     IMAGE     STATUS    PORTS
+
+================================================================
+14. RUNTIME HEALTH / API SMOKE
+================================================================
+--- health ---
+
+--- login ---
+
+TOKEN_LENGTH=0
+TOKEN MISSING
+
+================================================================
+15. SERVER LOGS
+================================================================
+--- backend logs ---
+
+--- db logs ---
+
+--- redis logs ---
+
+================================================================
+16. STOP / CLEANUP BEHAVIOR
+================================================================
+
+> smartaccounting@1.0.0 stop:all
+> bash scripts/stop-all.sh
+
+🛑 STOPPING SMARTACCOUNTING ENTERPRISE SYSTEM...
+
+🌐 Stopping SmartAccounting frontend...
+   no frontend PID file found
+
+🐳 Stopping SmartAccounting Docker services...
+
+✅ SMARTACCOUNTING SERVICES STOPPED CLEANLY
+
+--- docker state after stop:all ---
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+NAMES     IMAGE     STATUS    PORTS
+local     smartaccounting-final_backend-node-modules
+local     smartaccounting-final_client-node-modules
+local     smartaccounting-final_pgdata
+local     smartaccounting-final_pgdata-dev
+
+================================================================
+17. RISK SCAN: RUNTIME / CI / ENV
+================================================================
+Dockerfile-3-WORKDIR /usr/src/app
+Dockerfile-4-
+Dockerfile:5:# Default environment (can be overridden by docker-compose)
+Dockerfile-6-ENV NODE_ENV=development
+Dockerfile-7-
+--
+package.json-34-    "test:sqlite": "USE_SQLITE=true jest",
+package.json-35-    "test:postgres": "bash scripts/ci-postgres-test.sh",
+package.json:36:    "migrate:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate\" && docker compose -f docker-compose.test.yml down",
+package.json:37:    "seed:demo:postgres": "docker compose -f docker-compose.test.yml up -d db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"DEMO_MODE=true ALLOW_DEMO_SEED=true NODE_ENV=test USE_SQLITE=false node scripts/seed-demo-prod.js\" && docker compose -f docker-compose.test.yml down",
+package.json:38:    "db:verify:postgres": "docker compose -f docker-compose.test.yml up -d --build db backend && node scripts/wait-for-postgres.js docker-compose.test.yml db && docker compose -f docker-compose.test.yml exec -T backend sh -lc \"CI=true NODE_ENV=test USE_SQLITE=false npx sequelize-cli db:migrate && CI=true NODE_ENV=test USE_SQLITE=false node scripts/check-migrations.js\" && docker compose -f docker-compose.test.yml down -v",
+package.json-39-    "runtime:check": "node scripts/runtime-guard.js",
+package.json-40-    "env:check": "node scripts/env-guard.js",
+package.json-41-    "voice:check": "node scripts/voice-guard.js",
+package.json:42:    "backend:start": "node src/server.js",
+package.json-43-    "backend:dev": "nodemon src/server.js"
+package.json-44-  },
+--
+docker-compose.yml-2-  db:
+docker-compose.yml-3-    image: postgres:15-alpine
+docker-compose.yml:4:    container_name: smartaccounting-db-dev
+docker-compose.yml-5-
+docker-compose.yml-6-    environment:
+--
+docker-compose.yml-26-  redis:
+docker-compose.yml-27-    image: redis:7-alpine
+docker-compose.yml:28:    container_name: smartaccounting-redis-dev
+docker-compose.yml-29-
+docker-compose.yml-30-    ports:
+--
+docker-compose.yml-45-      dockerfile: Dockerfile.backend
+docker-compose.yml-46-
+docker-compose.yml:47:    container_name: smartaccounting-backend-dev
+docker-compose.yml-48-
+docker-compose.yml-49-    environment:
+--
+docker-compose.yml-54-
+docker-compose.yml-55-      USE_SQLITE: "false"
+docker-compose.yml:56:      DATABASE_URL: postgres://smart:smartpass@db:5432/smartaccounting
+docker-compose.yml:57:      REDIS_URL: redis://redis:6379
+docker-compose.yml-58-      CACHE_TTL: "3600"
+docker-compose.yml-59-
+--
+docker-compose.yml-69-      TRUST_PROXY: "false"
+docker-compose.yml-70-
+docker-compose.yml:71:      JWT_SECRET: dev_jwt_secret_please_change_later_123456
+docker-compose.yml-72-
+docker-compose.yml-73-      AI_ASSISTANT_ENABLED: "true"
+--
+docker-compose.prod.yml-2-  db:
+docker-compose.prod.yml-3-    image: postgres:16
+docker-compose.prod.yml:4:    container_name: smartaccounting-db
+docker-compose.prod.yml-5-
+docker-compose.prod.yml-6-    environment:
+--
+docker-compose.prod.yml-21-
+docker-compose.prod.yml-22-  backend:
+docker-compose.prod.yml:23:    container_name: smartaccounting-backend
+docker-compose.prod.yml-24-
+docker-compose.prod.yml-25-    build:
+--
+docker-compose.prod.yml-51-
+docker-compose.prod.yml-52-  frontend:
+docker-compose.prod.yml:53:    container_name: smartaccounting-frontend
+docker-compose.prod.yml-54-
+docker-compose.prod.yml-55-    build:
+--
+docker-compose.test.yml-2-  db:
+docker-compose.test.yml-3-    image: postgres:16
+docker-compose.test.yml:4:    container_name: smartaccounting-db-test
+docker-compose.test.yml-5-
+docker-compose.test.yml-6-    environment:
+--
+docker-compose.test.yml-26-      dockerfile: Dockerfile.backend
+docker-compose.test.yml-27-
+docker-compose.test.yml:28:    container_name: smartaccounting-backend-test
+docker-compose.test.yml-29-
+docker-compose.test.yml-30-    depends_on:
+--
+docker-compose.test.yml-37-      USE_SQLITE: "false"
+docker-compose.test.yml-38-
+docker-compose.test.yml:39:      DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting_test
+docker-compose.test.yml-40-
+docker-compose.test.yml-41-      API_BASE_URL: /api
+--
+scripts/stop-all.sh-20-      echo "   stopping frontend PID $FRONTEND_PID"
+scripts/stop-all.sh-21-      kill "$FRONTEND_PID" 2>/dev/null || true
+scripts/stop-all.sh:22:      sleep 1
+scripts/stop-all.sh-23-
+scripts/stop-all.sh-24-      if ps -p "$FRONTEND_PID" >/dev/null 2>&1; then
+--
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-10-Runtime environment source
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-11-
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md:12:For daily runtime, docker-compose.yml is the source of truth.
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-13-
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-14-Local CLI environment
+--
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-16-Root .env is for local CLI tools only and must point to Docker-exposed local ports:
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-17-
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md:18:Backend: localhost:5001
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-19-Postgres: localhost:5441
+docs/ARCHITECTURE_LOCK/ENVIRONMENT_SOURCE_OF_TRUTH.md-20-Redis: localhost:6381
+--
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-14-Redis: Docker Compose Redis service
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-15-Do not use for daily runtime
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:16:node server/index.js
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:17:node src/server.js
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md:18:cd client && npm run dev
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-19-
+docs/ARCHITECTURE_LOCK/RUNTIME_SOURCE_OF_TRUTH.md-20-These commands are development/debug-only and must not be used as the normal system startup path.
+--
+.github/workflows/ci.yml-46-    env:
+.github/workflows/ci.yml-47-      NODE_ENV: test
+.github/workflows/ci.yml:48:      JWT_SECRET: test-jwt-secret-32-char-placeholder
+.github/workflows/ci.yml-49-      FRONTEND_URL: http://localhost:5173
+.github/workflows/ci.yml-50-    steps:
+--
+scripts/runtime-guard.js-2-
+scripts/runtime-guard.js-3-const forbiddenDailyCommands = [
+scripts/runtime-guard.js:4:  'node server/index.js',
+scripts/runtime-guard.js:5:  'node src/server.js',
+scripts/runtime-guard.js:6:  'cd client && npm run dev',
+scripts/runtime-guard.js-7-];
+scripts/runtime-guard.js-8-
+--
+server/src/routes/companies.js-2-const router = express.Router();
+server/src/routes/companies.js-3-
+server/src/routes/companies.js:4:// temporary in-memory fallback (safe until DB wiring verified)
+server/src/routes/companies.js-5-const mockCompanies = [
+server/src/routes/companies.js-6-  { id: 1, name: 'Demo Company A' },
+--
+scripts/start.sh-28-echo "🚀 Starting frontend..."
+scripts/start.sh-29-cd client
+scripts/start.sh:30:npm run dev &
+scripts/start.sh-31-FRONTEND_PID=$!
+scripts/start.sh-32-
+--
+scripts/start.sh-42-echo "=================================="
+scripts/start.sh-43-echo "🌐 Frontend: http://localhost:5173"
+scripts/start.sh:44:echo "🧠 Backend:  http://localhost:5001"
+--
+src/services/invoiceService.js-66-    // Lock original invoice (set status to CANCELLED_CREDITED or similar)
+src/services/invoiceService.js-67-    await original.update({ status: 'CANCELLED' }, { transaction: t });
+src/services/invoiceService.js:68:    // TODO: Audit-log credit note creation
+src/services/invoiceService.js-69-    const updatedOriginal = await getInvoiceById(original.id, companyId);
+src/services/invoiceService.js-70-    const finalizedCreditNote = await getInvoiceById(creditNote.id, companyId);
+--
+src/services/invoiceService.js-148-        { transaction: t },
+src/services/invoiceService.js-149-      );
+src/services/invoiceService.js:150:      // TODO: Audit-log payment registration
+src/services/invoiceService.js-151-      const updatedInvoice = await getInvoiceById(invoice.id, companyId);
+src/services/invoiceService.js-152-      return { payment, invoice: updatedInvoice };
+--
+src/services/invoiceService.js-395-    );
+src/services/invoiceService.js-396-    err.status = 409;
+src/services/invoiceService.js:397:    // TODO: Audit-log blocked attempt here
+src/services/invoiceService.js-398-    throw err;
+src/services/invoiceService.js-399-  }
+--
+src/services/bankStatementService.js-433-            }
+src/services/bankStatementService.js-434-          } catch (error) {
+src/services/bankStatementService.js:435:            // TODO: implement
+src/services/bankStatementService.js-436-          }
+src/services/bankStatementService.js-437-        })
+--
+src/services/bankStatementService.js-521-        }
+src/services/bankStatementService.js-522-      } catch (error) {
+src/services/bankStatementService.js:523:        // TODO: implement
+src/services/bankStatementService.js-524-      }
+src/services/bankStatementService.js-525-    }
+--
+src/services/bankStatementService.js-602-        processedTransactions.push(bankTransaction);
+src/services/bankStatementService.js-603-      } catch (error) {
+src/services/bankStatementService.js:604:        // TODO: implement
+src/services/bankStatementService.js-605-      }
+src/services/bankStatementService.js-606-    }
+--
+src/app.js-12-  DB_PASS: str({ default: 'testpass' }),
+src/app.js-13-  DB_NAME: str({ default: 'testdb' }),
+src/app.js:14:  JWT_SECRET: str({ default: 'testsecret' }),
+src/app.js-15-  // Add other required env vars here as needed
+src/app.js-16-};
+--
+src/app.js-73-const getCacheStatus = () => {
+src/app.js-74-  if (!cache || typeof cache.getStats !== 'function') {
+src/app.js:75:    return { redis: 'not_configured' };
+src/app.js-76-  }
+src/app.js-77-
+--
+src/app.js-91-const getQueueStatus = () => ({
+src/app.js-92-  name: 'background',
+src/app.js:93:  status: 'not_configured',
+src/app.js-94-  detail: 'No asynchronous queue client has been configured in this deployment.',
+src/app.js-95-});
+--
+scripts/ops/restore/full-restore.sh-15-
+scripts/ops/restore/full-restore.sh-16-# -------- Environment --------
+scripts/ops/restore/full-restore.sh:17:RESTORE_DATABASE_URL="${RESTORE_DATABASE_URL:-${DATABASE_URL:-}}"
+scripts/ops/restore/full-restore.sh-18-BACKUP_PASSPHRASE="${BACKUP_PASSPHRASE:-}"
+scripts/ops/restore/full-restore.sh-19-CONFIRM_RESTORE="${CONFIRM_RESTORE:-false}"
+--
+scripts/ops/restore/full-restore.sh-35-# -------- Preconditions --------
+scripts/ops/restore/full-restore.sh-36-[[ ! -f "$BACKUP_FILE" ]] && fail "Backup file not found: $BACKUP_FILE"
+scripts/ops/restore/full-restore.sh:37:[[ -z "$RESTORE_DATABASE_URL" ]] && fail "RESTORE_DATABASE_URL or DATABASE_URL must be set"
+scripts/ops/restore/full-restore.sh-38-[[ -z "$BACKUP_PASSPHRASE" ]] && fail "BACKUP_PASSPHRASE is required"
+scripts/ops/restore/full-restore.sh-39-
+--
+scripts/ops/restore/full-restore.sh-44-# -------- Safety barrier --------
+scripts/ops/restore/full-restore.sh-45-log "Target database:"
+scripts/ops/restore/full-restore.sh:46:log "  $RESTORE_DATABASE_URL"
+scripts/ops/restore/full-restore.sh-47-
+scripts/ops/restore/full-restore.sh-48-if [[ "$CONFIRM_RESTORE" != "true" ]]; then
+--
+scripts/ops/restore/full-restore.sh-52-# -------- Connectivity check --------
+scripts/ops/restore/full-restore.sh-53-log "Checking database connectivity"
+scripts/ops/restore/full-restore.sh:54:psql "$RESTORE_DATABASE_URL" -Atqc "SELECT 1;" >/dev/null \
+scripts/ops/restore/full-restore.sh-55-  || fail "Unable to connect to target database"
+scripts/ops/restore/full-restore.sh-56-
+--
+scripts/ops/restore/full-restore.sh-63-  -in "$BACKUP_FILE" \
+scripts/ops/restore/full-restore.sh-64-| gzip -dc \
+scripts/ops/restore/full-restore.sh:65:| psql "$RESTORE_DATABASE_URL"
+scripts/ops/restore/full-restore.sh-66-
+scripts/ops/restore/full-restore.sh-67-log "Restore completed successfully"
+--
+scripts/ops/backup/full-backup.sh-8-# -------- Configuration --------
+scripts/ops/backup/full-backup.sh-9-BACKUP_DIR="${BACKUP_DIR:-./backups/full}"
+scripts/ops/backup/full-backup.sh:10:DATABASE_URL="${DATABASE_URL:-}"
+scripts/ops/backup/full-backup.sh-11-BACKUP_PASSPHRASE="${BACKUP_PASSPHRASE:-}"
+scripts/ops/backup/full-backup.sh-12-OPENSSL_CIPHER="aes-256-cbc"
+--
+scripts/ops/backup/full-backup.sh-23-
+scripts/ops/backup/full-backup.sh-24-# -------- Preconditions --------
+scripts/ops/backup/full-backup.sh:25:[[ -z "$DATABASE_URL" ]] && fail "DATABASE_URL is required"
+scripts/ops/backup/full-backup.sh-26-[[ -z "$BACKUP_PASSPHRASE" ]] && fail "BACKUP_PASSPHRASE is required"
+scripts/ops/backup/full-backup.sh-27-
+--
+scripts/ops/backup/full-backup.sh-45-
+scripts/ops/backup/full-backup.sh-46-# -------- Backup Pipeline --------
+scripts/ops/backup/full-backup.sh:47:pg_dump "$DATABASE_URL" \
+scripts/ops/backup/full-backup.sh-48-  --format=plain \
+scripts/ops/backup/full-backup.sh-49-  --no-owner \
+--
+scripts/ops/backup/full-backup.sh-70-  "checksum_sha256": "${CHECKSUM}",
+scripts/ops/backup/full-backup.sh-71-  "file_size_bytes": ${FILE_SIZE},
+scripts/ops/backup/full-backup.sh:72:  "database_url_redacted": "$(echo "$DATABASE_URL" | sed 's#//.*@#//***@#')",
+scripts/ops/backup/full-backup.sh-73-  "type": "full-logical-backup"
+scripts/ops/backup/full-backup.sh-74-}
+--
+src/services/bankImportService.js-4-class BankImportService {
+src/services/bankImportService.js-5-  async importCAMT053(xmlString) {
+src/services/bankImportService.js:6:    // TODO: Use camt053Parser to parse XML
+src/services/bankImportService.js-7-    // Return array of BankTransaction objects
+src/services/bankImportService.js-8-    return [];
+--
+src/services/bankImportService.js-10-
+src/services/bankImportService.js-11-  async importMT940(mt940String) {
+src/services/bankImportService.js:12:    // TODO: Use mt940Parser to parse SWIFT
+src/services/bankImportService.js-13-    // Return array of BankTransaction objects
+src/services/bankImportService.js-14-    return [];
+--
+src/services/bankImportService.js-16-
+src/services/bankImportService.js-17-  async importOCR(pdfBuffer) {
+src/services/bankImportService.js:18:    // TODO: Use ocrStatementParser to extract data
+src/services/bankImportService.js-19-    // Return array of BankTransaction objects
+src/services/bankImportService.js-20-    return [];
+--
+client/src/pages/AIAssistant.jsx-1729-        <div className="mt-4 text-xs text-gray-500">
+client/src/pages/AIAssistant.jsx-1730-          <span className="font-semibold">Why is AI unavailable?</span> The assistant may be
+client/src/pages/AIAssistant.jsx:1731:          disabled due to feature flags, role restrictions, or temporary system limits. Contact your
+client/src/pages/AIAssistant.jsx-1732-          administrator if you believe this is an error.
+client/src/pages/AIAssistant.jsx-1733-        </div>
+--
+scripts/ops/backup/incremental-wal.sh-8-# -------- Configuration --------
+scripts/ops/backup/incremental-wal.sh-9-WAL_ARCHIVE_DIR="${WAL_ARCHIVE_DIR:-./backups/wal}"
+scripts/ops/backup/incremental-wal.sh:10:REPLICATION_URL="${REPLICATION_DATABASE_URL:-${DATABASE_URL:-}}"
+scripts/ops/backup/incremental-wal.sh-11-WAL_SLOT_NAME="${WAL_SLOT_NAME:-smartaccounting_slot}"
+scripts/ops/backup/incremental-wal.sh-12-CREATE_SLOT="${CREATE_WAL_SLOT:-false}"
+--
+scripts/ops/backup/incremental-wal.sh-30-
+scripts/ops/backup/incremental-wal.sh-31-# -------- Preconditions --------
+scripts/ops/backup/incremental-wal.sh:32:[[ -z "$REPLICATION_URL" ]] && fail "REPLICATION_DATABASE_URL or DATABASE_URL must be set"
+scripts/ops/backup/incremental-wal.sh-33-
+scripts/ops/backup/incremental-wal.sh-34-require pg_receivewal
+--
+src/services/auditLogService.js-35-      metadata = { ...context };
+src/services/auditLogService.js-36-    } else {
+src/services/auditLogService.js:37:      // TODO: Migrate all callers to provide SystemContext for full GoBD compliance
+src/services/auditLogService.js-38-      // Optionally log a warning here
+src/services/auditLogService.js-39-    }
+--
+scripts/verify-production.sh-14-
+scripts/verify-production.sh-15-DOCKER_URL="http://localhost:5000"
+scripts/verify-production.sh:16:HOST_URL="http://localhost:5001"
+scripts/verify-production.sh-17-
+scripts/verify-production.sh-18-BASE_URL="${PRODUCTION_VERIFY_BASE_URL:-}"
+--
+scripts/verify-production.sh-60-    break
+scripts/verify-production.sh-61-  fi
+scripts/verify-production.sh:62:  sleep 2
+scripts/verify-production.sh-63-  [[ $i -eq 15 ]] && fail "/health not ready"
+scripts/verify-production.sh-64-done
+--
+scripts/verify-production.sh-70-    break
+scripts/verify-production.sh-71-  fi
+scripts/verify-production.sh:72:  sleep 2
+scripts/verify-production.sh-73-  [[ $i -eq 15 ]] && fail "/ready not ready"
+scripts/verify-production.sh-74-done
+--
+src/services/ocrService.js-598-  }
+src/services/ocrService.js-599-
+src/services/ocrService.js:600:  // Cleanup temporary files
+src/services/ocrService.js-601-  async cleanup(filePaths) {
+src/services/ocrService.js-602-    for (const filePath of filePaths) {
+--
+scripts/auth-readiness.js-28-
+scripts/auth-readiness.js-29-function ensureJwtSecret() {
+scripts/auth-readiness.js:30:  const jwtSecret = process.env.JWT_SECRET;
+scripts/auth-readiness.js-31-
+scripts/auth-readiness.js-32-  if (!jwtSecret) {
+scripts/auth-readiness.js:33:    throw new Error('JWT_SECRET must be defined for authentication to work');
+scripts/auth-readiness.js-34-  }
+scripts/auth-readiness.js-35-
+scripts/auth-readiness.js-36-  if (jwtSecret.length < 16) {
+scripts/auth-readiness.js:37:    console.warn('[AUTH-READINESS] Warning: JWT_SECRET is shorter than recommended (>=16 chars)');
+scripts/auth-readiness.js-38-  }
+scripts/auth-readiness.js-39-
+--
+server/src/core/auth/auth.js-4-
+server/src/core/auth/auth.js-5-  static generateToken(user) {
+server/src/core/auth/auth.js:6:    return jwt.sign(user, process.env.JWT_SECRET, {
+server/src/core/auth/auth.js-7-      expiresIn: '7d',
+server/src/core/auth/auth.js-8-    });
+--
+server/src/core/auth/auth.js-10-
+server/src/core/auth/auth.js-11-  static verify(token) {
+server/src/core/auth/auth.js:12:    return jwt.verify(token, process.env.JWT_SECRET);
+server/src/core/auth/auth.js-13-  }
+server/src/core/auth/auth.js-14-
+--
+scripts/env-guard.js-22-}
+scripts/env-guard.js-23-
+scripts/env-guard.js:24:if (!String(root.DATABASE_URL || '').includes('localhost:5441')) {
+scripts/env-guard.js:25:  fail('root .env DATABASE_URL must point to localhost:5441 for local CLI access');
+scripts/env-guard.js-26-}
+scripts/env-guard.js-27-
+--
+scripts/demo-integration-verify.js-6-
+scripts/demo-integration-verify.js-7-const API_URL =
+scripts/demo-integration-verify.js:8:  (process.env.API_URL || 'http://localhost:5001/api').replace(/\/+$/, '');
+scripts/demo-integration-verify.js-9-const EMAIL = process.env.DEMO_ADMIN_EMAIL || process.env.DEMO_EMAIL || 'demo-admin@demo.com';
+scripts/demo-integration-verify.js-10-const PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
+--
+server/src/core/db/index.js-2-
+server/src/core/db/index.js-3-const pool = new Pool({
+server/src/core/db/index.js:4:  connectionString: process.env.DATABASE_URL,
+server/src/core/db/index.js-5-});
+server/src/core/db/index.js-6-
+--
+scripts/README.md-23-  - Database connectivity
+scripts/README.md-24-  - Correct DB dialect (SQLite/Postgres)
+scripts/README.md:25:  - `JWT_SECRET` presence
+scripts/README.md-26-
+scripts/README.md-27-- **`dev-smoke.js`**
+--
+scripts/ci-postgres-test.sh-2-set -u
+scripts/ci-postgres-test.sh-3-
+scripts/ci-postgres-test.sh:4:COMPOSE_FILE="docker-compose.test.yml"
+scripts/ci-postgres-test.sh-5-
+scripts/ci-postgres-test.sh-6-cleanup() {
+--
+scripts/ci-postgres-test.sh-16-
+scripts/ci-postgres-test.sh-17-echo "[ci-postgres-test] allowing backend to settle"
+scripts/ci-postgres-test.sh:18:sleep 5
+scripts/ci-postgres-test.sh-19-
+scripts/ci-postgres-test.sh-20-echo "[ci-postgres-test] docker status"
+--
+server/.env-1-# Legacy/debug only.
+server/.env:2:# Daily runtime uses docker-compose.yml via npm run start:all.
+server/.env:3:# Do not use node server/index.js as daily runtime.
+server/.env-4-
+server/.env-5-NODE_ENV=development
+--
+server/.env-8-
+server/.env-9-USE_SQLITE=false
+server/.env:10:DATABASE_URL=postgres://smart:smartpass@localhost:5441/smartaccounting
+server/.env:11:REDIS_URL=redis://localhost:6381
+server/.env-12-
+server/.env:13:JWT_SECRET=dev_jwt_secret_please_change_later_123456
+server/.env-14-FRONTEND_URL=http://localhost:5173
+server/.env-15-CLIENT_URL=http://localhost:5173
+--
+scripts/verify-core-api.sh-5-
+scripts/verify-core-api.sh-6-REPORT="core-api-audit.txt"
+scripts/verify-core-api.sh:7:API_URL="${API_URL:-http://localhost:5001/api}"
+scripts/verify-core-api.sh-8-if [[ "$API_URL" == *"backend:"* ]] || [[ "$API_URL" != http://localhost* ]]; then
+scripts/verify-core-api.sh-9-  echo "❌ API_URL must point to localhost, never docker service name (backend:)."
+--
+scripts/wait-for-postgres.js-9-const { spawnSync } = require('child_process');
+scripts/wait-for-postgres.js-10-
+scripts/wait-for-postgres.js:11:const composeFile = process.argv[2] || 'docker-compose.yml';
+scripts/wait-for-postgres.js-12-const serviceName = process.argv[3] || 'db';
+scripts/wait-for-postgres.js-13-
+--
+scripts/start-all.sh-34-    echo "   stopping previous SmartAccounting frontend on port 5173 (PID $pid)"
+scripts/start-all.sh-35-    kill "$pid" 2>/dev/null || true
+scripts/start-all.sh:36:    sleep 1
+scripts/start-all.sh-37-
+scripts/start-all.sh-38-    if ps -p "$pid" >/dev/null 2>&1; then
+--
+scripts/start-all.sh-62-
+scripts/start-all.sh-63-docker compose down
+scripts/start-all.sh:64:docker compose up -d db backend
+scripts/start-all.sh-65-
+scripts/start-all.sh-66-# -----------------------------
+--
+scripts/start-all.sh-74-for i in {1..30}
+scripts/start-all.sh-75-do
+scripts/start-all.sh:76:  if curl -s http://localhost:5001/api/docs >/dev/null 2>&1; then
+scripts/start-all.sh-77-    echo "✔ Backend is READY"
+scripts/start-all.sh-78-    READY=true
+--
+scripts/start-all.sh-81-
+scripts/start-all.sh-82-  echo "   ...waiting ($i/30)"
+scripts/start-all.sh:83:  sleep 2
+scripts/start-all.sh-84-done
+scripts/start-all.sh-85-
+--
+scripts/start-all.sh-105-
+scripts/start-all.sh-106-cd client
+scripts/start-all.sh:107:VITE_DEV_PORT=5173 VITE_HMR_CLIENT_PORT=5173 npm run dev -- --port 5173 > ../logs/frontend.log 2>&1 &
+scripts/start-all.sh-108-FRONTEND_PID=$!
+scripts/start-all.sh-109-cd ..
+--
+scripts/start-all.sh-123-echo ""
+scripts/start-all.sh-124-echo "🟢 Backend:"
+scripts/start-all.sh:125:echo "   http://localhost:5001"
+scripts/start-all.sh:126:echo "   http://localhost:5001/api/docs"
+scripts/start-all.sh-127-echo ""
+scripts/start-all.sh-128-echo "🟢 Database:"
+--
+scripts/seed-demo-prod.js-100-    configureDemoPassword();
+scripts/seed-demo-prod.js-101-
+scripts/seed-demo-prod.js:102:    console.log(`[seed:demo:prod] Target DB: ${process.env.DATABASE_URL || 'sqlite'}`);
+scripts/seed-demo-prod.js-103-
+scripts/seed-demo-prod.js-104-    const { sequelize } = require('../src/models');
+--
+scripts/seed-demo-prod.js-131-    console.log('[seed:demo:prod] DEMO READY ✅');
+scripts/seed-demo-prod.js-132-    console.log('Frontend: http://localhost:3000');
+scripts/seed-demo-prod.js:133:    console.log('API:      http://localhost:5001/api');
+scripts/seed-demo-prod.js-134-    console.log('========================================\n');
+scripts/seed-demo-prod.js-135-
+--
+server/.env.backup.phase2-env-lock-6-
+server/.env.backup.phase2-env-lock-7-# DATABASE
+server/.env.backup.phase2-env-lock:8:DATABASE_URL=postgres://user:password@localhost:5432/smartaccounting
+server/.env.backup.phase2-env-lock-9-
+server/.env.backup.phase2-env-lock-10-# SECURITY
+server/.env.backup.phase2-env-lock:11:JWT_SECRET=dev_secret
+--
+scripts/smoke-bank-statements.js-15- * -------------------------------------------------- */
+scripts/smoke-bank-statements.js-16-
+scripts/smoke-bank-statements.js:17:const API_BASE = process.env.API_URL || 'http://localhost:5001/api';
+scripts/smoke-bank-statements.js-18-const CONTRACT_PATH = path.join(__dirname, 'demo-contract.json');
+scripts/smoke-bank-statements.js-19-
+--
+scripts/demo-verify.js-10-require('dotenv').config();
+scripts/demo-verify.js-11-
+scripts/demo-verify.js:12:const API_URL = (process.env.API_URL || 'http://localhost:5001/api').replace(/\/+$/, '');
+scripts/demo-verify.js-13-const EMAIL = process.env.DEMO_ADMIN_EMAIL || process.env.DEMO_EMAIL || 'demo-admin@demo.com';
+scripts/demo-verify.js-14-const PASSWORD = process.env.DEMO_PASSWORD || 'Demo123!';
+--
+scripts/feature-audit.sh-3-
+scripts/feature-audit.sh-4-REPORT="feature-audit-report.txt"
+scripts/feature-audit.sh:5:API="http://localhost:5001"
+scripts/feature-audit.sh-6-FRONT="http://localhost:3000"
+scripts/feature-audit.sh-7-
+--
+scripts/feature-audit.sh-41-log "1) Start Docker Local (fresh)"
+scripts/feature-audit.sh-42-docker compose down -v >/dev/null 2>&1 || true
+scripts/feature-audit.sh:43:docker compose up -d --build || fail "docker compose up failed"
+scripts/feature-audit.sh-44-pass "Docker Local started"
+scripts/feature-audit.sh-45-
+--
+scripts/feature-audit.sh-51-    break
+scripts/feature-audit.sh-52-  fi
+scripts/feature-audit.sh:53:  sleep 2
+scripts/feature-audit.sh-54-  [[ $i -eq 20 ]] && fail "Backend not ready"
+scripts/feature-audit.sh-55-done
+--
+scripts/feature-audit.sh-62-    break
+scripts/feature-audit.sh-63-  fi
+scripts/feature-audit.sh:64:  sleep 2
+scripts/feature-audit.sh-65-  [[ $i -eq 20 ]] && fail "Frontend not ready"
+scripts/feature-audit.sh-66-done
+--
+scripts/dev-smoke.js-3-const { URLSearchParams } = require('url');
+scripts/dev-smoke.js-4-
+scripts/dev-smoke.js:5:const DEFAULT_BASE_URL = 'http://localhost:5001';
+scripts/dev-smoke.js-6-const baseUrl = (process.env.DEV_SMOKE_API_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
+scripts/dev-smoke.js-7-const client = axios.create({
+--
+scripts/system-audit.sh-23-log "1. Docker Local: Clean startup"
+scripts/system-audit.sh-24-docker compose down -v >/dev/null 2>&1 || true
+scripts/system-audit.sh:25:docker compose up -d --build || fail "Docker compose up failed"
+scripts/system-audit.sh-26-pass "Docker Local started"
+scripts/system-audit.sh-27-
+scripts/system-audit.sh-28-# --------------------------------------------------
+scripts/system-audit.sh-29-log "2. Backend health check"
+scripts/system-audit.sh:30:sleep 5
+scripts/system-audit.sh:31:curl -fsS http://localhost:5001/health >/dev/null \
+scripts/system-audit.sh-32-  && pass "Backend /health OK" \
+scripts/system-audit.sh-33-  || fail "Backend /health failed"
+--
+scripts/system-audit.sh-35-# --------------------------------------------------
+scripts/system-audit.sh-36-log "3. Database connectivity"
+scripts/system-audit.sh:37:curl -fsS http://localhost:5001/health | grep -q '"db":{"status":"connected"' \
+scripts/system-audit.sh-38-  && pass "Database connected" \
+scripts/system-audit.sh-39-  || fail "Database NOT connected"
+--
+scripts/system-audit.sh-47-    break
+scripts/system-audit.sh-48-  fi
+scripts/system-audit.sh:49:  sleep 2
+scripts/system-audit.sh-50-done
+scripts/system-audit.sh-51-$FRONTEND_OK \
+--
+scripts/system-audit.sh-55-# --------------------------------------------------
+scripts/system-audit.sh-56-log "5. API reachable"
+scripts/system-audit.sh:57:curl -fsS http://localhost:5001/api/health >/dev/null \
+scripts/system-audit.sh-58-  && pass "API reachable" \
+scripts/system-audit.sh-59-  || pass "API health optional (skipped)"
+--
+scripts/run-fresh-demo.sh-27-# ---------------------------------------------
+scripts/run-fresh-demo.sh-28-echo "🐳 Starting Docker stack (fresh build)..."
+scripts/run-fresh-demo.sh:29:docker compose up -d --build
+scripts/run-fresh-demo.sh-30-
+scripts/run-fresh-demo.sh-31-# ---------------------------------------------
+--
+scripts/run-fresh-demo.sh-33-# ---------------------------------------------
+scripts/run-fresh-demo.sh-34-echo "⏳ Waiting for backend health..."
+scripts/run-fresh-demo.sh:35:until curl -sf http://localhost:5001/api/health >/dev/null; do
+scripts/run-fresh-demo.sh:36:  sleep 2
+scripts/run-fresh-demo.sh-37-done
+scripts/run-fresh-demo.sh-38-echo "✅ Backend is healthy"
+--
+scripts/run-fresh-demo.sh-71-echo ""
+scripts/run-fresh-demo.sh-72-echo "🌐 Frontend (dev): http://localhost:5173"
+scripts/run-fresh-demo.sh:73:echo "🔌 Backend API   : http://localhost:5001/api"
+scripts/run-fresh-demo.sh-74-echo ""
+scripts/run-fresh-demo.sh-75-echo "👤 Demo Users (password: Demo123!)"
+--
+client/src/pages/AuditorDashboard.jsx-12-        <h2 className="text-xl font-semibold mb-2">Audit Log Summary</h2>
+client/src/pages/AuditorDashboard.jsx-13-        <p className="text-gray-700 mb-4">Review a summary of all system audit logs. No actions can be performed in this mode.</p>
+client/src/pages/AuditorDashboard.jsx:14:        {/* TODO: Add audit log summary table or component here */}
+client/src/pages/AuditorDashboard.jsx-15-      </section>
+client/src/pages/AuditorDashboard.jsx-16-      <section className="mt-8">
+client/src/pages/AuditorDashboard.jsx-17-        <h2 className="text-xl font-semibold mb-2">GDPR Activity Summary</h2>
+client/src/pages/AuditorDashboard.jsx-18-        <p className="text-gray-700 mb-4">Overview of GDPR-related activities and requests. All data is read-only.</p>
+client/src/pages/AuditorDashboard.jsx:19:        {/* TODO: Add GDPR summary component here */}
+client/src/pages/AuditorDashboard.jsx-20-      </section>
+client/src/pages/AuditorDashboard.jsx-21-      <section className="mt-8">
+client/src/pages/AuditorDashboard.jsx-22-        <h2 className="text-xl font-semibold mb-2">AI Insights (Read-Only)</h2>
+client/src/pages/AuditorDashboard.jsx-23-        <p className="text-gray-700 mb-4">AI-generated insights for auditors. No data is changed or generated in this mode.</p>
+client/src/pages/AuditorDashboard.jsx:24:        {/* TODO: Add AI insights summary here */}
+client/src/pages/AuditorDashboard.jsx-25-      </section>
+client/src/pages/AuditorDashboard.jsx-26-      <section className="mt-8">
+--
+client/src/lib/envGuards.js-1-const REQUIRED_CLIENT_ENV = ['VITE_APP_ENV'];
+client/src/lib/envGuards.js-2-const SENSITIVE_SERVER_ENV = [
+client/src/lib/envGuards.js:3:  'JWT_SECRET',
+client/src/lib/envGuards.js-4-  'JWT_REFRESH_SECRET',
+client/src/lib/envGuards.js:5:  'DATABASE_URL',
+client/src/lib/envGuards.js-6-  'STRIPE_SECRET_KEY',
+client/src/lib/envGuards.js-7-  'EMAIL_USER',
+client/src/lib/envGuards.js-8-  'EMAIL_PASS',
+client/src/lib/envGuards.js:9:  'REDIS_URL',
+client/src/lib/envGuards.js-10-  'ELSTER_CERTIFICATE_PATH',
+client/src/lib/envGuards.js-11-  'CACHE_TTL',
+--
+src/lib/cache/index.js-53-    hitRate: '0%',
+src/lib/cache/index.js-54-    memorySize: 0,
+src/lib/cache/index.js:55:    redisStatus: 'not_configured',
+src/lib/cache/index.js-56-  }),
+src/lib/cache/index.js-57-  close: async () => undefined,
+--
+src/lib/cache/index.js-72-    };
+src/lib/cache/index.js-73-
+src/lib/cache/index.js:74:    if (Redis && process.env.REDIS_URL) {
+src/lib/cache/index.js:75:      this.redis = new Redis(process.env.REDIS_URL, {
+src/lib/cache/index.js-76-        retryDelayOnFailover: 100,
+src/lib/cache/index.js-77-        maxRetriesPerRequest: 3,
+--
+src/lib/cache/index.js-253-      hitRate: `${hitRate}%`,
+src/lib/cache/index.js-254-      memorySize: this.memoryCache.size,
+src/lib/cache/index.js:255:      redisStatus: this.redis ? this.redis.status : 'not_configured',
+src/lib/cache/index.js-256-    };
+src/lib/cache/index.js-257-  }
+--
+src/utils/validateEnv.js-2-const logger = require('../lib/logger');
+src/utils/validateEnv.js-3-
+src/utils/validateEnv.js:4:const requiredEnvVars = ['NODE_ENV', 'PORT', 'DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL'];
+src/utils/validateEnv.js-5-
+src/utils/validateEnv.js-6-const optionalEnvVars = [
+--
+src/utils/validateEnv.js-10-  'STRIPE_SECRET_KEY',
+src/utils/validateEnv.js-11-  'ELSTER_CERTIFICATE_PATH',
+src/utils/validateEnv.js:12:  'REDIS_URL',
+src/utils/validateEnv.js-13-  'CACHE_TTL',
+src/utils/validateEnv.js-14-];
+--
+src/utils/validateEnv.js-67-        break;
+src/utils/validateEnv.js-68-      }
+src/utils/validateEnv.js:69:      case 'JWT_SECRET': {
+src/utils/validateEnv.js-70-        if (process.env.NODE_ENV !== 'test' && value.length < 32) {
+src/utils/validateEnv.js:71:          errors.push('JWT_SECRET must be at least 32 characters long');
+src/utils/validateEnv.js-72-        }
+src/utils/validateEnv.js-73-        break;
+--
+src/utils/validateEnv.js-81-        break;
+src/utils/validateEnv.js-82-      }
+src/utils/validateEnv.js:83:      case 'DATABASE_URL': {
+src/utils/validateEnv.js-84-        // Accept sqlite:./path or sqlite://... or postgres://...
+src/utils/validateEnv.js-85-        if (!(value.startsWith('sqlite:') || value.includes('://'))) {
+src/utils/validateEnv.js-86-          errors.push(
+src/utils/validateEnv.js:87:            'DATABASE_URL must include a scheme (e.g. postgres:// or sqlite:). For SQLite, use sqlite:./path or sqlite://...',
+src/utils/validateEnv.js-88-          );
+src/utils/validateEnv.js-89-        }
+--
+src/config/database.js-76-  const forceSqlite =
+src/config/database.js-77-    process.env.USE_SQLITE !== undefined ? process.env.USE_SQLITE === 'true' : isTestEnv;
+src/config/database.js:78:  const databaseUrl = process.env.DATABASE_URL;
+src/config/database.js-79-  const storage =
+src/config/database.js-80-    process.env.SQLITE_STORAGE ||
+--
+src/config/database.js-138-  } else {
+src/config/database.js-139-    if (!dbConfig.databaseUrl) {
+src/config/database.js:140:      throw new Error('DATABASE_URL is not defined');
+src/config/database.js-141-    }
+src/config/database.js-142-
+--
+src/utils/jwtConfig.js-6-    return cachedSecret;
+src/utils/jwtConfig.js-7-  }
+src/utils/jwtConfig.js:8:  const secret = process.env.JWT_SECRET;
+src/utils/jwtConfig.js-9-  if (!secret) {
+src/utils/jwtConfig.js:10:    throw new Error('JWT_SECRET must be configured via environment variables');
+src/utils/jwtConfig.js-11-  }
+src/utils/jwtConfig.js-12-  cachedSecret = secret;
+--
+src/utils/jwtConfig.js-22-    return cachedRefreshSecret;
+src/utils/jwtConfig.js-23-  }
+src/utils/jwtConfig.js:24:  const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+src/utils/jwtConfig.js-25-  if (!refreshSecret) {
+src/utils/jwtConfig.js:26:    throw new Error('JWT_REFRESH_SECRET or JWT_SECRET must be configured via environment variables');
+src/utils/jwtConfig.js-27-  }
+src/utils/jwtConfig.js-28-  cachedRefreshSecret = refreshSecret;
+--
+src/utils/testUtils.js-52-
+src/utils/testUtils.js-53-const createAuthToken = (userId, payload = {}) => {
+src/utils/testUtils.js:54:  const secret = process.env.JWT_SECRET || 'test-jwt-secret-key';
+src/utils/testUtils.js-55-  return jwt.sign({ userId, ...payload }, secret, { expiresIn: '1h' });
+src/utils/testUtils.js-56-};
+--
+src/middleware/jwtTenantContext.js-12-
+src/middleware/jwtTenantContext.js-13-  try {
+src/middleware/jwtTenantContext.js:14:    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'testsecret');
+src/middleware/jwtTenantContext.js-15-
+src/middleware/jwtTenantContext.js-16-    if (!decoded.companyId) {
+--
+src/utils/bank/ocrStatementParser.js-3-
+src/utils/bank/ocrStatementParser.js-4-function parseOCRStatement(pdfBuffer) {
+src/utils/bank/ocrStatementParser.js:5:  // TODO: Integrate real OCR (e.g. Tesseract)
+src/utils/bank/ocrStatementParser.js-6-  // For now, return empty array
+src/utils/bank/ocrStatementParser.js-7-  return [];
+--
+src/utils/datev/datevValidators.js-3-
+src/utils/datev/datevValidators.js-4-export function validateVatConsistency(records) {
+src/utils/datev/datevValidators.js:5:  // TODO: Implement VAT consistency checks
+src/utils/datev/datevValidators.js-6-  return true;
+src/utils/datev/datevValidators.js-7-}
+src/utils/datev/datevValidators.js-8-
+src/utils/datev/datevValidators.js-9-export function validateFiscalYear(records, fiscalYear) {
+src/utils/datev/datevValidators.js:10:  // TODO: Implement fiscal year boundary checks
+src/utils/datev/datevValidators.js-11-  return true;
+src/utils/datev/datevValidators.js-12-}
+--
+src/utils/datev/datevFormatter.js-23-  belegnummer,
+src/utils/datev/datevFormatter.js-24-}) {
+src/utils/datev/datevFormatter.js:25:  // TODO: Implement strict DATEV column order and formatting
+src/utils/datev/datevFormatter.js-26-  return [
+src/utils/datev/datevFormatter.js-27-    belegdatum,
+
+================================================================
+18. FINAL GIT STATUS
+================================================================
+## main...origin/main
+?? docs/AUDIT/PHASE_1_RUNTIME_DOCKER_CI_TRUTH_20260703_005626.txt
+docs/AUDIT/PHASE_1_RUNTIME_DOCKER_CI_TRUTH_20260703_005626.txt
+
+================================================================
+PHASE 1 RESULT: READY FOR REVIEW
+Report: docs/AUDIT/PHASE_1_RUNTIME_DOCKER_CI_TRUTH_20260703_005626.txt
+================================================================

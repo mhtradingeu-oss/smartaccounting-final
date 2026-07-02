@@ -10,21 +10,31 @@ FRONTEND_PID_FILE="$PROJECT_ROOT/logs/frontend.pid"
 echo ""
 echo "🌐 Stopping SmartAccounting frontend..."
 
+stop_frontend_pid() {
+  local target_pid="$1"
+
+  if [ -z "$target_pid" ]; then
+    return 0
+  fi
+
+  echo "   stopping frontend PID $target_pid"
+  kill "$target_pid" 2>/dev/null || true
+  sleep 1
+
+  if ps -p "$target_pid" >/dev/null 2>&1; then
+    echo "   frontend still running, forcing stop PID $target_pid"
+    kill -9 "$target_pid" 2>/dev/null || true
+  fi
+}
+
 if [ -f "$FRONTEND_PID_FILE" ]; then
   FRONTEND_PID="$(cat "$FRONTEND_PID_FILE" 2>/dev/null || true)"
 
   if [ -n "$FRONTEND_PID" ] && ps -p "$FRONTEND_PID" >/dev/null 2>&1; then
-    FRONTEND_CMD="$(ps -p "$FRONTEND_PID" -o command= 2>/dev/null || true)"
+    FRONTEND_CWD="$(lsof -p "$FRONTEND_PID" 2>/dev/null | awk '$4=="cwd"{print $9; exit}')"
 
-    if echo "$FRONTEND_CMD" | grep -q "$PROJECT_ROOT/client"; then
-      echo "   stopping frontend PID $FRONTEND_PID"
-      kill "$FRONTEND_PID" 2>/dev/null || true
-      sleep 1
-
-      if ps -p "$FRONTEND_PID" >/dev/null 2>&1; then
-        echo "   frontend still running, forcing stop PID $FRONTEND_PID"
-        kill -9 "$FRONTEND_PID" 2>/dev/null || true
-      fi
+    if [ "$FRONTEND_CWD" = "$PROJECT_ROOT/client" ]; then
+      stop_frontend_pid "$FRONTEND_PID"
     else
       echo "   PID file exists, but PID $FRONTEND_PID does not belong to this project. Skipping."
     fi
@@ -35,6 +45,18 @@ if [ -f "$FRONTEND_PID_FILE" ]; then
   rm -f "$FRONTEND_PID_FILE"
 else
   echo "   no frontend PID file found"
+fi
+
+STALE_FRONTEND_PID="$(lsof -tiTCP:5173 -sTCP:LISTEN | head -1 || true)"
+if [ -n "$STALE_FRONTEND_PID" ]; then
+  STALE_FRONTEND_CWD="$(lsof -p "$STALE_FRONTEND_PID" 2>/dev/null | awk '$4=="cwd"{print $9; exit}')"
+
+  if [ "$STALE_FRONTEND_CWD" = "$PROJECT_ROOT/client" ]; then
+    echo "   found stale SmartAccounting frontend on port 5173"
+    stop_frontend_pid "$STALE_FRONTEND_PID"
+  else
+    echo "   port 5173 is used by another process; leaving it untouched"
+  fi
 fi
 
 echo ""

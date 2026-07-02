@@ -26,25 +26,42 @@ echo "✔ Docker is running"
 echo ""
 echo "🧹 Cleaning frontend port..."
 
-FRONTEND_PID_FILE="logs/frontend.pid"
-pid=$(lsof -tiTCP:5173 -sTCP:LISTEN || true)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+FRONTEND_PID_FILE="$PROJECT_ROOT/logs/frontend.pid"
+pid=$(lsof -tiTCP:5173 -sTCP:LISTEN | head -1 || true)
+
+stop_frontend_pid() {
+  local target_pid="$1"
+
+  if [ -z "$target_pid" ]; then
+    return 0
+  fi
+
+  echo "   stopping SmartAccounting frontend on port 5173 (PID $target_pid)"
+  kill "$target_pid" 2>/dev/null || true
+  sleep 1
+
+  if ps -p "$target_pid" >/dev/null 2>&1; then
+    echo "   frontend still running, forcing stop PID $target_pid"
+    kill -9 "$target_pid" 2>/dev/null || true
+  fi
+}
 
 if [ -n "$pid" ]; then
+  pid_cwd="$(lsof -p "$pid" 2>/dev/null | awk '$4=="cwd"{print $9; exit}')"
+
   if [ -f "$FRONTEND_PID_FILE" ] && grep -qx "$pid" "$FRONTEND_PID_FILE"; then
-    echo "   stopping previous SmartAccounting frontend on port 5173 (PID $pid)"
-    kill "$pid" 2>/dev/null || true
-    sleep 1
-
-    if ps -p "$pid" >/dev/null 2>&1; then
-      echo "   previous frontend still running, forcing stop PID $pid"
-      kill -9 "$pid" 2>/dev/null || true
-    fi
-
+    stop_frontend_pid "$pid"
+    rm -f "$FRONTEND_PID_FILE"
+  elif [ "$pid_cwd" = "$PROJECT_ROOT/client" ]; then
+    echo "   found stale SmartAccounting frontend without matching PID file"
+    stop_frontend_pid "$pid"
     rm -f "$FRONTEND_PID_FILE"
   else
-    echo "❌ Port 5173 is already in use by PID $pid, but it is not tracked as SmartAccounting frontend."
-    echo "   To protect other projects, start-all.sh will not kill it automatically."
-    echo "   Please stop that process manually or choose another VITE_DEV_PORT."
+    echo "ERROR: Port 5173 is already in use by PID $pid, but it is not this SmartAccounting frontend."
+    echo "       cwd: ${pid_cwd:-unknown}"
+    echo "       To protect other projects, start-all.sh will not kill it automatically."
+    echo "       Stop that process manually or choose another VITE_DEV_PORT."
     exit 1
   fi
 else
