@@ -1,0 +1,74 @@
+================================================================
+PHASE 2 — BACKEND API & DATABASE TRUTH LOCK
+SECRET-SAFE SUMMARY ONLY
+================================================================
+
+Scope:
+- Backend API entrypoint truth
+- Docker backend entrypoint truth
+- Active Express app route mounts
+- Runtime smoke
+- Core API smoke
+- Database connectivity
+- Postgres test gate
+
+Final decision:
+PHASE 2 = PASS + LOCKED
+
+Key correction applied before lock:
+- Dockerfile.backend was aligned from legacy server/index.js to real backend entrypoint src/server.js.
+- Commit: 49a95f0 fix: align backend docker entrypoint
+
+Backend source of truth:
+- package.json backend:start = node src/server.js
+- package.json backend:dev = nodemon src/server.js
+- Dockerfile.backend CMD = node src/server.js
+- Active Express app = src/app.js
+
+Confirmed active modules/routes:
+- /api/auth
+- /api/companies
+- /api/stripe
+- /api/invoices
+- /api/expenses
+- /api/reports
+- /api/bank-statements
+- /api/exports
+- /api/gdpr
+- /api/ai
+- /api/docs
+- /health, /ready, /metrics
+
+Final runtime verification:
+- Runtime started successfully through npm start / start-all.
+- Docker stack started: backend, postgres, redis.
+- Backend health returned HTTP 200.
+- Database status: connected.
+- Redis status: ready.
+- Login succeeded for demo-admin.
+- JWT token was returned.
+- stop:all cleaned frontend and Docker services.
+
+Core API smoke result:
+- /api/auth/me => HTTP 200
+- /api/companies => HTTP 200
+- /api/stripe/plans => HTTP 200
+- /api/invoices => HTTP 200
+- /api/expenses => HTTP 200
+- /api/reports/trial-balance => HTTP 200
+- /api/reports/profit-loss => HTTP 200
+- /api/reports/balance-sheet => HTTP 200
+- /api/reports/general-ledger => HTTP 200
+- /api/reports/account-ledger?accountCode=4930 => HTTP 200
+- /api/reports/vat-summary => HTTP 200
+- /api/bank-statements => HTTP 200
+- /api/exports/audit-logs => HTTP 200
+
+Known non-blocking follow-ups:
+- Some accounting reports return empty rows when no posted journal entries exist in seed data.
+- Historical audit logs include old bank import failures; current bank statement list endpoint returned HTTP 200.
+- Raw audit scan reports are local-only and must not be committed because they may contain environment/security material.
+
+Security note:
+- This lock file intentionally excludes raw environment values, tokens, API keys, and full logs.
+================================================================
