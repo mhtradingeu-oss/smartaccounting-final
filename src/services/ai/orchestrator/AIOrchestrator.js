@@ -10,6 +10,9 @@ const { validateAssistantResponse } = require('../assistantResponseSchema');
 const { validateSuggestionContract } = require('../suggestionContract');
 
 async function AIOrchestrator(request) {
+  request.context = request.context || {};
+  request.payload = request.payload || {};
+
   try {
     const { type, payload, context } = request;
 
@@ -18,7 +21,34 @@ async function AIOrchestrator(request) {
 
     switch (type) {
       case 'assistant':
-        result = await aiAssistantService.handle(payload, context);
+        {
+          const intent = payload.intent;
+          const prompt = payload.prompt || payload.input || '';
+          const targetInsightId = payload.targetInsightId;
+          const companyId = context.companyId;
+
+          if (!intent) {
+            throw new Error('intent is required');
+          }
+
+          if (!aiAssistantService.INTENT_LABELS[intent]) {
+            throw new Error('Intent not supported');
+          }
+
+          const assistantContext = payload.context || await aiAssistantService.getContext(companyId);
+
+          result = {
+            success: true,
+            type: 'assistant',
+            data: await aiAssistantService.answerIntentComplianceWithProvider({
+              intent,
+              context: assistantContext,
+              targetInsightId,
+              prompt,
+              requestId: context.requestId,
+            }),
+          };
+        }
         break;
 
       case 'insight':

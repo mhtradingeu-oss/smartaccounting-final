@@ -1,9 +1,14 @@
 const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
+const path = require('path');
 
 const TenantContext = require('../../core/tenant/tenant.context');
-const { processSafePipeline } = require('./engine/safe.pipeline');
+
+// ✅ FIXED PATH (correct root resolution)
+const AIOrchestrator = require(
+  path.resolve(__dirname, '../../../src/services/ai/orchestrator/AIOrchestrator'),
+);
 
 async function processVoice(req, res) {
   try {
@@ -15,7 +20,7 @@ async function processVoice(req, res) {
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
-    // 🎤 Whisper STT
+    // 🎤 Whisper STT ONLY
     const form = new FormData();
     form.append('file', fs.createReadStream(file.path));
     form.append('model', 'whisper-1');
@@ -33,10 +38,22 @@ async function processVoice(req, res) {
 
     const transcript = whisper.data.text;
 
-    // 🛡 SAFE PIPELINE (NEW ACTIVE SYSTEM)
-    const result = await processSafePipeline(transcript, tenant);
+    // 🧠 SINGLE AI ENTRY POINT
+    const result = await AIOrchestrator({
+      type: 'assistant',
+      payload: { input: transcript },
+      context: {
+        actor: { userId: tenant.userId || 1 },
+        companyId: tenant.companyId,
+        source: 'voice',
+      },
+    });
 
-    return res.json(result);
+    return res.json({
+      transcript,
+      result,
+      mode: 'VOICE_INPUT_ONLY',
+    });
 
   } catch (err) {
     return res.status(500).json({

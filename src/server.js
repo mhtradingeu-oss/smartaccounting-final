@@ -75,3 +75,10 @@ module.exports = {
   startServer,
   closeServer,
 };
+
+if (require.main === module) {
+  startServer().catch((error) => {
+    logger.error('Failed to start server', { error: error.stack || error.message });
+    process.exit(1);
+  });
+}
