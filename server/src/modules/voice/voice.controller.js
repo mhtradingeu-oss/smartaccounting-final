@@ -7,7 +7,7 @@ const TenantContext = require('../../core/tenant/tenant.context');
 
 // ✅ FIXED PATH (correct root resolution)
 const AIOrchestrator = require(
-  path.resolve(__dirname, '../../../src/services/ai/orchestrator/AIOrchestrator'),
+  path.resolve(__dirname, '../../../../src/services/ai/orchestrator/AIOrchestrator'),
 );
 
 async function processVoice(req, res) {
