@@ -20,4 +20,4 @@ RUN mkdir -p logs uploads temp
 
 EXPOSE 5001
 
-CMD ["node", "server/index.js"]
+CMD ["node", "src/server.js"]
