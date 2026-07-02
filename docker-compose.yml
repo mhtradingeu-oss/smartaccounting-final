@@ -101,7 +101,7 @@ services:
     command: >
       sh -lc "npm run db:migrate &&
               npm run seed:demo:prod &&
-              npm run dev"
+              npm run backend:dev"
 
 volumes:
   pgdata-dev:
