@@ -48,7 +48,7 @@ services:
 
     environment:
       NODE_ENV: development
-      PORT: 5000
+      PORT: 5001
       HOST: 0.0.0.0
       API_BASE_URL: /api
 
@@ -81,7 +81,7 @@ services:
       EMAIL_ENABLED: "false"
 
     ports:
-      - "5001:5000"
+      - "5001:5001"
 
     depends_on:
       db:
@@ -101,7 +101,7 @@ services:
     command: >
       sh -lc "npm run db:migrate &&
               npm run seed:demo:prod &&
-              npm run dev"
+              npm run backend:dev"
 
 volumes:
   pgdata-dev:

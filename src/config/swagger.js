@@ -1,6 +1,14 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
+const normalizeApiPrefix = (value) => {
+  if (!value || /^https?:\/\//i.test(value)) {
+    return '/api';
+  }
+  const prefixed = value.startsWith('/') ? value : `/${value}`;
+  return prefixed.replace(/\/$/, '') || '/api';
+};
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -40,7 +48,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.API_BASE_URL || '/api',
+        url: normalizeApiPrefix(process.env.API_BASE_URL),
         description: 'Configurable API host (defaults to /api)',
       },
       {

@@ -1,0 +1,968 @@
+======================================
+🧠 FRONTEND AI UNIFICATION AUDIT
+======================================
+
+===== AI UI PAGES =====
+client/src/pages/AIInsights.jsx
+client/src/pages/AIManager.jsx
+client/src/pages/__tests__/AIAssistant.test.jsx
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx
+client/src/pages/__tests__/AIManager.test.jsx
+client/src/pages/__tests__/AIInsights.test.jsx
+client/src/pages/AIAssistant.jsx
+client/src/pages/BankStatementDetail.jsx
+
+===== AI COMPONENTS =====
+client/src/components/AISuggestionCard.jsx
+client/src/components/GlobalAICompanion.jsx
+client/src/components/AISeverityPill.jsx
+client/src/components/ExplainWhy.jsx
+client/src/components/__tests__/GlobalAICompanion.test.jsx
+client/src/components/ai/cfo/CFOIntelligenceEngine.jsx
+client/src/components/ai/orchestrator/AIOrchestrator.jsx
+client/src/components/AIMetadataLine.jsx
+client/src/components/AIBadge.jsx
+client/src/components/AIDrawer.jsx
+client/src/components/AITrustBanner.jsx
+client/src/components/AIInsightCard.jsx
+
+===== AI API USAGE =====
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:3:import { routeToOrchestrator } from "./useAIOrchestrator";
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:4:import aiAssistantAPI from "../aiAssistantAPI";
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:11:  async askIntent(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:15:      fallback: () => aiAssistantAPI.askIntent(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:22:  async askIntentStream(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:26:      fallback: () => aiAssistantAPI.askIntentStream(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:33:  async startSession(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:37:      fallback: () => aiAssistantAPI.startSession(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:44:  async getContext(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:48:      fallback: () => aiAssistantAPI.getContext(params),
+client/src/services/ai/orchestratorBridge/useAIOrchestrator.js:2:// This layer safely routes AI calls to AIOrchestrator WITHOUT breaking existing API
+client/src/services/ai/orchestratorBridge/useAIOrchestrator.js:25:    console.warn("[AIOrchestrator fallback]", error.message);
+client/src/pages/AIAssistant.jsx:27:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIAssistant.jsx:343:      aiAssistantAPI.reset();
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:374:            aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/components/__tests__/GlobalAICompanion.test.jsx:19:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:20:  aiAssistantAPI: {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:21:    askIntent: vi.fn(),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:40:    aiAssistantAPI.askIntent.mockResolvedValue({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:91:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:111:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:135:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:3:export default function AIOrchestrator({ state = {} }) {
+client/src/services/__tests__/aiAssistantAPI.test.jsx:2:import { aiAssistantAPI } from '../aiAssistantAPI';
+client/src/services/__tests__/aiAssistantAPI.test.jsx:14:describe('aiAssistantAPI', () => {
+client/src/services/__tests__/aiAssistantAPI.test.jsx:16:    aiAssistantAPI.reset();
+client/src/services/__tests__/aiAssistantAPI.test.jsx:22:    const firstContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:23:    const secondContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:28:    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:29:    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:34:    const otherContext = await aiAssistantAPI.getContext({ companyId: 22 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:41:    await aiAssistantAPI.getContext({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:50:    await aiAssistantAPI.startSession({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:59:    await aiAssistantAPI.askIntent({
+client/src/components/GlobalAICompanion.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/components/GlobalAICompanion.jsx:81:      const response = await aiAssistantAPI.askIntent({
+client/src/lib/resetClientState.js:3:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/lib/resetClientState.js:17:  aiAssistantAPI.reset();
+client/src/pages/AIManager.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIManager.jsx:323:        aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:499:        <AIOrchestrator
+client/src/services/aiAssistantAPI.js:48:export const aiAssistantAPI = {
+client/src/services/aiAssistantAPI.js:53:  async getContext({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:75:  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
+client/src/services/aiAssistantAPI.js:87:  async askIntentStream({
+client/src/services/aiAssistantAPI.js:157:  async startSession({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:187:export default aiAssistantAPI;
+client/src/pages/__tests__/AIManager.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIManager.test.jsx:14:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:15:  aiAssistantAPI: {
+client/src/pages/__tests__/AIManager.test.jsx:16:    getContext: vi.fn(),
+client/src/pages/__tests__/AIManager.test.jsx:34:    aiAssistantAPI.getContext.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:79:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:217:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIAssistant.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:36:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:37:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:38:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:39:    getContext: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:40:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:41:    askIntentStream: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:104:  aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:934:    aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:29:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:30:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:31:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:32:    getContext: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:33:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:81:    expect(aiAssistantAPI.getContext).not.toHaveBeenCalled();
+
+===== DUPLICATE AI LOGIC =====
+client/src/pages/AIManager.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIManager.jsx:13:import { aiInsightsAPI } from '../services/aiInsightsAPI';
+client/src/pages/AIManager.jsx:16:const ExplainWhy = ({ why }) => <p className="text-sm text-gray-600 dark:text-gray-300">{why}</p>;
+client/src/pages/AIManager.jsx:49:  if (entityType === 'insight') {return '/ai-advisor';}
+client/src/pages/AIManager.jsx:50:  return '/ai-assistant';
+client/src/pages/AIManager.jsx:53:const buildEvidence = ({ source, rule, entityType, entityId, detail }) => ({
+client/src/pages/AIManager.jsx:58:  detail,
+client/src/pages/AIManager.jsx:80:          detail: highInsight.type || highInsight.summary || 'High-severity insight',
+client/src/pages/AIManager.jsx:103:          detail: unreconciledTransaction.description || 'Unreconciled bank transaction',
+client/src/pages/AIManager.jsx:126:          detail: `Status: ${openInvoice.status || 'pending'}`,
+client/src/pages/AIManager.jsx:149:          detail: mediumInsight.type || mediumInsight.summary || 'Medium-severity insight',
+client/src/pages/AIManager.jsx:157:    title: 'No priority decision available',
+client/src/pages/AIManager.jsx:163:    route: '/ai-assistant',
+client/src/pages/AIManager.jsx:171:        detail: 'No visible decision items in the current read-only context',
+client/src/pages/AIManager.jsx:181:  reason: priorityDecision?.reason || 'Review the available read-only evidence before deciding what to do next.',
+client/src/pages/AIManager.jsx:185:  route: priorityDecision?.route || '/ai-assistant',
+client/src/pages/AIManager.jsx:190:const buildEvidenceTrail = ({ priorityDecision, context, insights }) => {
+client/src/pages/AIManager.jsx:202:      detail: `${highInsightCount} high-severity insight${highInsightCount === 1 ? '' : 's'}`,
+client/src/pages/AIManager.jsx:209:      detail: `${unreconciledCount} unreconciled bank transaction${unreconciledCount === 1 ? '' : 's'}`,
+client/src/pages/AIManager.jsx:216:      detail: `${openInvoiceCount} overdue, pending, or draft invoice${openInvoiceCount === 1 ? '' : 's'}`,
+client/src/pages/AIManager.jsx:238:        route: '/ai-advisor',
+client/src/pages/AIManager.jsx:289:        route: '/ai-advisor',
+client/src/pages/AIManager.jsx:322:      const [assistantContext, insightsResult] = await Promise.all([
+client/src/pages/AIManager.jsx:323:        aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIManager.jsx:324:        aiInsightsAPI.list({ companyId: activeCompanyId }),
+client/src/pages/AIManager.jsx:327:      setContext(assistantContext || null);
+client/src/pages/AIManager.jsx:369:  const evidenceTrail = useMemo(
+client/src/pages/AIManager.jsx:370:    () => buildEvidenceTrail({ priorityDecision, context, insights }),
+client/src/pages/AIManager.jsx:382:        id: 'ai-insights',
+client/src/pages/AIManager.jsx:445:        help="AI Manager is read-only. If this continues, check AI assistant and insights access."
+client/src/pages/AIManager.jsx:478:            <Link to="/ai-advisor">
+client/src/pages/AIManager.jsx:483:            <Link to="/ai-assistant">
+client/src/pages/AIManager.jsx:498:            'Accounting staff remain responsible for review and decisions.',
+client/src/pages/AIManager.jsx:509:              SmartAccounting AI can read, analyze, explain, and suggest safe next steps from company-scoped accounting evidence.
+client/src/pages/AIManager.jsx:520:            ['VAT / Umsatzsteuer', 'Explain input VAT, output VAT, and missing VAT evidence from supplied data.'],
+client/src/pages/AIManager.jsx:521:            ['Reports & journal entries', 'Explain posted accounting truth, balances, and report gaps.'],
+client/src/pages/AIManager.jsx:541:              Start with a focused read-only question. AI Manager will use company context, AI insights, and accounting evidence where available.
+client/src/pages/AIManager.jsx:551:            'Explain unreconciled bank transactions',
+client/src/pages/AIManager.jsx:558:              to={`/ai-assistant?prompt=${encodeURIComponent(prompt)}`}
+client/src/pages/AIManager.jsx:574:            Live read-only context from the assistant and AI insights feed for the active company.
+client/src/pages/AIManager.jsx:614:          lastEvaluated="Current assistant context"
+client/src/pages/AIManager.jsx:616:          ExplainWhy={ExplainWhy}
+client/src/pages/AIManager.jsx:668:            <AIBadge label="Trail" />
+client/src/pages/AIManager.jsx:671:            {evidenceTrail.map((item, index) => (
+client/src/pages/AIManager.jsx:673:                <p className="font-medium text-gray-950 dark:text-white">{item.detail}</p>
+client/src/pages/AIManager.jsx:730:                                to={`/ai-assistant?prompt=${encodeURIComponent(`Review this accounting item: Entity ${item.entityType}${item.entityId ? ` #${item.entityId}` : ''}. Issue: ${item.title}. Evidence: ${item.reason}. Source: ${item.source}. Give me a read-only explanation, evidence checklist, and safest next review step.`)}`}
+client/src/pages/AIManager.jsx:758:            <Link to="/ai-assistant">
+client/src/pages/AIManager.jsx:763:            <Link to="/ai-advisor">
+client/src/pages/Companies.jsx:59:          const data = await companiesAPI.list({ force: force || attempt > 0 });
+client/src/pages/Companies.jsx:145:      const updated = await companiesAPI.update(activeCompany.id, payload);
+client/src/pages/Companies.jsx:156:      setSuccessMessage('Company details updated.');
+client/src/pages/Companies.jsx:158:      setSaveError(formatApiError(err, 'Unable to save company details.'));
+client/src/pages/Companies.jsx:199:        help="Once a company is added, you can manage its details and users here."
+client/src/pages/Companies.jsx:209:        description="Select or create a company to manage details."
+client/src/pages/Companies.jsx:225:          Manage your business entities and their core details.
+client/src/pages/Companies.jsx:234:            Company Details
+client/src/pages/BankStatements.jsx:35:    return Boolean(planFeatures.aiAssistant || planFeatures.aiRead);
+client/src/pages/BankStatements.jsx:54:  const companyAIEnabled = activeCompany?.aiEnabled !== false;
+client/src/pages/BankStatements.jsx:58:  const aiEnabled = Boolean(
+client/src/pages/BankStatements.jsx:61:  const aiDisabledReason = !activeCompany
+client/src/pages/BankStatements.jsx:66:        ? 'AI Advisor is available to admin and accountant roles.'
+client/src/pages/BankStatements.jsx:81:        const payload = await bankStatementsAPI.list({ signal });
+client/src/pages/BankStatements.jsx:175:    ? 'Totals reflect the statements currently available for viewing.'
+client/src/pages/BankStatements.jsx:176:    : 'Totals reflect the statements currently available to your team.';
+client/src/pages/BankStatements.jsx:177:  const summaryDetail = isReadOnlyUser
+client/src/pages/BankStatements.jsx:256:          details="You can review statements, previews, and reconciliation status."
+client/src/pages/BankStatements.jsx:262:        {aiEnabled ? (
+client/src/pages/BankStatements.jsx:265:              variant="ai"
+client/src/pages/BankStatements.jsx:267:              onClick={() => navigate('/ai-assistant')}
+client/src/pages/BankStatements.jsx:276:            <Button variant="ai" size="small" disabled title={aiDisabledReason}>
+client/src/pages/BankStatements.jsx:280:            <span className="text-xs text-gray-400">{aiDisabledReason}</span>
+client/src/pages/BankStatements.jsx:336:      {aiEnabled && (
+client/src/pages/BankStatements.jsx:342:      {!aiEnabled && (
+client/src/pages/BankStatements.jsx:344:          <h3 className="text-sm font-semibold text-gray-700 mb-1">AI Advisor unavailable</h3>
+client/src/pages/BankStatements.jsx:345:          <p className="text-xs text-gray-700">{aiDisabledReason}</p>
+client/src/pages/BankStatements.jsx:360:          <p className="text-xs font-medium text-gray-500">{summaryDetail}</p>
+client/src/pages/BankStatements.jsx:390:                : 'No statement periods available yet.'}
+client/src/pages/Billing.jsx:38:        const [statusResponse, historyResponse] = await Promise.all([
+client/src/pages/Billing.jsx:47:        logger.error('Failed to load billing data', getSafeErrorMeta(err));
+client/src/pages/Billing.jsx:48:        setError('Billing data is unavailable right now.');
+client/src/pages/Billing.jsx:66:        description="Billing features are not available in this version. If you need access, please contact support."
+client/src/pages/Billing.jsx:94:      const [statusResponse, historyResponse] = await Promise.all([
+client/src/pages/Billing.jsx:103:      logger.error('Failed to load billing data', getSafeErrorMeta(err));
+client/src/pages/Billing.jsx:104:      setError('Billing data is unavailable right now.');
+client/src/pages/Billing.jsx:121:      await api.post('/stripe/cancel-subscription');
+client/src/pages/Billing.jsx:122:      await fetchBillingData();
+client/src/pages/Billing.jsx:125:      alert('Failed to cancel subscription. Please try again.');
+client/src/pages/Billing.jsx:138:        alert('PDF not available for this invoice');
+client/src/pages/Billing.jsx:141:      alert('Failed to download PDF. Please try again.');
+client/src/pages/Billing.jsx:234:                      {resolvePlanLabel(subscriptionStatus.plan, planMap) || 'Plan unavailable'}
+client/src/pages/Billing.jsx:306:                    alert('No invoices available');
+client/src/pages/AuditorDashboard.jsx:27:        <h2 className="text-xl font-semibold mb-2">Explain This System</h2>
+client/src/pages/Expenses.jsx:75:      const data = await expensesAPI.list({ companyId });
+client/src/pages/Expenses.jsx:98:      const response = await expensesAPI.updateStatus(expenseId, status, { companyId });
+client/src/pages/Expenses.jsx:103:      await fetchExpenses();
+client/src/pages/Expenses.jsx:164:              new CustomEvent('open-ai-assistant', { detail: { context: 'expenses' } }),
+client/src/pages/Expenses.jsx:175:        <span className="font-semibold">What does AI see?</span> The assistant will only see your
+client/src/pages/Expenses.jsx:176:        current company’s expenses, amounts, and visible details on this page. No generic
+client/src/pages/Expenses.jsx:184:          This page shows all company expenses in one place. You can review spending, see details
+client/src/pages/Users.jsx:42:      const data = await usersAPI.list();
+client/src/pages/Users.jsx:66:      await usersAPI.update(userId, { role: nextRole });
+client/src/pages/Users.jsx:84:      await usersAPI.update(targetUser.id, {
+client/src/pages/Users.jsx:191:                    Email
+client/src/pages/Users.jsx:219:                    <td className="px-6 py-4 text-sm text-gray-600">{u.email}</td>
+client/src/pages/DatevExport.jsx:17:      const response = await exportDATEV(params);
+client/src/pages/DatevExport.jsx:26:      setError('Export failed.');
+client/src/pages/InvoiceEdit.jsx:23:    { label: 'Mark as partially paid', nextStatus: 'partially_paid', variant: 'secondary' },
+client/src/pages/InvoiceEdit.jsx:25:    { label: 'Mark as paid', nextStatus: 'paid', variant: 'primary' },
+client/src/pages/InvoiceEdit.jsx:28:  partially_paid: [
+client/src/pages/InvoiceEdit.jsx:30:    { label: 'Mark as paid', nextStatus: 'paid', variant: 'primary' },
+client/src/pages/InvoiceEdit.jsx:33:    { label: 'Mark as paid', nextStatus: 'paid', variant: 'primary' },
+client/src/pages/InvoiceEdit.jsx:36:  paid: [],
+client/src/pages/InvoiceEdit.jsx:140:            Payment instructions can be added through company billing settings when available.
+client/src/pages/InvoiceEdit.jsx:168:const AuditTrail = ({ entries, loading }) => (
+client/src/pages/InvoiceEdit.jsx:172:        <h2 className="text-lg font-semibold text-gray-900">Audit trail</h2>
+client/src/pages/InvoiceEdit.jsx:176:        <p className="text-sm text-gray-500">Loading audit trail...</p>
+client/src/pages/InvoiceEdit.jsx:224:      const found = await invoicesAPI.get(invoiceId, { companyId: activeCompany.id });
+client/src/pages/InvoiceEdit.jsx:249:      const entries = await invoicesAPI.auditLog(invoiceId, { companyId: activeCompany.id });
+client/src/pages/InvoiceEdit.jsx:271:      const updated = await invoicesAPI.update(invoiceId, {
+client/src/pages/InvoiceEdit.jsx:291:      const updated = await invoicesAPI.update(invoiceId, {
+client/src/pages/InvoiceEdit.jsx:454:              : `This invoice is ${formatStatus(invoice.status)} and cannot be edited. Use available status actions only.`}
+client/src/pages/InvoiceEdit.jsx:460:      <AuditTrail entries={auditLog} loading={auditLoading} />
+client/src/pages/Privacy.jsx:7:      This Privacy Policy explains how SmartAccounting collects, uses, and protects your
+client/src/pages/Privacy.jsx:17:      We use your information to provide, maintain, and improve our services, and to communicate
+client/src/pages/Privacy.jsx:28:      <a href="mailto:support@smartaccounting.de" className="text-blue-600 underline">
+client/src/pages/InvoiceImport.jsx:51:      const data = await invoicesAPI.previewImport({ file, companyId: activeCompany.id });
+client/src/pages/InvoiceImport.jsx:68:      const data = await invoicesAPI.commitImport({ file, companyId: activeCompany.id });
+client/src/pages/BankStatementImport.jsx:109:      const payload = await bankStatementsAPI.upload(selectedFile);
+client/src/pages/BankStatementImport.jsx:111:        throw new Error(payload?.message || 'Import failed');
+client/src/pages/BankStatementImport.jsx:274:              <p className="text-xs uppercase text-gray-500">Transactions available</p>
+client/src/pages/Login.jsx:19:    email: '',
+client/src/pages/Login.jsx:42:    if (!formData.email || !formData.password) {
+client/src/pages/Login.jsx:51:      const result = await login(formData);
+client/src/pages/Login.jsx:55:        setError(result.error || 'Login failed. Please check your credentials.');
+client/src/pages/Login.jsx:61:      setError('An unexpected error occurred. Please try again.');
+client/src/pages/Login.jsx:72:          description="Sign-ins are disabled right now while we work on the next secure session rollout. Please try again shortly or contact support."
+client/src/pages/Login.jsx:103:            className="max-h-125 w-auto mx-auto mb-2 object-contain"
+client/src/pages/Login.jsx:120:                htmlFor="email"
+client/src/pages/Login.jsx:123:                Email
+client/src/pages/Login.jsx:126:                id="email"
+client/src/pages/Login.jsx:127:                name="email"
+client/src/pages/Login.jsx:128:                type="email"
+client/src/pages/Login.jsx:129:                autoComplete="email"
+client/src/pages/Login.jsx:131:                value={formData.email}
+client/src/pages/ProfileSettings.jsx:9:  if (!value) {return 'Not available';}
+client/src/pages/ProfileSettings.jsx:11:  if (Number.isNaN(date.getTime())) {return 'Not available';}
+client/src/pages/ProfileSettings.jsx:21:    email: user?.email || '',
+client/src/pages/ProfileSettings.jsx:47:      email: user?.email || '',
+client/src/pages/ProfileSettings.jsx:55:      const response = await api.get('/auth/sessions', {
+client/src/pages/ProfileSettings.jsx:83:      email: user?.email || '',
+client/src/pages/ProfileSettings.jsx:104:      const response = await api.put('/auth/profile', {
+client/src/pages/ProfileSettings.jsx:114:          email: updatedUser.email || '',
+client/src/pages/ProfileSettings.jsx:118:      await refreshUser?.();
+client/src/pages/ProfileSettings.jsx:135:      await api.post('/auth/change-password', passwordForm, {
+client/src/pages/ProfileSettings.jsx:149:      await api.delete(`/auth/sessions/${id}`, {
+client/src/pages/ProfileSettings.jsx:166:          Manage your personal identity, password, and active sessions. Company legal details are managed separately from the Companies page.
+client/src/pages/ProfileSettings.jsx:181:              This name appears in the sidebar, audit trail, and internal user management.
+client/src/pages/ProfileSettings.jsx:219:            <span>Email</span>
+client/src/pages/ProfileSettings.jsx:221:              name="email"
+client/src/pages/ProfileSettings.jsx:222:              value={form.email}
+client/src/pages/ProfileSettings.jsx:227:              Email changes are disabled for security and audit consistency.
+client/src/pages/Pricing.jsx:117:          Planinformationen sind derzeit nicht verfuegbar. Bitte kontaktieren Sie uns fuer Details.
+client/src/pages/Pricing.jsx:130:          Planinformationen sind derzeit nicht verfuegbar. Bitte kontaktieren Sie uns fuer Details.
+client/src/pages/Pricing.jsx:234:                  ? 'Planinformationen sind gerade nicht verfügbar. Bitte kontaktieren Sie uns für Details.'
+client/src/pages/Pricing.jsx:263:                {row.availability.map((available, index) => (
+client/src/pages/Pricing.jsx:265:                    {available ? (
+client/src/pages/Pricing.jsx:296:            <a href={`mailto:${copy.customEmail}`} className="inline-flex">
+client/src/pages/Pricing.jsx:298:                E-Mail senden
+client/src/pages/Onboarding.jsx:30:        setError(err?.message || 'Failed to check company');
+client/src/pages/Terms.jsx:18:      Your data is handled according to our Privacy Policy. You retain ownership of your data, but
+client/src/pages/Terms.jsx:23:      We provide the service &quot;as is&quot; and disclaim all warranties. We are not liable for
+client/src/pages/Terms.jsx:34:      <a href="mailto:support@smartaccounting.de" className="text-blue-600 underline">
+client/src/pages/BankStatementPreview.jsx:64:    : 'Waiting for upload';
+client/src/pages/BankStatementPreview.jsx:106:      const response = await bankStatementsAPI.previewDryRun(file);
+client/src/pages/BankStatementPreview.jsx:135:      const payload = await bankStatementsAPI.confirmImport(dryRunId);
+client/src/pages/BankStatementPreview.jsx:143:      const detailSummary = result?.summary;
+client/src/pages/BankStatementPreview.jsx:152:            summary: detailSummary,
+client/src/pages/BankStatementPreview.jsx:258:              {detectedFormat || 'Awaiting file'}
+client/src/pages/BankStatementPreview.jsx:288:                  These counts come straight from the dry-run response.
+client/src/pages/AIInsights.jsx:4:import { aiInsightsAPI } from '../services/aiInsightsAPI';
+client/src/pages/AIInsights.jsx:24:  const aiSuggestionsEnabled = isAISuggestionsEnabled();
+client/src/pages/AIInsights.jsx:31:    if (!aiSuggestionsEnabled) {
+client/src/pages/AIInsights.jsx:50:      const { insights: result = [], viewerLimited: limited } = await aiInsightsAPI.list({
+client/src/pages/AIInsights.jsx:62:  }, [activeCompanyId, aiSuggestionsEnabled]);
+client/src/pages/AIInsights.jsx:72:    window.addEventListener('ai-insights:refresh', handleRefresh);
+client/src/pages/AIInsights.jsx:73:    return () => window.removeEventListener('ai-insights:refresh', handleRefresh);
+client/src/pages/AIInsights.jsx:76:  if (!aiSuggestionsEnabled) {
+client/src/pages/AIInsights.jsx:79:        title="AI suggestions unavailable"
+client/src/pages/AIInsights.jsx:167:            details="Review supporting records and audit history for each insight."
+client/src/pages/AIInsights.jsx:170:            <Button variant="secondary" size="sm" onClick={() => navigate('/ai-assistant')}>
+client/src/pages/AIInsights.jsx:201:          : 'No AI insights are currently available.'}
+client/src/pages/BankStatementReconciliationPreview.jsx:14:  { number: 'INV-5488', description: 'Cloud accounting retainer' },
+client/src/pages/BankStatementReconciliationPreview.jsx:50:        const payload = await bankStatementsAPI.transactions(statementId, { signal: controller.signal });
+client/src/pages/BankStatementReconciliationPreview.jsx:93:              This preview explains what would happen if reconciliation were applied. No data is changed.
+client/src/pages/BankStatementReconciliationPreview.jsx:116:            Gathering transactions to explain potential matches…
+client/src/pages/BankStatementReconciliationPreview.jsx:150:                Explaining {simulation.matches.length} match suggestions
+client/src/pages/BankStatementReconciliationPreview.jsx:201:                {simulation.unmatched.length} transactions remain unmatched
+client/src/pages/BankStatementReconciliationPreview.jsx:259:            Matches are explained with date proximity and amount similarity, so the next reconciliation
+client/src/pages/BankStatementReconciliationPreview.jsx:263:            Close this preview at any time and return to the detail view. No backend reconciliations were triggered.
+client/src/pages/__tests__/AIInsights.test.jsx:8:import { aiInsightsAPI } from '../../services/aiInsightsAPI';
+client/src/pages/__tests__/AIInsights.test.jsx:13:  const actual = await vi.importActual('react-router-dom');
+client/src/pages/__tests__/AIInsights.test.jsx:28:vi.mock('../../services/aiInsightsAPI', () => ({
+client/src/pages/__tests__/AIInsights.test.jsx:29:  aiInsightsAPI: {
+client/src/pages/__tests__/AIInsights.test.jsx:74:    expect(screen.getByText('AI suggestions unavailable')).toBeInTheDocument();
+client/src/pages/__tests__/AIInsights.test.jsx:75:    expect(aiInsightsAPI.list).not.toHaveBeenCalled();
+client/src/pages/ExpensesCreate.jsx:78:      await expensesAPI.create(payload);
+client/src/pages/ExpensesCreate.jsx:82:      setError('Failed to create expense.');
+client/src/pages/ComplianceDashboard.jsx:9:    title: 'Policy guardrails',
+client/src/pages/ComplianceDashboard.jsx:17:      'Data exports are available on demand and hold immutable fingerprints so regulators can verify activity without back-and-forth.',
+client/src/pages/Landing.jsx:21:    description: 'Explainable insights, risk highlights, and a conversational assistant keep your team aligned.',
+client/src/pages/Landing.jsx:40:      <main className="relative overflow-hidden">
+client/src/pages/Landing.jsx:51:                SmartAccounting brings bank feeds, AI-assisted bookkeeping, detailed reports, and
+client/src/pages/Landing.jsx:73:                <Badge color="blue">Coming soon: Austria & Spain</Badge>
+client/src/pages/Landing.jsx:152:      </main>
+client/src/pages/DocumentInbox.jsx:90:      const response = await listDocumentInbox({
+client/src/pages/DocumentInbox.jsx:162:            <Link to="/ai-assistant">
+client/src/pages/DocumentInbox.jsx:226:              <h2 className="font-semibold">Document inbox unavailable</h2>
+client/src/pages/DocumentInbox.jsx:238:            <Link to="/ai-assistant">
+client/src/pages/DocumentInbox.jsx:333:            <h2 className="font-semibold">Human review remains required</h2>
+client/src/pages/Analytics.jsx:35:    body: 'No dedicated expenses endpoint yet. Data not available until backend coverage expands.',
+client/src/pages/Analytics.jsx:40:    body: 'Monthly/quarterly trend data is still pending—no chart data is available.',
+client/src/pages/Analytics.jsx:89:      const result = await dashboardAPI.getStats({ companyId });
+client/src/pages/Analytics.jsx:109:      logger.error('Failed to load analytics data', getSafeErrorMeta(error));
+client/src/pages/Analytics.jsx:142:  const paidCount = data?.statusBreakdown?.paid || 0;
+client/src/pages/Analytics.jsx:144:  const paidPercentage = invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0;
+client/src/pages/Analytics.jsx:145:  const unpaidCount = Math.max(invoiceCount - paidCount, 0);
+client/src/pages/Analytics.jsx:153:      paid: 'text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50',
+client/src/pages/Analytics.jsx:257:      <div className="surface-card-ai flex flex-wrap items-start justify-between gap-4">
+client/src/pages/Analytics.jsx:313:            {t('analytics_page.paid_unpaid', { paidPercentage, unpaidCount })}
+client/src/pages/Analytics.jsx:318:          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.paid_invoice_ratio')}</p>
+client/src/pages/Analytics.jsx:319:          <p className="stat-value">{paidPercentage}%</p>
+client/src/pages/Analytics.jsx:322:              ? t('analytics_page.paid_ratio_summary', { paidCount, invoiceCount })
+client/src/pages/Analytics.jsx:382:            <h3 className="section-title mb-2">{t('analytics_page.unavailable_metrics')}</h3>
+client/src/pages/Analytics.jsx:384:              {t('analytics_page.unavailable_metrics_description')}
+client/src/pages/__tests__/Dashboard.test.jsx:2:import { render, screen, waitFor } from '@testing-library/react';
+client/src/pages/__tests__/Dashboard.test.jsx:35:      email: 'demo@demo.com',
+client/src/pages/__tests__/Dashboard.test.jsx:121:  it('renders KPI, trends, and details sections from live data', async () => {
+client/src/pages/__tests__/Dashboard.test.jsx:128:    await waitFor(() => {
+client/src/pages/__tests__/Dashboard.test.jsx:133:    expect(screen.getByText('Details')).toBeInTheDocument();
+client/src/pages/__tests__/Dashboard.test.jsx:146:    expect(screen.getByText('AI-safe assistant')).toBeInTheDocument();
+client/src/pages/InvestorDashboard.jsx:35:        <h2 className="text-xl font-semibold mb-2">Explain This System</h2>
+client/src/pages/__tests__/Companies.test.jsx:2:import { act, render, screen, waitFor } from '@testing-library/react';
+client/src/pages/__tests__/Companies.test.jsx:9:  const actual = await vi.importActual('react-router-dom');
+client/src/pages/__tests__/Companies.test.jsx:80:    await waitFor(() => expect(screen.getByText('TestCo')).toBeInTheDocument());
+client/src/pages/__tests__/Companies.test.jsx:101:      await act(async () => {
+client/src/pages/__tests__/Companies.test.jsx:102:        await vi.runAllTimersAsync();
+client/src/pages/__tests__/Companies.test.jsx:103:        await vi.runAllTimersAsync();
+client/src/pages/__tests__/Companies.test.jsx:125:    await waitFor(() =>
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:83:    to: '/ai-assistant',
+client/src/pages/Dashboard.jsx:137:            key={`detail-skeleton-${index}`}
+client/src/pages/Dashboard.jsx:185:        const result = await dashboardAPI.getStats({
+client/src/pages/Dashboard.jsx:201:          setRateLimitMessage(err.message || 'Too many requests. Please try again shortly.');
+client/src/pages/Dashboard.jsx:266:    dashboardData?.financialOverview?.status !== 'unavailable';
+client/src/pages/Dashboard.jsx:282:  const hasDetails =
+client/src/pages/Dashboard.jsx:291:      const response = await api.post('/admin/demo-data/load');
+client/src/pages/Dashboard.jsx:295:        throw new Error(data?.message || 'Failed to load demo data');
+client/src/pages/Dashboard.jsx:307:  const cooldownRemaining = cooldownExpiresAt
+client/src/pages/Dashboard.jsx:345:        {cooldownRemaining > 0 && (
+client/src/pages/Dashboard.jsx:347:            Cooldown resets in {cooldownRemaining} second{cooldownRemaining !== 1 ? 's' : ''}
+client/src/pages/Dashboard.jsx:354:          disabled={cooldownRemaining > 0}
+client/src/pages/Dashboard.jsx:366:  if (!hasMetrics && !hasTrends && !hasDetails) {
+client/src/pages/Dashboard.jsx:404:                  AI-safe assistant
+client/src/pages/Dashboard.jsx:415:                  VAT, audit trail, bank reconciliation, and export readiness stay visible.
+client/src/pages/Dashboard.jsx:506:            vatSummaryStatus: hasVatSummary ? 'Available' : 'Unavailable',
+client/src/pages/Dashboard.jsx:508:              ? auditReadiness.status || 'Available'
+client/src/pages/Dashboard.jsx:509:              : 'Unavailable',
+client/src/pages/Dashboard.jsx:522:                  Jump into the auditor-friendly KPI surface without leaving the main workspace.
+client/src/pages/Dashboard.jsx:609:            <p className="text-sm text-gray-500 dark:text-gray-400">No KPI data available yet.</p>
+client/src/pages/Dashboard.jsx:695:          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Details</h2>
+client/src/pages/RequestAccess.jsx:11:  email: '',
+client/src/pages/RequestAccess.jsx:13:  details: '',
+client/src/pages/RequestAccess.jsx:34:    if (!formData.fullName || !formData.email || !formData.company) {
+client/src/pages/RequestAccess.jsx:43:      await new Promise((resolve) => setTimeout(resolve, 700));
+client/src/pages/RequestAccess.jsx:65:            Wir melden uns innerhalb von 24 Stunden mit Onboarding-Verfügbarkeit, Governance-Details und einer klaren Preisübersicht.
+client/src/pages/RequestAccess.jsx:74:                In Kürze erhalten Sie eine E-Mail mit den nächsten Schritten. Ihr Platz bleibt während der Prüfung der Preise reserviert.
+client/src/pages/RequestAccess.jsx:104:                <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+client/src/pages/RequestAccess.jsx:105:                  Geschäftliche E-Mail
+client/src/pages/RequestAccess.jsx:108:                  id="email"
+client/src/pages/RequestAccess.jsx:109:                  name="email"
+client/src/pages/RequestAccess.jsx:110:                  type="email"
+client/src/pages/RequestAccess.jsx:111:                  value={formData.email}
+client/src/pages/RequestAccess.jsx:133:                <label htmlFor="details" className="text-sm font-semibold text-slate-700">
+client/src/pages/RequestAccess.jsx:137:                  id="details"
+client/src/pages/RequestAccess.jsx:138:                  name="details"
+client/src/pages/RequestAccess.jsx:141:                  value={formData.details}
+client/src/pages/RequestAccess.jsx:165:            href="mailto:sales@smartaccounting.de"
+client/src/pages/__tests__/AIManager.test.jsx:1:import { render, screen, waitFor } from '@testing-library/react';
+client/src/pages/__tests__/AIManager.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIManager.test.jsx:6:import { aiInsightsAPI } from '../../services/aiInsightsAPI';
+client/src/pages/__tests__/AIManager.test.jsx:14:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:15:  aiAssistantAPI: {
+client/src/pages/__tests__/AIManager.test.jsx:20:vi.mock('../../services/aiInsightsAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:21:  aiInsightsAPI: {
+client/src/pages/__tests__/AIManager.test.jsx:34:    aiAssistantAPI.getContext.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:43:    aiInsightsAPI.list.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:77:    await waitFor(() => expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:79:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:80:    expect(aiInsightsAPI.list).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:92:    expect(screen.getByText(/SmartAccounting AI can read, analyze, explain/i)).toBeInTheDocument();
+client/src/pages/__tests__/AIManager.test.jsx:101:      '/ai-assistant?prompt=Show%20VAT%20evidence%20gaps',
+client/src/pages/__tests__/AIManager.test.jsx:131:      expect.stringContaining('/ai-assistant?prompt='),
+client/src/pages/__tests__/AIManager.test.jsx:133:    expect(decodeURIComponent(askAiLinks[0].getAttribute('href'))).toContain(
+client/src/pages/__tests__/AIManager.test.jsx:141:    await waitFor(() => expect(screen.getByText('Priority decision')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:160:    await waitFor(() => expect(screen.getByText('Priority decision')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:182:    await waitFor(() => expect(screen.getByText('Priority decision')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:189:  it('renders evidence source, rule, and entity where available', async () => {
+client/src/pages/__tests__/AIManager.test.jsx:192:    await waitFor(() => expect(screen.getByText('Evidence')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:206:    await waitFor(() => expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:215:    await waitFor(() => expect(screen.getByText('AI Accounting Manager')).toBeInTheDocument());
+client/src/pages/__tests__/AIManager.test.jsx:217:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:218:    expect(aiInsightsAPI.list).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:1:import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:12:  const actual = await vi.importActual('react-router-dom');
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:30:      email: 'test@example.com',
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:88:  const actual = await vi.importActual('../../services/bankStatementsAPI');
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:112:import BankStatementDetail from '../BankStatementDetail';
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:117:const renderDetail = () =>
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:120:      <BankStatementDetail />
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:144:describe('BankStatementDetail manual reconciliation', () => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:146:    renderDetail();
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:148:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:155:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:172:    renderDetail();
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:174:    await waitFor(() => screen.getByText('Bank TX'));
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:176:    await waitFor(() => screen.getByText('INV-001'));
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:190:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:200:    renderDetail();
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:202:    await waitFor(() => screen.getByText('Bank TX'));
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:204:    await waitFor(() => screen.getByText('INV-001'));
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:215:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:219:    await waitFor(() => {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:13:  const actual = await vi.importActual('react-router-dom');
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:29:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:30:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:79:    expect(screen.getByText('AI Assistant unavailable')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:81:    expect(aiAssistantAPI.getContext).not.toHaveBeenCalled();
+client/src/pages/OCRPreview.jsx:128:      const response = await previewDocument(file, documentType, activeCompanyId);
+client/src/pages/OCRPreview.jsx:131:      setFileError('The preview could not be generated. Please try again later.');
+client/src/pages/OCRPreview.jsx:144:      const response = await processDocument(selectedFile, documentType, activeCompanyId);
+client/src/pages/OCRPreview.jsx:148:      setProcessError('Processing failed. Please review the file and try again.');
+client/src/pages/OCRPreview.jsx:221:          details="OCR preview is read-only. Nothing is persisted during this dry run."
+client/src/pages/OCRPreview.jsx:233:                confidence, and explains how results were derived. This mode does not modify your
+client/src/pages/__tests__/OCRPreview.test.jsx:1:import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+client/src/pages/__tests__/OCRPreview.test.jsx:13:      email: 'preview@example.com',
+client/src/pages/__tests__/OCRPreview.test.jsx:77:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:1:import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+client/src/pages/__tests__/BankStatementPreview.test.jsx:9:  const actual = await vi.importActual('react-router-dom');
+client/src/pages/__tests__/BankStatementPreview.test.jsx:24:      email: 'test@example.com',
+client/src/pages/__tests__/BankStatementPreview.test.jsx:45:  const actual = await vi.importActual('../../services/bankStatementsAPI');
+client/src/pages/__tests__/BankStatementPreview.test.jsx:101:  const waitForPreview = async () => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:102:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:113:    await waitForPreview();
+client/src/pages/__tests__/BankStatementPreview.test.jsx:132:    await waitForPreview();
+client/src/pages/__tests__/BankStatementPreview.test.jsx:155:    await waitForPreview();
+client/src/pages/__tests__/BankStatementPreview.test.jsx:165:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:168:    await waitFor(() => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:171:          statement: expect.objectContaining({
+client/src/pages/__tests__/AIAssistant.test.jsx:2:import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+client/src/pages/__tests__/AIAssistant.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:20:  const actual = await vi.importActual('react-router-dom');
+client/src/pages/__tests__/AIAssistant.test.jsx:36:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:37:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:92:  company: { id: 1, name: 'TraceCo', city: 'Berlin', country: 'DE', aiEnabled: true },
+client/src/pages/__tests__/AIAssistant.test.jsx:99:const renderAssistant = async (initialEntry = '/ai-assistant') => {
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:104:  aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:114:  await waitFor(() => expect(screen.getByText('AI Accounting Assistant')).toBeInTheDocument());
+client/src/pages/__tests__/AIAssistant.test.jsx:124:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:129:    await waitFor(() => expect(screen.getAllByText(/كيف أقدر أساعدك اليوم/i).length).toBeGreaterThan(1));
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:131:      expect.objectContaining({ intent: 'review' }),
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:137:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:146:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:157:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:161:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:163:        expect.objectContaining({ intent: 'review' }),
+client/src/pages/__tests__/AIAssistant.test.jsx:166:    expect(await screen.findByText('Review response')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:174:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:178:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:180:        expect.objectContaining({ intent: 'risks' }),
+client/src/pages/__tests__/AIAssistant.test.jsx:186:    await renderAssistant('/ai-assistant?prompt=Show%20VAT%20evidence%20gaps');
+client/src/pages/__tests__/AIAssistant.test.jsx:188:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:201:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:204:      target: { value: 'Explain this bank transaction' },
+client/src/pages/__tests__/AIAssistant.test.jsx:208:    expect(await screen.findByText('Explain this bank transaction')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:209:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:211:        expect.objectContaining({ intent: 'explain_transaction' }),
+client/src/pages/__tests__/AIAssistant.test.jsx:217:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:224:    expect(await screen.findByText(/invoice\.pdf/i)).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:260:        aiExtractedValues: {
+client/src/pages/__tests__/AIAssistant.test.jsx:285:        source: 'ai_document_intake',
+client/src/pages/__tests__/AIAssistant.test.jsx:299:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:307:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:310:        expect.objectContaining({ companyId: 1, documentType: 'auto' }),
+client/src/pages/__tests__/AIAssistant.test.jsx:313:    expect(await screen.findByText('Document analysis')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:368:        aiExtractedValues: {
+client/src/pages/__tests__/AIAssistant.test.jsx:390:          systemContext: { source: 'ai_document_intake', documentId: 'doc-1' },
+client/src/pages/__tests__/AIAssistant.test.jsx:434:        aiExtractedValues: {
+client/src/pages/__tests__/AIAssistant.test.jsx:459:            aiValue: 'DB Vertrieb GmbH',
+client/src/pages/__tests__/AIAssistant.test.jsx:467:            aiValue: 'travel',
+client/src/pages/__tests__/AIAssistant.test.jsx:507:              aiValue: 'DB Vertrieb GmbH',
+client/src/pages/__tests__/AIAssistant.test.jsx:523:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:531:    fireEvent.click(await screen.findByRole('button', { name: /Review extracted fields/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:557:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:560:        expect.objectContaining({
+client/src/pages/__tests__/AIAssistant.test.jsx:561:          reviewedValues: expect.objectContaining({
+client/src/pages/__tests__/AIAssistant.test.jsx:576:    expect(await screen.findByText(/Status: rechecked/i)).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:582:    expect(await screen.findByRole('button', { name: /^Create draft$/i })).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:586:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:596:    expect(await screen.findByText('Expense draft created from reviewed values')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:636:        aiExtractedValues: {
+client/src/pages/__tests__/AIAssistant.test.jsx:700:        aiExtractedValues: {
+client/src/pages/__tests__/AIAssistant.test.jsx:746:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:754:    fireEvent.click(await screen.findByRole('button', { name: /Review extracted fields/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:772:    await waitFor(() =>
+client/src/pages/__tests__/AIAssistant.test.jsx:775:        expect.objectContaining({
+client/src/pages/__tests__/AIAssistant.test.jsx:787:    expect(await screen.findByText('Manual override recorded. Expense draft will use no input VAT and requires accountant review.')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:788:    expect(await screen.findByRole('button', { name: /^Create draft$/i })).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:825:        aiExtractedValues: {
+client/src/pages/__tests__/AIAssistant.test.jsx:845:          systemContext: { source: 'ai_document_intake', documentId: 'doc-invoice-1' },
+client/src/pages/__tests__/AIAssistant.test.jsx:855:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:863:    expect(await screen.findByRole('button', { name: /Review extracted fields/i })).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:873:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:881:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:886:      await screen.findByText(/Voice recording is not available in this browser/i),
+client/src/pages/__tests__/AIAssistant.test.jsx:890:  it('assistant answer renders bullets and references clearly', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:901:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:905:    expect(await screen.findByText('Here is the review.')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:914:  it('renders requestId when present on assistant responses', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:919:    await renderAssistant();
+client/src/pages/__tests__/AIAssistant.test.jsx:922:    await waitFor(() => expect(screen.getByText('Traceable response')).toBeInTheDocument());
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:934:    aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:949:    await waitFor(() => expect(screen.getByText('AI Accounting Assistant')).toBeInTheDocument());
+client/src/pages/__tests__/AIAssistant.test.jsx:952:    await waitFor(() => expect(screen.getByText('Hallo Welt')).toBeInTheDocument());
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:957:    await renderAssistant();
+client/src/pages/GermanTaxReports.jsx:31:  const [availability, setAvailability] = useState({ status: 'idle', detail: null });
+client/src/pages/GermanTaxReports.jsx:69:      setAvailability({ status: 'checking', detail: null });
+client/src/pages/GermanTaxReports.jsx:71:        await api.get('/german-tax/status', { signal: controller.signal });
+client/src/pages/GermanTaxReports.jsx:73:          setAvailability({ status: 'available', detail: null });
+client/src/pages/GermanTaxReports.jsx:90:          setAvailability({
+client/src/pages/GermanTaxReports.jsx:92:            detail: {
+client/src/pages/GermanTaxReports.jsx:99:          setAvailability({
+client/src/pages/GermanTaxReports.jsx:101:            detail: formatApiError(fetchError, 'Unable to reach global tax reporting services.'),
+client/src/pages/GermanTaxReports.jsx:115:  const actionDisabled = availability.status !== 'available';
+client/src/pages/GermanTaxReports.jsx:118:    if (availability.status === 'idle' || availability.status === 'available') {
+client/src/pages/GermanTaxReports.jsx:123:    const statusDetail = availability.detail || {};
+client/src/pages/GermanTaxReports.jsx:126:        title: 'Checking availability',
+client/src/pages/GermanTaxReports.jsx:133:        title: 'Not available yet',
+client/src/pages/GermanTaxReports.jsx:134:        description: statusDetail.message || 'German tax reporting is disabled for this release.',
+client/src/pages/GermanTaxReports.jsx:139:        title: 'Service unavailable',
+client/src/pages/GermanTaxReports.jsx:141:          statusDetail.message ||
+client/src/pages/GermanTaxReports.jsx:142:          'We cannot reach the tax service right now. Please try again later.',
+client/src/pages/GermanTaxReports.jsx:148:    const config = statusConfig[availability.status] || statusConfig.error;
+client/src/pages/GermanTaxReports.jsx:158:            {availability.status === 'checking' && (
+client/src/pages/GermanTaxReports.jsx:161:                <span>Validating backend availability...</span>
+client/src/pages/GermanTaxReports.jsx:164:            {(availability.status === 'disabled' || availability.status === 'error') && (
+client/src/pages/GermanTaxReports.jsx:166:                {statusDetail.feature && <p>Feature: {statusDetail.feature}</p>}
+client/src/pages/GermanTaxReports.jsx:167:                <p>Version: v{statusDetail.version || APP_VERSION}</p>
+client/src/pages/GermanTaxReports.jsx:195:    availability.status === 'disabled'
+client/src/pages/GermanTaxReports.jsx:197:      : availability.status === 'checking'
+client/src/pages/GermanTaxReports.jsx:198:        ? 'We are verifying availability with the backend.'
+client/src/pages/GermanTaxReports.jsx:199:        : availability.status === 'error'
+client/src/pages/GermanTaxReports.jsx:200:          ? 'Tax reporting is currently unavailable.'
+client/src/pages/GermanTaxReports.jsx:201:          : availability.status === 'submitted'
+client/src/pages/GermanTaxReports.jsx:203:            : availability.status === 'accepted'
+client/src/pages/GermanTaxReports.jsx:205:              : availability.status === 'rejected'
+client/src/pages/GermanTaxReports.jsx:226:      {(availability.status === 'submitted' || availability.status === 'accepted') && (
+client/src/pages/GermanTaxReports.jsx:232:            {availability.status === 'submitted'
+client/src/pages/GermanTaxReports.jsx:238:            justification. Contact your tax advisor for details.
+client/src/pages/SystemAdminDashboard.jsx:38:  email: '',
+client/src/pages/SystemAdminDashboard.jsx:60:  const [maintenance, setMaintenance] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:75:        return 'Plan unavailable';
+client/src/pages/SystemAdminDashboard.jsx:88:  const [maintenanceReason, setMaintenanceReason] = useState('');
+client/src/pages/SystemAdminDashboard.jsx:103:        maintenanceData,
+client/src/pages/SystemAdminDashboard.jsx:106:      ] = await Promise.all([
+client/src/pages/SystemAdminDashboard.jsx:115:        systemAdminAPI.getMaintenance(),
+client/src/pages/SystemAdminDashboard.jsx:128:      setMaintenance(maintenanceData);
+client/src/pages/SystemAdminDashboard.jsx:144:      const data = await systemAdminAPI.listCompanies();
+client/src/pages/SystemAdminDashboard.jsx:153:      const data = await systemAdminAPI.listUsers();
+client/src/pages/SystemAdminDashboard.jsx:180:        aiEnabled: true,
+client/src/pages/SystemAdminDashboard.jsx:184:      await systemAdminAPI.createCompany(payload);
+client/src/pages/SystemAdminDashboard.jsx:186:      await refreshCompanies();
+client/src/pages/SystemAdminDashboard.jsx:195:      await systemAdminAPI.suspendCompany(companyId, {});
+client/src/pages/SystemAdminDashboard.jsx:196:      await refreshCompanies();
+client/src/pages/SystemAdminDashboard.jsx:205:      await systemAdminAPI.restoreCompany(companyId);
+client/src/pages/SystemAdminDashboard.jsx:206:      await refreshCompanies();
+client/src/pages/SystemAdminDashboard.jsx:218:      await systemAdminAPI.deleteCompany(companyId);
+client/src/pages/SystemAdminDashboard.jsx:219:      await refreshCompanies();
+client/src/pages/SystemAdminDashboard.jsx:228:      await systemAdminAPI.updateCompanyFlags(company.id, {
+client/src/pages/SystemAdminDashboard.jsx:231:      await refreshCompanies();
+client/src/pages/SystemAdminDashboard.jsx:244:      await systemAdminAPI.createUser(payload);
+client/src/pages/SystemAdminDashboard.jsx:246:      await refreshUsers();
+client/src/pages/SystemAdminDashboard.jsx:255:      await systemAdminAPI.updateUser(userId, { role });
+client/src/pages/SystemAdminDashboard.jsx:256:      await refreshUsers();
+client/src/pages/SystemAdminDashboard.jsx:265:      await systemAdminAPI.updateUser(user.id, { isActive: !user.isActive });
+client/src/pages/SystemAdminDashboard.jsx:266:      await refreshUsers();
+client/src/pages/SystemAdminDashboard.jsx:272:  const handleMaintenanceToggle = async () => {
+client/src/pages/SystemAdminDashboard.jsx:275:      const nextEnabled = !maintenance?.enabled;
+client/src/pages/SystemAdminDashboard.jsx:276:      const updated = await systemAdminAPI.setMaintenance({
+client/src/pages/SystemAdminDashboard.jsx:278:        reason: nextEnabled ? maintenanceReason : '',
+client/src/pages/SystemAdminDashboard.jsx:280:      setMaintenance(updated);
+client/src/pages/SystemAdminDashboard.jsx:281:      setMaintenanceReason('');
+client/src/pages/SystemAdminDashboard.jsx:283:      setActionError(formatApiError(err, 'Unable to update maintenance mode.'));
+client/src/pages/SystemAdminDashboard.jsx:318:  const maintenanceBadge = maintenance?.enabled ? (
+client/src/pages/SystemAdminDashboard.jsx:483:                          onClick={() => handleToggleCompanyFlag(company, 'aiEnabled')}
+client/src/pages/SystemAdminDashboard.jsx:485:                          AI: {company.aiEnabled ? 'On' : 'Off'}
+client/src/pages/SystemAdminDashboard.jsx:564:            <Field label="Email">
+client/src/pages/SystemAdminDashboard.jsx:566:                value={userForm.email}
+client/src/pages/SystemAdminDashboard.jsx:567:                onChange={(event) => handleUserFormChange('email', event.target.value)}
+client/src/pages/SystemAdminDashboard.jsx:637:                      <div className="text-xs text-gray-500">{user.email}</div>
+client/src/pages/SystemAdminDashboard.jsx:699:            {!plans.length && <p className="text-sm text-gray-500">No plans available.</p>}
+client/src/pages/SystemAdminDashboard.jsx:745:                {featureFlags?.companyAI?.aiEnabledCount ?? 0} /{' '}
+client/src/pages/SystemAdminDashboard.jsx:757:          <h2 className="text-lg font-semibold text-gray-900">Maintenance Mode</h2>
+client/src/pages/SystemAdminDashboard.jsx:761:              {maintenanceBadge}
+client/src/pages/SystemAdminDashboard.jsx:763:                {maintenance?.enabled ? 'Maintenance active' : 'System normal'}
+client/src/pages/SystemAdminDashboard.jsx:767:              variant={maintenance?.enabled ? 'secondary' : 'danger'}
+client/src/pages/SystemAdminDashboard.jsx:768:              onClick={handleMaintenanceToggle}
+client/src/pages/SystemAdminDashboard.jsx:770:              {maintenance?.enabled ? 'Disable maintenance' : 'Enable maintenance'}
+client/src/pages/SystemAdminDashboard.jsx:773:          {!maintenance?.enabled && (
+client/src/pages/SystemAdminDashboard.jsx:776:                value={maintenanceReason}
+client/src/pages/SystemAdminDashboard.jsx:777:                onChange={(event) => setMaintenanceReason(event.target.value)}
+client/src/pages/SystemAdminDashboard.jsx:778:                placeholder="Scheduled maintenance window details"
+client/src/pages/SystemAdminDashboard.jsx:782:          {maintenance?.enabled && maintenance?.reason && (
+client/src/pages/SystemAdminDashboard.jsx:783:            <p className="text-sm text-gray-600 mt-2">Reason: {maintenance.reason}</p>
+client/src/pages/AIAssistant.jsx:27:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIAssistant.jsx:46:} from '../lib/aiChatIntent';
+client/src/pages/AIAssistant.jsx:51:} from '../lib/aiChatAttachments';
+client/src/pages/AIAssistant.jsx:67:    id: 'explain_transaction',
+client/src/pages/AIAssistant.jsx:68:    label: 'Explain this transaction',
+client/src/pages/AIAssistant.jsx:105:      reject(new Error(`${label} timed out. Please try again.`));
+client/src/pages/AIAssistant.jsx:125:      'You have read-only access. The AI assistant provides explanations and summaries, but you cannot interact or ask questions.',
+client/src/pages/AIAssistant.jsx:130:      'You have audit access. The AI assistant provides explanations and audit-focused summaries. No actions or data changes are possible.',
+client/src/pages/AIAssistant.jsx:135:      'You can interact with the AI assistant for advisory insights, but all actions are non-binding and do not change records.',
+client/src/pages/AIAssistant.jsx:140:      'You have full access. The AI assistant provides advisory insights only and cannot make changes to data.',
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:195:  const aiFeatureGateProps = {
+client/src/pages/AIAssistant.jsx:196:    enabled: aiAssistantEnabled,
+client/src/pages/AIAssistant.jsx:211:      'All interactions are logged to the audit trail.',
+client/src/pages/AIAssistant.jsx:220:      return 'Not available';
+client/src/pages/AIAssistant.jsx:277:      'You have read-only access. The AI assistant provides explanations and summaries only.';
+client/src/pages/AIAssistant.jsx:293:        : 'Not available';
+client/src/pages/AIAssistant.jsx:299:          : 'Not available';
+client/src/pages/AIAssistant.jsx:311:      if (messages[i].speaker === 'assistant') {
+client/src/pages/AIAssistant.jsx:343:      aiAssistantAPI.reset();
+client/src/pages/AIAssistant.jsx:348:    if (!aiAssistantEnabled || !activeCompanyId || isReadOnly || isSystemAdmin) {
+client/src/pages/AIAssistant.jsx:368:        const [sessionResult, contextResult] = await Promise.allSettled([
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:371:            'AI assistant session',
+client/src/pages/AIAssistant.jsx:374:            aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:375:            'AI assistant context',
+client/src/pages/AIAssistant.jsx:385:            formatApiError(sessionResult.reason, 'Unable to start the AI assistant session.'),
+client/src/pages/AIAssistant.jsx:393:            formatApiError(contextResult.reason, 'Unable to load the AI assistant context.'),
+client/src/pages/AIAssistant.jsx:403:          setContextError(formatApiError(err, 'Unable to load the AI assistant.'));
+client/src/pages/AIAssistant.jsx:416:  }, [aiAssistantEnabled, activeCompanyId, isReadOnly, isSystemAdmin, context]);
+client/src/pages/AIAssistant.jsx:434:        id: 'assistant-intro',
+client/src/pages/AIAssistant.jsx:435:        speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:436:        role: 'assistant',
+client/src/pages/AIAssistant.jsx:479:      <FeatureGate {...aiFeatureGateProps}>
+client/src/pages/AIAssistant.jsx:481:          title={t('states.ai_assistant_system_admin_blocked.title')}
+client/src/pages/AIAssistant.jsx:482:          description={t('states.ai_assistant_system_admin_blocked.description')}
+client/src/pages/AIAssistant.jsx:483:          help={t('states.ai_assistant_system_admin_blocked.help')}
+client/src/pages/AIAssistant.jsx:491:      <FeatureGate {...aiFeatureGateProps}>
+client/src/pages/AIAssistant.jsx:494:          description="Choose an active company to load the AI assistant context."
+client/src/pages/AIAssistant.jsx:502:          <span className="font-semibold">Why is AI unavailable?</span> The AI assistant requires an
+client/src/pages/AIAssistant.jsx:554:      setRecordingError('Voice recording is not available in this browser.');
+client/src/pages/AIAssistant.jsx:558:      setRecordingError('Microphone access is not available in this browser.');
+client/src/pages/AIAssistant.jsx:562:      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+client/src/pages/AIAssistant.jsx:567:      recorder.ondataavailable = (event) => {
+client/src/pages/AIAssistant.jsx:605:        id: `assistant-${Date.now()}`,
+client/src/pages/AIAssistant.jsx:606:        speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:607:        role: 'assistant',
+client/src/pages/AIAssistant.jsx:664:        id: `assistant-document-${Date.now()}`,
+client/src/pages/AIAssistant.jsx:665:        speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:666:        role: 'assistant',
+client/src/pages/AIAssistant.jsx:683:          'File analysis is available for PDF, JPEG, PNG, and TIFF documents. I can still help based on your text.',
+client/src/pages/AIAssistant.jsx:685:        references: ['Read-only assistant guidance'],
+client/src/pages/AIAssistant.jsx:701:      await Promise.resolve();
+client/src/pages/AIAssistant.jsx:703:      await Promise.resolve();
+client/src/pages/AIAssistant.jsx:705:      const result = await analyzeIntake(supportedAttachment.file, {
+client/src/pages/AIAssistant.jsx:742:          id: `assistant-error-${Date.now()}`,
+client/src/pages/AIAssistant.jsx:743:          speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:744:          role: 'assistant',
+client/src/pages/AIAssistant.jsx:747:            'This assistant is read-only. I can explain and summarize, but I cannot modify records.',
+client/src/pages/AIAssistant.jsx:761:          id: `assistant-error-${Date.now()}`,
+client/src/pages/AIAssistant.jsx:762:          speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:763:          role: 'assistant',
+client/src/pages/AIAssistant.jsx:765:          error: 'Your role does not permit interacting with the AI assistant.',
+client/src/pages/AIAssistant.jsx:778:          id: `assistant-error-${Date.now()}`,
+client/src/pages/AIAssistant.jsx:779:          speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:780:          role: 'assistant',
+client/src/pages/AIAssistant.jsx:782:          error: 'Session is initializing. Please wait a moment.',
+client/src/pages/AIAssistant.jsx:814:              references: ['Read-only assistant guidance'],
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:844:            id: `assistant-error-${Date.now()}`,
+client/src/pages/AIAssistant.jsx:845:            speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:846:            role: 'assistant',
+client/src/pages/AIAssistant.jsx:848:            error: formatApiError(err, 'Unable to reach the assistant.').message,
+client/src/pages/AIAssistant.jsx:874:    const assistantMessageId = `assistant-stream-${Date.now()}`;
+client/src/pages/AIAssistant.jsx:875:    const assistantMessage = {
+client/src/pages/AIAssistant.jsx:876:      id: assistantMessageId,
+client/src/pages/AIAssistant.jsx:877:      speaker: 'assistant',
+client/src/pages/AIAssistant.jsx:878:      role: 'assistant',
+client/src/pages/AIAssistant.jsx:887:    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+client/src/pages/AIAssistant.jsx:898:        prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, ...patch } : msg)),
+client/src/pages/AIAssistant.jsx:904:          msg.id === assistantMessageId
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/pages/AIAssistant.jsx:943:        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
+client/src/pages/AIAssistant.jsx:944:        await sendNonStreaming({ includeUserMessage: false });
+client/src/pages/AIAssistant.jsx:948:          error: formatApiError(err, 'Unable to reach the assistant.').message,
+client/src/pages/AIAssistant.jsx:996:    analysis?.editablePayload?.aiExtractedValues ||
+client/src/pages/AIAssistant.jsx:997:    analysis?.lifecycle?.editablePayload?.aiExtractedValues ||
+client/src/pages/AIAssistant.jsx:1024:      analysis?.editablePayload?.aiExtractedValues ||
+client/src/pages/AIAssistant.jsx:1142:      const result = await recheckIntakeDocument(
+client/src/pages/AIAssistant.jsx:1203:      const result = await createDraftFromReviewedIntake(
+client/src/pages/AIAssistant.jsx:1441:                    <span>{String(change.aiValue ?? '')}</span>
+client/src/pages/AIAssistant.jsx:1499:            Confidence: {analysis.classification?.confidence || 'not available'}
+client/src/pages/AIAssistant.jsx:1583:    const isAssistant = message.speaker === 'assistant';
+client/src/pages/AIAssistant.jsx:1650:                  Source: {message.meta.source || 'Not available'} · Confidence:{' '}
+client/src/pages/AIAssistant.jsx:1651:                  {message.meta.confidence || 'Not available'} · Last updated:{' '}
+client/src/pages/AIAssistant.jsx:1652:                  {message.meta.lastUpdated || 'Not available'}
+client/src/pages/AIAssistant.jsx:1696:      <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading AI assistant">
+client/src/pages/AIAssistant.jsx:1708:          feature="AI assistant"
+client/src/pages/AIAssistant.jsx:1717:          title="Unable to load the AI assistant"
+client/src/pages/AIAssistant.jsx:1718:          description={contextError.message || 'Please try again later.'}
+client/src/pages/AIAssistant.jsx:1726:          <span className="font-semibold">Why is AI unavailable?</span> The assistant may be
+client/src/pages/AIAssistant.jsx:1737:      <FeatureGate {...aiFeatureGateProps}>
+client/src/pages/AIAssistant.jsx:1747:                A read-only advisor that highlights issues and links to explainable insights.
+client/src/pages/AIAssistant.jsx:1755:              <Button variant="secondary" size="sm" onClick={() => navigate('/ai-advisor')}>
+client/src/pages/AIAssistant.jsx:1772:    <FeatureGate {...aiFeatureGateProps}>
+client/src/pages/AIAssistant.jsx:1774:        <div className="surface-card-ai flex flex-wrap items-start justify-between gap-4">
+client/src/pages/AIAssistant.jsx:1783:                A conversational advisor that highlights issues and connects to explainable
+client/src/pages/AIAssistant.jsx:1804:              This assistant prompt was prepared from a review queue item. Review it first,
+client/src/pages/AIAssistant.jsx:1805:              then send it when ready. The assistant remains read-only and advisory.
+client/src/pages/AIAssistant.jsx:1821:              AI Enabled: {context?.company?.aiEnabled === false ? 'No' : 'Yes'}
+client/src/pages/AIAssistant.jsx:1842:              <p className="text-xs text-gray-500 dark:text-gray-400">No invoices available yet.</p>
+client/src/pages/AIAssistant.jsx:1896:              <span className="text-xs text-blue-600">Explainable + auditable</span>
+client/src/pages/AIAssistant.jsx:1928:                        : 'Not available'}
+client/src/pages/AIAssistant.jsx:1936:                          handleIntent('explain_transaction', {
+client/src/pages/AIAssistant.jsx:1938:                            prompt: `Explain insight ${insight.type}`,
+client/src/pages/AIAssistant.jsx:1942:                        Explain transaction
+client/src/pages/AIAssistant.jsx:1963:                No AI insights available yet. This can happen if:
+client/src/pages/AIAssistant.jsx:1985:                  The assistant references invoices, expenses, bank statements, and AI insights.
+client/src/pages/AIAssistant.jsx:1996:                : 'The assistant is ready for your request.'}
+client/src/pages/AIAssistant.jsx:2117:                    placeholder="Message the accounting assistant..."
+client/src/pages/AIAssistant.jsx:2177:                Voice recording is unavailable in this browser. Text, files, and camera input remain available.
+client/src/pages/AIAssistant.jsx:2212:              Refresh assistant
+client/src/pages/Invoices.jsx:25:  { value: 'partially_paid', label: 'Partially paid' },
+client/src/pages/Invoices.jsx:27:  { value: 'paid', label: 'Paid' },
+client/src/pages/Invoices.jsx:57:  partially_paid: 'Partially paid: A payment has been recorded and the invoice remains locked.',
+client/src/pages/Invoices.jsx:58:  overdue: 'Overdue: Payment is past due and the invoice remains locked.',
+client/src/pages/Invoices.jsx:59:  paid: 'Paid: This invoice is settled and locked.',
+client/src/pages/Invoices.jsx:90:      const data = await invoicesAPI.list({ companyId: activeCompany.id });
+client/src/pages/Invoices.jsx:166:              new CustomEvent('open-ai-assistant', { detail: { context: 'invoices' } }),
+client/src/pages/Invoices.jsx:177:        <span className="font-semibold">What does AI see?</span> The assistant will only see your
+client/src/pages/Invoices.jsx:178:        current company’s invoices, status, and visible details on this page. No generic
+client/src/pages/__tests__/DocumentInbox.test.jsx:1:import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+client/src/pages/__tests__/DocumentInbox.test.jsx:85:    expect(await screen.findByText('Document Inbox')).toBeInTheDocument();
+client/src/pages/__tests__/DocumentInbox.test.jsx:86:    expect(await screen.findByText('receipt.pdf')).toBeInTheDocument();
+client/src/pages/__tests__/DocumentInbox.test.jsx:90:    expect(screen.getByText('Human review remains required')).toBeInTheDocument();
+client/src/pages/__tests__/DocumentInbox.test.jsx:92:    await waitFor(() =>
+client/src/pages/__tests__/DocumentInbox.test.jsx:106:    await screen.findByText('receipt.pdf');
+client/src/pages/__tests__/DocumentInbox.test.jsx:109:    await waitFor(() =>
+client/src/pages/__tests__/DocumentInbox.test.jsx:122:    expect(await screen.findByText('No documents found')).toBeInTheDocument();
+client/src/pages/__tests__/DocumentInbox.test.jsx:131:    expect(await screen.findByText('Document inbox unavailable')).toBeInTheDocument();
+client/src/pages/InvoiceCreate.jsx:35:      await invoicesAPI.create({
+client/src/pages/InvoiceCreate.jsx:43:      setError(formatApiError(creationError, 'Failed to create invoice.'));
+client/src/pages/GDPRActions.jsx:23:      const data = await gdprAPI.exportUser(user.id);
+client/src/pages/GDPRActions.jsx:26:      setError(err?.message || 'Failed to export data');
+client/src/pages/GDPRActions.jsx:40:      await gdprAPI.anonymizeUser(user.id, 'Requested via GDPR Actions UI');
+client/src/pages/GDPRActions.jsx:43:      setError(err?.message || 'Failed to anonymize user');
+client/src/pages/AuditLogs.jsx:26:      .catch((err) => setError(formatApiError(err, 'Failed to load audit logs')))
+client/src/pages/AuditLogs.jsx:41:        the same GoBD-grade trail exported for legal reviews. Entries below reflect company-scoped
+client/src/pages/AuditLogs.jsx:47:            title="Loading audit trail export..."
+client/src/pages/BankStatementDetail.jsx:72:  if (actor.email) {
+client/src/pages/BankStatementDetail.jsx:73:    return actor.email;
+client/src/pages/BankStatementDetail.jsx:109:  'Bank statement details are available in read-only mode. No changes can be made.';
+client/src/pages/BankStatementDetail.jsx:113:    'This statement is being ingested and validated. Transactions will become available once processing completes.',
+client/src/pages/BankStatementDetail.jsx:114:  COMPLETED: 'Processing has finished and the statement is available for read-only review.',
+client/src/pages/BankStatementDetail.jsx:115:  FAILED: 'Processing could not finish, so the captured transactions are not available in this view.',
+client/src/pages/BankStatementDetail.jsx:123:const BankStatementDetail = () => {
+client/src/pages/BankStatementDetail.jsx:178:        const payload = await bankStatementsAPI.transactions(statementId, { signal });
+client/src/pages/BankStatementDetail.jsx:234:        const payload = await bankStatementsAPI.auditLogs(statementId, { signal });
+client/src/pages/BankStatementDetail.jsx:299:      const response = await bankStatementsAPI.updateTransaction(transaction.id, payload);
+client/src/pages/BankStatementDetail.jsx:324:      const response = await bankStatementsAPI.updateTransaction(transaction.id, payload);
+client/src/pages/BankStatementDetail.jsx:357:      const response = await bankStatementsAPI.reconcileTransaction(selectedTransaction.id, payload);
+client/src/pages/BankStatementDetail.jsx:412:      const response = await bankStatementsAPI.undoReconciliation(selectedUndoTransaction.id, {
+client/src/pages/BankStatementDetail.jsx:475:        const data = await invoicesAPI.list({ companyId: activeCompany.id });
+client/src/pages/BankStatementDetail.jsx:494:        const data = await expensesAPI.list({ companyId: activeCompany.id });
+client/src/pages/BankStatementDetail.jsx:591:          No {type === 'invoices' ? 'invoices' : 'expenses'} are available to link right now.
+client/src/pages/BankStatementDetail.jsx:663:            {statementSummary?.fileName || 'Bank statement detail'}
+client/src/pages/BankStatementDetail.jsx:900:                  Transaction details
+client/src/pages/BankStatementDetail.jsx:1133:export default BankStatementDetail;
+
+===== ROUTING STRUCTURE =====
+3:import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+21:const wrapRoute = (element) => <RouteErrorBoundary>{element}</RouteErrorBoundary>;
+23:const withCompanyLayout = (element, requiredRole) => (
+26:      <Layout>{withSuspense(element)}</Layout>
+31:const withSystemAdminLayout = (element) => (
+34:      <Layout>{withSuspense(element)}</Layout>
+39:const renderProtectedRoute = (element, requiredRole) =>
+40:  wrapRoute(withCompanyLayout(element, requiredRole));
+42:const renderSystemAdminRoute = (element) => wrapRoute(withSystemAdminLayout(element));
+132:const routeElementResolver = (route, context = {}) => {
+133:  if (typeof route.element === 'function') {
+134:    return route.element(context);
+136:  return route.element;
+141:    path: '/',
+142:    element: wrapRoute(<LandingRoute />),
+149:    path: '/terms',
+150:    element: wrapRoute(withSuspense(<Terms />)),
+157:    path: '/privacy',
+158:    element: wrapRoute(withSuspense(<Privacy />)),
+165:    path: '/login',
+166:    element: wrapRoute(<LoginRoute />),
+173:    path: '/pricing',
+174:    element: wrapRoute(withSuspense(<Pricing />)),
+181:    path: '/request-access',
+182:    element: wrapRoute(withSuspense(<RequestAccess />)),
+189:    path: '/onboarding',
+190:    element: renderProtectedRoute(<OnboardingWizard />),
+197:    path: '/profile-settings',
+198:    element: renderProtectedRoute(<ProfileSettings />),
+205:    path: '/profile',
+206:    element: wrapRoute(
+217:    path: '/exports',
+218:    element: renderProtectedRoute(<Exports />),
+225:    path: '/exports/datev',
+226:    element: renderProtectedRoute(<DatevExport />),
+233:    path: '/invoices/import',
+234:    element: renderProtectedRoute(<InvoiceImport />),
+241:    path: '/rbac',
+242:    element: wrapRoute(
+253:    path: '/role-management',
+254:    element: wrapRoute(
+265:    path: '/investor-dashboard',
+266:    element: renderProtectedRoute(<InvestorDashboard />, 'auditor'),
+273:    path: '/analytics',
+274:    element: renderProtectedRoute(<Analytics />),
+281:    path: '/ai-advisor',
+282:    element: renderProtectedRoute(<AIInsights />),
+289:    path: '/ai-assistant',
+290:    element: renderProtectedRoute(<AIAssistant />),
+297:    path: '/ai-manager',
+298:    element: renderProtectedRoute(<AIManager />),
+305:    path: '/dashboard',
+306:    element: renderProtectedRoute(<Dashboard />),
+313:    path: '/app',
+314:    element: renderProtectedRoute(<Dashboard />),
+321:    path: '/invoices',
+322:    element: renderProtectedRoute(<Invoices />),
+329:    path: '/expenses',
+330:    element: renderProtectedRoute(<Expenses />),
+337:    path: '/expenses/create',
+338:    element: renderProtectedRoute(<ExpensesCreate />),
+345:    path: '/invoices/create',
+346:    element: renderProtectedRoute(<InvoiceCreate />),
+353:    path: '/invoices/:invoiceId/edit',
+354:    element: renderProtectedRoute(<InvoiceEdit />),
+361:    path: '/bank-statements',
+362:    element: renderProtectedRoute(<BankStatements />),
+369:    path: '/bank-statements/preview',
+370:    element: renderProtectedRoute(<BankStatementPreview />),
+377:    path: '/documents/inbox',
+378:    element: renderProtectedRoute(<DocumentInbox />),
+385:    path: '/ocr-preview',
+386:    element: renderProtectedRoute(<OCRPreview />),
+393:    path: '/bank-statements/import',
+394:    element: renderProtectedRoute(<BankStatementImport />),
+401:    path: '/bank-statements/:statementId/reconciliation-preview',
+402:    element: renderProtectedRoute(<BankStatementReconciliationPreview />, 'accountant'),
+409:    path: '/bank-statements/:statementId',
+410:    element: renderProtectedRoute(<BankStatementDetail />),
+417:    path: '/billing',
+418:    element: FEATURE_FLAGS.STRIPE_BILLING.enabled
+435:    path: '/german-tax-reports/*',
+436:    element: ({ activeCompany: company }) =>
+444:    path: '/companies',
+445:    element: renderProtectedRoute(<Companies />),
+452:    path: '/users',
+453:    element: renderProtectedRoute(<Users />, 'admin'),
+460:    path: '/compliance',
+461:    element: FEATURE_FLAGS.ELSTER_COMPLIANCE.enabled
+478:    path: '/gdpr-actions',
+479:    element: renderProtectedRoute(<GDPRActions />),
+486:    path: '/audit-logs',
+487:    element: renderProtectedRoute(<AuditLogs />, 'admin'),
+494:    path: '/tax-reports',
+495:    element: wrapRoute(
+506:    path: '/german-tax-reports',
+507:    element: FEATURE_FLAGS.GERMAN_TAX.enabled
+524:    path: '/compliance-dashboard',
+525:    element: wrapRoute(
+536:    path: '/system-admin',
+537:    element: renderSystemAdminRoute(<SystemAdminDashboard />),
+544:    path: '*',
+545:    element: wrapRoute(<NotFound />),
+558:      {ROUTE_DEFINITIONS.map((route) => (
+560:          key={route.path}
+561:          path={route.path}
+562:          element={routeElementResolver(route, { activeCompany })}
+
+===== GIT STATE =====
+ D client/src/components/ai/AIDecisionLayer.jsx
+ D client/src/components/ai/AIFinancialControlPanel.jsx
+ D client/src/components/ai/core/AIIntelligenceZone.jsx
+ D client/src/components/ai/engine/AIFinancialEngine.jsx
+ D client/src/components/ai/live/AILiveFeed.jsx
+ D client/src/components/ai/live/AILiveStreamBridge.jsx
+ D client/src/components/ai/stream/AIStreamEngine.jsx
+ D client/src/hooks/useAIStream.js
+ M client/src/pages/AIAssistant.jsx
+ M client/src/pages/Dashboard.jsx
+ M client/src/services/aiAssistantAPI.js
+ M src/services/ai/README.md
+ M src/services/ai/aiReadGateway.js
+ D src/services/ai/decision/decisionContract.js
+ D src/services/ai/decision/decisionService.js
+ D src/services/ai/decision/decisionValidator.js
+?? .architecture-archive/
+?? client/src/components/ai/cfo/
+?? client/src/components/ai/orchestrator/
+?? client/src/services/ai/
+?? docs/AUDIT/
+?? src/services/ai/cfo/
+?? src/services/ai/eventBus.js
+?? src/services/ai/orchestrator/

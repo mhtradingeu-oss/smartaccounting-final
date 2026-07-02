@@ -27,7 +27,7 @@ echo ""
 echo "🧹 Cleaning frontend port..."
 
 FRONTEND_PID_FILE="logs/frontend.pid"
-pid=$(lsof -ti:5173 || true)
+pid=$(lsof -tiTCP:5173 -sTCP:LISTEN || true)
 
 if [ -n "$pid" ]; then
   if [ -f "$FRONTEND_PID_FILE" ] && grep -qx "$pid" "$FRONTEND_PID_FILE"; then

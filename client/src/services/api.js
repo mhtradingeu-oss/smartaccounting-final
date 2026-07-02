@@ -1,305 +1,63 @@
 import axios from 'axios';
-import { getSafeErrorMeta } from '../lib/errorMeta';
 import { getStoredActiveCompanyId } from '../lib/companyStorage';
 
-/**
- * API BASE URL
- * - Production: /api (Nginx proxy)
- * - Dev: VITE_API_URL (required for docker/dev setups)
- */
+export const API_BASE_URL = '/api';
+export const AUTH_FORCE_LOGOUT_EVENT = 'AUTH_FORCE_LOGOUT';
+export const SKIP_FORCE_LOGOUT_ON_401_FLAG = '__skip_logout__';
 
-const raw = import.meta.env.VITE_API_URL?.trim();
-let API_BASE_URL = '/api';
-
-if (raw) {
-  const isSafe = /^https?:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(raw);
-  if (typeof window !== 'undefined' && raw.includes('backend:')) {
-    throw new Error(
-      'VITE_API_URL must not use docker service names in browser. Use http://localhost:5001/api or leave empty.',
-    );
-  }
-  if (isSafe) {
-    API_BASE_URL = raw;
-  } else {
-    console.warn(
-      `[api] Invalid VITE_API_URL '${raw}'. Docker service names are not allowed in browser. Falling back to '/api'.`,
-    );
-  }
-} else {
-  console.info('[api] Using "/api" via Vite proxy');
+export function formatApiError(error, fallback = 'API Error') {
+  return (
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.response?.data?.code ||
+    error?.message ||
+    fallback
+  );
 }
-
-export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: import.meta.env.DEV ? 30000 : 15000,
-  withCredentials: true, // required for cookies / auth
+  withCredentials: true,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 });
 
-const COMPANY_ID_HEADER = 'X-Company-Id';
-const COMPANY_OPTIONAL_ROUTES = [
-  '/auth',
-  '/system',
-  '/monitoring',
-  '/telemetry',
-  '/logs',
-  '/email-test',
-  '/public',
-];
-
-const isCompanyOptionalRoute = (path) =>
-  COMPANY_OPTIONAL_ROUTES.some((prefix) => path.startsWith(prefix));
-
-const normalizePath = (urlValue) => {
-  if (typeof urlValue !== 'string') {
-    return '';
-  }
-  if (urlValue.startsWith('http')) {
-    try {
-      return new URL(urlValue).pathname;
-    } catch {
-      return '';
-    }
-  }
-  return urlValue;
-};
-
-/* ================================
-   AUTH FORCE LOGOUT EVENT
-================================ */
-export const AUTH_FORCE_LOGOUT_EVENT = 'smartaccounting:force-logout';
-
-const emitForceLogout = () => {
-  if (typeof window === 'undefined') {
-    return;
+api.interceptors.request.use((config) => {
+  if (!config.headers) {
+    config.headers = {};
   }
 
-  localStorage.removeItem('token');
-  window.dispatchEvent(new CustomEvent(AUTH_FORCE_LOGOUT_EVENT));
-
-  if (window.location.pathname !== '/login') {
-    window.location.replace('/login');
-  }
-};
-
-export const SKIP_FORCE_LOGOUT_ON_401_FLAG = 'skipForceLogoutOn401';
-
-/* ================================
-   DEV LOGGING (SAFE)
-================================ */
-const isDev = import.meta.env.DEV;
-
-const logError = (...args) => {
-  if (isDev) {
-    console.error(...args);
-  }
-};
-
-const isCanceledApiError = (error) =>
-  error?.code === 'ERR_CANCELED' ||
-  error?.name === 'CanceledError' ||
-  error?.message === 'canceled' ||
-  error?.__CANCEL__ === true;
-
-/* ================================
-   API ERROR FORMATTER
-================================ */
-export const formatApiError = (error, fallbackMessage = 'An error occurred. Please try again.') => {
-  const formatted = {
-    status: null,
-    message: fallbackMessage,
-    retryable: false,
-    type: 'generic',
-  };
-
-  if (!error) {
-    return formatted;
+  const path = typeof config.url === 'string' ? config.url.split('?')[0] : '';
+  const publicAuthRoutes = ['/auth/login', '/auth/register', '/auth/refresh'];
+  if (!publicAuthRoutes.includes(path)) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
-  if (error.response) {
-    const { status, data } = error.response;
-    formatted.status = status;
-
-    // Prefer safe backend-provided messages for validation/auth errors.
-    const backendMessage =
-      typeof data?.message === 'string'
-        ? data.message
-        : typeof data?.error === 'string'
-          ? data.error
-          : null;
-
-    if (backendMessage) {
-      formatted.message = backendMessage;
-    }
-
-    const errorCode = data?.code || data?.errorCode;
-    if (errorCode === 'PLAN_RESTRICTED') {
-      formatted.type = 'plan_restricted';
-      formatted.message = data?.message || fallbackMessage;
-      formatted.feature = data?.feature || null;
-      formatted.plan = data?.plan || null;
-      formatted.upgradePath = data?.upgradePath || '/pricing';
-      formatted.retryable = false;
-      return formatted;
-    }
-
-    if (status === 401) {
-      formatted.type = 'unauthorized';
-    } else if (status === 403) {
-      formatted.type = 'forbidden';
-      formatted.message = 'Not allowed';
-    } else if (status === 429) {
-      formatted.type = 'rate_limit';
-      formatted.retryable = true;
-      formatted.message = 'Too many requests. Please try again later.';
-    } else if (status >= 500) {
-      formatted.type = 'server_error';
-      formatted.retryable = true;
-      formatted.message = 'Server is temporarily unavailable. Please try again shortly.';
-    } else {
-      formatted.type = 'http';
-    }
-  } else if (error.request) {
-    formatted.type = 'network';
-    formatted.retryable = true;
-
-    formatted.message = 'Unable to reach the server. Check your connection and try again.';
-  } else if (error.message) {
-    formatted.message = error.message;
+  const companyId = getStoredActiveCompanyId();
+  if (companyId) {
+    config.headers['X-Company-Id'] = companyId;
   }
 
-  return formatted;
-};
-
-/* ================================
-   REQUEST INTERCEPTOR
-================================ */
-api.interceptors.request.use(
-  (config) => {
-    if (!config.headers) {
-      config.headers = {};
-    }
-
-    const rawPath = normalizePath(config.url);
-    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
-    const pathWithoutQuery = normalizedPath.split('?')[0];
-
-    // Do not send Authorization only for public auth entrypoints.
-    // Authenticated auth routes such as /auth/me, /auth/logout and /auth/sessions
-    // must still receive the Bearer token when it exists.
-    const authRoutesWithoutBearer = ['/auth/login', '/auth/register', '/auth/refresh'];
-    if (!authRoutesWithoutBearer.includes(pathWithoutQuery)) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-
-    if (!isCompanyOptionalRoute(pathWithoutQuery)) {
-      const existingCompanyHeader =
-        config.headers?.[COMPANY_ID_HEADER] || config.headers?.[COMPANY_ID_HEADER.toLowerCase()];
-      const companyId = getStoredActiveCompanyId();
-      if (!existingCompanyHeader) {
-        if (!companyId) {
-          const err = new Error('Company context is required for this request.');
-          err.code = 'COMPANY_HEADER_REQUIRED';
-          return Promise.reject(err);
-        }
-        if (!config.headers) {
-          config.headers = {};
-        }
-        config.headers[COMPANY_ID_HEADER] = companyId;
-      } else if (companyId && String(existingCompanyHeader) !== String(companyId)) {
-        const err = new Error('Company context mismatch detected.');
-        err.code = 'COMPANY_HEADER_MISMATCH';
-        return Promise.reject(err);
-      }
-    }
-
-    if (isDev) {
-      console.log(`➡️ ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
-    }
-
-    return config;
-  },
-  (error) => {
-    logError('❌ Request error:', error);
-    return Promise.reject(error);
-  },
-);
-
-/* ================================
-   RESPONSE INTERCEPTOR
-================================ */
-// Global for last requestId (safe, not PII)
-if (typeof window !== 'undefined') {
-  window.__LAST_REQUEST_ID__ = null;
-}
+  return config;
+});
 
 api.interceptors.response.use(
-  (response) => {
-    // Capture X-Request-Id from headers
-    const reqId = response.headers?.['x-request-id'] || response.headers?.['X-Request-Id'];
-    if (reqId && typeof window !== 'undefined') {
-      window.__LAST_REQUEST_ID__ = reqId;
-    }
-    if (isDev) {
-      console.log(`⬅️ ${response.status} ${response.config.url}`);
-    }
-    return response;
-  },
-  (error) => {
-    if (isCanceledApiError(error)) {
-      if (isDev) {
-        console.debug('↪️ API request canceled:', error?.config?.url || error?.message);
-      }
-      return Promise.reject(error);
+  (res) => res,
+  (err) => {
+    const skip = err?.config?.[SKIP_FORCE_LOGOUT_ON_401_FLAG];
+
+    if (err?.response?.status === 401 && !skip) {
+      window.dispatchEvent(new Event(AUTH_FORCE_LOGOUT_EVENT));
     }
 
-    // Also try to capture from error responses
-    const reqId =
-      error?.response?.headers?.['x-request-id'] || error?.response?.headers?.['X-Request-Id'];
-    if (reqId && typeof window !== 'undefined') {
-      window.__LAST_REQUEST_ID__ = reqId;
-    }
-    const rawPath = normalizePath(error?.config?.url ?? '');
-    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
-    const pathWithoutQuery = normalizedPath.split('?')[0];
-    const isAuthLoginRoute = pathWithoutQuery === '/auth/login';
-    const isAuthRefreshRoute = pathWithoutQuery === '/auth/refresh';
-    const isAuthRegisterRoute = pathWithoutQuery === '/auth/register';
-    if (error.response) {
-      const { status } = error.response;
-      const skipForceLogout = Boolean(
-        error?.config?.[SKIP_FORCE_LOGOUT_ON_401_FLAG] ??
-        error?.config?.skipForceLogoutOn401 ??
-        false,
-      );
-      const isAuthRoute = isAuthLoginRoute || isAuthRefreshRoute || isAuthRegisterRoute;
-
-      if (status === 401 && skipForceLogout) {
-        if (isDev) {
-          console.debug('↪️ Expected authenticated validation error:', getSafeErrorMeta(error));
-        }
-      } else {
-        logError(`❌ API Error ${status}`, getSafeErrorMeta(error));
-      }
-
-      if (status === 401 && !skipForceLogout && !isAuthRoute) {
-        emitForceLogout();
-      }
-    } else if (error.request) {
-      logError('🌐 Network error:', error.message);
-    } else {
-      logError('❌ Unknown API error:', error.message);
-    }
-    return Promise.reject(error);
+    return Promise.reject(err);
   },
 );
 
+export { api };
 export default api;

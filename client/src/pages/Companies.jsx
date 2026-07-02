@@ -108,6 +108,8 @@ export default function Companies() {
   }, [activeCompany]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
       if (retryTimeoutRef.current) {
@@ -173,7 +175,7 @@ export default function Companies() {
   if (loadError) {
     return (
       <div className="text-center py-16 space-y-4">
-        <p className="text-lg font-semibold text-red-600">{loadError.message}</p>
+        <p className="text-lg font-semibold text-red-600">{loadError}</p>
         <Button onClick={refreshCompanies} variant="primary">
           Retry
         </Button>
@@ -323,7 +325,7 @@ export default function Companies() {
               </PermissionGuard>
             </label>
           </div>
-          {saveError && <p className="text-sm text-red-600">{saveError.message}</p>}
+          {saveError && <p className="text-sm text-red-600">{saveError}</p>}
           {successMessage && <p className="text-sm text-emerald-600">{successMessage}</p>}
           <div className="flex flex-wrap items-center gap-3">
             <PermissionGuard action="edit" role={user?.role} showDisabled>

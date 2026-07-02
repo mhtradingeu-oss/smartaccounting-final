@@ -1,0 +1,665 @@
+client/src/pages/InvoiceEdit.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/InvoiceEdit.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/InvoiceEdit.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/InvoiceEdit.jsx:6:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/InvoiceEdit.jsx:7:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/pages/InvoiceEdit.jsx:8:import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
+client/src/pages/InvoiceEdit.jsx:13:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/InvoiceEdit.jsx:15:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/InvoiceEdit.jsx:42:    return '-';
+client/src/pages/InvoiceEdit.jsx:44:  return new Date(value).toLocaleDateString('de-DE', {
+client/src/pages/InvoiceEdit.jsx:54:    return '-';
+client/src/pages/InvoiceEdit.jsx:56:  return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(amount);
+client/src/pages/InvoiceEdit.jsx:218:      return;
+client/src/pages/InvoiceEdit.jsx:228:        return;
+client/src/pages/InvoiceEdit.jsx:245:      return;
+client/src/pages/InvoiceEdit.jsx:265:      return;
+client/src/pages/InvoiceEdit.jsx:285:      return;
+client/src/pages/InvoiceEdit.jsx:310:      return [];
+client/src/pages/InvoiceEdit.jsx:312:    return STATUS_TRANSITIONS[invoice.status] || [];
+client/src/pages/InvoiceEdit.jsx:317:      return null;
+client/src/pages/InvoiceEdit.jsx:319:    return {
+client/src/pages/InvoiceEdit.jsx:336:    return (
+client/src/pages/InvoiceEdit.jsx:350:    return (
+client/src/pages/InvoiceEdit.jsx:359:    return (
+client/src/pages/InvoiceEdit.jsx:377:    return (
+client/src/pages/InvoiceEdit.jsx:384:  return (
+client/src/pages/Pricing.jsx:3:import { Badge } from '../components/ui/Badge';
+client/src/pages/Pricing.jsx:4:import { Button } from '../components/ui/Button';
+client/src/pages/Pricing.jsx:5:import { Card } from '../components/ui/Card';
+client/src/pages/Pricing.jsx:33:    return 'Individuell';
+client/src/pages/Pricing.jsx:36:    return 'Kostenlos';
+client/src/pages/Pricing.jsx:38:  return formatCurrency(price.monthlyCents, price.currency);
+client/src/pages/Pricing.jsx:43:    return null;
+client/src/pages/Pricing.jsx:46:    return 'Kostenlos';
+client/src/pages/Pricing.jsx:48:  return formatCurrency(price.yearlyCents, price.currency);
+client/src/pages/Pricing.jsx:74:    return () => {
+client/src/pages/Pricing.jsx:89:        return 'grid-cols-5';
+client/src/pages/Pricing.jsx:91:        return 'grid-cols-4';
+client/src/pages/Pricing.jsx:93:        return 'grid-cols-3';
+client/src/pages/Pricing.jsx:95:        return 'grid-cols-4';
+client/src/pages/Pricing.jsx:100:    return (
+client/src/pages/Pricing.jsx:111:    return (
+client/src/pages/Pricing.jsx:124:    return (
+client/src/pages/Pricing.jsx:136:  return (
+client/src/pages/GDPRActions.jsx:2:import { Card } from '../components/ui/Card';
+client/src/pages/GDPRActions.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/GDPRActions.jsx:4:import { ConfirmDangerModal } from '../components/ui/ConfirmDangerModal';
+client/src/pages/GDPRActions.jsx:51:  return (
+client/src/pages/BankStatementDetail.jsx:3:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/BankStatementDetail.jsx:4:import Button from '../components/Button';
+client/src/pages/BankStatementDetail.jsx:5:import BankStatementStatusBadge from '../components/BankStatementStatusBadge';
+client/src/pages/BankStatementDetail.jsx:6:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/BankStatementDetail.jsx:7:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/BankStatementDetail.jsx:8:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/BankStatementDetail.jsx:9:import AsyncModal from '../components/ui/AsyncModal';
+client/src/pages/BankStatementDetail.jsx:29:    return '—';
+client/src/pages/BankStatementDetail.jsx:31:  return new Date(value).toLocaleDateString('de-DE', {
+client/src/pages/BankStatementDetail.jsx:40:    return '—';
+client/src/pages/BankStatementDetail.jsx:42:  return new Intl.NumberFormat('de-DE', {
+client/src/pages/BankStatementDetail.jsx:50:    return '—';
+client/src/pages/BankStatementDetail.jsx:52:  return new Date(value).toLocaleString('de-DE', {
+client/src/pages/BankStatementDetail.jsx:64:    return 'System';
+client/src/pages/BankStatementDetail.jsx:70:    return fullName;
+client/src/pages/BankStatementDetail.jsx:73:    return actor.email;
+client/src/pages/BankStatementDetail.jsx:75:  return 'System';
+client/src/pages/BankStatementDetail.jsx:81:    return 'Bank transaction';
+client/src/pages/BankStatementDetail.jsx:96:    return 'Bank transaction';
+client/src/pages/BankStatementDetail.jsx:98:  return targetParts.join(' ');
+client/src/pages/BankStatementDetail.jsx:165:    return STATUS_EXPLANATIONS[statusCode] || '';
+client/src/pages/BankStatementDetail.jsx:171:        return;
+client/src/pages/BankStatementDetail.jsx:183:          return;
+client/src/pages/BankStatementDetail.jsx:196:      return;
+client/src/pages/BankStatementDetail.jsx:212:      return;
+client/src/pages/BankStatementDetail.jsx:219:    return () => {
+client/src/pages/BankStatementDetail.jsx:227:        return;
+client/src/pages/BankStatementDetail.jsx:239:          return;
+client/src/pages/BankStatementDetail.jsx:251:      return;
+client/src/pages/BankStatementDetail.jsx:268:      return undefined;
+client/src/pages/BankStatementDetail.jsx:275:    return () => {
+client/src/pages/BankStatementDetail.jsx:306:        return;
+client/src/pages/BankStatementDetail.jsx:316:      return;
+client/src/pages/BankStatementDetail.jsx:331:        return;
+client/src/pages/BankStatementDetail.jsx:341:      return;
+client/src/pages/BankStatementDetail.jsx:372:        return;
+client/src/pages/BankStatementDetail.jsx:397:      return;
+client/src/pages/BankStatementDetail.jsx:405:      return;
+client/src/pages/BankStatementDetail.jsx:424:        return;
+client/src/pages/BankStatementDetail.jsx:437:        return;
+client/src/pages/BankStatementDetail.jsx:445:    return map;
+client/src/pages/BankStatementDetail.jsx:451:      return null;
+client/src/pages/BankStatementDetail.jsx:453:    return entries.find((log) => log.action === 'bank_transaction_reconciled') ?? entries[0];
+client/src/pages/BankStatementDetail.jsx:461:      return undefined;
+client/src/pages/BankStatementDetail.jsx:513:    return () => {
+client/src/pages/BankStatementDetail.jsx:543:      return item.invoiceNumber || item.number || `Invoice ${item.id ?? ''}`.trim();
+client/src/pages/BankStatementDetail.jsx:545:    return item.description || item.title || `Expense ${item.id ?? ''}`.trim();
+client/src/pages/BankStatementDetail.jsx:550:      return item.total ?? item.amount ?? 0;
+client/src/pages/BankStatementDetail.jsx:552:    return item.amount ?? 0;
+client/src/pages/BankStatementDetail.jsx:556:    return item.date || item.issueDate || item.createdAt || '';
+client/src/pages/BankStatementDetail.jsx:561:      return item.status || 'Unknown';
+client/src/pages/BankStatementDetail.jsx:563:    return item.status || 'Recorded';
+client/src/pages/BankStatementDetail.jsx:572:      return (
+client/src/pages/BankStatementDetail.jsx:581:      return (
+client/src/pages/BankStatementDetail.jsx:589:      return (
+client/src/pages/BankStatementDetail.jsx:596:    return (
+client/src/pages/BankStatementDetail.jsx:601:          return (
+client/src/pages/BankStatementDetail.jsx:632:    return (
+client/src/pages/BankStatementDetail.jsx:651:  return (
+client/src/pages/BankStatementDetail.jsx:749:              return (
+client/src/pages/GermanTaxReports.jsx:4:import Card from '../components/Card';
+client/src/pages/GermanTaxReports.jsx:5:import { PageEmptyState } from '../components/ui/PageStates';
+client/src/pages/GermanTaxReports.jsx:6:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/GermanTaxReports.jsx:7:import Button from '../components/Button';
+client/src/pages/GermanTaxReports.jsx:8:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/GermanTaxReports.jsx:25:  // All hooks must be called before any conditional return
+client/src/pages/GermanTaxReports.jsx:38:      description: t('ustReportDescription', { defaultValue: 'Value-added tax return' }),
+client/src/pages/GermanTaxReports.jsx:62:      return;
+client/src/pages/GermanTaxReports.jsx:77:          return;
+client/src/pages/GermanTaxReports.jsx:81:          return;
+client/src/pages/GermanTaxReports.jsx:95:              message: `German tax reporting (${feature}) is disabled in v${version}. This workflow will return once the compliance services ship in a future release.`,
+client/src/pages/GermanTaxReports.jsx:109:    return () => {
+client/src/pages/GermanTaxReports.jsx:120:      return <div className="sr-only">No status callout</div>;
+client/src/pages/GermanTaxReports.jsx:150:    return (
+client/src/pages/GermanTaxReports.jsx:177:    return (
+client/src/pages/GermanTaxReports.jsx:181:          description="German tax reporting is scoped to an active company. Choose or create one before returning to this page."
+client/src/pages/GermanTaxReports.jsx:196:      ? 'German tax reporting is disabled in v0.1 and will return in a later release.'
+client/src/pages/GermanTaxReports.jsx:209:  return (
+client/src/pages/SystemAdminDashboard.jsx:2:import { Card } from '../components/ui/Card';
+client/src/pages/SystemAdminDashboard.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/SystemAdminDashboard.jsx:4:import { Input } from '../components/ui/Input';
+client/src/pages/SystemAdminDashboard.jsx:5:import { Select } from '../components/ui/Select';
+client/src/pages/SystemAdminDashboard.jsx:6:import { Textarea } from '../components/ui/Textarea';
+client/src/pages/SystemAdminDashboard.jsx:7:import { Badge } from '../components/ui/Badge';
+client/src/pages/SystemAdminDashboard.jsx:8:import { Label } from '../components/ui/Label';
+client/src/pages/SystemAdminDashboard.jsx:9:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/SystemAdminDashboard.jsx:16:    return '—';
+client/src/pages/SystemAdminDashboard.jsx:19:    return new Date(value).toLocaleString();
+client/src/pages/SystemAdminDashboard.jsx:21:    return String(value);
+client/src/pages/SystemAdminDashboard.jsx:69:    return map;
+client/src/pages/SystemAdminDashboard.jsx:75:        return 'Plan unavailable';
+client/src/pages/SystemAdminDashboard.jsx:77:      return planMap[planId]?.name || String(planId);
+client/src/pages/SystemAdminDashboard.jsx:214:      return;
+client/src/pages/SystemAdminDashboard.jsx:297:    return (
+client/src/pages/SystemAdminDashboard.jsx:306:    return (
+client/src/pages/SystemAdminDashboard.jsx:324:  return (
+client/src/pages/InvoiceCreate.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/InvoiceCreate.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/InvoiceCreate.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/InvoiceCreate.jsx:6:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/pages/InvoiceCreate.jsx:11:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/InvoiceCreate.jsx:13:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/InvoiceCreate.jsx:25:      return;
+client/src/pages/InvoiceCreate.jsx:29:      return;
+client/src/pages/InvoiceCreate.jsx:50:    return (
+client/src/pages/InvoiceCreate.jsx:63:  return (
+client/src/pages/AIAssistant.jsx:13:import { Button } from '../components/ui/Button';
+client/src/pages/AIAssistant.jsx:14:import { Card } from '../components/ui/Card';
+client/src/pages/AIAssistant.jsx:15:import InfoTooltip from '../components/ui/InfoTooltip';
+client/src/pages/AIAssistant.jsx:16:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/AIAssistant.jsx:17:import { Skeleton } from '../components/ui/Skeleton';
+client/src/pages/AIAssistant.jsx:18:import FeatureGate from '../components/FeatureGate';
+client/src/pages/AIAssistant.jsx:19:import AITrustBanner from '../components/AITrustBanner';
+client/src/pages/AIAssistant.jsx:20:import { AIBadge } from '../components/AIBadge';
+client/src/pages/AIAssistant.jsx:21:import AISeverityPill from '../components/AISeverityPill';
+client/src/pages/AIAssistant.jsx:22:import AIMetadataLine from '../components/AIMetadataLine';
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:35:import ChatEmptyState from '../components/ChatEmptyState';
+client/src/pages/AIAssistant.jsx:36:import ChatTypingIndicator from '../components/ChatTypingIndicator';
+client/src/pages/AIAssistant.jsx:37:import MutationIntentGuard, { detectMutationIntent } from '../components/MutationIntentGuard';
+client/src/pages/AIAssistant.jsx:38:import PlanRestrictedState from '../components/PlanRestrictedState';
+client/src/pages/AIAssistant.jsx:108:  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
+client/src/pages/AIAssistant.jsx:113:    return 'مرحبًا، أنا مساعدك المحاسبي. اسألني عن الفواتير، المخاطر، المعاملات البنكية، أو سبب ظهور تنبيه. إجاباتي استشارية فقط ولا أغير أي بيانات.';
+client/src/pages/AIAssistant.jsx:118:  return `مرحبًا، كيف أقدر أساعدك اليوم؟ أراقب ${context.company?.name ?? 'شركتك'} بشكل استشاري فقط: ${insightCount} insights, ${invoiceCount} invoices, ${transactionCount} transactions.`;
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:215:    return items;
+client/src/pages/AIAssistant.jsx:220:      return 'Not available';
+client/src/pages/AIAssistant.jsx:235:    return sources.length ? sources.join(', ') : 'Accounting data';
+client/src/pages/AIAssistant.jsx:240:      return null;
+client/src/pages/AIAssistant.jsx:267:    return parsed[0] || null;
+client/src/pages/AIAssistant.jsx:273:      return base;
+client/src/pages/AIAssistant.jsx:278:    return `${roleMessage} ${base}`;
+client/src/pages/AIAssistant.jsx:300:      return {
+client/src/pages/AIAssistant.jsx:312:        return messages[i];
+client/src/pages/AIAssistant.jsx:315:    return null;
+client/src/pages/AIAssistant.jsx:352:      return;
+client/src/pages/AIAssistant.jsx:357:      return;
+client/src/pages/AIAssistant.jsx:380:          return;
+client/src/pages/AIAssistant.jsx:387:          return;
+client/src/pages/AIAssistant.jsx:395:          return;
+client/src/pages/AIAssistant.jsx:413:    return () => {
+client/src/pages/AIAssistant.jsx:419:    return () => {
+client/src/pages/AIAssistant.jsx:429:      return;
+client/src/pages/AIAssistant.jsx:448:      return {};
+client/src/pages/AIAssistant.jsx:455:    return breakdown;
+client/src/pages/AIAssistant.jsx:460:      return {};
+client/src/pages/AIAssistant.jsx:467:    return breakdown;
+client/src/pages/AIAssistant.jsx:472:      return 0;
+client/src/pages/AIAssistant.jsx:474:    return context.bankTransactions.filter((tx) => !tx.isReconciled).length;
+client/src/pages/AIAssistant.jsx:478:    return (
+client/src/pages/AIAssistant.jsx:490:    return (
+client/src/pages/AIAssistant.jsx:523:      return;
+client/src/pages/AIAssistant.jsx:555:      return;
+client/src/pages/AIAssistant.jsx:559:      return;
+client/src/pages/AIAssistant.jsx:642:      return 'ar';
+client/src/pages/AIAssistant.jsx:645:      return 'de';
+client/src/pages/AIAssistant.jsx:647:    return 'auto';
+client/src/pages/AIAssistant.jsx:652:      return 'قرأت المستند واستخرجت اقتراحًا محاسبيًا للمراجعة فقط. راجع الحقول قبل إنشاء أي مسودة.';
+client/src/pages/AIAssistant.jsx:655:      return 'Ich habe das Dokument gelesen und einen unverbindlichen Buchhaltungsvorschlag erstellt. Bitte prüfe die Felder vor jeder Entwurfserstellung.';
+client/src/pages/AIAssistant.jsx:657:    return 'I read the document and prepared an advisory accounting suggestion. Review extracted fields before creating any draft.';
+client/src/pages/AIAssistant.jsx:687:      return;
+client/src/pages/AIAssistant.jsx:736:      return;
+client/src/pages/AIAssistant.jsx:754:      return;
+client/src/pages/AIAssistant.jsx:772:      return;
+client/src/pages/AIAssistant.jsx:789:      return;
+client/src/pages/AIAssistant.jsx:818:      return;
+client/src/pages/AIAssistant.jsx:861:      return sendNonStreaming();
+client/src/pages/AIAssistant.jsx:945:        return;
+client/src/pages/AIAssistant.jsx:961:      return null;
+client/src/pages/AIAssistant.jsx:963:    return (
+client/src/pages/AIAssistant.jsx:982:      return '';
+client/src/pages/AIAssistant.jsx:985:      return value.join(', ');
+client/src/pages/AIAssistant.jsx:988:      return JSON.stringify(value);
+client/src/pages/AIAssistant.jsx:990:    return String(value);
+client/src/pages/AIAssistant.jsx:1003:    return DOCUMENT_REVIEW_FIELDS.reduce((acc, field) => {
+client/src/pages/AIAssistant.jsx:1011:      return acc;
+client/src/pages/AIAssistant.jsx:1027:    return {
+client/src/pages/AIAssistant.jsx:1057:      return null;
+client/src/pages/AIAssistant.jsx:1060:    return {
+client/src/pages/AIAssistant.jsx:1111:      return;
+client/src/pages/AIAssistant.jsx:1133:        return;
+client/src/pages/AIAssistant.jsx:1195:      return;
+client/src/pages/AIAssistant.jsx:1267:    return (
+client/src/pages/AIAssistant.jsx:1458:      return null;
+client/src/pages/AIAssistant.jsx:1486:    return (
+client/src/pages/AIAssistant.jsx:1588:    return (
+client/src/pages/AIAssistant.jsx:1671:      return;
+client/src/pages/AIAssistant.jsx:1675:      return;
+client/src/pages/AIAssistant.jsx:1686:      return;
+client/src/pages/AIAssistant.jsx:1695:    return (
+client/src/pages/AIAssistant.jsx:1706:      return (
+client/src/pages/AIAssistant.jsx:1714:    return (
+client/src/pages/AIAssistant.jsx:1736:    return (
+client/src/pages/AIAssistant.jsx:1771:  return (
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/pages/InvoiceImport.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/InvoiceImport.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/InvoiceImport.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/InvoiceImport.jsx:6:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/InvoiceImport.jsx:45:      return;
+client/src/pages/InvoiceImport.jsx:63:      return;
+client/src/pages/InvoiceImport.jsx:78:    return (
+client/src/pages/InvoiceImport.jsx:91:  return (
+client/src/pages/InvoiceImport.jsx:117:            return (
+client/src/pages/BankStatements.jsx:4:import Button from '../components/Button';
+client/src/pages/BankStatements.jsx:5:import BankStatementStatusBadge from '../components/BankStatementStatusBadge';
+client/src/pages/BankStatements.jsx:8:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/BankStatements.jsx:9:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/BankStatements.jsx:10:import AITrustBanner from '../components/AITrustBanner';
+client/src/pages/BankStatements.jsx:11:import { AIBadge } from '../components/AIBadge';
+client/src/pages/BankStatements.jsx:21:} from '../components/ui/PageStates';
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:31:    return false;
+client/src/pages/BankStatements.jsx:35:    return Boolean(planFeatures.aiAssistant || planFeatures.aiRead);
+client/src/pages/BankStatements.jsx:37:  return AI_ADVISOR_PLANS.has(normalizedPlanId);
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/pages/BankStatements.jsx:74:        return;
+client/src/pages/BankStatements.jsx:86:          return;
+client/src/pages/BankStatements.jsx:98:      return;
+client/src/pages/BankStatements.jsx:114:      return;
+client/src/pages/BankStatements.jsx:121:    return () => {
+client/src/pages/BankStatements.jsx:128:      return undefined;
+client/src/pages/BankStatements.jsx:135:    return () => {
+client/src/pages/BankStatements.jsx:143:      return {
+client/src/pages/BankStatements.jsx:164:    return {
+client/src/pages/BankStatements.jsx:183:      return '';
+client/src/pages/BankStatements.jsx:185:    return new Date(date).toLocaleDateString('de-DE');
+client/src/pages/BankStatements.jsx:189:    return <PageNoAccessState />;
+client/src/pages/BankStatements.jsx:193:    return <PageLoadingState />;
+client/src/pages/BankStatements.jsx:197:    return <PageErrorState onRetry={refreshStatements} />;
+client/src/pages/BankStatements.jsx:239:    return (
+client/src/pages/BankStatements.jsx:251:  return (
+client/src/pages/ProfileSettings.jsx:2:import { Button } from '../components/ui/Button';
+client/src/pages/ProfileSettings.jsx:3:import { Card } from '../components/ui/Card';
+client/src/pages/ProfileSettings.jsx:9:  if (!value) {return 'Not available';}
+client/src/pages/ProfileSettings.jsx:11:  if (Number.isNaN(date.getTime())) {return 'Not available';}
+client/src/pages/ProfileSettings.jsx:12:  return date.toLocaleString();
+client/src/pages/ProfileSettings.jsx:158:  return (
+client/src/pages/Companies.jsx:3:import Breadcrumbs from '../components/Breadcrumbs';
+client/src/pages/Companies.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/Companies.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/Companies.jsx:6:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/Companies.jsx:7:import Button from '../components/Button';
+client/src/pages/Companies.jsx:8:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/Companies.jsx:9:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/Companies.jsx:61:            return;
+client/src/pages/Companies.jsx:67:            return;
+client/src/pages/Companies.jsx:74:            return;
+client/src/pages/Companies.jsx:91:      return;
+client/src/pages/Companies.jsx:99:      return;
+client/src/pages/Companies.jsx:111:    return () => {
+client/src/pages/Companies.jsx:130:      return;
+client/src/pages/Companies.jsx:165:    return (
+client/src/pages/Companies.jsx:174:    return (
+client/src/pages/Companies.jsx:185:    return (
+client/src/pages/Companies.jsx:206:    return (
+client/src/pages/Companies.jsx:219:  return (
+client/src/pages/Exports.jsx:5:  return (
+client/src/pages/Calculator.jsx:25:      return;
+client/src/pages/Calculator.jsx:44:    if (income <= 10908) {return 0;}
+client/src/pages/Calculator.jsx:45:    if (income <= 15999) {return income * 0.14;}
+client/src/pages/Calculator.jsx:46:    if (income <= 62809) {return income * 0.24;}
+client/src/pages/Calculator.jsx:47:    if (income <= 277825) {return income * 0.42;}
+client/src/pages/Calculator.jsx:48:    return income * 0.45;
+client/src/pages/Calculator.jsx:52:    return new Intl.NumberFormat('de-DE', {
+client/src/pages/Calculator.jsx:58:  return (
+client/src/pages/BankStatementImport.jsx:3:import Button from '../components/Button';
+client/src/pages/BankStatementImport.jsx:4:import BankStatementStatusBadge from '../components/BankStatementStatusBadge';
+client/src/pages/BankStatementImport.jsx:5:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/BankStatementImport.jsx:6:import { PageEmptyState } from '../components/ui/PageStates';
+client/src/pages/BankStatementImport.jsx:19:    return '—';
+client/src/pages/BankStatementImport.jsx:21:  return new Date(value).toLocaleString('de-DE', {
+client/src/pages/BankStatementImport.jsx:32:    return 'Please select a bank statement file.';
+client/src/pages/BankStatementImport.jsx:37:    return `Only ${ALLOWED_EXTENSIONS.join(', ').toUpperCase()} files are allowed.`;
+client/src/pages/BankStatementImport.jsx:41:    return 'File exceeds the 10 MB upload limit.';
+client/src/pages/BankStatementImport.jsx:44:  return null;
+client/src/pages/BankStatementImport.jsx:60:    return (
+client/src/pages/BankStatementImport.jsx:90:      return;
+client/src/pages/BankStatementImport.jsx:96:      return;
+client/src/pages/BankStatementImport.jsx:101:      return;
+client/src/pages/BankStatementImport.jsx:131:  return (
+client/src/pages/DatevExport.jsx:32:  return (
+client/src/pages/Login.jsx:4:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/Login.jsx:5:import Button from '../components/Button';
+client/src/pages/Login.jsx:6:import Card from '../components/Card';
+client/src/pages/Login.jsx:7:import Footer from '../components/Footer';
+client/src/pages/Login.jsx:8:import RateLimitBanner from '../components/RateLimitBanner';
+client/src/pages/Login.jsx:9:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/Login.jsx:10:import { Input } from '../components/ui/Input';
+client/src/pages/Login.jsx:44:      return;
+client/src/pages/Login.jsx:68:    return (
+client/src/pages/Login.jsx:88:    return (
+client/src/pages/Login.jsx:95:  return (
+client/src/pages/Onboarding.jsx:4:import { Skeleton } from '../components/ui/Skeleton';
+client/src/pages/Onboarding.jsx:5:import { Card } from '../components/ui/Card';
+client/src/pages/Onboarding.jsx:6:import { Button } from '../components/ui/Button';
+client/src/pages/Onboarding.jsx:18:        if (!mounted) {return;}
+client/src/pages/Onboarding.jsx:33:    return () => {
+client/src/pages/Onboarding.jsx:39:    return (
+client/src/pages/Onboarding.jsx:48:    return (
+client/src/pages/Onboarding.jsx:61:    return <Navigate to="/dashboard" replace />;
+client/src/pages/Onboarding.jsx:64:  return (
+client/src/pages/Landing.jsx:3:import { Badge } from '../components/ui/Badge';
+client/src/pages/Landing.jsx:4:import { Button } from '../components/ui/Button';
+client/src/pages/Landing.jsx:5:import { Card } from '../components/ui/Card';
+client/src/pages/Landing.jsx:35:  return (
+client/src/pages/Users.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/Users.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/Users.jsx:6:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/Users.jsx:7:import { Button } from '../components/ui/Button';
+client/src/pages/Users.jsx:14:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/Users.jsx:15:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/Users.jsx:59:      return;
+client/src/pages/Users.jsx:77:      return;
+client/src/pages/Users.jsx:101:    return (
+client/src/pages/Users.jsx:115:    return (
+client/src/pages/Users.jsx:124:    return (
+client/src/pages/Users.jsx:138:  return (
+client/src/pages/ComplianceDashboard.jsx:4:import Card from '../components/Card';
+client/src/pages/ComplianceDashboard.jsx:5:import ComplianceSnapshot from '../components/ComplianceSnapshot';
+client/src/pages/ComplianceDashboard.jsx:42:  return (
+client/src/pages/ExpensesCreate.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/ExpensesCreate.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/ExpensesCreate.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/ExpensesCreate.jsx:9:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/ExpensesCreate.jsx:55:      return;
+client/src/pages/ExpensesCreate.jsx:89:    return (
+client/src/pages/ExpensesCreate.jsx:103:    return (
+client/src/pages/ExpensesCreate.jsx:116:  return (
+client/src/pages/AIInsights.jsx:3:import { AISuggestionCard } from '../components/AISuggestionCard';
+client/src/pages/AIInsights.jsx:5:import { Skeleton } from '../components/ui/Skeleton';
+client/src/pages/AIInsights.jsx:6:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/AIInsights.jsx:7:import { Button } from '../components/ui/Button';
+client/src/pages/AIInsights.jsx:8:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/AIInsights.jsx:9:import AITrustBanner from '../components/AITrustBanner';
+client/src/pages/AIInsights.jsx:10:import { AIBadge } from '../components/AIBadge';
+client/src/pages/AIInsights.jsx:11:import PlanRestrictedState from '../components/PlanRestrictedState';
+client/src/pages/AIInsights.jsx:18:const AIInsights = () => {
+client/src/pages/AIInsights.jsx:36:      return;
+client/src/pages/AIInsights.jsx:43:      return;
+client/src/pages/AIInsights.jsx:73:    return () => window.removeEventListener('ai-insights:refresh', handleRefresh);
+client/src/pages/AIInsights.jsx:77:    return (
+client/src/pages/AIInsights.jsx:87:    return (
+client/src/pages/AIInsights.jsx:96:      return (
+client/src/pages/AIInsights.jsx:104:    return (
+client/src/pages/AIInsights.jsx:123:    return (
+client/src/pages/AIInsights.jsx:136:    return (
+client/src/pages/AIInsights.jsx:154:  return (
+client/src/pages/AIInsights.jsx:207:export default AIInsights;
+client/src/pages/RequestAccess.jsx:3:import { Button } from '../components/ui/Button';
+client/src/pages/RequestAccess.jsx:4:import { Card } from '../components/ui/Card';
+client/src/pages/RequestAccess.jsx:5:import { Input } from '../components/ui/Input';
+client/src/pages/RequestAccess.jsx:6:import { Textarea } from '../components/ui/Textarea';
+client/src/pages/RequestAccess.jsx:36:      return;
+client/src/pages/RequestAccess.jsx:51:  return (
+client/src/pages/OCRPreview.jsx:2:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/OCRPreview.jsx:8:import FeatureGate from '../components/FeatureGate';
+client/src/pages/OCRPreview.jsx:9:import { PageNoAccessState } from '../components/ui/PageStates';
+client/src/pages/OCRPreview.jsx:32:  return key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+client/src/pages/OCRPreview.jsx:37:    return '—';
+client/src/pages/OCRPreview.jsx:40:    return value.join(', ');
+client/src/pages/OCRPreview.jsx:44:      return JSON.stringify(value);
+client/src/pages/OCRPreview.jsx:46:      return '—';
+client/src/pages/OCRPreview.jsx:49:  return String(value);
+client/src/pages/OCRPreview.jsx:54:    return '—';
+client/src/pages/OCRPreview.jsx:56:  return `${value.toFixed(1)}%`;
+client/src/pages/OCRPreview.jsx:81:    return DOCUMENT_TYPE_LABELS[responseType] || DOCUMENT_TYPE_LABELS[documentType];
+client/src/pages/OCRPreview.jsx:108:      return;
+client/src/pages/OCRPreview.jsx:114:      return;
+client/src/pages/OCRPreview.jsx:119:      return;
+client/src/pages/OCRPreview.jsx:139:      return;
+client/src/pages/OCRPreview.jsx:156:      return <p className="text-sm text-gray-500">No warnings detected.</p>;
+client/src/pages/OCRPreview.jsx:158:    return (
+client/src/pages/OCRPreview.jsx:170:      return <p className="text-sm text-gray-500">No explanations provided.</p>;
+client/src/pages/OCRPreview.jsx:172:    return (
+client/src/pages/OCRPreview.jsx:185:      return <p className="text-sm text-gray-500">No structured fields detected yet.</p>;
+client/src/pages/OCRPreview.jsx:187:    return (
+client/src/pages/OCRPreview.jsx:207:    return <PageNoAccessState />;
+client/src/pages/OCRPreview.jsx:210:  return (
+client/src/pages/Analytics.jsx:11:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/Analytics.jsx:12:import { Button } from '../components/ui/Button';
+client/src/pages/Analytics.jsx:13:import { Card } from '../components/ui/Card';
+client/src/pages/Analytics.jsx:14:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/Analytics.jsx:20:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/Analytics.jsx:21:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/Analytics.jsx:52:    return t('analytics_page.total_invoices_none');
+client/src/pages/Analytics.jsx:54:  return t('analytics_page.total_invoices_count', { count });
+client/src/pages/Analytics.jsx:59:    return 'Unknown';
+client/src/pages/Analytics.jsx:61:  return status
+client/src/pages/Analytics.jsx:78:      return;
+client/src/pages/Analytics.jsx:98:        return;
+client/src/pages/Analytics.jsx:121:      return;
+client/src/pages/Analytics.jsx:128:    return () => clearTimeout(timer);
+client/src/pages/Analytics.jsx:135:      return [];
+client/src/pages/Analytics.jsx:137:    return Object.entries(data.statusBreakdown)
+client/src/pages/Analytics.jsx:161:    return (
+client/src/pages/Analytics.jsx:167:    return new Intl.NumberFormat('de-DE', {
+client/src/pages/Analytics.jsx:174:    return (
+client/src/pages/Analytics.jsx:188:    return (
+client/src/pages/Analytics.jsx:203:    return (
+client/src/pages/Analytics.jsx:217:    return (
+client/src/pages/Analytics.jsx:238:    return (
+client/src/pages/Analytics.jsx:251:  return (
+client/src/pages/DocumentInbox.jsx:11:import { Button } from '../components/ui/Button';
+client/src/pages/DocumentInbox.jsx:12:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/DocumentInbox.jsx:13:import { Skeleton } from '../components/ui/Skeleton';
+client/src/pages/DocumentInbox.jsx:14:import { PageNoAccessState } from '../components/ui/PageStates';
+client/src/pages/DocumentInbox.jsx:43:  if (!value) {return '—';}
+client/src/pages/DocumentInbox.jsx:45:  if (Number.isNaN(date.getTime())) {return '—';}
+client/src/pages/DocumentInbox.jsx:46:  return new Intl.DateTimeFormat('en-GB', {
+client/src/pages/DocumentInbox.jsx:53:  if (value === true) {return 'Yes';}
+client/src/pages/DocumentInbox.jsx:54:  if (value === false) {return 'No';}
+client/src/pages/DocumentInbox.jsx:55:  return '—';
+client/src/pages/DocumentInbox.jsx:84:    if (!activeCompanyId) {return;}
+client/src/pages/DocumentInbox.jsx:115:    return [
+client/src/pages/DocumentInbox.jsx:125:    return <PageNoAccessState />;
+client/src/pages/DocumentInbox.jsx:128:  return (
+client/src/pages/DocumentInbox.jsx:195:            return (
+client/src/pages/DocumentInbox.jsx:264:                  return (
+client/src/pages/Invoices.jsx:4:import { Button } from '../components/ui/Button';
+client/src/pages/Invoices.jsx:5:import { Card } from '../components/ui/Card';
+client/src/pages/Invoices.jsx:11:} from '../components/ui/PageStates';
+client/src/pages/Invoices.jsx:12:import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
+client/src/pages/Invoices.jsx:17:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/Invoices.jsx:19:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/Invoices.jsx:35:    return '-';
+client/src/pages/Invoices.jsx:37:  return new Date(value).toLocaleDateString('de-DE', {
+client/src/pages/Invoices.jsx:46:    return '-';
+client/src/pages/Invoices.jsx:48:  return new Intl.NumberFormat('de-DE', {
+client/src/pages/Invoices.jsx:84:      return;
+client/src/pages/Invoices.jsx:104:      return;
+client/src/pages/Invoices.jsx:120:    return invoices.filter((invoice) => {
+client/src/pages/Invoices.jsx:127:      return matchesStatus && matchesSearch;
+client/src/pages/Invoices.jsx:141:    return filteredInvoices.slice(start, start + PAGE_SIZE);
+client/src/pages/Invoices.jsx:148:    return <PageNoAccessState />;
+client/src/pages/Invoices.jsx:151:  return (
+client/src/pages/Invoices.jsx:328:                      return (
+client/src/pages/Expenses.jsx:4:import { Button } from '../components/ui/Button';
+client/src/pages/Expenses.jsx:5:import { Card } from '../components/ui/Card';
+client/src/pages/Expenses.jsx:11:} from '../components/ui/PageStates';
+client/src/pages/Expenses.jsx:16:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/Expenses.jsx:17:import PermissionGuard from '../components/PermissionGuard';
+client/src/pages/Expenses.jsx:22:    return '-';
+client/src/pages/Expenses.jsx:24:  return new Date(value).toLocaleDateString('de-DE', {
+client/src/pages/Expenses.jsx:33:    return '-';
+client/src/pages/Expenses.jsx:35:  return new Intl.NumberFormat('de-DE', {
+client/src/pages/Expenses.jsx:70:      return;
+client/src/pages/Expenses.jsx:93:      return;
+client/src/pages/Expenses.jsx:116:      return;
+client/src/pages/Expenses.jsx:122:    return <PageNoAccessState />;
+client/src/pages/Expenses.jsx:126:    return <PageLoadingState />;
+client/src/pages/Expenses.jsx:130:    return <PageErrorState onRetry={fetchExpenses} />;
+client/src/pages/Expenses.jsx:134:    return (
+client/src/pages/Expenses.jsx:149:  return (
+client/src/pages/Expenses.jsx:257:                return (
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:10:import { Button } from '../components/ui/Button';
+client/src/pages/Dashboard.jsx:11:import Card from '../components/Card';
+client/src/pages/Dashboard.jsx:12:import { Modal } from '../components/ui/Modal';
+client/src/pages/Dashboard.jsx:13:import { PageEmptyState, PageErrorState } from '../components/ui/PageStates';
+client/src/pages/Dashboard.jsx:14:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/Dashboard.jsx:15:import { Skeleton } from '../components/ui/Skeleton';
+client/src/pages/Dashboard.jsx:16:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/Dashboard.jsx:32:  return formatter.format(value);
+client/src/pages/Dashboard.jsx:41:  return formatter.format(value);
+client/src/pages/Dashboard.jsx:47:    return '--';
+client/src/pages/Dashboard.jsx:50:    return formatCurrency(numericValue, metric.currency);
+client/src/pages/Dashboard.jsx:53:    return `${formatNumber(numericValue, { maximumFractionDigits: 2 })}%`;
+client/src/pages/Dashboard.jsx:56:    return formatNumber(numericValue);
+client/src/pages/Dashboard.jsx:58:  return formatNumber(numericValue, { maximumFractionDigits: 2 });
+client/src/pages/Dashboard.jsx:177:        return;
+client/src/pages/Dashboard.jsx:204:          return;
+client/src/pages/Dashboard.jsx:216:      return;
+client/src/pages/Dashboard.jsx:225:      return undefined;
+client/src/pages/Dashboard.jsx:232:    return () => clearInterval(intervalId);
+client/src/pages/Dashboard.jsx:255:      return [];
+client/src/pages/Dashboard.jsx:257:    return Object.entries(statusBreakdown)
+client/src/pages/Dashboard.jsx:312:    return (
+client/src/pages/Dashboard.jsx:325:    return <DashboardSkeleton />;
+client/src/pages/Dashboard.jsx:329:    return (
+client/src/pages/Dashboard.jsx:338:    return (
+client/src/pages/Dashboard.jsx:363:    return <PageErrorState onRetry={fetchDashboardData} />;
+client/src/pages/Dashboard.jsx:367:    return (
+client/src/pages/Dashboard.jsx:381:  return (
+client/src/pages/Dashboard.jsx:581:                return (
+client/src/pages/Dashboard.jsx:629:                      return (
+client/src/pages/Dashboard.jsx:667:                      return (
+client/src/pages/OnboardingWizard.jsx:3:import { Card } from '../components/ui/Card';
+client/src/pages/OnboardingWizard.jsx:4:import { Button } from '../components/ui/Button';
+client/src/pages/OnboardingWizard.jsx:13:      return step || 0;
+client/src/pages/OnboardingWizard.jsx:18:  return 0;
+client/src/pages/OnboardingWizard.jsx:68:  return (
+client/src/pages/InvestorDashboard.jsx:3:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/InvestorDashboard.jsx:4:import ComplianceSnapshot from '../components/ComplianceSnapshot';
+client/src/pages/InvestorDashboard.jsx:7:  return (
+client/src/pages/AuditLogs.jsx:2:import { PageLoadingState, PageErrorState, PageEmptyState } from '../components/ui/PageStates';
+client/src/pages/AuditLogs.jsx:6:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/AuditLogs.jsx:9:import PlanRestrictedState from '../components/PlanRestrictedState';
+client/src/pages/AuditLogs.jsx:28:    return () => {
+client/src/pages/AuditLogs.jsx:33:  return (
+client/src/pages/BankStatementPreview.jsx:3:import Button from '../components/Button';
+client/src/pages/BankStatementPreview.jsx:4:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/BankStatementPreview.jsx:12:import { PageNoAccessState } from '../components/ui/PageStates';
+client/src/pages/BankStatementPreview.jsx:19:    return '—';
+client/src/pages/BankStatementPreview.jsx:21:  return `${formatDate(range.from)} – ${formatDate(range.to)}`;
+client/src/pages/BankStatementPreview.jsx:26:    return '—';
+client/src/pages/BankStatementPreview.jsx:30:    return '—';
+client/src/pages/BankStatementPreview.jsx:32:  return formatCurrency(numberValue, currency);
+client/src/pages/BankStatementPreview.jsx:87:      return;
+client/src/pages/BankStatementPreview.jsx:92:      return;
+client/src/pages/BankStatementPreview.jsx:98:      return;
+client/src/pages/BankStatementPreview.jsx:121:      return;
+client/src/pages/BankStatementPreview.jsx:128:      return;
+client/src/pages/BankStatementPreview.jsx:168:    return <PageNoAccessState />;
+client/src/pages/BankStatementPreview.jsx:171:  return (
+client/src/pages/BankStatementPreview.jsx:615:          <p>The backend will return matches, unmatched rows, and warnings without persisting any data.</p>
+client/src/pages/AuditorDashboard.jsx:2:import ReadOnlyBanner from '../components/ReadOnlyBanner';
+client/src/pages/AuditorDashboard.jsx:3:import ComplianceSnapshot from '../components/ComplianceSnapshot';
+client/src/pages/AuditorDashboard.jsx:6:  return (
+client/src/pages/AuditorDashboard.jsx:14:        {/* TODO: Add audit log summary table or component here */}
+client/src/pages/AuditorDashboard.jsx:19:        {/* TODO: Add GDPR summary component here */}
+client/src/pages/__tests__/BankStatementPreview.test.jsx:10:  return {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:46:  return {
+client/src/pages/AIManager.jsx:4:import { AIBadge } from '../components/AIBadge';
+client/src/pages/AIManager.jsx:5:import AIInsightCard from '../components/AIInsightCard';
+client/src/pages/AIManager.jsx:6:import AISeverityPill from '../components/AISeverityPill';
+client/src/pages/AIManager.jsx:7:import AITrustBanner from '../components/AITrustBanner';
+client/src/pages/AIManager.jsx:8:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/AIManager.jsx:9:import { Skeleton } from '../components/ui/Skeleton';
+client/src/pages/AIManager.jsx:10:import { Button } from '../components/ui/Button';
+client/src/pages/AIManager.jsx:28:  return severityRanks[normalized] ? normalized : 'low';
+client/src/pages/AIManager.jsx:35:  return ['DRAFT', 'PENDING', 'OVERDUE'].includes(status);
+client/src/pages/AIManager.jsx:46:  if (entityType === 'invoice') {return '/invoices';}
+client/src/pages/AIManager.jsx:47:  if (entityType === 'bankTransaction') {return '/bank-statements';}
+client/src/pages/AIManager.jsx:48:  if (entityType === 'expense') {return '/expenses';}
+client/src/pages/AIManager.jsx:49:  if (entityType === 'insight') {return '/ai-advisor';}
+client/src/pages/AIManager.jsx:50:  return '/ai-assistant';
+client/src/pages/AIManager.jsx:84:    return { ...decision, route: buildEntityLink(decision) };
+client/src/pages/AIManager.jsx:107:    return { ...decision, route: buildEntityLink(decision) };
+client/src/pages/AIManager.jsx:130:    return { ...decision, route: buildEntityLink(decision) };
+client/src/pages/AIManager.jsx:153:    return { ...decision, route: buildEntityLink(decision) };
+client/src/pages/AIManager.jsx:175:  return decision;
+client/src/pages/AIManager.jsx:220:  return evidence;
+client/src/pages/AIManager.jsx:294:  return queue
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:315:      return;
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:407:    return groups.filter((group) => group.items.length > 0);
+client/src/pages/AIManager.jsx:411:    return (
+client/src/pages/AIManager.jsx:421:    return (
+client/src/pages/AIManager.jsx:436:    return (
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:450:  return (
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/Billing.jsx:10:import Button from '../components/Button';
+client/src/pages/Billing.jsx:11:import Card from '../components/Card';
+client/src/pages/Billing.jsx:12:import FeatureGate from '../components/FeatureGate';
+client/src/pages/Billing.jsx:13:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/Billing.jsx:33:      return;
+client/src/pages/Billing.jsx:62:    return (
+client/src/pages/Billing.jsx:69:        help="The backend currently returns 501 for /api/stripe when the feature is off."
+client/src/pages/Billing.jsx:75:    return (
+client/src/pages/Billing.jsx:83:    return (
+client/src/pages/Billing.jsx:116:      return;
+client/src/pages/Billing.jsx:153:    return (
+client/src/pages/Billing.jsx:164:      return '-';
+client/src/pages/Billing.jsx:166:    return new Date(dateString).toLocaleDateString('de-DE', {
+client/src/pages/Billing.jsx:175:    return new Intl.NumberFormat('de-DE', {
+client/src/pages/Billing.jsx:182:    return (
+client/src/pages/Billing.jsx:190:    return (
+client/src/pages/Billing.jsx:205:  return (
+client/src/pages/BankStatementReconciliationPreview.jsx:3:import Button from '../components/Button';
+client/src/pages/BankStatementReconciliationPreview.jsx:4:import LoadingSpinner from '../components/LoadingSpinner';
+client/src/pages/BankStatementReconciliationPreview.jsx:5:import { EmptyState } from '../components/ui/EmptyState';
+client/src/pages/BankStatementReconciliationPreview.jsx:6:import AsyncModal from '../components/ui/AsyncModal';
+client/src/pages/BankStatementReconciliationPreview.jsx:10:import { PageNoAccessState } from '../components/ui/PageStates';
+client/src/pages/BankStatementReconciliationPreview.jsx:41:      return undefined;
+client/src/pages/BankStatementReconciliationPreview.jsx:55:          return;
+client/src/pages/BankStatementReconciliationPreview.jsx:65:    return () => {
+client/src/pages/BankStatementReconciliationPreview.jsx:78:    return <PageNoAccessState />;
+client/src/pages/BankStatementReconciliationPreview.jsx:81:  return (
+client/src/pages/BankStatementReconciliationPreview.jsx:263:            Close this preview at any time and return to the detail view. No backend reconciliations were triggered.
+client/src/pages/BankStatementReconciliationPreview.jsx:295:  return { total, matches, unmatched };
+client/src/pages/BankStatementReconciliationPreview.jsx:323:  return {
+client/src/pages/__tests__/AIInsights.test.jsx:6:import AIInsights from '../AIInsights';
+client/src/pages/__tests__/AIInsights.test.jsx:14:  return {
+client/src/pages/__tests__/AIInsights.test.jsx:40:  return (
+client/src/pages/__tests__/AIInsights.test.jsx:69:          <AIInsights />
+client/src/pages/__tests__/DocumentInbox.test.jsx:117:  it('shows empty state when no documents are returned', async () => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:13:  return {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:89:  return {
+client/src/pages/__tests__/Companies.test.jsx:10:  return {
+client/src/pages/__tests__/Companies.test.jsx:44:  return (
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:14:  return {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:45:  return (
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:21:  return {
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:72:  return (
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();

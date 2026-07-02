@@ -10,6 +10,12 @@ const devServerHost = process.env.VITE_DEV_HOST || '0.0.0.0';
 const hmrHost = process.env.VITE_HMR_HOST;
 const hmrClientPort = Number(process.env.VITE_HMR_CLIENT_PORT || serverPort);
 const hmrProtocol = process.env.VITE_HMR_PROTOCOL || 'ws';
+const apiProxyProtocol = process.env.API_PROXY_PROTOCOL || 'http';
+const apiProxyHost = process.env.API_PROXY_HOST || '127.0.0.1';
+const apiProxyPort = process.env.API_PROXY_PORT || '5001';
+const apiProxyTarget =
+  process.env.VITE_API_PROXY_TARGET ||
+  `${apiProxyProtocol}://${apiProxyHost}:${apiProxyPort}`;
 
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
@@ -44,7 +50,7 @@ export default defineConfig(({ mode }) => {
           port: 3000,
           proxy: {
             '/api': {
-              target: 'http://localhost:5001',
+              target: apiProxyTarget,
               changeOrigin: true,
               secure: false,
             },
@@ -67,7 +73,7 @@ export default defineConfig(({ mode }) => {
           },
           proxy: {
             '/api': {
-              target: 'http://localhost:5001',
+              target: apiProxyTarget,
               changeOrigin: true,
               secure: false,
             },

@@ -24,8 +24,8 @@ RUN npm ci
 # =====================
 # SOURCE CODE
 # =====================
-COPY index.js ./
 COPY .sequelizerc ./
+COPY server ./server
 COPY src ./src
 COPY config ./config
 COPY database ./database
@@ -41,9 +41,9 @@ RUN mkdir -p logs uploads temp
 # =====================
 # PORT
 # =====================
-EXPOSE 5000
+EXPOSE 5001
 
 # =====================
 # START COMMAND
 # =====================
-CMD ["node", "index.js"]
+CMD ["node", "server/index.js"]

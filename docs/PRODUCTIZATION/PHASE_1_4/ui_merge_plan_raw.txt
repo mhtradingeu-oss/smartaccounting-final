@@ -1,0 +1,303 @@
+client/src/services/aiAssistantAPI.js:1:import AIControlRouter from "./orchestratorBridge/AIControlRouter";
+client/src/services/api.js:55:const isCompanyOptionalRoute = (path) =>
+client/src/services/api.js:195:    const authRoutesWithoutBearer = ['/auth/login', '/auth/register', '/auth/refresh'];
+client/src/services/api.js:196:    if (!authRoutesWithoutBearer.includes(pathWithoutQuery)) {
+client/src/services/api.js:203:    if (!isCompanyOptionalRoute(pathWithoutQuery)) {
+client/src/services/api.js:273:    const isAuthLoginRoute = pathWithoutQuery === '/auth/login';
+client/src/services/api.js:274:    const isAuthRefreshRoute = pathWithoutQuery === '/auth/refresh';
+client/src/services/api.js:275:    const isAuthRegisterRoute = pathWithoutQuery === '/auth/register';
+client/src/services/api.js:283:      const isAuthRoute = isAuthLoginRoute || isAuthRefreshRoute || isAuthRegisterRoute;
+client/src/services/api.js:293:      if (status === 401 && !skipForceLogout && !isAuthRoute) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:7:export const AIControlRouter = {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:53:export default AIControlRouter;
+client/src/tests/routeConfig.test.jsx:21:const matchesRoute = (href, routePath) => {
+client/src/tests/routeConfig.test.jsx:38:      const hasRoute = ROUTE_DEFINITIONS.some((route) =>
+client/src/tests/routeConfig.test.jsx:39:        matchesRoute(entry.href, route.path),
+client/src/tests/routeConfig.test.jsx:41:      expect(hasRoute).toBe(true);
+client/src/pages/BankStatementDetail.jsx:127:  const navigate = useNavigate();
+client/src/pages/BankStatementDetail.jsx:687:            <Button variant="primary" size="medium" onClick={() => navigate('/bank-statements/import')}>
+client/src/pages/BankStatementDetail.jsx:698:              navigate(`/bank-statements/${statementId}/reconciliation-preview`, {
+client/src/tests/routes.smoke.test.jsx:3:import { MemoryRouter } from 'react-router-dom';
+client/src/tests/routes.smoke.test.jsx:14:vi.mock('../pages/AIInsights', () => ({
+client/src/tests/routes.smoke.test.jsx:18:vi.mock('../pages/AIAssistant', () => ({
+client/src/tests/routes.smoke.test.jsx:22:vi.mock('../pages/AIManager', () => ({
+client/src/tests/routes.smoke.test.jsx:162:import { AppRoutes } from '../App';
+client/src/tests/routes.smoke.test.jsx:199:describe('Route smoke test', () => {
+client/src/tests/routes.smoke.test.jsx:206:        <MemoryRouter initialEntries={[path]}>
+client/src/tests/routes.smoke.test.jsx:207:          <AppRoutes />
+client/src/tests/routes.smoke.test.jsx:208:        </MemoryRouter>,
+client/src/tests/analytics-route-guard.test.jsx:3:import { Routes, Route, MemoryRouter } from 'react-router-dom';
+client/src/tests/analytics-route-guard.test.jsx:6:import ProtectedRoute from '../components/ProtectedRoute';
+client/src/tests/analytics-route-guard.test.jsx:25:        <MemoryRouter initialEntries={['/analytics']}>
+client/src/tests/analytics-route-guard.test.jsx:26:          <Routes>
+client/src/tests/analytics-route-guard.test.jsx:27:            <Route path="/login" element={<div>Login page</div>} />
+client/src/tests/analytics-route-guard.test.jsx:28:            <Route
+client/src/tests/analytics-route-guard.test.jsx:31:                <ProtectedRoute>
+client/src/tests/analytics-route-guard.test.jsx:33:                </ProtectedRoute>
+client/src/tests/analytics-route-guard.test.jsx:36:          </Routes>
+client/src/tests/analytics-route-guard.test.jsx:37:        </MemoryRouter>
+client/src/pages/InvoiceImport.jsx:20:  const navigate = useNavigate();
+client/src/pages/InvoiceImport.jsx:83:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/InvoiceImport.jsx:101:        <Button variant="secondary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceImport.jsx:253:            <Button variant="primary" onClick={() => navigate('/invoices')}>
+client/src/tests/sidebar.test.jsx:3:import { MemoryRouter } from 'react-router-dom';
+client/src/tests/sidebar.test.jsx:86:    <MemoryRouter>
+client/src/tests/sidebar.test.jsx:92:    </MemoryRouter>,
+client/src/pages/Login.jsx:12:import { getDefaultRouteForUser } from '../lib/systemAdmin';
+client/src/pages/Login.jsx:15:  const navigate = useNavigate();
+client/src/pages/Login.jsx:53:        navigate(getDefaultRouteForUser(result.user), { replace: true });
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:148:  const navigate = useNavigate();
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:496:            <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/AIAssistant.jsx:1755:              <Button variant="secondary" size="sm" onClick={() => navigate('/ai-advisor')}>
+client/src/pages/AIAssistant.jsx:1758:              <Button variant="outline" size="sm" onClick={() => navigate('/audit-logs')}>
+client/src/pages/AIAssistant.jsx:1761:              <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/pages/ExpensesCreate.jsx:24:  const navigate = useNavigate();
+client/src/pages/ExpensesCreate.jsx:80:      navigate('/expenses');
+client/src/pages/ExpensesCreate.jsx:94:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/ExpensesCreate.jsx:108:          <Button variant="secondary" onClick={() => navigate('/expenses')}>
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIInsights.jsx:18:const AIInsights = () => {
+client/src/pages/AIInsights.jsx:23:  const navigate = useNavigate();
+client/src/pages/AIInsights.jsx:128:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/AIInsights.jsx:170:            <Button variant="secondary" size="sm" onClick={() => navigate('/ai-assistant')}>
+client/src/pages/AIInsights.jsx:173:            <Button variant="outline" size="sm" onClick={() => navigate('/audit-logs')}>
+client/src/pages/AIInsights.jsx:176:            <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/AIInsights.jsx:207:export default AIInsights;
+client/src/pages/BankStatementPreview.jsx:38:  const navigate = useNavigate();
+client/src/pages/BankStatementPreview.jsx:146:      navigate(`/bank-statements/${bankStatementId}`, {
+client/src/pages/Dashboard.jsx:153:  const navigate = useNavigate();
+client/src/pages/Dashboard.jsx:316:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/Billing.jsx:19:  const navigate = useNavigate();
+client/src/pages/Billing.jsx:221:                <Button onClick={() => navigate('/pricing')}>{t('choosePlanButton')}</Button>
+client/src/pages/Billing.jsx:282:                onClick={() => navigate('/pricing')}
+client/src/pages/Billing.jsx:328:              <Button className="mt-4" variant="primary" onClick={() => navigate('/pricing')}>
+client/src/pages/InvoiceCreate.jsx:16:  const navigate = useNavigate();
+client/src/pages/InvoiceCreate.jsx:41:      navigate('/invoices', { replace: true });
+client/src/pages/InvoiceCreate.jsx:55:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/InvoiceCreate.jsx:73:        <Button variant="secondary" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/__tests__/AIInsights.test.jsx:4:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/AIInsights.test.jsx:6:import AIInsights from '../AIInsights';
+client/src/pages/__tests__/AIInsights.test.jsx:67:      <MemoryRouter>
+client/src/pages/__tests__/AIInsights.test.jsx:69:          <AIInsights />
+client/src/pages/__tests__/AIInsights.test.jsx:71:      </MemoryRouter>,
+client/src/lib/featureFlags.js:37:export const isAIAssistantEnabled = () => aiAssistantEnabled;
+client/src/lib/featureFlags.js:39:export const setAIAssistantEnabled = (value) => {
+client/src/lib/featureFlags.js:43:export const resetAIAssistantEnabled = () => {
+client/src/pages/Analytics.jsx:72:  const navigate = useNavigate();
+client/src/pages/Analytics.jsx:179:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/App.jsx:3:import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+client/src/App.jsx:6:import ProtectedRoute from './components/ProtectedRoute';
+client/src/App.jsx:7:import CompanyRoute from './components/CompanyRoute';
+client/src/App.jsx:8:import SystemAdminRoute from './components/SystemAdminRoute';
+client/src/App.jsx:10:import RouteErrorBoundary from './components/RouteErrorBoundary';
+client/src/App.jsx:17:import { getDefaultRouteForUser } from './lib/systemAdmin';
+client/src/App.jsx:21:const wrapRoute = (element) => <RouteErrorBoundary>{element}</RouteErrorBoundary>;
+client/src/App.jsx:24:  <ProtectedRoute requiredRole={requiredRole}>
+client/src/App.jsx:25:    <CompanyRoute>
+client/src/App.jsx:27:    </CompanyRoute>
+client/src/App.jsx:28:  </ProtectedRoute>
+client/src/App.jsx:32:  <ProtectedRoute>
+client/src/App.jsx:33:    <SystemAdminRoute>
+client/src/App.jsx:35:    </SystemAdminRoute>
+client/src/App.jsx:36:  </ProtectedRoute>
+client/src/App.jsx:39:const renderProtectedRoute = (element, requiredRole) =>
+client/src/App.jsx:40:  wrapRoute(withCompanyLayout(element, requiredRole));
+client/src/App.jsx:42:const renderSystemAdminRoute = (element) => wrapRoute(withSystemAdminLayout(element));
+client/src/App.jsx:79:const AIInsights = lazy(() => import('./pages/AIInsights'));
+client/src/App.jsx:80:const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+client/src/App.jsx:81:const AIManager = lazy(() => import('./pages/AIManager'));
+client/src/App.jsx:85:function LandingRoute() {
+client/src/App.jsx:97:    return <Navigate to={getDefaultRouteForUser(user)} replace />;
+client/src/App.jsx:114:function LoginRoute() {
+client/src/App.jsx:126:    return <Navigate to={getDefaultRouteForUser(user)} replace />;
+client/src/App.jsx:142:    element: wrapRoute(<LandingRoute />),
+client/src/App.jsx:150:    element: wrapRoute(withSuspense(<Terms />)),
+client/src/App.jsx:158:    element: wrapRoute(withSuspense(<Privacy />)),
+client/src/App.jsx:166:    element: wrapRoute(<LoginRoute />),
+client/src/App.jsx:174:    element: wrapRoute(withSuspense(<Pricing />)),
+client/src/App.jsx:182:    element: wrapRoute(withSuspense(<RequestAccess />)),
+client/src/App.jsx:190:    element: renderProtectedRoute(<OnboardingWizard />),
+client/src/App.jsx:198:    element: renderProtectedRoute(<ProfileSettings />),
+client/src/App.jsx:206:    element: wrapRoute(
+client/src/App.jsx:207:      <ProtectedRoute>
+client/src/App.jsx:209:      </ProtectedRoute>,
+client/src/App.jsx:218:    element: renderProtectedRoute(<Exports />),
+client/src/App.jsx:226:    element: renderProtectedRoute(<DatevExport />),
+client/src/App.jsx:234:    element: renderProtectedRoute(<InvoiceImport />),
+client/src/App.jsx:242:    element: wrapRoute(
+client/src/App.jsx:243:      <ProtectedRoute requiredRole="admin">
+client/src/App.jsx:245:      </ProtectedRoute>,
+client/src/App.jsx:254:    element: wrapRoute(
+client/src/App.jsx:255:      <ProtectedRoute requiredRole="admin">
+client/src/App.jsx:257:      </ProtectedRoute>,
+client/src/App.jsx:266:    element: renderProtectedRoute(<InvestorDashboard />, 'auditor'),
+client/src/App.jsx:274:    element: renderProtectedRoute(<Analytics />),
+client/src/App.jsx:282:    element: renderProtectedRoute(<AIInsights />),
+client/src/App.jsx:283:    componentFile: 'client/src/pages/AIInsights.jsx',
+client/src/App.jsx:290:    element: renderProtectedRoute(<AIAssistant />),
+client/src/App.jsx:291:    componentFile: 'client/src/pages/AIAssistant.jsx',
+client/src/App.jsx:298:    element: renderProtectedRoute(<AIManager />),
+client/src/App.jsx:299:    componentFile: 'client/src/pages/AIManager.jsx',
+client/src/App.jsx:306:    element: renderProtectedRoute(<Dashboard />),
+client/src/App.jsx:314:    element: renderProtectedRoute(<Dashboard />),
+client/src/App.jsx:322:    element: renderProtectedRoute(<Invoices />),
+client/src/App.jsx:330:    element: renderProtectedRoute(<Expenses />),
+client/src/App.jsx:338:    element: renderProtectedRoute(<ExpensesCreate />),
+client/src/App.jsx:346:    element: renderProtectedRoute(<InvoiceCreate />),
+client/src/App.jsx:354:    element: renderProtectedRoute(<InvoiceEdit />),
+client/src/App.jsx:362:    element: renderProtectedRoute(<BankStatements />),
+client/src/App.jsx:370:    element: renderProtectedRoute(<BankStatementPreview />),
+client/src/App.jsx:378:    element: renderProtectedRoute(<DocumentInbox />),
+client/src/App.jsx:386:    element: renderProtectedRoute(<OCRPreview />),
+client/src/App.jsx:394:    element: renderProtectedRoute(<BankStatementImport />),
+client/src/App.jsx:402:    element: renderProtectedRoute(<BankStatementReconciliationPreview />, 'accountant'),
+client/src/App.jsx:410:    element: renderProtectedRoute(<BankStatementDetail />),
+client/src/App.jsx:419:      ? renderProtectedRoute(<Billing />)
+client/src/App.jsx:420:      : wrapRoute(
+client/src/App.jsx:421:          <ProtectedRoute>
+client/src/App.jsx:427:          </ProtectedRoute>,
+client/src/App.jsx:437:      renderProtectedRoute(<GermanTaxReports key={company?.id || 'no-company'} />),
+client/src/App.jsx:445:    element: renderProtectedRoute(<Companies />),
+client/src/App.jsx:453:    element: renderProtectedRoute(<Users />, 'admin'),
+client/src/App.jsx:462:      ? renderProtectedRoute(<ComplianceDashboard />, 'admin')
+client/src/App.jsx:463:      : wrapRoute(
+client/src/App.jsx:464:          <ProtectedRoute requiredRole="admin">
+client/src/App.jsx:470:          </ProtectedRoute>,
+client/src/App.jsx:479:    element: renderProtectedRoute(<GDPRActions />),
+client/src/App.jsx:487:    element: renderProtectedRoute(<AuditLogs />, 'admin'),
+client/src/App.jsx:495:    element: wrapRoute(
+client/src/App.jsx:496:      <ProtectedRoute>
+client/src/App.jsx:498:      </ProtectedRoute>,
+client/src/App.jsx:508:      ? renderProtectedRoute(<GermanTaxReports />)
+client/src/App.jsx:509:      : wrapRoute(
+client/src/App.jsx:510:          <ProtectedRoute>
+client/src/App.jsx:516:          </ProtectedRoute>,
+client/src/App.jsx:525:    element: wrapRoute(
+client/src/App.jsx:526:      <ProtectedRoute requiredRole="admin">
+client/src/App.jsx:528:      </ProtectedRoute>,
+client/src/App.jsx:537:    element: renderSystemAdminRoute(<SystemAdminDashboard />),
+client/src/App.jsx:545:    element: wrapRoute(<NotFound />),
+client/src/App.jsx:553:export const AppRoutes = () => {
+client/src/App.jsx:557:    <Routes>
+client/src/App.jsx:559:        <Route
+client/src/App.jsx:565:    </Routes>
+client/src/App.jsx:578:          <AppRoutes />
+client/src/pages/__tests__/Dashboard.test.jsx:3:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/Dashboard.test.jsx:123:      <MemoryRouter>
+client/src/pages/__tests__/Dashboard.test.jsx:125:      </MemoryRouter>,
+client/src/pages/__tests__/Dashboard.test.jsx:157:      <MemoryRouter>
+client/src/pages/__tests__/Dashboard.test.jsx:159:      </MemoryRouter>,
+client/src/lib/constants.js:3:import { isAIAssistantEnabled } from './featureFlags';
+client/src/lib/constants.js:19:  AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
+client/src/main.jsx:13:import { BrowserRouter } from 'react-router-dom';
+client/src/main.jsx:23:    <BrowserRouter>
+client/src/main.jsx:25:    </BrowserRouter>
+client/src/pages/Companies.jsx:17:  const navigate = useNavigate();
+client/src/pages/Companies.jsx:211:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/BankStatementReconciliationPreview.jsx:25:  const navigate = useNavigate();
+client/src/pages/BankStatementReconciliationPreview.jsx:244:        <Button variant="outline" size="medium" onClick={() => navigate('/bank-statements')}>
+client/src/pages/__tests__/Companies.test.jsx:4:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/Companies.test.jsx:73:      <MemoryRouter>
+client/src/pages/__tests__/Companies.test.jsx:77:      </MemoryRouter>,
+client/src/pages/__tests__/Companies.test.jsx:94:        <MemoryRouter>
+client/src/pages/__tests__/Companies.test.jsx:98:        </MemoryRouter>,
+client/src/pages/__tests__/Companies.test.jsx:118:      <MemoryRouter>
+client/src/pages/__tests__/Companies.test.jsx:122:      </MemoryRouter>,
+client/src/lib/systemAdmin.js:9:export const getDefaultRouteForUser = (user) => (isSystemAdmin(user) ? '/system-admin' : '/dashboard');
+client/src/pages/Users.jsx:28:  const navigate = useNavigate();
+client/src/pages/Users.jsx:106:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/BankStatementImport.jsx:50:  const navigate = useNavigate();
+client/src/pages/BankStatementImport.jsx:219:            onClick={() => navigate('/bank-statements')}
+client/src/pages/BankStatementImport.jsx:287:                  navigate(`/bank-statements/${result.bankStatement.id}`, {
+client/src/pages/BankStatementImport.jsx:295:            <Button variant="outline" size="medium" onClick={() => navigate('/bank-statements')}>
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:45:  const navigate = useNavigate();
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/pages/BankStatements.jsx:221:            onClick={() => navigate('/bank-statements/import')}
+client/src/pages/BankStatements.jsx:228:            onClick={() => navigate('/bank-statements/preview')}
+client/src/pages/BankStatements.jsx:267:              onClick={() => navigate('/ai-assistant')}
+client/src/pages/BankStatements.jsx:307:                onClick={() => navigate('/bank-statements/import')}
+client/src/pages/BankStatements.jsx:320:              onClick={() => navigate('/bank-statements/preview')}
+client/src/pages/OnboardingWizard.jsx:43:  const navigate = useNavigate();
+client/src/pages/OnboardingWizard.jsx:48:      navigate('/dashboard', { replace: true });
+client/src/pages/OnboardingWizard.jsx:52:  }, [step, completed, navigate]);
+client/src/pages/__tests__/OCRPreview.test.jsx:2:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/OCRPreview.test.jsx:43:    <MemoryRouter>
+client/src/pages/__tests__/OCRPreview.test.jsx:45:    </MemoryRouter>,
+client/src/pages/__tests__/AIManager.test.jsx:3:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:28:    <MemoryRouter>
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:30:    </MemoryRouter>,
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/BankStatementPreview.test.jsx:2:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/BankStatementPreview.test.jsx:75:    <MemoryRouter>
+client/src/pages/__tests__/BankStatementPreview.test.jsx:77:    </MemoryRouter>,
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:2:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:119:    <MemoryRouter>
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:121:    </MemoryRouter>,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:4:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:72:      <MemoryRouter>
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:76:      </MemoryRouter>,
+client/src/pages/__tests__/DocumentInbox.test.jsx:2:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/DocumentInbox.test.jsx:24:    <MemoryRouter>
+client/src/pages/__tests__/DocumentInbox.test.jsx:26:    </MemoryRouter>,
+client/src/pages/InvoiceEdit.jsx:203:  const navigate = useNavigate();
+client/src/pages/InvoiceEdit.jsx:341:          <Button variant="primary" onClick={() => navigate('/companies')}>
+client/src/pages/InvoiceEdit.jsx:400:          <Button variant="secondary" onClick={() => navigate('/invoices')}>
+client/src/components/Layout.jsx:7:import GlobalAICompanion from './GlobalAICompanion';
+client/src/components/Layout.jsx:128:      {status === 'authenticated' && <GlobalAICompanion />}
+client/src/components/RouteErrorBoundary.jsx:9:class RouteErrorBoundaryInner extends React.Component {
+client/src/components/RouteErrorBoundary.jsx:23:      console.error('RouteErrorBoundary caught an error:', error, errorInfo);
+client/src/components/RouteErrorBoundary.jsx:34:          errorType: 'RouteErrorBoundary',
+client/src/components/RouteErrorBoundary.jsx:55:export default function RouteErrorBoundary({ children }) {
+client/src/components/RouteErrorBoundary.jsx:60:    <RouteErrorBoundaryInner
+client/src/components/RouteErrorBoundary.jsx:65:    </RouteErrorBoundaryInner>
+client/src/pages/__tests__/AIAssistant.test.jsx:4:import { MemoryRouter } from 'react-router-dom';
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:107:    <MemoryRouter initialEntries={[initialEntry]}>
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:111:    </MemoryRouter>,
+client/src/pages/__tests__/AIAssistant.test.jsx:292:      draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-1'] } },
+client/src/pages/__tests__/AIAssistant.test.jsx:387:        targetRoute: 'POST /api/expenses',
+client/src/pages/__tests__/AIAssistant.test.jsx:479:      draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-1'] } },
+client/src/pages/__tests__/AIAssistant.test.jsx:842:        targetRoute: 'POST /api/invoices',
+client/src/pages/__tests__/AIAssistant.test.jsx:942:      <MemoryRouter>
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:946:      </MemoryRouter>,
+client/src/components/CompanyRoute.jsx:6:const CompanyRoute = ({ children }) => {
+client/src/components/CompanyRoute.jsx:16:export default CompanyRoute;
+client/src/components/GlobalAICompanion.jsx:55:export default function GlobalAICompanion() {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:3:import { MemoryRouter } from 'react-router-dom';
+client/src/components/__tests__/GlobalAICompanion.test.jsx:37:describe('GlobalAICompanion in authenticated layout', () => {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:48:      <MemoryRouter initialEntries={['/invoices/123/edit']}>
+client/src/components/__tests__/GlobalAICompanion.test.jsx:52:      </MemoryRouter>,
+client/src/components/ProtectedRoute.jsx:5:const ProtectedRoute = ({ children, requiredRole }) => {
+client/src/components/ProtectedRoute.jsx:60:export default ProtectedRoute;
+client/src/components/__tests__/TopBar.test.jsx:3:import { MemoryRouter } from 'react-router-dom';
+client/src/components/__tests__/TopBar.test.jsx:53:      <MemoryRouter>
+client/src/components/__tests__/TopBar.test.jsx:60:      </MemoryRouter>,
+client/src/components/TopBar.jsx:106:  const navigate = useNavigate();
+client/src/components/TopBar.jsx:303:                    navigate(filteredSearchResults[0].href);
+client/src/components/SystemAdminRoute.jsx:6:const SystemAdminRoute = ({ children }) => {
+client/src/components/SystemAdminRoute.jsx:16:export default SystemAdminRoute;

@@ -9,7 +9,6 @@ const { validateRequest } = require('../middleware/security');
 const router = express.Router();
 
 router.use(authenticate);
-router.use(requireCompany);
 
 const companyUpdateValidators = [
   param('companyId').isInt().withMessage('Invalid company id'),
@@ -50,10 +49,12 @@ const sanitizeStringValue = (value) => (typeof value === 'string' ? value.trim()
 router.get('/', async (req, res, next) => {
   try {
     const filters = [];
-    if (req.companyId) {
-      filters.push({ id: req.companyId });
+    const scopedCompanyId = req.companyId || req.user?.companyId || req.tokenCompanyId;
+
+    if (scopedCompanyId) {
+      filters.push({ id: scopedCompanyId });
     }
-    if (req.user.id) {
+    if (req.user?.id) {
       filters.push({ userId: req.user.id });
     }
 
@@ -76,6 +77,7 @@ router.get('/', async (req, res, next) => {
 
 router.put(
   '/:companyId',
+  requireCompany,
   requireRole(['admin']),
   validateRequest(companyUpdateValidators),
   async (req, res, next) => {

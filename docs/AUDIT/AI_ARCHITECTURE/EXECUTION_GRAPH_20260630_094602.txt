@@ -1,0 +1,527 @@
+==============================
+🧠 AI EXECUTION GRAPH MAP
+==============================
+
+===== FRONTEND AI ENTRY POINTS =====
+client/src/services/aiAssistantAPI.js:74:  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
+client/src/services/aiAssistantAPI.js:86:  async askIntentStream({
+client/src/services/aiAssistantAPI.js:156:  async startSession({ companyId } = {}) {
+client/src/components/Layout.jsx:7:import GlobalAICompanion from './GlobalAICompanion';
+client/src/components/Layout.jsx:128:      {status === 'authenticated' && <GlobalAICompanion />}
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:3:export default function AIOrchestrator({ state = {} }) {
+client/src/services/__tests__/aiAssistantAPI.test.jsx:28:    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:29:    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:50:    await aiAssistantAPI.startSession({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:59:    await aiAssistantAPI.askIntent({
+client/src/tests/routes.smoke.test.jsx:18:vi.mock('../pages/AIAssistant', () => ({
+client/src/tests/routes.smoke.test.jsx:22:vi.mock('../pages/AIManager', () => ({
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/components/__tests__/GlobalAICompanion.test.jsx:21:    askIntent: vi.fn(),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:37:describe('GlobalAICompanion in authenticated layout', () => {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:40:    aiAssistantAPI.askIntent.mockResolvedValue({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:91:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:111:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:135:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/GlobalAICompanion.jsx:55:export default function GlobalAICompanion() {
+client/src/components/GlobalAICompanion.jsx:81:      const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/lib/constants.js:3:import { isAIAssistantEnabled } from './featureFlags';
+client/src/lib/constants.js:19:  AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
+client/src/App.jsx:80:const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+client/src/App.jsx:81:const AIManager = lazy(() => import('./pages/AIManager'));
+client/src/App.jsx:290:    element: renderProtectedRoute(<AIAssistant />),
+client/src/App.jsx:291:    componentFile: 'client/src/pages/AIAssistant.jsx',
+client/src/App.jsx:298:    element: renderProtectedRoute(<AIManager />),
+client/src/App.jsx:299:    componentFile: 'client/src/pages/AIManager.jsx',
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/lib/featureFlags.js:37:export const isAIAssistantEnabled = () => aiAssistantEnabled;
+client/src/lib/featureFlags.js:39:export const setAIAssistantEnabled = (value) => {
+client/src/lib/featureFlags.js:43:export const resetAIAssistantEnabled = () => {
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:499:        <AIOrchestrator
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:31:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:33:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:38:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:40:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:41:    askIntentStream: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+
+===== BACKEND AI FLOW =====
+src/services/ai/aiInsightsService.js:154:        '[aiInsightsService] listInsightsForClient: schema or query error in demo mode',
+src/services/ai/aiInsightsService.js:269:      console.debug('[aiInsightsService] exportInsights: schema or query error in demo mode', {
+src/services/ai/automation/automationEngine.js:1:// automationEngine.js
+src/services/ai/README.md:4:- `aiReadGateway.js` orchestrates every `/api/ai` read request, enforces read-only contracts, attaches disclaimers, and now logs the `requestId`/`companyId` pair into the immutable audit trail.
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:9:- `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
+src/services/ai/README.md:21:routes -> aiReadGateway -> cfoEngine
+src/services/ai/README.md:25:The eventBus remains active for the normal AI read gateway flow and is not part of a legacy CFO routing chain.
+src/services/ai/aiReadGateway.js:1:const cfoEngine = require('./cfo/cfoEngine');
+src/services/ai/aiReadGateway.js:2:async function aiReadGateway(input) {
+src/services/ai/aiReadGateway.js:6:      body: await cfoEngine.analyze(input.payload || {}),
+src/services/ai/aiReadGateway.js:207:    console.error('[aiReadGateway][DEBUG] meta:', meta);
+src/services/ai/aiReadGateway.js:209:    console.error('[aiReadGateway][DEBUG] handler:', meta && meta.handler);
+src/services/ai/aiReadGateway.js:324:module.exports = aiReadGateway;
+
+===== DECISION SYSTEM FLOW =====
+src/services/ai/assistantCapabilityContract.js:9:    'Provide accounting and VAT review guidance from supplied evidence only; do not provide binding tax filing, payment, or legal conclusions. Escalate compliance-critical decisions to a qualified Steuerberater.',
+src/services/ai/germanAccountingKnowledgeContract.js:9:    'The assistant provides non-binding accounting and VAT review guidance from supplied system data only. Filing, payment, legal classification, and tax optimization decisions must be confirmed by a qualified Steuerberater.',
+src/services/ai/germanAccountingKnowledgeContract.js:37:    mustEscalate: ['UStVA filing', 'VAT payment decisions', 'final input VAT deductibility', 'binding tax classification'],
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:23:Archived legacy CFO and decision artifacts were moved outside active runtime under .architecture-archive. The active AI services no longer import CFO router, CFO controller, CFO connector bridge, or decision service files.
+src/services/ai/aiAssistantService.js:594:    actions.push('Inspect the referenced AI insight, rule, evidence, and legal context before making accounting decisions.');
+src/services/ai/aiInsightsService.js:6:const { AIInsight, AIInsightDecision, Company } = require('../../models');
+src/services/ai/aiInsightsService.js:139:    include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/services/ai/aiInsightsService.js:166:async function decideInsight(companyId, insightId, actorUser, decision, reason) {
+src/services/ai/aiInsightsService.js:168:  if (!ALLOWED_DECISIONS.includes(decision)) {
+src/services/ai/aiInsightsService.js:169:    throw Object.assign(new Error('Invalid decision'), { status: 400 });
+src/services/ai/aiInsightsService.js:171:  if ((decision === 'rejected' || decision === 'overridden') && !reason) {
+src/services/ai/aiInsightsService.js:183:  if (decision === 'overridden' && actorUser.role !== 'admin') {
+src/services/ai/aiInsightsService.js:191:  const decisionObj = await AIInsightDecision.create({
+src/services/ai/aiInsightsService.js:195:    decision,
+src/services/ai/aiInsightsService.js:201:    action: `USER_${decision.toUpperCase()}`,
+src/services/ai/aiInsightsService.js:207:  return decisionObj;
+src/services/ai/aiInsightsService.js:215:      include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/services/ai/aiInsightsService.js:234:        'decision',
+src/services/ai/aiInsightsService.js:235:        'decisionReason',
+src/services/ai/aiInsightsService.js:236:        'decisionActorUserId',
+src/services/ai/aiInsightsService.js:237:        'decisionCreatedAt',
+src/services/ai/aiInsightsService.js:240:        const d = (i.decisions && i.decisions[0]) || {};
+src/services/ai/aiInsightsService.js:255:          d.decision || '',
+src/services/ai/aiInsightsService.js:284:  decideInsight,
+src/services/dashboardService.js:241:        recommendedAction: 'Review VAT summary details before preparing VAT filing or payment decisions.',
+src/services/ai/documentIntakeAssistantService.js:91:      schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:100:const buildDecisionFingerprint = (decision = {}) =>
+src/services/ai/documentIntakeAssistantService.js:101:  crypto.createHash('sha256').update(stableStringify(decision) || '{}').digest('hex');
+src/services/ai/documentIntakeAssistantService.js:387:    explanation.push('Validation errors must be corrected before relying on this accounting decision.');
+src/services/ai/documentIntakeAssistantService.js:394:    schemaVersion: 'accounting_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:565:  const decisionBase = {
+src/services/ai/documentIntakeAssistantService.js:566:    schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:575:  const decisionFingerprint = buildDecisionFingerprint(decisionBase);
+src/services/ai/documentIntakeAssistantService.js:582:    decisionFingerprint,
+src/services/ai/documentIntakeAssistantService.js:584:      ...decisionBase,
+src/services/ai/documentIntakeAssistantService.js:585:      decisionFingerprint,
+src/services/ai/auditLogger.js:5: * Log an AI insight or user decision (GoBD-compliant)
+src/services/ai/providers/mockProvider.js:45:    requiredActions: ['Review source records before making accounting decisions.'],
+src/services/ai/providers/mockProvider.js:58:      requiredActions: ['Review source records before making accounting decisions.'],
+src/routes/ocr.js:177:    decisionFingerprint: intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null,
+src/routes/ocr.js:210:  decisionFingerprint: intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null,
+src/routes/ocr.js:851:        decisionFingerprint: recheckedIntake.decisionFingerprint,
+src/routes/ocr.js:870:  const providedFingerprint = String(req.body?.decisionFingerprint || '').trim();
+src/routes/ocr.js:890:    const currentFingerprint = intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null;
+src/routes/ocr.js:902:      return sendError(res, 'The reviewed document decision is stale. Re-check document first.', 409);
+src/routes/ocr.js:959:      decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1007:        decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1032:        decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1065:      decisionFingerprint: currentFingerprint,
+src/routes/ai.js:27:  '/insights/:id/decisions',
+src/routes/ai.js:29:  respondMutationDisabled('AI decision capture'),
+src/models/AIInsight.js:8:      const decisionsModel = models?.AIInsightDecision;
+src/models/AIInsight.js:10:        decisionsModel &&
+src/models/AIInsight.js:11:        decisionsModel.sequelize === this.sequelize &&
+src/models/AIInsight.js:12:        !this.associations?.decisions
+src/models/AIInsight.js:14:        this.hasMany(decisionsModel, {
+src/models/AIInsight.js:16:          as: 'decisions',
+src/models/AIInsightDecision.js:2:  const AIInsightDecision = sequelize.define(
+src/models/AIInsightDecision.js:3:    'AIInsightDecision',
+src/models/AIInsightDecision.js:25:      decision: {
+src/models/AIInsightDecision.js:37:      tableName: 'ai_insight_decisions',
+src/models/AIInsightDecision.js:41:  AIInsightDecision.associate = (models) => {
+src/models/AIInsightDecision.js:45:      insightModel.sequelize === AIInsightDecision.sequelize &&
+src/models/AIInsightDecision.js:46:      !AIInsightDecision.associations?.insight
+src/models/AIInsightDecision.js:48:      AIInsightDecision.belongsTo(insightModel, {
+src/models/AIInsightDecision.js:55:  return AIInsightDecision;
+src/routes/exports.js:10:  AIInsightDecision,
+src/routes/exports.js:440:router.get('/ai-decisions', requireRole(['auditor']), async (req, res) => {
+src/routes/exports.js:451:      include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/routes/exports.js:458:        'decisionId',
+src/routes/exports.js:459:        'decision',
+src/routes/exports.js:468:        (insight.decisions || []).forEach((decision) => {
+src/routes/exports.js:471:            decisionId: decision.id,
+src/routes/exports.js:472:            decision: decision.decision,
+src/routes/exports.js:473:            actorUserId: decision.actorUserId,
+src/routes/exports.js:474:            reason: decision.reason,
+src/routes/exports.js:480:        if (!insight.decisions || insight.decisions.length === 0) {
+src/routes/exports.js:483:            decisionId: 'pending',
+src/routes/exports.js:484:            decision: 'pending',
+src/routes/exports.js:493:      return sendCsvResponse(res, 'ai-decisions.csv', headers, rows);
+src/routes/exports.js:499:      message: 'Failed to export AI decisions',
+
+===== ORCHESTRATION SIGNALS =====
+src/services/ai/eventBus.js:18:  bus.emit('ai:requested', event);
+src/services/ai/eventBus.js:22:    bus.emit('ai:succeeded', event);
+src/services/ai/eventBus.js:25:    bus.emit('ai:failed', {
+src/services/ai/README.md:25:The eventBus remains active for the normal AI read gateway flow and is not part of a legacy CFO routing chain.
+
+===== CONTRACT LAYERS =====
+src/services/ai/aiDataService.js:4:const { checkTableAndColumns } = require('../guards/schemaGuard');
+src/services/ai/aiDataService.js:23:    // Guard: check ai_insights schema (read-only)
+src/services/ai/aiDataService.js:37:      const err = new Error('AI schema missing or incomplete');
+src/services/ai/aiReadGateway.js:22:  // 1️⃣ Normalize input and define safePrompt at the very top (per audit contract)
+src/services/ai/aiReadGateway.js:23:  const { redactPII } = require('./governance');
+src/services/ai/aiReadGateway.js:113:    // STRICT: Check company context BEFORE contract validation, even if required fields are missing
+src/services/ai/aiReadGateway.js:162:    // Only run contract validation if company context and feature flag pass
+src/services/ai/aiReadGateway.js:163:    // (fall through to contract validation below)
+src/services/ai/aiReadGateway.js:166:  // Ensure logging for all successful (status: 200) returns before contract validation
+src/services/ai/aiReadGateway.js:169:  // 4️⃣ Mutation intent detection BEFORE contract validation
+src/services/ai/aiReadGateway.js:197:    // Provide a default meta if missing, to ensure contract response
+src/services/ai/aiReadGateway.js:287:  // 9️⃣ Shape FINAL contract response
+src/services/ai/aiReadGateway.js:293:  // Always return a contract-shaped response, even if data is undefined
+src/services/ai/aiReadGateway.js:294:  // Always include disclaimer in contract response
+src/services/ai/approvalState.js:1:// Approval state model and API contract for human-in-the-loop
+src/services/ai/approvalState.js:18: * API contract for accepting/rejecting AI suggestions
+src/services/ai/automation/automationContract.js:41:function validateAutomationSuggestion(suggestion) {
+src/services/ai/automation/automationContract.js:57:  validateAutomationSuggestion,
+src/services/ai/automation/automationGuard.js:4:// Defensive guard functions for automation engine (read-only, no mutation)
+src/services/ai/automation/automationGuard.js:26:  // Use contract validator
+src/services/ai/automation/automationGuard.js:27:  const { validateAutomationSuggestion } = require('./automationContract');
+src/services/ai/automation/automationGuard.js:28:  validateAutomationSuggestion(suggestion);
+src/services/ai/aiAssistantService.js:2:const { redactPII } = require('./governance');
+src/services/ai/aiAssistantService.js:3:const { validateAssistantResponse } = require('./assistantResponseSchema');
+src/services/ai/aiAssistantService.js:862:  const validation = validateAssistantResponse(response);
+src/services/ai/aiAssistantService.js:997:    const validation = validateAssistantResponse(providerResponse);
+src/services/ai/promptRegistry.js:19:      'Return JSON only and match the provided schema exactly for required fields.',
+src/services/ai/aiSuggestionService.js:1:const { validateSuggestionContract } = require('./suggestionContract');
+src/services/ai/aiSuggestionService.js:28:  // Validate contract
+src/services/ai/aiSuggestionService.js:29:  validateSuggestionContract(suggestion);
+src/services/ai/documentIntakeAssistantService.js:91:      schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:152:    'contract',
+src/services/ai/documentIntakeAssistantService.js:191:const validateManualOverride = (manualOverride = {}) => {
+src/services/ai/documentIntakeAssistantService.js:222:  validateManualOverride(manualOverride).valid;
+src/services/ai/documentIntakeAssistantService.js:228:  const validation = validateManualOverride(manualOverride);
+src/services/ai/documentIntakeAssistantService.js:394:    schemaVersion: 'accounting_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:566:    schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:669:const validateGermanReadiness = ({ documentType, direction, extracted }) => {
+src/services/ai/documentIntakeAssistantService.js:871:  const validation = validateGermanReadiness({ documentType: inferredType, direction, extracted });
+src/services/ai/documentIntakeAssistantService.js:917:  validateGermanReadiness,
+src/services/ai/documentIntakeAssistantService.js:925:  validateManualOverride,
+src/services/ai/assistantResponseSchema.js:16:const validateAssistantResponse = (payload) => assistantResponseSchema.safeParse(payload);
+src/services/ai/assistantResponseSchema.js:18:module.exports = { assistantResponseSchema, validateAssistantResponse };
+src/services/ai/aiInsightsService.js:9:const { checkTableAndColumns } = require('../guards/schemaGuard');
+src/services/ai/aiInsightsService.js:28:    const err = new Error('AI schema missing or incomplete');
+src/services/ai/aiInsightsService.js:149:    // Graceful degradation: in demo or schema-missing scenarios, return empty insights array
+src/services/ai/aiInsightsService.js:154:        '[aiInsightsService] listInsightsForClient: schema or query error in demo mode',
+src/services/ai/aiInsightsService.js:266:    // Graceful degradation: in demo or schema-missing scenarios, return empty export
+src/services/ai/aiInsightsService.js:269:      console.debug('[aiInsightsService] exportInsights: schema or query error in demo mode', {
+src/services/ai/explainability.js:1:// Explainability schema and helpers for all AI outputs
+src/services/ai/suggestionContract.js:2:// Validates the AI suggestion contract for Phase 12
+src/services/ai/suggestionContract.js:5: * Throws if suggestion does not match contract
+src/services/ai/suggestionContract.js:8:function validateSuggestionContract(suggestion) {
+src/services/ai/suggestionContract.js:35:module.exports = { validateSuggestionContract };
+src/services/ai/README.md:4:- `aiReadGateway.js` orchestrates every `/api/ai` read request, enforces read-only contracts, attaches disclaimers, and now logs the `requestId`/`companyId` pair into the immutable audit trail.
+src/services/ai/README.md:6:- `governance.js`, `contextContract.js`, `mutationIntent.js`, `promptRegistry.js`, `explainability.js`, and `insightTypes.js` form the compliance toolbox that redacts PII, enforces purpose/policy, detects mutation intent, and surfaces explainability data.
+src/services/ai/README.md:7:- `aiDataService.js`, `aiAssistantService.js`, and `aiSuggestionService.js` contain the read-only AI handlers (summaries, assistant prompts, suggestions) and all bubble through `requiresHumanApproval`/`rateLimit` guards before returning advisory-only responses.
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:9:- `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
+src/services/ai/README.md:14:- Any additional automation detectors added under `automation/detectors/` should remain toggled off until their explainability metadata and audit logging are validated end-to-end.
+src/services/ai/providers/openaiProvider.js:3:const { validateAssistantResponse } = require('../assistantResponseSchema');
+src/services/ai/providers/openaiProvider.js:28:          'Return JSON only with the required schema fields.',
+src/services/ai/providers/openaiProvider.js:95:  const validation = validateAssistantResponse(payload);
+src/services/ai/providers/openaiProvider.js:97:    const err = new Error('OpenAI provider response failed schema validation');
+src/services/ai/aiAuditLogger.js:5:const { redactPII } = require('./governance');
+src/services/ai/providers/mockProvider.js:3:const { validateAssistantResponse } = require('../assistantResponseSchema');
+src/services/ai/providers/mockProvider.js:53:  const validation = validateAssistantResponse(response);
+
+===== DUPLICATION CHECK =====
+client/src/App.jsx
+client/src/assets/ai-premium.svg
+client/src/components/AIBadge.jsx
+client/src/components/AIDrawer.jsx
+client/src/components/AIInsightCard.jsx
+client/src/components/AIMetadataLine.jsx
+client/src/components/AISeverityPill.jsx
+client/src/components/AISuggestionCard.jsx
+client/src/components/AITrustBanner.jsx
+client/src/components/ActionButton.jsx
+client/src/components/AppErrorBoundary.jsx
+client/src/components/BankStatementStatusBadge.jsx
+client/src/components/Breadcrumbs.jsx
+client/src/components/Button.jsx
+client/src/components/Card.jsx
+client/src/components/ChatEmptyState.jsx
+client/src/components/ChatMessageGroup.jsx
+client/src/components/ChatTypingIndicator.jsx
+client/src/components/CompanyRoute.jsx
+client/src/components/CompanySelector.jsx
+client/src/components/ComplianceSnapshot.jsx
+client/src/components/ConfirmDangerModal.jsx
+client/src/components/DevHealthCheck.jsx
+client/src/components/EmptyState.jsx
+client/src/components/EnhancedCard.jsx
+client/src/components/ErrorState.jsx
+client/src/components/ExplainWhy.jsx
+client/src/components/FeatureGate.jsx
+client/src/components/Footer.jsx
+client/src/components/GlobalAICompanion.jsx
+client/src/components/LanguageSwitcher.jsx
+client/src/components/Layout.jsx
+client/src/components/LoadingSpinner.jsx
+client/src/components/LoadingState.jsx
+client/src/components/MetricCard.jsx
+client/src/components/MutationIntentGuard.jsx
+client/src/components/NotificationToast.jsx
+client/src/components/PermissionGuard.jsx
+client/src/components/PlanBadge.jsx
+client/src/components/PlanRestrictedState.jsx
+client/src/components/ProtectedRoute.jsx
+client/src/components/RateLimitBanner.jsx
+client/src/components/ReadOnlyBanner.jsx
+client/src/components/RouteErrorBoundary.jsx
+client/src/components/Sidebar.jsx
+client/src/components/SystemAdminRoute.jsx
+client/src/components/TopBar.jsx
+client/src/components/__tests__/Button.test.jsx
+client/src/components/__tests__/GlobalAICompanion.test.jsx
+client/src/components/__tests__/PermissionGuard.test.jsx
+client/src/components/__tests__/TopBar.test.jsx
+client/src/components/ai/cfo/CFOIntelligenceEngine.jsx
+client/src/components/ai/orchestrator/AIOrchestrator.jsx
+client/src/components/invoices/InvoiceForm.jsx
+client/src/components/invoices/InvoiceStatusBadge.jsx
+client/src/components/ui/AsyncModal.jsx
+client/src/components/ui/Badge.jsx
+client/src/components/ui/Button.jsx
+client/src/components/ui/Card.jsx
+client/src/components/ui/ConfirmDangerModal.jsx
+client/src/components/ui/Drawer.jsx
+client/src/components/ui/EmptyState.jsx
+client/src/components/ui/ErrorBoundaryFallback.jsx
+client/src/components/ui/FormField.jsx
+client/src/components/ui/InfoTooltip.jsx
+client/src/components/ui/Input.jsx
+client/src/components/ui/Label.jsx
+client/src/components/ui/Modal.jsx
+client/src/components/ui/PageStates.jsx
+client/src/components/ui/Pagination.jsx
+client/src/components/ui/RBAC.jsx
+client/src/components/ui/Select.jsx
+client/src/components/ui/Skeleton.jsx
+client/src/components/ui/Table.jsx
+client/src/components/ui/Tag.jsx
+client/src/components/ui/Textarea.jsx
+client/src/components/ui/Toast.jsx
+client/src/context/AuthContext.jsx
+client/src/context/CompanyContext.jsx
+client/src/context/RoleContext.jsx
+client/src/context/__tests__/AuthContext.test.jsx
+client/src/hooks/__tests__/useLoadCompanies.test.jsx
+client/src/hooks/useApi.js
+client/src/hooks/useLoadCompanies.js
+client/src/hooks/useLocalStorage.js
+client/src/hooks/usePlanCatalog.js
+client/src/i18n.js
+client/src/index.css
+client/src/lib/__tests__/aiPageContext.test.js
+client/src/lib/aiChatAttachments.js
+client/src/lib/aiChatIntent.js
+client/src/lib/aiConstants.js
+client/src/lib/aiPageContext.js
+client/src/lib/clsx.js
+client/src/lib/companyStorage.js
+client/src/lib/constants.js
+client/src/lib/demoMode.js
+client/src/lib/designTokens.js
+client/src/lib/envGuards.js
+client/src/lib/errorMeta.js
+client/src/lib/featureFlags.js
+client/src/lib/logger.js
+client/src/lib/permissions.js
+client/src/lib/permissions.test.js
+client/src/lib/rbac.js
+client/src/lib/resetClientState.js
+client/src/lib/systemAdmin.js
+client/src/lib/telemetryClient.js
+client/src/lib/utils/formatting.js
+client/src/lib/utils/validation.js
+client/src/locales/ar/translation.json
+client/src/locales/de/translation.json
+client/src/locales/en/translation.json
+client/src/main.jsx
+client/src/navigation/sidebarNavigation.js
+client/src/pages/AIAssistant.jsx
+client/src/pages/AIInsights.jsx
+client/src/pages/AIManager.jsx
+client/src/pages/Analytics.jsx
+client/src/pages/AuditLogs.jsx
+client/src/pages/AuditorDashboard.jsx
+client/src/pages/BankStatementDetail.jsx
+client/src/pages/BankStatementImport.jsx
+client/src/pages/BankStatementPreview.jsx
+client/src/pages/BankStatementReconciliationPreview.jsx
+client/src/pages/BankStatements.jsx
+client/src/pages/Billing.jsx
+client/src/pages/Calculator.jsx
+client/src/pages/Companies.jsx
+client/src/pages/ComplianceDashboard.jsx
+client/src/pages/Dashboard.jsx
+client/src/pages/DatevExport.jsx
+client/src/pages/DocumentInbox.jsx
+client/src/pages/Expenses.jsx
+client/src/pages/ExpensesCreate.jsx
+client/src/pages/Exports.jsx
+client/src/pages/GDPRActions.jsx
+client/src/pages/GermanTaxReports.jsx
+client/src/pages/InvestorDashboard.jsx
+client/src/pages/InvoiceCreate.jsx
+client/src/pages/InvoiceEdit.jsx
+client/src/pages/InvoiceImport.jsx
+client/src/pages/Invoices.jsx
+client/src/pages/Landing.jsx
+client/src/pages/Login.jsx
+client/src/pages/OCRPreview.jsx
+client/src/pages/Onboarding.jsx
+client/src/pages/OnboardingWizard.jsx
+client/src/pages/Pricing.jsx
+client/src/pages/Privacy.jsx
+client/src/pages/ProfileSettings.jsx
+client/src/pages/RequestAccess.jsx
+client/src/pages/SystemAdminDashboard.jsx
+client/src/pages/Terms.jsx
+client/src/pages/Users.jsx
+client/src/pages/__tests__/AIAssistant.test.jsx
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx
+client/src/pages/__tests__/AIInsights.test.jsx
+client/src/pages/__tests__/AIManager.test.jsx
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx
+client/src/pages/__tests__/BankStatementPreview.test.jsx
+client/src/pages/__tests__/Companies.test.jsx
+client/src/pages/__tests__/Dashboard.test.jsx
+client/src/pages/__tests__/DocumentInbox.test.jsx
+client/src/pages/__tests__/OCRPreview.test.jsx
+client/src/services/__tests__/aiAssistantAPI.test.jsx
+client/src/services/__tests__/aiInsightsAPI.test.jsx
+client/src/services/__tests__/api.interceptor.test.js
+client/src/services/__tests__/dashboardAPI.test.jsx
+client/src/services/__tests__/expensesAPI.test.jsx
+client/src/services/__tests__/invoicesAPI.test.js
+client/src/services/__tests__/ocrAPI.test.js
+client/src/services/aiAssistantAPI.js
+client/src/services/aiInsightsAPI.js
+client/src/services/aiInsightsMappers.js
+client/src/services/api.js
+client/src/services/auditLogsAPI.js
+client/src/services/authAPI.js
+client/src/services/bankStatementsAPI.js
+client/src/services/companiesAPI.js
+client/src/services/dashboardAPI.js
+client/src/services/expensesAPI.js
+client/src/services/exportsAPI.js
+client/src/services/gdprAPI.js
+client/src/services/invoicesAPI.js
+client/src/services/ocrAPI.js
+client/src/services/plansAPI.js
+client/src/services/systemAdminAPI.js
+client/src/services/usersAPI.js
+client/src/shared/ai/mutationIntentConfig.json
+client/src/test/AISuggestionCard.test.jsx
+client/src/test/setup.js
+client/src/tests/InvoiceForm.test.jsx
+client/src/tests/analytics-route-guard.test.jsx
+client/src/tests/routeConfig.test.jsx
+client/src/tests/routes.smoke.test.jsx
+client/src/tests/sidebar.test.jsx
+src/services/ai/README.md
+src/services/ai/aiAssistantService.js
+src/services/ai/aiAuditLogger.js
+src/services/ai/aiDataService.js
+src/services/ai/aiInsightsService.js
+src/services/ai/aiReadGateway.js
+src/services/ai/aiSuggestionService.js
+src/services/ai/approvalState.js
+src/services/ai/assistantAuthorization.js
+src/services/ai/assistantCapabilityContract.js
+src/services/ai/assistantResponseSchema.js
+src/services/ai/auditLogger.js
+src/services/ai/automation/automationAuditLogger.js
+src/services/ai/automation/automationContract.js
+src/services/ai/automation/automationEngine.js
+src/services/ai/automation/automationGuard.js
+src/services/ai/automation/detectors/anomalyDetector.js
+src/services/ai/automation/detectors/cashFlowRiskDetector.js
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js
+src/services/ai/automation/detectors/unmatchedBankTransactionDetector.js
+src/services/ai/automation/recommendationBuilder.js
+src/services/ai/cfo/cfoEngine.js
+src/services/ai/contextContract.js
+src/services/ai/documentIntakeAssistantService.js
+src/services/ai/eventBus.js
+src/services/ai/explainability.js
+src/services/ai/germanAccountingKnowledgeContract.js
+src/services/ai/governance.js
+src/services/ai/insightTypes.js
+src/services/ai/mutationIntent.js
+src/services/ai/promptRegistry.js
+src/services/ai/providerBudgetGuard.js
+src/services/ai/providerTimeout.js
+src/services/ai/providers/index.js
+src/services/ai/providers/mockProvider.js
+src/services/ai/providers/openaiProvider.js
+src/services/ai/providers/providerConfig.js
+src/services/ai/suggestionContract.js
+
+===== SUMMARY SNAPSHOT =====
+ D client/src/components/ai/AIDecisionLayer.jsx
+ D client/src/components/ai/AIFinancialControlPanel.jsx
+ D client/src/components/ai/core/AIIntelligenceZone.jsx
+ D client/src/components/ai/engine/AIFinancialEngine.jsx
+ D client/src/components/ai/live/AILiveFeed.jsx
+ D client/src/components/ai/live/AILiveStreamBridge.jsx
+ D client/src/components/ai/stream/AIStreamEngine.jsx
+ D client/src/hooks/useAIStream.js
+ M client/src/pages/AIAssistant.jsx
+ M client/src/pages/Dashboard.jsx
+ M src/services/ai/README.md
+ M src/services/ai/aiReadGateway.js
+ D src/services/ai/decision/decisionContract.js
+ D src/services/ai/decision/decisionService.js
+ D src/services/ai/decision/decisionValidator.js
+?? .architecture-archive/
+?? client/src/components/ai/cfo/
+?? client/src/components/ai/orchestrator/
+?? docs/AUDIT/
+?? src/services/ai/cfo/
+?? src/services/ai/eventBus.js

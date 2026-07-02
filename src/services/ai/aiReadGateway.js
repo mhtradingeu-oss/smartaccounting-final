@@ -1,4 +1,11 @@
+const cfoEngine = require('./cfo/cfoEngine');
 async function aiReadGateway(input) {
+  if (input?.type === 'CFO_INSIGHT') {
+    return {
+      status: 200,
+      body: await cfoEngine.analyze(input.payload || {}),
+    };
+  }
   // Canonical audit payload builder: always returns a full object, never undefined
   function buildAuditPayload({ normalized, safePrompt, meta, reason, overrides = {} }) {
     return {

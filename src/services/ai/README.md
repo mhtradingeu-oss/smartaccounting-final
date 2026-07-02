@@ -9,8 +9,17 @@
 - `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
 
 ## Disabled or experimental components
-- The `/decision` subfolder (`decisionContract.js`, `decisionService.js`, `decisionValidator.js`) is dormant: nothing in the current route graph imports it, so no decision-writing logic executes. It is kept for future decision workflows but treated as inactive (no API wiring, no scheduler triggers).
 
 ## Future components (not production)
-- The `decisionService` artifacts listed above are placeholders for a controlled, auditable decision capture flow; they must be explicitly wired into a guarded endpoint (with extra approvals and tests) before they can process live inputs.
 - Any additional automation detectors added under `automation/detectors/` should remain toggled off until their explainability metadata and audit logging are validated end-to-end.
+
+
+## UI-9.12 CFO single-brain architecture
+
+The active CFO intelligence path is now:
+
+routes -> aiReadGateway -> cfoEngine
+
+Archived legacy CFO and decision artifacts were moved outside active runtime under .architecture-archive. The active AI services no longer import CFO router, CFO controller, CFO connector bridge, or decision service files.
+
+The eventBus remains active for the normal AI read gateway flow and is not part of a legacy CFO routing chain.

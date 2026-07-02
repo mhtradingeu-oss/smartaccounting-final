@@ -13,8 +13,8 @@ import { isAIAssistantEnabled } from './featureFlags';
 export const APP_VERSION = appVersionData.APP_VERSION;
 
 export const FEATURE_FLAGS = {
-  GERMAN_TAX: { enabled: false, label: 'German VAT/Tax reporting' },
-  STRIPE_BILLING: { enabled: false, label: 'Stripe billing' },
+  GERMAN_TAX: { enabled: true, label: 'German VAT/Tax reporting' },
+  STRIPE_BILLING: { enabled: true, label: 'Stripe billing' },
   ELSTER_COMPLIANCE: { enabled: false, label: 'Elster/compliance' },
   AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
 };

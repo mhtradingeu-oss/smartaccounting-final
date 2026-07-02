@@ -30,8 +30,6 @@ import {
   createDraftFromReviewedIntake,
   recheckIntakeDocument,
 } from '../services/ocrAPI';
-import { expensesAPI } from '../services/expensesAPI';
-import { invoicesAPI } from '../services/invoicesAPI';
 import { isAIAssistantEnabled } from '../lib/featureFlags';
 import { formatApiError } from '../services/api';
 import ChatEmptyState from '../components/ChatEmptyState';
@@ -167,7 +165,6 @@ const AIAssistant = () => {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingError, setRecordingError] = useState(null);
   const [documentIntakeProgress, setDocumentIntakeProgress] = useState(null);
-  const [draftCreationStatus, setDraftCreationStatus] = useState(null);
   const [documentReviewOpen, setDocumentReviewOpen] = useState({});
   const [documentReviewForms, setDocumentReviewForms] = useState({});
   const [documentReviewReasons, setDocumentReviewReasons] = useState({});
@@ -717,7 +714,7 @@ const AIAssistant = () => {
       const message = formatApiError(
         err,
         'Unable to analyze the document. The attachment was not used to create or change accounting records.',
-      ).message;
+      );
       addLocalAssistantMessage({
         message,
         highlights: [
@@ -848,7 +845,7 @@ const AIAssistant = () => {
             speaker: 'assistant',
             role: 'assistant',
             text: '',
-            error: formatApiError(err, 'Unable to reach the assistant.').message,
+            error: formatApiError(err, 'Unable to reach the assistant.'),
             requestId: errorRequestId,
             createdAt: new Date().toISOString(),
             timestamp: new Date().toLocaleTimeString(),
@@ -948,7 +945,7 @@ const AIAssistant = () => {
         return;
       } else {
         updateAssistant({
-          error: formatApiError(err, 'Unable to reach the assistant.').message,
+          error: formatApiError(err, 'Unable to reach the assistant.'),
           requestId: err?.response?.data?.requestId ?? null,
         });
       }
@@ -978,233 +975,6 @@ const AIAssistant = () => {
         </ul>
       </div>
     );
-  };
-
-
-  const toDraftNumber = (value, fallback = 0) => {
-    if (value === null || value === undefined || value === '') {
-      return fallback;
-    }
-
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : fallback;
-    }
-
-    let normalized = String(value).trim().replace(/[^\d,.-]/g, '');
-
-    const hasComma = normalized.includes(',');
-    const hasDot = normalized.includes('.');
-
-    if (hasComma && hasDot) {
-      normalized = normalized.replace(/\./g, '').replace(',', '.');
-    } else if (hasComma) {
-      normalized = normalized.replace(',', '.');
-    }
-
-    const number = Number(normalized);
-    return Number.isFinite(number) ? number : fallback;
-  };
-
-  const toDraftVatRate = (value) => {
-    const number = toDraftNumber(value, 0.19);
-    if (!Number.isFinite(number) || number < 0) {
-      return 0.19;
-    }
-    return number > 1 ? number / 100 : number;
-  };
-
-  const getDocumentSourceNote = (analysis) => {
-    const document = analysis?.document || {};
-    const detectedCurrency = analysis?.extracted?.currency;
-    const parts = [
-      'Created from AI document intake review.',
-      document.id ? `Source document ID: ${document.id}.` : null,
-      document.originalName ? `Original file: ${document.originalName}.` : null,
-      analysis?.requestId ? `AI request ID: ${analysis.requestId}.` : null,
-      detectedCurrency
-        ? `Detected currency: ${String(detectedCurrency).toUpperCase()}.`
-        : 'Currency was not detected; EUR is assumed.',
-      'Human confirmed draft creation. Advisory AI suggestion only.',
-    ].filter(Boolean);
-    return parts.join(' ');
-  };
-
-  const getDocumentAttachmentIds = (analysis) => {
-    const documentId = analysis?.document?.id;
-    return documentId ? [documentId] : [];
-  };
-
-  const getDraftSuggestion = (analysis) => analysis?.draft?.payload || {};
-
-  const buildExpenseDraftPayloadFromAnalysis = (analysis) => {
-    const extracted = analysis?.extracted || {};
-    const classification = analysis?.classification || {};
-    const draftSuggestion = getDraftSuggestion(analysis);
-    const attachmentIds = getDocumentAttachmentIds(analysis);
-    const netAmount = toDraftNumber(extracted.netAmount ?? extracted.amount, 0);
-    const vatRate = toDraftVatRate(extracted.vatRate);
-    const vatAmount = toDraftNumber(extracted.vatAmount, +(netAmount * vatRate).toFixed(2));
-    const grossAmount = toDraftNumber(extracted.grossAmount, +(netAmount + vatAmount).toFixed(2));
-    const vendorName =
-      extracted.vendorName ||
-      extracted.supplierName ||
-      extracted.merchantName ||
-      extracted.counterpartyName ||
-      'Unknown vendor';
-
-    return {
-      companyId: activeCompanyId,
-      vendorName,
-      description:
-        extracted.description ||
-        extracted.documentNumber ||
-        `AI document intake draft for ${vendorName}`,
-      category: classification.category || extracted.category || 'general',
-      expenseDate:
-        extracted.documentDate ||
-        extracted.invoiceDate ||
-        extracted.date ||
-        new Date().toISOString().slice(0, 10),
-      currency: extracted.currency || 'EUR',
-      netAmount,
-      vatRate,
-      vatAmount,
-      grossAmount,
-      status: 'pending',
-      source: 'ai_document_intake',
-      ...(attachmentIds.length ? { attachments: attachmentIds } : {}),
-      notes: getDocumentSourceNote(analysis),
-      reason:
-        draftSuggestion.reason ||
-        'Human confirmed AI document intake suggestion for draft creation',
-      systemContext: {
-        ...(draftSuggestion.systemContext || {}),
-        source: 'ai_document_intake',
-        documentId: analysis?.document?.id || draftSuggestion.systemContext?.documentId || null,
-        requestId: analysis?.requestId || null,
-      },
-    };
-  };
-
-  const buildInvoiceDraftPayloadFromAnalysis = (analysis) => {
-    const extracted = analysis?.extracted || {};
-    const classification = analysis?.classification || {};
-    const draftSuggestion = getDraftSuggestion(analysis);
-    const attachmentIds = getDocumentAttachmentIds(analysis);
-    const netAmount = toDraftNumber(extracted.netAmount ?? extracted.amount, 0);
-    const vatRate = toDraftVatRate(extracted.vatRate);
-    const clientName =
-      extracted.customerName ||
-      extracted.clientName ||
-      extracted.buyerName ||
-      extracted.counterpartyName ||
-      'Review customer';
-
-    return {
-      companyId: activeCompanyId,
-      clientName,
-      date:
-        extracted.documentDate ||
-        extracted.invoiceDate ||
-        extracted.date ||
-        new Date().toISOString().slice(0, 10),
-      dueDate:
-        extracted.dueDate ||
-        extracted.documentDate ||
-        extracted.invoiceDate ||
-        extracted.date ||
-        new Date().toISOString().slice(0, 10),
-      currency: extracted.currency || 'EUR',
-      status: 'draft',
-      notes: getDocumentSourceNote(analysis),
-      reason:
-        draftSuggestion.reason ||
-        'Human confirmed AI document intake suggestion for invoice draft creation',
-      systemContext: {
-        ...(draftSuggestion.systemContext || {}),
-        source: 'ai_document_intake',
-        documentId: analysis?.document?.id || draftSuggestion.systemContext?.documentId || null,
-        requestId: analysis?.requestId || null,
-      },
-      ...(attachmentIds.length ? { attachments: attachmentIds } : {}),
-      items: [
-        {
-          description:
-            extracted.description ||
-            classification.category ||
-            extracted.documentNumber ||
-            'AI document intake line item',
-          quantity: 1,
-          unitPrice: netAmount,
-          vatRate,
-        },
-      ],
-    };
-  };
-
-  const handleCreateDraftFromAnalysis = async (analysis) => {
-    if (!analysis || isReadOnly || !activeCompanyId) {
-      return;
-    }
-
-    const suggestedAction = analysis.classification?.suggestedAction;
-    const isExpenseDraft = suggestedAction === 'create_expense_draft';
-    const isInvoiceDraft = suggestedAction === 'create_invoice_draft';
-
-    if (!isExpenseDraft && !isInvoiceDraft) {
-      addLocalAssistantMessage({
-        message:
-          'This document needs review or correction before a draft can be created. No accounting record was changed.',
-        highlights: ['Resolve validation warnings and missing fields before confirming a draft.'],
-        references: ['AI document intake safety policy'],
-      });
-      return;
-    }
-
-    setDraftCreationStatus('Creating draft...');
-    setIsAsking(true);
-
-    try {
-      if (isExpenseDraft) {
-        const result = await expensesAPI.create(buildExpenseDraftPayloadFromAnalysis(analysis));
-        const expense = result?.expense || result?.data?.expense || result;
-        addLocalAssistantMessage({
-          message:
-            'Expense draft created after your confirmation. Please review it before booking or posting.',
-          highlights: [
-            `Draft expense: ${expense?.vendorName || expense?.vendor || 'Created expense draft'}`,
-            'The original document was not automatically posted, approved, deleted, or reconciled.',
-          ],
-          references: ['Created through existing Expenses API', analysis?.document?.id].filter(Boolean),
-        });
-      }
-
-      if (isInvoiceDraft) {
-        const invoice = await invoicesAPI.create(buildInvoiceDraftPayloadFromAnalysis(analysis));
-        addLocalAssistantMessage({
-          message:
-            'Invoice draft created after your confirmation. Please review it before issuing or sending.',
-          highlights: [
-            `Draft invoice: ${invoice?.clientName || 'Created invoice draft'}`,
-            'The original document was not automatically issued, posted, approved, deleted, or reconciled.',
-          ],
-          references: ['Created through existing Invoices API', analysis?.document?.id].filter(Boolean),
-        });
-      }
-    } catch (err) {
-      const message = formatApiError(
-        err,
-        'Unable to create a draft from this document. No accounting record was changed.',
-      ).message;
-      addLocalAssistantMessage({
-        message,
-        highlights: ['No invoice, expense, posting, approval, deletion, or reconciliation was created.'],
-        references: ['AI document intake confirmation path'],
-      });
-    } finally {
-      setDraftCreationStatus(null);
-      setIsAsking(false);
-    }
   };
 
   const normalizeReviewFormValue = (value) => {
@@ -1406,7 +1176,7 @@ const AIAssistant = () => {
         [messageId]: { type: 'success', message: 'Recheck complete' },
       }));
     } catch (err) {
-      const message = formatApiError(err, 'Unable to re-check document.').message;
+      const message = formatApiError(err, 'Unable to re-check document.');
       setDocumentRecheckStatus((prev) => ({
         ...prev,
         [messageId]: { type: 'error', message },
@@ -1465,7 +1235,7 @@ const AIAssistant = () => {
         },
       }));
     } catch (err) {
-      const message = formatApiError(err, 'Unable to create draft from reviewed values.').message;
+      const message = formatApiError(err, 'Unable to create draft from reviewed values.');
       setDocumentDraftStatus((prev) => ({
         ...prev,
         [messageId]: { type: 'error', message },
@@ -1932,7 +1702,7 @@ const AIAssistant = () => {
   }
 
   if (contextError) {
-    if (contextError.type === 'plan_restricted') {
+    if (typeof contextError === 'object' && contextError.type === 'plan_restricted') {
       return (
         <PlanRestrictedState
           feature="AI assistant"
@@ -1945,7 +1715,11 @@ const AIAssistant = () => {
       <>
         <EmptyState
           title="Unable to load the AI assistant"
-          description={contextError.message || 'Please try again later.'}
+          description={
+            typeof contextError === 'string'
+              ? contextError
+              : contextError.message || 'Please try again later.'
+          }
           action={
             <Button variant="primary" onClick={() => window.location.reload()}>
               Retry

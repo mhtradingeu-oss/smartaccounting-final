@@ -37,10 +37,17 @@ const { cache } = require('./lib/cache');
 const { sequelize } = require('./models');
 
 const app = express();
-const API_PREFIX = process.env.API_BASE_URL || '/api';
+const normalizeApiPrefix = (value) => {
+  if (!value || /^https?:\/\//i.test(value)) {
+    return '/api';
+  }
+  const prefixed = value.startsWith('/') ? value : `/${value}`;
+  return prefixed.replace(/\/$/, '') || '/api';
+};
+const API_PREFIX = normalizeApiPrefix(process.env.API_BASE_URL);
 const EXPRESS_API_PREFIX = '/api';
 app.set('apiPrefix', API_PREFIX);
-const normalizedApiPrefix = API_PREFIX.replace(/\/$/, '');
+const normalizedApiPrefix = API_PREFIX;
 
 const registerPublicMonitorEndpoint = (path, handler) => {
   app.get(path, handler);
@@ -278,6 +285,7 @@ registerPublicMonitorEndpoint('/metrics', metricsHandler);
 app.use(EXPRESS_API_PREFIX, createApiTimeoutMiddleware());
 
 // Mount public auth routes BEFORE authentication middleware
+app.use('/auth', authRoutes);
 app.use(`${EXPRESS_API_PREFIX}/auth`, authRoutes);
 
 // Authentication & RBAC (protect all other /api routes)

@@ -1,0 +1,188 @@
+
+====================================
+🧠 AI DUPLICATION + TRUTH SCAN
+====================================
+
+
+[1. AI UI DUPLICATION CHECK]
+client/src/pages/ai-hub/AiHub.jsx:2:import AIAssistant from "../AIAssistant";
+client/src/pages/ai-hub/AiHub.jsx:3:import AIInsights from "../AIInsights";
+client/src/pages/ai-hub/AiHub.jsx:4:import AIManager from "../AIManager";
+client/src/pages/ai-hub/AiHub.jsx:7:export default function AiHub() {
+client/src/pages/ai-hub/AiHub.jsx:36:              <AIAssistant />
+client/src/pages/ai-hub/AiHub.jsx:42:              <AIInsights />
+client/src/pages/ai-hub/AiHub.jsx:48:              <AIManager />
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/pages/AIInsights.jsx:18:const AIInsights = () => {
+client/src/pages/AIInsights.jsx:207:export default AIInsights;
+client/src/pages/__tests__/AIInsights.test.jsx:6:import AIInsights from '../AIInsights';
+client/src/pages/__tests__/AIInsights.test.jsx:69:          <AIInsights />
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+
+
+[2. AI API DUPLICATION FLOW]
+client/src/pages/AIAssistant.jsx:27:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIAssistant.jsx:343:      aiAssistantAPI.reset();
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:374:            aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/components/__tests__/GlobalAICompanion.test.jsx:19:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:20:  aiAssistantAPI: {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:21:    askIntent: vi.fn(),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:40:    aiAssistantAPI.askIntent.mockResolvedValue({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:91:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:111:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:135:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/services/aiAssistantAPI.js:1:import AIControlRouter from "./orchestratorBridge/AIControlRouter";
+client/src/services/aiAssistantAPI.js:48:export const aiAssistantAPI = {
+client/src/services/aiAssistantAPI.js:53:  async getContext({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:75:  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
+client/src/services/aiAssistantAPI.js:87:  async askIntentStream({
+client/src/services/aiAssistantAPI.js:157:  async startSession({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:187:export default aiAssistantAPI;
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:4:import aiAssistantAPI from "../aiAssistantAPI";
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:7:export const AIControlRouter = {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:11:  async askIntent(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:15:      fallback: () => aiAssistantAPI.askIntent(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:22:  async askIntentStream(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:26:      fallback: () => aiAssistantAPI.askIntentStream(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:33:  async startSession(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:37:      fallback: () => aiAssistantAPI.startSession(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:44:  async getContext(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:48:      fallback: () => aiAssistantAPI.getContext(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:53:export default AIControlRouter;
+client/src/pages/__tests__/AIManager.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIManager.test.jsx:14:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:15:  aiAssistantAPI: {
+client/src/pages/__tests__/AIManager.test.jsx:16:    getContext: vi.fn(),
+client/src/pages/__tests__/AIManager.test.jsx:34:    aiAssistantAPI.getContext.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:79:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:217:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:29:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:30:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:31:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:32:    getContext: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:33:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:81:    expect(aiAssistantAPI.getContext).not.toHaveBeenCalled();
+client/src/services/__tests__/aiAssistantAPI.test.jsx:2:import { aiAssistantAPI } from '../aiAssistantAPI';
+client/src/services/__tests__/aiAssistantAPI.test.jsx:14:describe('aiAssistantAPI', () => {
+client/src/services/__tests__/aiAssistantAPI.test.jsx:16:    aiAssistantAPI.reset();
+client/src/services/__tests__/aiAssistantAPI.test.jsx:22:    const firstContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:23:    const secondContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:28:    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:29:    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:34:    const otherContext = await aiAssistantAPI.getContext({ companyId: 22 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:41:    await aiAssistantAPI.getContext({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:50:    await aiAssistantAPI.startSession({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:59:    await aiAssistantAPI.askIntent({
+client/src/pages/__tests__/AIAssistant.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:36:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:37:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:38:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:39:    getContext: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:40:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:41:    askIntentStream: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:104:  aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:934:    aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/components/GlobalAICompanion.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/components/GlobalAICompanion.jsx:81:      const response = await aiAssistantAPI.askIntent({
+client/src/pages/ai-hub/AiHub.jsx:5:import { aiAssistantAPI } from "../../services/aiAssistantAPI";
+client/src/lib/resetClientState.js:3:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/lib/resetClientState.js:17:  aiAssistantAPI.reset();
+client/src/pages/AIManager.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIManager.jsx:323:        aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+
+
+[3. AI ROUTING OVERLAP]
+281:    path: '/ai-advisor',
+289:    path: '/ai-assistant',
+297:    path: '/ai-manager',
+558:        <Route path="/ai" element={<AiHub />} />
+
+
+[4. AI HUB INTEGRATION CHECK]
+client/src/pages/ai-hub/AiHub.jsx:2:import AIAssistant from "../AIAssistant";
+client/src/pages/ai-hub/AiHub.jsx:3:import AIInsights from "../AIInsights";
+client/src/pages/ai-hub/AiHub.jsx:4:import AIManager from "../AIManager";
+client/src/pages/ai-hub/AiHub.jsx:36:              <AIAssistant />
+client/src/pages/ai-hub/AiHub.jsx:42:              <AIInsights />
+client/src/pages/ai-hub/AiHub.jsx:48:              <AIManager />
+
+
+[5. GLOBAL AI ENTRY POINTS]
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:3:import { routeToOrchestrator } from "./useAIOrchestrator";
+client/src/services/ai/orchestratorBridge/useAIOrchestrator.js:2:// This layer safely routes AI calls to AIOrchestrator WITHOUT breaking existing API
+client/src/services/ai/orchestratorBridge/useAIOrchestrator.js:25:    console.warn("[AIOrchestrator fallback]", error.message);
+client/src/components/GlobalAICompanion.jsx:55:export default function GlobalAICompanion() {
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:499:        <AIOrchestrator
+client/src/components/Layout.jsx:7:import GlobalAICompanion from './GlobalAICompanion';
+client/src/components/Layout.jsx:128:      {status === 'authenticated' && <GlobalAICompanion />}
+client/src/components/__tests__/GlobalAICompanion.test.jsx:37:describe('GlobalAICompanion in authenticated layout', () => {
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:3:export default function AIOrchestrator({ state = {} }) {
+
+
+[6. AI SERVICE ARCHITECTURE]
+orchestratorBridge
+
+
+[7. AI CONTROL LAYER CHECK]
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:3:import { routeToOrchestrator } from "./useAIOrchestrator";
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:7:export const AIControlRouter = {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:53:export default AIControlRouter;
+
+
+[8. FILE COUNT (UI COMPLEXITY)]
+      52
+
+
+====================================
+📌 END DUPLICATION REPORT
+====================================

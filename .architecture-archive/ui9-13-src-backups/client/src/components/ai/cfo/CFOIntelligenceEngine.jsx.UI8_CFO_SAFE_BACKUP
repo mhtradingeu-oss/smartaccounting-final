@@ -1,0 +1,34 @@
+import React, { useMemo } from "react";
+
+export default function CFOIntelligenceEngine({ data = {} }) {
+
+  const insights = useMemo(() => {
+    return {
+      cashflowRisk: "LOW",
+      revenueTrend: "STABLE",
+      expenseAlert: "NORMAL",
+      liquidity: "HEALTHY"
+    };
+  }, [data]);
+
+  return (
+    <div className="rounded-xl border p-4 bg-black/5 text-sm">
+
+      <div className="font-bold mb-3">
+        🧠 UI-8 CFO INTELLIGENCE ENGINE
+      </div>
+
+      <div className="space-y-1 opacity-80">
+        <div>Cashflow Risk: {insights.cashflowRisk}</div>
+        <div>Revenue Trend: {insights.revenueTrend}</div>
+        <div>Expense Status: {insights.expenseAlert}</div>
+        <div>Liquidity: {insights.liquidity}</div>
+      </div>
+
+      <div className="mt-3 text-green-600 font-semibold">
+        AUTONOMOUS CFO MODE ACTIVE
+      </div>
+
+    </div>
+  );
+}

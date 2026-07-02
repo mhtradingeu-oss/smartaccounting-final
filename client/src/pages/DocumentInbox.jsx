@@ -103,7 +103,13 @@ const DocumentInbox = () => {
   }, [activeCompanyId, selectedFilter]);
 
   useEffect(() => {
-    loadDocuments();
+    const timeoutId = window.setTimeout(() => {
+      void loadDocuments();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [loadDocuments]);
 
   const stats = useMemo(() => {

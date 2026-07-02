@@ -1,0 +1,1700 @@
+=======================================
+🧠 FULL AI CONTROL PLANE TRUTH AUDIT
+=======================================
+Tue Jun 30 10:08:27 CEST 2026
+
+===== 1. ALL AI ENTRY POINTS (FRONTEND) =====
+client/src/services/aiAssistantAPI.js:47:export const aiAssistantAPI = {
+client/src/services/aiAssistantAPI.js:52:  async getContext({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:74:  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
+client/src/services/aiAssistantAPI.js:86:  async askIntentStream({
+client/src/services/aiAssistantAPI.js:156:  async startSession({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:186:export default aiAssistantAPI;
+client/src/services/__tests__/aiAssistantAPI.test.jsx:2:import { aiAssistantAPI } from '../aiAssistantAPI';
+client/src/services/__tests__/aiAssistantAPI.test.jsx:14:describe('aiAssistantAPI', () => {
+client/src/services/__tests__/aiAssistantAPI.test.jsx:16:    aiAssistantAPI.reset();
+client/src/services/__tests__/aiAssistantAPI.test.jsx:22:    const firstContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:23:    const secondContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:28:    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:29:    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:34:    const otherContext = await aiAssistantAPI.getContext({ companyId: 22 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:41:    await aiAssistantAPI.getContext({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:50:    await aiAssistantAPI.startSession({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:59:    await aiAssistantAPI.askIntent({
+client/src/lib/featureFlags.js:37:export const isAIAssistantEnabled = () => aiAssistantEnabled;
+client/src/lib/featureFlags.js:39:export const setAIAssistantEnabled = (value) => {
+client/src/lib/featureFlags.js:43:export const resetAIAssistantEnabled = () => {
+client/src/pages/AIAssistant.jsx:27:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:343:      aiAssistantAPI.reset();
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:374:            aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/components/Layout.jsx:7:import GlobalAICompanion from './GlobalAICompanion';
+client/src/components/Layout.jsx:128:      {status === 'authenticated' && <GlobalAICompanion />}
+client/src/components/GlobalAICompanion.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/components/GlobalAICompanion.jsx:55:export default function GlobalAICompanion() {
+client/src/components/GlobalAICompanion.jsx:81:      const response = await aiAssistantAPI.askIntent({
+client/src/tests/routes.smoke.test.jsx:18:vi.mock('../pages/AIAssistant', () => ({
+client/src/tests/routes.smoke.test.jsx:22:vi.mock('../pages/AIManager', () => ({
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:3:export default function AIOrchestrator({ state = {} }) {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/components/__tests__/GlobalAICompanion.test.jsx:19:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:20:  aiAssistantAPI: {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:21:    askIntent: vi.fn(),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:37:describe('GlobalAICompanion in authenticated layout', () => {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:40:    aiAssistantAPI.askIntent.mockResolvedValue({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:91:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:111:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:135:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/lib/resetClientState.js:3:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/lib/resetClientState.js:17:  aiAssistantAPI.reset();
+client/src/lib/constants.js:3:import { isAIAssistantEnabled } from './featureFlags';
+client/src/lib/constants.js:19:  AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
+client/src/pages/AIManager.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:323:        aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/App.jsx:80:const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+client/src/App.jsx:81:const AIManager = lazy(() => import('./pages/AIManager'));
+client/src/App.jsx:290:    element: renderProtectedRoute(<AIAssistant />),
+client/src/App.jsx:291:    componentFile: 'client/src/pages/AIAssistant.jsx',
+client/src/App.jsx:298:    element: renderProtectedRoute(<AIManager />),
+client/src/App.jsx:299:    componentFile: 'client/src/pages/AIManager.jsx',
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIManager.test.jsx:14:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:15:  aiAssistantAPI: {
+client/src/pages/__tests__/AIManager.test.jsx:16:    getContext: vi.fn(),
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:34:    aiAssistantAPI.getContext.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:79:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:217:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:29:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:30:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:31:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:32:    getContext: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:33:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:81:    expect(aiAssistantAPI.getContext).not.toHaveBeenCalled();
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:499:        <AIOrchestrator
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:36:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:37:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:38:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:39:    getContext: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:40:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:41:    askIntentStream: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:104:  aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:934:    aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+
+===== 2. AI FRONTEND API CALLS (CRITICAL) =====
+client/src/services/authAPI.js:1:import api, { SKIP_FORCE_LOGOUT_ON_401_FLAG } from './api';
+client/src/services/auditLogsAPI.js:1:import api from './api';
+client/src/services/aiInsightsAPI.js:3:import api from './api';
+client/src/services/usersAPI.js:2:import api from './api';
+client/src/services/systemAdminAPI.js:1:import api from './api';
+client/src/services/dashboardAPI.js:1:import api from './api';
+client/src/services/dashboardAPI.js:190:  _fetchCount: {},
+client/src/services/dashboardAPI.js:209:    const fetchPromise = (async () => {
+client/src/services/dashboardAPI.js:211:        this._fetchCount[cacheKey] = (this._fetchCount[cacheKey] || 0) + 1;
+client/src/services/dashboardAPI.js:212:        logDev(`fetch #${this._fetchCount[cacheKey]}`);
+client/src/services/dashboardAPI.js:251:    this.inFlight[cacheKey] = fetchPromise;
+client/src/services/dashboardAPI.js:252:    return fetchPromise;
+client/src/services/dashboardAPI.js:259:      delete this._fetchCount[cacheKey];
+client/src/services/dashboardAPI.js:265:    this._fetchCount = {};
+client/src/services/plansAPI.js:1:import api from './api';
+client/src/services/plansAPI.js:3:export const fetchPublicPlans = async () => {
+client/src/services/bankStatementsAPI.js:1:import api from './api';
+client/src/services/expensesAPI.js:1:import api from './api';
+client/src/services/expensesAPI.js:104:  _fetchCount: {},
+client/src/services/expensesAPI.js:124:    const fetchPromise = (async () => {
+client/src/services/expensesAPI.js:126:        this._fetchCount[companyId] = (this._fetchCount[companyId] || 0) + 1;
+client/src/services/expensesAPI.js:127:        logDev(`fetch #${this._fetchCount[companyId]} for ${companyId}`);
+client/src/services/expensesAPI.js:172:    this.inFlight[companyId] = fetchPromise;
+client/src/services/expensesAPI.js:173:    return fetchPromise;
+client/src/services/expensesAPI.js:210:      delete this._fetchCount[companyId];
+client/src/services/ocrAPI.js:1:import api from './api';
+client/src/services/gdprAPI.js:1:import api from './api';
+client/src/services/__tests__/api.interceptor.test.js:2:import api, { SKIP_FORCE_LOGOUT_ON_401_FLAG } from '../api';
+client/src/services/__tests__/aiAssistantAPI.test.jsx:4:import api from '../api';
+client/src/services/__tests__/aiAssistantAPI.test.jsx:6:vi.mock('../api', () => ({
+client/src/services/__tests__/invoicesAPI.test.js:3:import api from '../api';
+client/src/services/__tests__/invoicesAPI.test.js:5:vi.mock('../api', () => ({
+client/src/services/__tests__/ocrAPI.test.js:2:import api from '../api';
+client/src/services/__tests__/ocrAPI.test.js:9:vi.mock('../api', () => ({
+client/src/services/companiesAPI.js:1:import api from './api';
+client/src/services/companiesAPI.js:15:  _fetchCount: 0,
+client/src/services/companiesAPI.js:48:    const fetchPromise = (async () => {
+client/src/services/companiesAPI.js:50:        this._fetchCount += 1;
+client/src/services/companiesAPI.js:52:        console.log(`[companiesAPI] fetch #${this._fetchCount}`);
+client/src/services/companiesAPI.js:89:          console.error('[companiesAPI] fetch error', err);
+client/src/services/companiesAPI.js:97:    this.inFlight = fetchPromise;
+client/src/services/companiesAPI.js:98:    return fetchPromise;
+client/src/services/companiesAPI.js:103:    this._fetchCount = 0;
+client/src/services/__tests__/dashboardAPI.test.jsx:3:import api from '../api';
+client/src/services/__tests__/dashboardAPI.test.jsx:5:vi.mock('../api', () => ({
+client/src/services/__tests__/dashboardAPI.test.jsx:23:  it('shares a single fetch for concurrent calls', async () => {
+client/src/services/aiAssistantAPI.js:1:import api, { API_BASE_URL } from './api';
+client/src/services/aiAssistantAPI.js:61:      .get(`${ENDPOINT}/assistant/context`, { headers: buildHeaders(companyId) })
+client/src/services/aiAssistantAPI.js:81:    const response = await api.post(`${ENDPOINT}/assistant`, payload, {
+client/src/services/aiAssistantAPI.js:101:    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/assistant/stream`, {
+client/src/services/aiAssistantAPI.js:115:      const err = new Error(errorPayload.message || 'Unable to reach the assistant.');
+client/src/services/aiAssistantAPI.js:151:    const response = await api.post('/ai/voice/assistant', payload, {
+client/src/services/api.js:1:import axios from 'axios';
+client/src/services/api.js:7: * - Production: /api (Nginx proxy)
+client/src/services/api.js:12:let API_BASE_URL = '/api';
+client/src/services/api.js:15:  const isSafe = /^https?:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(raw);
+client/src/services/api.js:18:      'VITE_API_URL must not use docker service names in browser. Use http://localhost:5001/api or leave empty.',
+client/src/services/api.js:25:      `[api] Invalid VITE_API_URL '${raw}'. Docker service names are not allowed in browser. Falling back to '/api'.`,
+client/src/services/api.js:29:  console.info('[api] Using "/api" via Vite proxy');
+client/src/services/api.js:34:const api = axios.create({
+client/src/services/invoicesAPI.js:1:import api from './api';
+client/src/services/__tests__/expensesAPI.test.jsx:3:import api from '../api';
+client/src/services/__tests__/expensesAPI.test.jsx:5:vi.mock('../api', () => ({
+client/src/services/__tests__/expensesAPI.test.jsx:20:    expensesAPI._fetchCount = {};
+client/src/services/__tests__/expensesAPI.test.jsx:24:  it('shares a single fetch across concurrent calls', async () => {
+client/src/services/__tests__/aiInsightsAPI.test.jsx:4:import api from '../api';
+client/src/services/__tests__/aiInsightsAPI.test.jsx:6:vi.mock('../api', () => ({
+client/src/services/exportsAPI.js:1:import api from './api';
+
+===== 3. BACKEND AI EXECUTION GRAPH =====
+src/services/ai/automation/automationEngine.js:1:// automationEngine.js
+src/services/ai/README.md:4:- `aiReadGateway.js` orchestrates every `/api/ai` read request, enforces read-only contracts, attaches disclaimers, and now logs the `requestId`/`companyId` pair into the immutable audit trail.
+src/services/ai/README.md:7:- `aiDataService.js`, `aiAssistantService.js`, and `aiSuggestionService.js` contain the read-only AI handlers (summaries, assistant prompts, suggestions) and all bubble through `requiresHumanApproval`/`rateLimit` guards before returning advisory-only responses.
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:9:- `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
+src/services/ai/README.md:21:routes -> aiReadGateway -> cfoEngine
+src/services/ai/orchestrator/AIOrchestrator.js:3:const aiReadGateway = require("../aiReadGateway");
+src/services/ai/orchestrator/AIOrchestrator.js:4:const aiInsightsService = require("../aiInsightsService");
+src/services/ai/orchestrator/AIOrchestrator.js:5:const aiAssistantService = require("../aiAssistantService");
+src/services/ai/orchestrator/AIOrchestrator.js:6:const automationEngine = require("../automation/automationEngine");
+src/services/ai/orchestrator/AIOrchestrator.js:7:const cfoEngine = require("../cfo/cfoEngine");
+src/services/ai/orchestrator/AIOrchestrator.js:21:        result = await aiAssistantService.handle(payload, context);
+src/services/ai/orchestrator/AIOrchestrator.js:25:        result = await aiInsightsService.generate(payload, context);
+src/services/ai/orchestrator/AIOrchestrator.js:29:        result = await automationEngine.execute(payload, context);
+src/services/ai/orchestrator/AIOrchestrator.js:33:        result = await cfoEngine.analyze(payload, context);
+src/services/ai/orchestrator/AIOrchestrator.js:38:        result = await aiReadGateway({ payload, context });
+src/services/ai/aiReadGateway.js:1:const cfoEngine = require('./cfo/cfoEngine');
+src/services/ai/aiReadGateway.js:2:async function aiReadGateway(input) {
+src/services/ai/aiReadGateway.js:6:      body: await cfoEngine.analyze(input.payload || {}),
+src/services/ai/aiReadGateway.js:207:    console.error('[aiReadGateway][DEBUG] meta:', meta);
+src/services/ai/aiReadGateway.js:209:    console.error('[aiReadGateway][DEBUG] handler:', meta && meta.handler);
+src/services/ai/aiReadGateway.js:324:module.exports = aiReadGateway;
+src/services/ai/aiInsightsService.js:154:        '[aiInsightsService] listInsightsForClient: schema or query error in demo mode',
+src/services/ai/aiInsightsService.js:269:      console.debug('[aiInsightsService] exportInsights: schema or query error in demo mode', {
+
+===== 4. AI ORCHESTRATION CHECK =====
+src/services/ai/orchestrator/AIOrchestrator.js:12:async function AIOrchestrator(request) {
+src/services/ai/orchestrator/AIOrchestrator.js:71:module.exports = AIOrchestrator;
+src/services/ai/README.md:9:- `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
+src/services/ai/README.md:25:The eventBus remains active for the normal AI read gateway flow and is not part of a legacy CFO routing chain.
+src/services/ai/eventBus.js:18:  bus.emit('ai:requested', event);
+src/services/ai/eventBus.js:22:    bus.emit('ai:succeeded', event);
+src/services/ai/eventBus.js:25:    bus.emit('ai:failed', {
+
+===== 5. DECISION + CONTRACT SYSTEM =====
+src/services/ai/orchestrator/AIOrchestrator.js:9:const { validateAssistantResponse } = require("../assistantResponseSchema");
+src/services/ai/orchestrator/AIOrchestrator.js:10:const { validateSuggestionContract } = require("../suggestionContract");
+src/services/ai/orchestrator/AIOrchestrator.js:44:      validateAssistantResponse(result.data);
+src/services/ai/orchestrator/AIOrchestrator.js:48:      validateSuggestionContract(result.data);
+src/services/ai/aiDataService.js:4:const { checkTableAndColumns } = require('../guards/schemaGuard');
+src/services/ai/aiDataService.js:23:    // Guard: check ai_insights schema (read-only)
+src/services/ai/aiDataService.js:37:      const err = new Error('AI schema missing or incomplete');
+src/services/ai/aiReadGateway.js:22:  // 1️⃣ Normalize input and define safePrompt at the very top (per audit contract)
+src/services/ai/aiReadGateway.js:23:  const { redactPII } = require('./governance');
+src/services/ai/aiReadGateway.js:113:    // STRICT: Check company context BEFORE contract validation, even if required fields are missing
+src/services/ai/aiReadGateway.js:162:    // Only run contract validation if company context and feature flag pass
+src/services/ai/aiReadGateway.js:163:    // (fall through to contract validation below)
+src/services/ai/aiReadGateway.js:166:  // Ensure logging for all successful (status: 200) returns before contract validation
+src/services/ai/aiReadGateway.js:169:  // 4️⃣ Mutation intent detection BEFORE contract validation
+src/services/ai/aiReadGateway.js:197:    // Provide a default meta if missing, to ensure contract response
+src/services/ai/aiReadGateway.js:287:  // 9️⃣ Shape FINAL contract response
+src/services/ai/aiReadGateway.js:293:  // Always return a contract-shaped response, even if data is undefined
+src/services/ai/aiReadGateway.js:294:  // Always include disclaimer in contract response
+src/services/ai/approvalState.js:1:// Approval state model and API contract for human-in-the-loop
+src/services/ai/approvalState.js:18: * API contract for accepting/rejecting AI suggestions
+src/services/taxCalculator.js:424:  validateGermanTaxCompliance(reportData, reportType) {
+src/services/ai/automation/automationContract.js:41:function validateAutomationSuggestion(suggestion) {
+src/services/ai/automation/automationContract.js:57:  validateAutomationSuggestion,
+src/services/ai/automation/detectors/anomalyDetector.js:5:  // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
+src/services/ai/README.md:4:- `aiReadGateway.js` orchestrates every `/api/ai` read request, enforces read-only contracts, attaches disclaimers, and now logs the `requestId`/`companyId` pair into the immutable audit trail.
+src/services/ai/README.md:6:- `governance.js`, `contextContract.js`, `mutationIntent.js`, `promptRegistry.js`, `explainability.js`, and `insightTypes.js` form the compliance toolbox that redacts PII, enforces purpose/policy, detects mutation intent, and surfaces explainability data.
+src/services/ai/README.md:7:- `aiDataService.js`, `aiAssistantService.js`, and `aiSuggestionService.js` contain the read-only AI handlers (summaries, assistant prompts, suggestions) and all bubble through `requiresHumanApproval`/`rateLimit` guards before returning advisory-only responses.
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:9:- `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
+src/services/ai/README.md:14:- Any additional automation detectors added under `automation/detectors/` should remain toggled off until their explainability metadata and audit logging are validated end-to-end.
+src/services/ai/providers/openaiProvider.js:3:const { validateAssistantResponse } = require('../assistantResponseSchema');
+src/services/ai/providers/openaiProvider.js:28:          'Return JSON only with the required schema fields.',
+src/services/ai/providers/openaiProvider.js:95:  const validation = validateAssistantResponse(payload);
+src/services/ai/providers/openaiProvider.js:97:    const err = new Error('OpenAI provider response failed schema validation');
+src/services/documentAnalysisService.js:69:      const vatCheck = vatComplianceService.validateTransaction({
+src/services/documentAnalysisService.js:131:      warnings.push('Document type could not be validated.');
+src/services/ai/providers/mockProvider.js:3:const { validateAssistantResponse } = require('../assistantResponseSchema');
+src/services/ai/providers/mockProvider.js:53:  const validation = validateAssistantResponse(response);
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:9:// eslint-disable-next-line no-unused-vars -- context reserved for AI explainability
+src/services/ai/aiAssistantService.js:2:const { redactPII } = require('./governance');
+src/services/ai/aiAssistantService.js:3:const { validateAssistantResponse } = require('./assistantResponseSchema');
+src/services/ai/aiAssistantService.js:862:  const validation = validateAssistantResponse(response);
+src/services/ai/aiAssistantService.js:997:    const validation = validateAssistantResponse(providerResponse);
+src/services/ai/automation/detectors/unmatchedBankTransactionDetector.js:9:// eslint-disable-next-line no-unused-vars -- context reserved for AI explainability
+src/services/guards/schemaGuard.js:1:// src/services/guards/schemaGuard.js
+src/services/guards/schemaGuard.js:2:// Runtime schema guard for optional modules (AI, OCR, etc.)
+src/services/guards/schemaGuard.js:5:// In-memory cache for schema checks
+src/services/ai/automation/automationGuard.js:2:// Enforces Phase 13 gates: no mutation, no tax, scoped automation, explainability, audit.
+src/services/ai/automation/automationGuard.js:4:// Defensive guard functions for automation engine (read-only, no mutation)
+src/services/ai/automation/automationGuard.js:26:  // Use contract validator
+src/services/ai/automation/automationGuard.js:27:  const { validateAutomationSuggestion } = require('./automationContract');
+src/services/ai/automation/automationGuard.js:28:  validateAutomationSuggestion(suggestion);
+src/services/ai/aiSuggestionService.js:1:const { validateSuggestionContract } = require('./suggestionContract');
+src/services/ai/aiSuggestionService.js:6:  // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
+src/services/ai/aiSuggestionService.js:28:  // Validate contract
+src/services/ai/aiSuggestionService.js:29:  validateSuggestionContract(suggestion);
+src/services/ai/auditLogger.js:10: * @param {Object} params.aiOutput - The AI output (with explainability)
+src/services/ai/promptRegistry.js:19:      'Return JSON only and match the provided schema exactly for required fields.',
+src/services/ai/assistantResponseSchema.js:16:const validateAssistantResponse = (payload) => assistantResponseSchema.safeParse(payload);
+src/services/ai/assistantResponseSchema.js:18:module.exports = { assistantResponseSchema, validateAssistantResponse };
+src/services/ai/aiAuditLogger.js:5:const { redactPII } = require('./governance');
+src/services/ai/aiInsightsService.js:6:const { AIInsight, AIInsightDecision, Company } = require('../../models');
+src/services/ai/aiInsightsService.js:9:const { checkTableAndColumns } = require('../guards/schemaGuard');
+src/services/ai/aiInsightsService.js:28:    const err = new Error('AI schema missing or incomplete');
+src/services/ai/aiInsightsService.js:109:        confidenceScore: anomaly.explainability.confidence,
+src/services/ai/aiInsightsService.js:110:        summary: anomaly.explainability.why,
+src/services/ai/aiInsightsService.js:111:        why: anomaly.explainability.why,
+src/services/ai/aiInsightsService.js:112:        legalContext: anomaly.explainability.legalContext,
+src/services/ai/aiInsightsService.js:113:        evidence: anomaly.explainability.dataPoints,
+src/services/ai/aiInsightsService.js:114:        ruleId: anomaly.explainability.ruleOrModel,
+src/services/ai/aiInsightsService.js:139:    include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/services/ai/aiInsightsService.js:149:    // Graceful degradation: in demo or schema-missing scenarios, return empty insights array
+src/services/ai/aiInsightsService.js:154:        '[aiInsightsService] listInsightsForClient: schema or query error in demo mode',
+src/services/ai/aiInsightsService.js:166:async function decideInsight(companyId, insightId, actorUser, decision, reason) {
+src/services/ai/aiInsightsService.js:191:  const decisionObj = await AIInsightDecision.create({
+src/services/ai/aiInsightsService.js:215:      include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/services/ai/aiInsightsService.js:266:    // Graceful degradation: in demo or schema-missing scenarios, return empty export
+src/services/ai/aiInsightsService.js:269:      console.debug('[aiInsightsService] exportInsights: schema or query error in demo mode', {
+src/services/ai/aiInsightsService.js:284:  decideInsight,
+src/services/ai/insightTypes.js:2:const { buildExplainability } = require('./explainability');
+src/services/ai/insightTypes.js:14:    explainability: buildExplainability({
+src/services/ai/insightTypes.js:34:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:51:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:72:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:86:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:105:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:129:    explainability: buildExplainability({
+src/models/AuditLog.js:59:        validate: {
+src/services/ai/documentIntakeAssistantService.js:91:      schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:152:    'contract',
+src/services/ai/documentIntakeAssistantService.js:191:const validateManualOverride = (manualOverride = {}) => {
+src/services/ai/documentIntakeAssistantService.js:222:  validateManualOverride(manualOverride).valid;
+src/services/ai/documentIntakeAssistantService.js:228:  const validation = validateManualOverride(manualOverride);
+src/services/ai/documentIntakeAssistantService.js:394:    schemaVersion: 'accounting_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:566:    schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:575:  const decisionFingerprint = buildDecisionFingerprint(decisionBase);
+src/services/ai/documentIntakeAssistantService.js:582:    decisionFingerprint,
+src/services/ai/documentIntakeAssistantService.js:585:      decisionFingerprint,
+src/services/ai/documentIntakeAssistantService.js:669:const validateGermanReadiness = ({ documentType, direction, extracted }) => {
+src/services/ai/documentIntakeAssistantService.js:871:  const validation = validateGermanReadiness({ documentType: inferredType, direction, extracted });
+src/services/ai/documentIntakeAssistantService.js:917:  validateGermanReadiness,
+src/services/ai/documentIntakeAssistantService.js:925:  validateManualOverride,
+src/services/ai/suggestionContract.js:2:// Validates the AI suggestion contract for Phase 12
+src/services/ai/suggestionContract.js:5: * Throws if suggestion does not match contract
+src/services/ai/suggestionContract.js:8:function validateSuggestionContract(suggestion) {
+src/services/ai/suggestionContract.js:35:module.exports = { validateSuggestionContract };
+src/services/telemetry.js:14:  // Minimal safe contract: log to console
+src/services/vatComplianceService.js:15:  validateTransaction({ net, vat, gross, vatRate, currency }) {
+src/services/ai/explainability.js:1:// Explainability schema and helpers for all AI outputs
+src/services/ai/explainability.js:14: * Build an explainability object for an AI output
+src/services/bankStatementService.js:652:      const validation = this.validateTransaction(normalizedTransaction);
+src/services/bankStatementService.js:759:  validateTransaction(transaction) {
+src/services/taxUnifiedService.js:14:  validateTransactionFields(requiredFields, featureName) {
+src/services/taxUnifiedService.js:30:      this.validateTransactionFields(['transactionDate', 'type', 'amount', 'vatRate', 'vatAmount'], 'VAT return');
+src/services/taxUnifiedService.js:82:      this.validateTransactionFields(['transactionDate', 'type', 'amount', 'vatRate'], 'EÜR calculation');
+src/services/taxUnifiedService.js:170:<Elster xmlns="http://www.elster.de/elsterweb/schema/elster_common">
+src/models/AIInsight.js:8:      const decisionsModel = models?.AIInsightDecision;
+src/routes/compliance.js:13:router.post('/validate-transaction', async (req, res, next) => {
+src/routes/compliance.js:15:  const result = vatComplianceService.validateTransaction({ net, vat, gross, vatRate, currency });
+src/models/Invoice.js:32:        validate: {
+src/services/datevExportService.js:14:  // Example: returns a default schema; replace with real logic as needed
+src/routes/exports.js:10:  AIInsightDecision,
+src/routes/exports.js:451:      include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/routes/ocr.js:15:  validateUploadedFile,
+src/routes/ocr.js:80:const validateDocument = [
+src/routes/ocr.js:103:const validateOcrUpload = (req, res) => {
+src/routes/ocr.js:104:  const fileCheck = validateUploadedFile(req.file.path, ['pdf', 'png', 'jpg', 'tiff']);
+src/routes/ocr.js:177:    decisionFingerprint: intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null,
+src/routes/ocr.js:210:  decisionFingerprint: intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null,
+src/routes/ocr.js:226:  const fileCheck = validateUploadedFile(req.file.path, ['pdf', 'png', 'jpg', 'tiff']);
+src/routes/ocr.js:316:    validateDocument,
+src/routes/ocr.js:328:  validateDocument,
+src/routes/ocr.js:339:      const fileCheck = validateOcrUpload(req, res);
+src/routes/ocr.js:724:  let validatedManualOverride = null;
+src/routes/ocr.js:726:    const manualOverrideValidation = documentIntakeAssistantService.validateManualOverride(manualOverride);
+src/routes/ocr.js:735:    validatedManualOverride = manualOverrideValidation.manualOverride;
+src/routes/ocr.js:775:        manualOverride: validatedManualOverride,
+src/routes/ocr.js:781:    const effectiveReviewedValues = validatedManualOverride
+src/routes/ocr.js:784:          manualOverride: validatedManualOverride,
+src/routes/ocr.js:809:    if (validatedManualOverride) {
+src/routes/ocr.js:810:      recheckedIntake.editablePayload.manualOverride = validatedManualOverride;
+src/routes/ocr.js:811:      recheckedIntake.manualOverride = validatedManualOverride;
+src/routes/ocr.js:814:        manualOverride: validatedManualOverride,
+src/routes/ocr.js:816:      recheckedIntake.lifecycle.manualOverride = validatedManualOverride;
+src/routes/ocr.js:851:        decisionFingerprint: recheckedIntake.decisionFingerprint,
+src/routes/ocr.js:870:  const providedFingerprint = String(req.body?.decisionFingerprint || '').trim();
+src/routes/ocr.js:890:    const currentFingerprint = intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null;
+src/routes/ocr.js:927:        documentIntakeAssistantService.validateManualOverride(storedManualOverride);
+src/routes/ocr.js:959:      decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1007:        decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1032:        decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1065:      decisionFingerprint: currentFingerprint,
+src/routes/ocr.js:1082:  validateDocument,
+src/routes/ocr.js:1093:      const fileCheck = validateUploadedFile(req.file.path, ['pdf', 'png', 'jpg', 'tiff']);
+src/routes/ocr.js:1335:router.get('/validate/:documentId', async (req, res) => {
+src/routes/ocr.js:1345:    const validation = await ocrService.validateDocumentIntegrity(file.id);
+src/routes/ocr.js:1346:    return sendSuccess(res, 'Document validated', { validation });
+src/services/invoiceService.js:390:  // Immutability guard: block edits after SENT (except status/credit note)
+src/services/accountingPostingService.js:25:const validateBalancedEntry = (lines = []) => {
+src/services/accountingPostingService.js:495:    validateBalancedEntry(
+src/services/accountingPostingService.js:659:    validateBalancedEntry(reversalLinesInput);
+src/services/accountingPostingService.js:774:    validateBalancedEntry(resolvedLines);
+src/services/accountingPostingService.js:818:  validateBalancedEntry,
+src/services/gobdComplianceService.js:51:      contract: 10,
+src/services/gobdComplianceService.js:113:  async validateDataIntegrity() {
+src/models/AIInsightDecision.js:2:  const AIInsightDecision = sequelize.define(
+src/models/AIInsightDecision.js:3:    'AIInsightDecision',
+src/models/AIInsightDecision.js:41:  AIInsightDecision.associate = (models) => {
+src/models/AIInsightDecision.js:45:      insightModel.sequelize === AIInsightDecision.sequelize &&
+src/models/AIInsightDecision.js:46:      !AIInsightDecision.associations?.insight
+src/models/AIInsightDecision.js:48:      AIInsightDecision.belongsTo(insightModel, {
+src/models/AIInsightDecision.js:55:  return AIInsightDecision;
+src/utils/vatIntegrity.js:21:  const { valid, errors } = VatComplianceService.validateTransaction({
+src/models/User.js:68:        validate: {
+src/models/User.js:80:        validate: {
+src/models/User.js:87:        validate: {
+src/models/User.js:95:        validate: {
+src/services/demoSimulationService.js:242:    // Policy metadata (required for AI governance)
+src/services/demoSimulationService.js:469:    // Policy metadata (required for AI governance)
+src/services/demoSimulationService.js:635:    // Policy metadata (required for AI governance)
+src/services/auditLogService.js:31:    // If context is provided, validate it and merge into metadata
+src/services/auditLogService.js:215:  static async validateChain() {
+src/services/ocrService.js:18:const { checkTableAndColumns } = require('./guards/schemaGuard');
+src/services/ocrService.js:91:      return { success: false, error: 'OCR schema missing or incomplete' };
+src/services/ocrService.js:104:      const validation = await this.validateDocument(filePath);
+src/services/ocrService.js:198:      const validation = await this.validateDocument(filePath);
+src/services/ocrService.js:226:  async validateDocument(filePath) {
+src/services/ocrService.js:252:      const validation = await this.validateDocument(filePath);
+src/services/ocrService.js:672:  async validateDocumentIntegrity(documentId) {
+src/models/Company.js:80:        validate: {
+src/routes/germanTaxCompliance.js:178:router.post('/validate/integrity', async (req, res) => {
+src/routes/germanTaxCompliance.js:180:    const validation = await gobdService.validateDataIntegrity();
+src/routes/germanTaxCompliance.js:190:      error: 'Failed to validate data integrity',
+src/services/authService.js:34: * Enable only if schema is aligned
+src/routes/telemetry.js:31:    // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
+src/utils/emailValidation.js:2:  static validateEnvironment() {
+src/utils/emailValidation.js:18:    if (process.env.EMAIL_USER && !this.validateEmailFormat(process.env.EMAIL_USER)) {
+src/utils/emailValidation.js:49:  static validateEmailFormat(email) {
+src/routes/germanTax.js:101:router.post('/validate-transaction', async (req, res, next) => {
+src/routes/germanTax.js:109:    const compliance = germanTaxCompliance.validateGoBDCompliance(transaction);
+src/routes/germanTax.js:116:    next(new ApiError(500, 'Failed to validate transaction', 'TRANSACTION_VALIDATION_ERROR'));
+src/routes/ai.js:8:const governanceRouter = require('./ai/governance');
+src/routes/ai.js:16:// Mount read-only, governance, and voice endpoints before general AI read routes.
+src/routes/ai.js:18:router.use('/governance', governanceRouter);
+src/services/elsterService.js:152:  // Generate UStVA XML according to ELSTER schema
+src/services/elsterService.js:163:          'xsi:schemaLocation': 'http://www.elster.de/2002/XMLSchema UStVA_2024.xsd',
+src/services/ai/orchestrator/AIOrchestrator.js:9:const { validateAssistantResponse } = require("../assistantResponseSchema");
+src/services/ai/orchestrator/AIOrchestrator.js:10:const { validateSuggestionContract } = require("../suggestionContract");
+src/services/ai/orchestrator/AIOrchestrator.js:44:      validateAssistantResponse(result.data);
+src/services/ai/orchestrator/AIOrchestrator.js:48:      validateSuggestionContract(result.data);
+src/routes/bankStatements.js:8:const { createSecureUploader, logUploadMetadata, validateUploadedFile } = require('../middleware/secureUpload');
+src/routes/bankStatements.js:199:      const signatureCheck = validateUploadedFile(req.file.path, ['text', 'xml', 'pdf', 'png', 'jpg']);
+src/services/ai/aiDataService.js:4:const { checkTableAndColumns } = require('../guards/schemaGuard');
+src/services/ai/aiDataService.js:23:    // Guard: check ai_insights schema (read-only)
+src/services/ai/aiDataService.js:37:      const err = new Error('AI schema missing or incomplete');
+src/services/germanTaxCompliance.js:23:  validateTransactionFields(requiredFields, featureName) {
+src/services/germanTaxCompliance.js:39:    this.validateTransactionFields(['transactionDate', 'type', 'amount', 'vatRate'], 'EÜR calculation');
+src/services/germanTaxCompliance.js:129:    this.validateTransactionFields(['transactionDate', 'type', 'amount', 'vatRate', 'vatAmount'], 'VAT return');
+src/services/germanTaxCompliance.js:227:  validateGoBDCompliance(transaction) {
+src/services/germanTaxCompliance.js:361:      validationStatus: this.validateElsterXML(elsterXML),
+src/services/germanTaxCompliance.js:417:  validateElsterXML(xml) {
+src/services/germanTaxCompliance.js:460:  validateInvoiceCompliance(invoice = {}) {
+src/services/ai/aiReadGateway.js:22:  // 1️⃣ Normalize input and define safePrompt at the very top (per audit contract)
+src/services/ai/aiReadGateway.js:23:  const { redactPII } = require('./governance');
+src/services/ai/aiReadGateway.js:113:    // STRICT: Check company context BEFORE contract validation, even if required fields are missing
+src/services/ai/aiReadGateway.js:162:    // Only run contract validation if company context and feature flag pass
+src/services/ai/aiReadGateway.js:163:    // (fall through to contract validation below)
+src/services/ai/aiReadGateway.js:166:  // Ensure logging for all successful (status: 200) returns before contract validation
+src/services/ai/aiReadGateway.js:169:  // 4️⃣ Mutation intent detection BEFORE contract validation
+src/services/ai/aiReadGateway.js:197:    // Provide a default meta if missing, to ensure contract response
+src/services/ai/aiReadGateway.js:287:  // 9️⃣ Shape FINAL contract response
+src/services/ai/aiReadGateway.js:293:  // Always return a contract-shaped response, even if data is undefined
+src/services/ai/aiReadGateway.js:294:  // Always include disclaimer in contract response
+src/services/ai/approvalState.js:1:// Approval state model and API contract for human-in-the-loop
+src/services/ai/approvalState.js:18: * API contract for accepting/rejecting AI suggestions
+src/routes/ai/voice.js:82:// Early role check to ensure audit logging of rejections before the guard short-circuits
+src/routes/elster.js:142:    const isValid = await elsterService.validateElsterXML(elsterXML);
+src/services/ai/README.md:4:- `aiReadGateway.js` orchestrates every `/api/ai` read request, enforces read-only contracts, attaches disclaimers, and now logs the `requestId`/`companyId` pair into the immutable audit trail.
+src/services/ai/README.md:6:- `governance.js`, `contextContract.js`, `mutationIntent.js`, `promptRegistry.js`, `explainability.js`, and `insightTypes.js` form the compliance toolbox that redacts PII, enforces purpose/policy, detects mutation intent, and surfaces explainability data.
+src/services/ai/README.md:7:- `aiDataService.js`, `aiAssistantService.js`, and `aiSuggestionService.js` contain the read-only AI handlers (summaries, assistant prompts, suggestions) and all bubble through `requiresHumanApproval`/`rateLimit` guards before returning advisory-only responses.
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:9:- `automation/` contains the guarded automation pipeline (`automationGuard.js`, `automationEngine.js`, `automationAuditLogger.js`) plus the detectors/recommendation builder; all run in GET-only mode, log via `aiAuditLogger`, and require human approval for every proposed action.
+src/services/ai/README.md:14:- Any additional automation detectors added under `automation/detectors/` should remain toggled off until their explainability metadata and audit logging are validated end-to-end.
+src/services/ai/aiAssistantService.js:2:const { redactPII } = require('./governance');
+src/services/ai/aiAssistantService.js:3:const { validateAssistantResponse } = require('./assistantResponseSchema');
+src/services/ai/aiAssistantService.js:862:  const validation = validateAssistantResponse(response);
+src/services/ai/aiAssistantService.js:997:    const validation = validateAssistantResponse(providerResponse);
+src/routes/invoiceImport.js:76:const validateInvoice = (invoice) => {
+src/routes/invoiceImport.js:110:    const errors = validateInvoice(invoice);
+src/routes/invoiceImport.js:143:      .map((invoice, idx) => ({ row: idx + 1, errors: validateInvoice(invoice) }))
+src/services/ai/automation/automationContract.js:41:function validateAutomationSuggestion(suggestion) {
+src/services/ai/automation/automationContract.js:57:  validateAutomationSuggestion,
+src/utils/authHelpers.js:27:const validatePassword = (password) => {
+src/utils/authHelpers.js:62:  validatePassword,
+src/services/ai/providers/openaiProvider.js:3:const { validateAssistantResponse } = require('../assistantResponseSchema');
+src/services/ai/providers/openaiProvider.js:28:          'Return JSON only with the required schema fields.',
+src/services/ai/providers/openaiProvider.js:95:  const validation = validateAssistantResponse(payload);
+src/services/ai/providers/openaiProvider.js:97:    const err = new Error('OpenAI provider response failed schema validation');
+src/routes/users.js:7:const { validateRequest } = require('../middleware/security');
+src/routes/users.js:63:  validateRequest(createUserValidators),
+src/routes/users.js:103:  validateRequest(updateUserValidators),
+src/services/ai/providers/mockProvider.js:3:const { validateAssistantResponse } = require('../assistantResponseSchema');
+src/services/ai/providers/mockProvider.js:53:  const validation = validateAssistantResponse(response);
+src/routes/ai/governance.js:26:// GET /api/ai/governance
+src/routes/ai/governance.js:27:router.get('/governance', async (req, res) => {
+src/routes/ai/governance.js:38:  const queryType = 'governance';
+src/routes/ai/governance.js:40:  // Audit log contract: must pass a single object with prompt, requestId, policyVersion
+src/routes/ai/governance.js:42:  // For test compatibility: call the logger mock with exactly the expected contract
+src/routes/ai/governance.js:62:  // Always return required contract
+src/routes/expenses.js:66:  const { error, value } = expenseSchema.validate(normalizedData, {
+src/services/ai/automation/detectors/anomalyDetector.js:5:  // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
+src/routes/emailTest.js:7:const { validateEnvironment } = require('../utils/validateEnv');
+src/routes/emailTest.js:16:  if (!EmailValidation.validateEmailFormat(value)) {
+src/routes/emailTest.js:34:      validation = validateEnvironment();
+src/routes/emailTest.js:37:    return sendSuccess(res, 'Email configuration validated', {
+src/routes/ai/index.js:4:const governanceRouter = require('./governance');
+src/routes/ai/index.js:19:// Mount governance endpoint under /api/ai/governance
+src/routes/ai/index.js:20:router.use('/governance', governanceRouter);
+src/services/ai/aiSuggestionService.js:1:const { validateSuggestionContract } = require('./suggestionContract');
+src/services/ai/aiSuggestionService.js:6:  // eslint-disable-next-line no-unused-vars -- reserved for AI explainability / audit
+src/services/ai/aiSuggestionService.js:28:  // Validate contract
+src/services/ai/aiSuggestionService.js:29:  validateSuggestionContract(suggestion);
+src/utils/datev/datevValidators.js:4:export function validateVatConsistency(records) {
+src/utils/datev/datevValidators.js:9:export function validateFiscalYear(records, fiscalYear) {
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:9:// eslint-disable-next-line no-unused-vars -- context reserved for AI explainability
+src/routes/aiReadOnly.js:12:const { redactPII } = require('../services/ai/governance');
+src/services/ai/assistantResponseSchema.js:16:const validateAssistantResponse = (payload) => assistantResponseSchema.safeParse(payload);
+src/services/ai/assistantResponseSchema.js:18:module.exports = { assistantResponseSchema, validateAssistantResponse };
+src/routes/companies.js:7:const { validateRequest } = require('../middleware/security');
+src/routes/companies.js:80:  validateRequest(companyUpdateValidators),
+src/services/ai/automation/detectors/unmatchedBankTransactionDetector.js:9:// eslint-disable-next-line no-unused-vars -- context reserved for AI explainability
+src/services/ai/suggestionContract.js:2:// Validates the AI suggestion contract for Phase 12
+src/services/ai/suggestionContract.js:5: * Throws if suggestion does not match contract
+src/services/ai/suggestionContract.js:8:function validateSuggestionContract(suggestion) {
+src/services/ai/suggestionContract.js:35:module.exports = { validateSuggestionContract };
+src/services/ai/aiAuditLogger.js:5:const { redactPII } = require('./governance');
+src/services/ai/automation/automationGuard.js:2:// Enforces Phase 13 gates: no mutation, no tax, scoped automation, explainability, audit.
+src/services/ai/automation/automationGuard.js:4:// Defensive guard functions for automation engine (read-only, no mutation)
+src/services/ai/automation/automationGuard.js:26:  // Use contract validator
+src/services/ai/automation/automationGuard.js:27:  const { validateAutomationSuggestion } = require('./automationContract');
+src/services/ai/automation/automationGuard.js:28:  validateAutomationSuggestion(suggestion);
+src/services/ai/insightTypes.js:2:const { buildExplainability } = require('./explainability');
+src/services/ai/insightTypes.js:14:    explainability: buildExplainability({
+src/services/ai/insightTypes.js:34:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:51:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:72:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:86:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:105:      explainability: buildExplainability({
+src/services/ai/insightTypes.js:129:    explainability: buildExplainability({
+src/services/ai/aiInsightsService.js:6:const { AIInsight, AIInsightDecision, Company } = require('../../models');
+src/services/ai/aiInsightsService.js:9:const { checkTableAndColumns } = require('../guards/schemaGuard');
+src/services/ai/aiInsightsService.js:28:    const err = new Error('AI schema missing or incomplete');
+src/services/ai/aiInsightsService.js:109:        confidenceScore: anomaly.explainability.confidence,
+src/services/ai/aiInsightsService.js:110:        summary: anomaly.explainability.why,
+src/services/ai/aiInsightsService.js:111:        why: anomaly.explainability.why,
+src/services/ai/aiInsightsService.js:112:        legalContext: anomaly.explainability.legalContext,
+src/services/ai/aiInsightsService.js:113:        evidence: anomaly.explainability.dataPoints,
+src/services/ai/aiInsightsService.js:114:        ruleId: anomaly.explainability.ruleOrModel,
+src/services/ai/aiInsightsService.js:139:    include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/services/ai/aiInsightsService.js:149:    // Graceful degradation: in demo or schema-missing scenarios, return empty insights array
+src/services/ai/aiInsightsService.js:154:        '[aiInsightsService] listInsightsForClient: schema or query error in demo mode',
+src/services/ai/aiInsightsService.js:166:async function decideInsight(companyId, insightId, actorUser, decision, reason) {
+src/services/ai/aiInsightsService.js:191:  const decisionObj = await AIInsightDecision.create({
+src/services/ai/aiInsightsService.js:215:      include: [{ model: AIInsightDecision, as: 'decisions' }],
+src/services/ai/aiInsightsService.js:266:    // Graceful degradation: in demo or schema-missing scenarios, return empty export
+src/services/ai/aiInsightsService.js:269:      console.debug('[aiInsightsService] exportInsights: schema or query error in demo mode', {
+src/services/ai/aiInsightsService.js:284:  decideInsight,
+src/services/ai/auditLogger.js:10: * @param {Object} params.aiOutput - The AI output (with explainability)
+src/services/ai/documentIntakeAssistantService.js:91:      schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:152:    'contract',
+src/services/ai/documentIntakeAssistantService.js:191:const validateManualOverride = (manualOverride = {}) => {
+src/services/ai/documentIntakeAssistantService.js:222:  validateManualOverride(manualOverride).valid;
+src/services/ai/documentIntakeAssistantService.js:228:  const validation = validateManualOverride(manualOverride);
+src/services/ai/documentIntakeAssistantService.js:394:    schemaVersion: 'accounting_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:566:    schemaVersion: 'document_lifecycle_decision.v1',
+src/services/ai/documentIntakeAssistantService.js:575:  const decisionFingerprint = buildDecisionFingerprint(decisionBase);
+src/services/ai/documentIntakeAssistantService.js:582:    decisionFingerprint,
+src/services/ai/documentIntakeAssistantService.js:585:      decisionFingerprint,
+src/services/ai/documentIntakeAssistantService.js:669:const validateGermanReadiness = ({ documentType, direction, extracted }) => {
+src/services/ai/documentIntakeAssistantService.js:871:  const validation = validateGermanReadiness({ documentType: inferredType, direction, extracted });
+src/services/ai/documentIntakeAssistantService.js:917:  validateGermanReadiness,
+src/services/ai/documentIntakeAssistantService.js:925:  validateManualOverride,
+src/services/ai/promptRegistry.js:19:      'Return JSON only and match the provided schema exactly for required fields.',
+src/services/ai/explainability.js:1:// Explainability schema and helpers for all AI outputs
+src/services/ai/explainability.js:14: * Build an explainability object for an AI output
+src/security/permissions.js:68:      'GET /api/ocr/validate/:id',
+src/utils/validateEnv.js:32:function validateUrl(varName, value) {
+src/utils/validateEnv.js:43:function validateEnvironment() {
+src/utils/validateEnv.js:77:          validateUrl(varName, value);
+src/utils/validateEnv.js:187:module.exports = validateEnvironment;
+src/middleware/secureUpload.js:140:const validateUploadedFile = (filePath, allowedKinds = []) => {
+src/middleware/secureUpload.js:177:  validateUploadedFile,
+src/middleware/security.js:1:// Middleware to validate Content-Type header
+src/middleware/security.js:2:function validateContentType(allowedTypes) {
+src/middleware/security.js:257:const validateRequest = (validations) => async (req, res, next) => {
+src/middleware/security.js:331:    validateContentType(['application/json', 'multipart/form-data']),
+src/middleware/security.js:371:  validateRequest,
+src/config/swagger.js:60:      schemas: {
+src/middleware/performance.js:100:        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+src/ai/aiReadContract.js:6:function validateInputContract(input) {
+src/ai/aiReadContract.js:29:  explainability,
+src/ai/aiReadContract.js:39:    ...(explainability ? { explainability } : {}),
+src/ai/aiReadContract.js:44:  validateAIReadInput: validateInputContract,
+
+===== 6. LEGACY / DUPLICATE DETECTION =====
+client/src/services/dashboardAPI.js:192:    const { force = false, cooldownMs, companyId } = options;
+client/src/services/dashboardAPI.js:242:          rateLimitError.cooldownMs = cooldownMs || RATE_LIMIT_COOLDOWN_MS;
+client/src/services/__tests__/ocrAPI.test.js:9:vi.mock('../api', () => ({
+client/src/services/__tests__/ocrAPI.test.js:23:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/ocrAPI.test.js:61:    api.post.mockResolvedValueOnce({
+client/src/services/__tests__/ocrAPI.test.js:85:    api.post.mockResolvedValueOnce({
+client/src/services/__tests__/aiAssistantAPI.test.jsx:6:vi.mock('../api', () => ({
+client/src/services/__tests__/aiAssistantAPI.test.jsx:21:    api.get.mockResolvedValueOnce({ data: { context: { company: 'Acme' } } });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:27:    api.get.mockResolvedValueOnce({ data: { sessionId: 'sess-123' } });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:33:    api.get.mockResolvedValueOnce({ data: { context: { company: 'Beta' } } });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:40:    api.get.mockResolvedValueOnce({ data: { context: {} } });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:42:    const [, contextConfig] = api.get.mock.calls[0];
+client/src/services/__tests__/aiAssistantAPI.test.jsx:49:    api.get.mockResolvedValueOnce({ data: { sessionId: 'abc' } });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:51:    const [, sessionConfig] = api.get.mock.calls[1];
+client/src/services/__tests__/aiAssistantAPI.test.jsx:58:    api.post.mockResolvedValueOnce({ data: { answer: { message: 'ok' } } });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:65:    const [, payload, askConfig] = api.post.mock.calls[0];
+client/src/services/__tests__/invoicesAPI.test.js:5:vi.mock('../api', () => ({
+client/src/services/__tests__/invoicesAPI.test.js:15:vi.mock('../lib/demoMode', () => ({
+client/src/services/__tests__/invoicesAPI.test.js:26:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/invoicesAPI.test.js:71:    api.post.mockResolvedValueOnce({
+client/src/services/__tests__/invoicesAPI.test.js:115:    api.patch.mockResolvedValueOnce({
+client/src/services/__tests__/invoicesAPI.test.js:130:  it('normalizes legacy and canonical issued statuses from the backend', async () => {
+client/src/services/__tests__/invoicesAPI.test.js:131:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/invoicesAPI.test.js:146:    api.put.mockResolvedValueOnce({
+client/src/services/__tests__/invoicesAPI.test.js:159:    const payload = api.put.mock.calls[0][1];
+client/src/services/__tests__/invoicesAPI.test.js:167:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/invoicesAPI.test.js:184:    api.post.mockResolvedValueOnce({ data: { success: true, preview: [] } });
+client/src/services/__tests__/invoicesAPI.test.js:185:    api.post.mockResolvedValueOnce({ data: { success: true, importedCount: 0 } });
+src/services/expenseService.js:142:        const oldAttachmentValues = supportsAttachments
+src/services/expenseService.js:165:          oldValues: oldAttachmentValues,
+src/services/expenseService.js:183:      oldValues: null,
+src/services/expenseService.js:234:        oldValues: { status: current },
+src/services/expenseService.js:248:  const oldStatus = expense.status;
+src/services/expenseService.js:258:      oldValues: { status: oldStatus },
+client/src/services/__tests__/aiInsightsAPI.test.jsx:6:vi.mock('../api', () => ({
+client/src/services/__tests__/aiInsightsAPI.test.jsx:19:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/aiInsightsAPI.test.jsx:23:    const [, config] = api.get.mock.calls[0];
+client/src/services/__tests__/aiInsightsAPI.test.jsx:32:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/dashboardAPI.test.jsx:5:vi.mock('../api', () => ({
+client/src/services/__tests__/dashboardAPI.test.jsx:12:vi.mock('../lib/demoMode', () => ({
+client/src/services/__tests__/dashboardAPI.test.jsx:24:    api.get.mockResolvedValueOnce({ data: { total: 1, success: true } });
+client/src/services/__tests__/dashboardAPI.test.jsx:36:    api.get.mockRejectedValueOnce({ response: { status: 429 } });
+client/src/services/__tests__/dashboardAPI.test.jsx:47:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/dashboardAPI.test.jsx:123:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/expensesAPI.test.jsx:5:vi.mock('../api', () => ({
+client/src/services/__tests__/expensesAPI.test.jsx:25:    api.get.mockResolvedValueOnce({ data: { expenses: [{ id: 1, status: 'PENDING' }] } });
+client/src/services/__tests__/expensesAPI.test.jsx:38:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/expensesAPI.test.jsx:68:    api.get.mockResolvedValueOnce({ data: { expenses: [{ id: 1 }] } });
+client/src/services/__tests__/expensesAPI.test.jsx:72:    api.post.mockResolvedValueOnce({ data: { success: true, expense: { id: 99 } } });
+client/src/services/__tests__/expensesAPI.test.jsx:110:    api.get.mockResolvedValueOnce({ data: { expenses: [{ id: 1 }, { id: 2 }] } });
+client/src/services/__tests__/expensesAPI.test.jsx:117:    api.get.mockResolvedValueOnce({
+client/src/services/__tests__/expensesAPI.test.jsx:131:    api.get.mockResolvedValueOnce({ data: { expenses: [{ id: 1, status: 'pending' }] } });
+client/src/services/__tests__/expensesAPI.test.jsx:135:    api.patch.mockResolvedValueOnce({
+src/services/bankStatementService.js:299:          duplicatesSkipped: transactions.length - processedTransactions.length,
+src/services/bankStatementService.js:435:            // TODO: implement
+src/services/bankStatementService.js:523:        // TODO: implement
+src/services/bankStatementService.js:604:        // TODO: implement
+src/services/bankStatementService.js:663:      const duplicate = await this.isDuplicateTransaction(companyId, normalizedTransaction);
+src/services/bankStatementService.js:664:      if (duplicate) {
+src/services/bankStatementService.js:1191:        oldValues: {
+src/services/bankStatementService.js:1305:        oldValues: {
+src/services/accountingPostingService.js:260:    oldValues: null,
+src/services/accountingPostingService.js:399:    oldValues: {
+src/services/accountingPostingService.js:551:    oldValues: {
+client/src/services/aiInsightsMappers.js:8:  const threshold = 10000; // EUR
+client/src/services/aiInsightsMappers.js:9:  if (invoice.amount >= threshold) {
+client/src/services/aiInsightsMappers.js:13:      summary: `Invoice #${invoice.number} for ${formatCurrency(invoice.amount)} exceeds the advisory threshold.`,
+client/src/services/aiInsightsMappers.js:16:        text: `Invoice amount (<b>amount</b>: ${formatCurrency(invoice.amount)}) is above the typical threshold.`,
+client/src/services/invoicesAPI.js:68:  oldValues: entry.oldValues || null,
+src/services/demoSimulationService.js:121:      oldValues: null,
+src/services/demoSimulationService.js:249:      confidenceThreshold: 0.85,
+src/services/demoSimulationService.js:399:          finding: 'Payroll fully reconciled for 5 employees. Tax withholding and social insurance contributions correctly calculated.',
+src/services/demoSimulationService.js:428:        duplicateTransactions: {
+src/services/demoSimulationService.js:430:          duplicatesFound: 0,
+src/services/demoSimulationService.js:476:      confidenceThreshold: 0.85,
+src/services/demoSimulationService.js:642:      confidenceThreshold: 0.85,
+src/services/taxUnifiedService.js:11:    this.taxThresholds = GermanTaxUtils.taxThresholds;
+src/services/taxUnifiedService.js:154:        threshold: GermanTaxUtils.taxThresholds.kleinunternehmer,
+src/services/taxUnifiedService.js:155:        recommendation: currentYearRevenue > GermanTaxUtils.taxThresholds.kleinunternehmer 
+src/services/invoiceService.js:68:    // TODO: Audit-log credit note creation
+src/services/invoiceService.js:150:      // TODO: Audit-log payment registration
+src/services/invoiceService.js:296:          oldValues: null,
+src/services/invoiceService.js:397:    // TODO: Audit-log blocked attempt here
+src/services/emailService.js:184:        .amount { font-size: 24px; font-weight: bold; color: #059669; }
+src/services/bankImportService.js:6:    // TODO: Use camt053Parser to parse XML
+src/services/bankImportService.js:12:    // TODO: Use mt940Parser to parse SWIFT
+src/services/bankImportService.js:18:    // TODO: Use ocrStatementParser to extract data
+src/services/auditLogService.js:15:   * @param {Object} params - { action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent }
+src/services/auditLogService.js:23:    oldValues,
+src/services/auditLogService.js:37:      // TODO: Migrate all callers to provide SystemContext for full GoBD compliance
+src/services/auditLogService.js:90:        oldValues,
+src/services/auditLogService.js:106:          oldValues,
+src/services/auditLogService.js:176:        'oldValues',
+src/services/auditLogService.js:227:        oldValues: log.oldValues,
+client/src/pages/BankStatements.jsx:287:          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
+client/src/pages/BankStatements.jsx:288:          <h1 className="text-3xl font-bold text-gray-900">{activeCompany.name}</h1>
+client/src/pages/BankStatements.jsx:344:          <h3 className="text-sm font-semibold text-gray-700 mb-1">AI Advisor unavailable</h3>
+client/src/pages/BankStatements.jsx:355:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatements.jsx:364:            <span className="text-xs text-gray-500 uppercase font-semibold tracking-wide">
+client/src/pages/BankStatements.jsx:367:            <span className="text-lg font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatements.jsx:372:            <span className="text-xs text-gray-500 uppercase font-semibold tracking-wide">
+client/src/pages/BankStatements.jsx:375:            <span className="text-lg font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatements.jsx:380:            <span className="text-xs text-gray-500 uppercase font-semibold tracking-wide">
+client/src/pages/BankStatements.jsx:383:            <span className="text-lg font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatements.jsx:408:                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatements.jsx:419:                  className="ml-2 inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold"
+client/src/pages/BankStatements.jsx:447:                        className="inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold mb-1"
+client/src/pages/BankStatements.jsx:452:                      <span className="text-xs text-red-700 font-semibold">
+client/src/pages/Invoices.jsx:177:        <span className="font-semibold">What does AI see?</span> The assistant will only see your
+client/src/pages/Invoices.jsx:184:          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Invoices</h1>
+client/src/pages/Invoices.jsx:186:            All invoices for <span className="font-semibold">{activeCompany.name}</span>
+client/src/pages/Invoices.jsx:219:                placeholder="Invoice number or client"
+client/src/pages/Invoices.jsx:276:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:282:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:288:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:294:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:300:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:306:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:312:                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Invoices.jsx:356:                                  className="inline-block rounded bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800"
+src/services/withAuditLog.js:4:async function withAuditLog({ action, resourceType, resourceId, userId, oldValues, newValues, ipAddress, userAgent, reason }, operation) {
+src/services/withAuditLog.js:13:      oldValues,
+client/src/pages/OnboardingWizard.jsx:70:      <h1 className="text-3xl font-bold mb-4">Welcome to SmartAccounting™</h1>
+client/src/pages/OnboardingWizard.jsx:74:            <li key={s.title} className={idx === step ? 'font-bold text-blue-700' : ''}>
+client/src/pages/OnboardingWizard.jsx:82:        <h2 className="text-xl font-semibold mb-2">{steps[step].title}</h2>
+src/services/germanTaxEngine.js:10:    this.thresholds = {
+src/services/germanTaxEngine.js:11:      kleinunternehmer: 22000,  // €22,000 threshold for Kleinunternehmerregelung
+src/services/germanTaxEngine.js:12:      gewerbesteuer: 24500,     // €24,500 Gewerbesteuer threshold
+src/services/germanTaxEngine.js:13:      umsatzsteuer: 50000,       // €50,000 VAT registration threshold
+src/services/germanTaxEngine.js:121:    if (revenue <= this.thresholds.kleinunternehmer) {
+src/services/germanTaxEngine.js:130:    if (revenue > this.thresholds.umsatzsteuer) {
+src/services/germanTaxEngine.js:139:    if (revenue > this.thresholds.gewerbesteuer) {
+src/services/germanTaxEngine.js:185:    // This is a placeholder structure
+client/src/pages/RequestAccess.jsx:58:          <p className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
+client/src/pages/RequestAccess.jsx:61:          <h1 className="text-3xl font-bold leading-snug sm:text-4xl">
+client/src/pages/RequestAccess.jsx:72:              <p className="text-xl font-semibold text-slate-900">Sie sind auf der Liste!</p>
+client/src/pages/RequestAccess.jsx:90:                <label htmlFor="fullName" className="text-sm font-semibold text-slate-700">
+client/src/pages/RequestAccess.jsx:98:                  placeholder="Alex Bauer"
+client/src/pages/RequestAccess.jsx:104:                <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+client/src/pages/RequestAccess.jsx:113:                  placeholder="name@unternehmen.de"
+client/src/pages/RequestAccess.jsx:119:                <label htmlFor="company" className="text-sm font-semibold text-slate-700">
+client/src/pages/RequestAccess.jsx:127:                  placeholder="Smart Fintech GmbH"
+client/src/pages/RequestAccess.jsx:133:                <label htmlFor="details" className="text-sm font-semibold text-slate-700">
+client/src/pages/RequestAccess.jsx:140:                  placeholder="Teilen Sie uns mit, ob Sie mehrere Unternehmen, besondere Governance oder Integrationen benötigen."
+client/src/pages/RequestAccess.jsx:149:                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+client/src/pages/RequestAccess.jsx:166:            className="font-semibold text-slate-900 underline-offset-4 hover:underline"
+src/services/ai/providerBudgetGuard.js:25:      provider: config.provider || 'mock',
+src/services/ai/README.md:23:Archived legacy CFO and decision artifacts were moved outside active runtime under .architecture-archive. The active AI services no longer import CFO router, CFO controller, CFO connector bridge, or decision service files.
+src/services/ai/README.md:25:The eventBus remains active for the normal AI read gateway flow and is not part of a legacy CFO routing chain.
+client/src/pages/OCRPreview.jsx:197:            <span className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/OCRPreview.jsx:227:              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/OCRPreview.jsx:230:              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">OCR Preview</h1>
+client/src/pages/OCRPreview.jsx:239:              <span className="block font-semibold text-gray-900 dark:text-white">
+client/src/pages/OCRPreview.jsx:249:              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/OCRPreview.jsx:252:              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/OCRPreview.jsx:281:                className="text-xs font-semibold uppercase tracking-wide text-gray-500"
+client/src/pages/OCRPreview.jsx:315:              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/OCRPreview.jsx:318:              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/OCRPreview.jsx:324:              <span className="text-2xl font-semibold text-primary-600 dark:text-primary-400">
+client/src/pages/OCRPreview.jsx:355:                    <span className="text-xs font-semibold uppercase">{complianceLabel}</span>
+client/src/pages/OCRPreview.jsx:400:              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/OCRPreview.jsx:403:              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/OCRPreview.jsx:410:            <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+src/services/ai/promptRegistry.js:8:const MODEL_VERSION = process.env.AI_MODEL_VERSION || 'mock';
+client/src/pages/AIManager.jsx:455:          <span className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+client/src/pages/AIManager.jsx:459:            <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-semibold text-orange-700">
+client/src/pages/AIManager.jsx:467:            <h1 className="text-3xl font-bold tracking-tight text-gray-950 dark:text-white">AI Accounting Manager</h1>
+client/src/pages/AIManager.jsx:507:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">What AI can help with</h2>
+client/src/pages/AIManager.jsx:525:              <p className="text-sm font-semibold text-gray-950 dark:text-white">{title}</p>
+client/src/pages/AIManager.jsx:539:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Smart prompts to try</h2>
+client/src/pages/AIManager.jsx:559:              className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 dark:border-gray-800 dark:bg-gray-950/70 dark:text-gray-100 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/30"
+client/src/pages/AIManager.jsx:571:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Today’s Accounting Briefing</h2>
+client/src/pages/AIManager.jsx:585:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/AIManager.jsx:588:                <p className="mt-1 text-2xl font-bold text-gray-950 dark:text-white">{value}</p>
+client/src/pages/AIManager.jsx:596:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Critical Alerts</h2>
+client/src/pages/AIManager.jsx:621:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Next best action</h2>
+client/src/pages/AIManager.jsx:632:            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/AIManager.jsx:642:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Why this matters</h2>
+client/src/pages/AIManager.jsx:648:              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/AIManager.jsx:657:              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/AIManager.jsx:667:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Evidence</h2>
+client/src/pages/AIManager.jsx:687:            <h2 className="text-lg font-bold text-gray-950 dark:text-white">Review queue</h2>
+client/src/pages/AIManager.jsx:697:                      <h3 className="text-sm font-bold text-gray-950 dark:text-white">{group.title}</h3>
+client/src/pages/AIManager.jsx:700:                    <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+client/src/pages/AIManager.jsx:713:                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+client/src/pages/AIManager.jsx:716:                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+client/src/pages/AIManager.jsx:720:                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+client/src/pages/AIManager.jsx:725:                              <Link className="inline-flex text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300" to={item.route}>
+client/src/pages/AIManager.jsx:729:                                className="inline-flex text-xs font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-300"
+client/src/pages/AIManager.jsx:752:          <h2 className="text-lg font-bold text-gray-950 dark:text-white">Ask AI Manager</h2>
+src/routes/ocr.js:56:        oldValues: { isActive: company.isActive, suspendedAt: company.suspendedAt },
+src/routes/ocr.js:68:        oldValues: { subscriptionStatus: company.subscriptionStatus || null },
+client/src/pages/ComplianceDashboard.jsx:17:      'Data exports are available on demand and hold immutable fingerprints so regulators can verify activity without back-and-forth.',
+client/src/pages/ComplianceDashboard.jsx:45:        <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+client/src/pages/ComplianceDashboard.jsx:48:        <h1 className="text-3xl font-semibold text-gray-900">Compliance Overview</h1>
+client/src/pages/ComplianceDashboard.jsx:61:              <p className="text-xl font-semibold text-gray-900">{card.title}</p>
+client/src/pages/ComplianceDashboard.jsx:74:            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Admin tools</p>
+client/src/pages/ComplianceDashboard.jsx:75:            <h2 className="text-xl font-semibold text-gray-900">Quick links</h2>
+client/src/pages/ComplianceDashboard.jsx:82:                <p className="text-lg font-semibold text-gray-900">{link.label}</p>
+src/services/ai/automation/automationEngine.js:65:  const { detectDuplicateInvoices } = require('./detectors/duplicateInvoiceDetector');
+src/services/gobdComplianceService.js:32:      oldValues: null,
+client/src/pages/DocumentInbox.jsx:62:    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusClass(value)}`}
+client/src/pages/DocumentInbox.jsx:141:                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+client/src/pages/DocumentInbox.jsx:177:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/DocumentInbox.jsx:180:            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+client/src/pages/DocumentInbox.jsx:188:        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/pages/DocumentInbox.jsx:226:              <h2 className="font-semibold">Document inbox unavailable</h2>
+client/src/pages/DocumentInbox.jsx:267:                        <p className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/DocumentInbox.jsx:306:                          <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+client/src/pages/DocumentInbox.jsx:333:            <h2 className="font-semibold">Human review remains required</h2>
+src/services/ai/automation/automationContract.js:17: * @property {string} type - Detector type (e.g., 'duplicateInvoice')
+src/services/ai/automation/automationContract.js:29: * @property {string} type - Suggestion type (e.g., 'duplicateInvoice')
+src/routes/logs.js:14:  legacyHeaders: false,
+client/src/pages/Analytics.jsx:162:      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${className}`}>{label}</span>
+client/src/pages/Analytics.jsx:206:        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/Analytics.jsx:221:          <p className="text-sm font-semibold text-red-600">{error.message}</p>
+client/src/pages/Analytics.jsx:259:          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700 dark:border-primary-900/40 dark:bg-slate-950/50 dark:text-primary-200">
+client/src/pages/Analytics.jsx:283:            <span className="inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-900 dark:bg-blue-900/50 dark:text-blue-100">
+client/src/pages/Analytics.jsx:339:                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/Analytics.jsx:344:                    <span className="font-semibold text-gray-900 dark:text-white">{count}</span>
+client/src/pages/Analytics.jsx:360:                <div className="text-2xl font-semibold text-gray-950 dark:text-white">
+client/src/pages/Analytics.jsx:394:                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+src/services/gdprService.js:30:  // Strict company boundary: no admin bypass
+src/services/gdprService.js:123:    oldValues: null,
+src/services/gdprService.js:168:  // Save old values for audit (no PII)
+src/services/gdprService.js:169:  const oldValues = {
+src/services/gdprService.js:189:    oldValues,
+src/services/gobdExportService.js:115:    'oldValues',
+client/src/hooks/__tests__/useLoadCompanies.test.jsx:7:vi.mock('../../services/companiesAPI', () => ({
+client/src/hooks/__tests__/useLoadCompanies.test.jsx:13:vi.mock('../../context/AuthContext', () => ({
+client/src/hooks/__tests__/useLoadCompanies.test.jsx:34:    companiesAPI.list.mockResolvedValue([{ id: 1, name: 'TestCo' }]);
+client/src/pages/InvestorDashboard.jsx:10:      <h1 className="text-3xl font-bold mb-4">Investor Dashboard <span className="text-base font-normal text-blue-700 align-middle ml-2">(Read-Only)</span></h1>
+client/src/pages/InvestorDashboard.jsx:18:        <h2 className="text-xl font-semibold mb-2">Compliance Status Overview</h2>
+client/src/pages/InvestorDashboard.jsx:22:        <h2 className="text-xl font-semibold mb-2">Audit Log Summary</h2>
+client/src/pages/InvestorDashboard.jsx:27:        <h2 className="text-xl font-semibold mb-2">GDPR Activity Summary</h2>
+client/src/pages/InvestorDashboard.jsx:31:        <h2 className="text-xl font-semibold mb-2">AI Insights (Read-Only)</h2>
+client/src/pages/InvestorDashboard.jsx:35:        <h2 className="text-xl font-semibold mb-2">Explain This System</h2>
+client/src/pages/Companies.jsx:176:        <p className="text-lg font-semibold text-red-600">{loadError.message}</p>
+client/src/pages/Companies.jsx:223:        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+client/src/pages/Companies.jsx:233:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+client/src/pages/Companies.jsx:236:          <h2 className="text-xl font-bold text-gray-900">{activeCompany?.name}</h2>
+client/src/pages/Companies.jsx:251:            <h2 className="text-lg font-semibold text-gray-900">Edit profile</h2>
+client/src/pages/Companies.jsx:256:          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+client/src/pages/Companies.jsx:271:                  placeholder="Company name"
+client/src/pages/Companies.jsx:283:                  placeholder="Street address"
+client/src/pages/Companies.jsx:297:                  placeholder="City"
+client/src/pages/Companies.jsx:309:                  placeholder="ZIP / Postal code"
+client/src/pages/Companies.jsx:321:                  placeholder="Country"
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:1:// duplicateInvoiceDetector.js
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:2:// Detects possible duplicate invoices (read-only, explainable).
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:5: * Detects duplicate invoices by invoiceNumber, amount, date, and client
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:24:        type: 'duplicate_invoice',
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js:27:        title: 'Potential duplicate invoice',
+src/routes/ai/governance.js:42:  // For test compatibility: call the logger mock with exactly the expected contract
+client/src/components/DevHealthCheck.jsx:109:          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/components/DevHealthCheck.jsx:132:          <span className="font-semibold text-gray-900 dark:text-gray-100">{userIdentity}</span>
+client/src/components/DevHealthCheck.jsx:145:              <span className="text-xs font-semibold text-gray-500 dark:text-gray-300">
+client/src/pages/Users.jsx:126:        <p className="text-lg font-semibold text-red-600">{error.message}</p>
+client/src/pages/Users.jsx:141:        <h1 className="text-2xl font-bold text-gray-900">User & Role Management</h1>
+client/src/pages/Users.jsx:151:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+client/src/pages/Users.jsx:154:          <h2 className="text-xl font-bold text-gray-900">Team Members & Roles</h2>
+client/src/pages/Users.jsx:183:                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+client/src/pages/Users.jsx:189:                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+client/src/pages/Users.jsx:195:                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+client/src/pages/Users.jsx:201:                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+client/src/pages/Users.jsx:207:                    className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+client/src/pages/Users.jsx:238:                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+client/src/components/ComplianceSnapshot.jsx:107:      <h2 className="text-xl font-semibold mb-2">Compliance Status Overview</h2>
+client/src/components/AIInsightCard.jsx:44:            className="text-sm font-semibold text-blue-700 uppercase tracking-wide dark:text-blue-300"
+client/src/components/AIInsightCard.jsx:64:        <span className="font-bold text-gray-950 dark:text-white" aria-label="Insight type">
+client/src/components/ChatMessageGroup.jsx:24:          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+client/src/components/ChatMessageGroup.jsx:76:          <div className="w-8 h-8 rounded-full bg-primary-200 flex items-center justify-center text-primary-800 font-bold">
+src/routes/invoices.js:112:      const oldInvoice = await invoiceService.getInvoiceById(req.params.invoiceId, req.companyId);
+src/routes/invoices.js:119:          oldValues: oldInvoice,
+src/routes/invoices.js:151:      const oldInvoice = await invoiceService.getInvoiceById(req.params.invoiceId, req.companyId);
+src/routes/invoices.js:160:            oldValues: oldInvoice,
+src/routes/invoices.js:252:        oldValues: null,
+src/routes/invoices.js:280:    const oldInvoice = await invoiceService.getInvoiceById(req.params.invoiceId, req.companyId);
+src/routes/invoices.js:287:        oldValues: oldInvoice,
+src/routes/invoices.js:307:    const oldInvoice = await invoiceService.getInvoiceById(req.params.invoiceId, req.companyId);
+src/routes/invoices.js:316:          oldValues: oldInvoice,
+client/src/components/Breadcrumbs.jsx:21:              <span className="font-semibold text-gray-700">{item.label}</span>
+client/src/components/MutationIntentGuard.jsx:24:      <div className="bg-yellow-100 text-yellow-800 p-2 rounded text-xs font-semibold mb-2">
+client/src/pages/Privacy.jsx:5:    <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
+client/src/pages/Privacy.jsx:10:    <h2 className="text-xl font-semibold mt-8 mb-2">1. Information We Collect</h2>
+client/src/pages/Privacy.jsx:15:    <h2 className="text-xl font-semibold mt-8 mb-2">2. Use of Information</h2>
+client/src/pages/Privacy.jsx:20:    <h2 className="text-xl font-semibold mt-8 mb-2">3. Data Security</h2>
+client/src/pages/Privacy.jsx:25:    <h2 className="text-xl font-semibold mt-8 mb-2">4. Your Rights</h2>
+client/src/pages/Privacy.jsx:33:    <h2 className="text-xl font-semibold mt-8 mb-2">5. Changes</h2>
+client/src/components/AITrustBanner.jsx:28:      <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">{title}</div>
+client/src/components/AITrustBanner.jsx:31:        <summary className="cursor-pointer font-semibold text-blue-700 hover:text-blue-900 dark:text-blue-200 dark:hover:text-blue-100">
+src/routes/companies.js:135:          oldValues: before,
+client/src/components/ChatEmptyState.jsx:7:        <span className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 text-3xl font-bold">
+client/src/components/ChatEmptyState.jsx:11:      <h2 className="text-xl font-semibold text-gray-800 mb-2">How can the AI Assistant help?</h2>
+client/src/pages/BankStatementDetail.jsx:79:  const metadata = log?.newValues?.metadata || log?.oldValues?.metadata;
+client/src/pages/BankStatementDetail.jsx:613:                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:616:                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:661:          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
+client/src/pages/BankStatementDetail.jsx:662:          <h1 className="text-3xl font-bold text-gray-900">
+client/src/pages/BankStatementDetail.jsx:673:              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/BankStatementDetail.jsx:728:              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementDetail.jsx:731:              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementDetail.jsx:734:              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementDetail.jsx:737:              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementDetail.jsx:740:              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementDetail.jsx:757:                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:777:                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+client/src/pages/BankStatementDetail.jsx:840:            <p className="text-sm font-semibold text-gray-900 dark:text-white">Audit log</p>
+client/src/pages/BankStatementDetail.jsx:866:                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:899:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/BankStatementDetail.jsx:905:                    <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:911:                    <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:917:                    <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:931:                    className={`rounded-full px-3 py-1 text-sm font-semibold transition ${
+client/src/pages/BankStatementDetail.jsx:949:                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/BankStatementDetail.jsx:955:                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:967:                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:985:                <p className="text-sm font-semibold text-gray-900 dark:text-white">Final confirmation</p>
+client/src/pages/BankStatementDetail.jsx:1014:                    placeholder="Optional notes for auditors"
+client/src/pages/BankStatementDetail.jsx:1059:              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementDetail.jsx:1067:                <p className="font-semibold">{selectedUndoTransaction.description || '—'}</p>
+client/src/pages/BankStatementDetail.jsx:1084:                placeholder="Describe why the reconciliation should be reverted"
+src/services/germanTaxCompliance.js:286:      threshold: 22000, 
+src/services/germanTaxCompliance.js:287:      previousThreshold: 17500,
+src/services/germanTaxCompliance.js:291:    if (previousYearRevenue <= eligibility.previousThreshold && 
+src/services/germanTaxCompliance.js:292:        currentYearRevenue <= eligibility.threshold) {
+src/services/germanTaxCompliance.js:294:      eligibility.reasons.push('Revenue below thresholds for both years');
+src/services/germanTaxCompliance.js:296:      if (previousYearRevenue > eligibility.previousThreshold) {
+src/services/germanTaxCompliance.js:297:        eligibility.reasons.push(`Previous year revenue (€${previousYearRevenue}) exceeds threshold`);
+src/services/germanTaxCompliance.js:299:      if (currentYearRevenue > eligibility.threshold) {
+src/services/germanTaxCompliance.js:300:        eligibility.reasons.push(`Current year revenue (€${currentYearRevenue}) exceeds threshold`);
+client/src/components/invoices/InvoiceStatusBadge.jsx:39:      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${meta.classes} ${className}`}
+client/src/pages/AIAssistant.jsx:502:          <span className="font-semibold">Why is AI unavailable?</span> The AI assistant requires an
+client/src/pages/AIAssistant.jsx:965:        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+client/src/pages/AIAssistant.jsx:1282:                <label key={field.key} className="block text-xs font-semibold text-blue-800 dark:text-blue-100">
+client/src/pages/AIAssistant.jsx:1295:            <label className="block text-xs font-semibold text-blue-800 dark:text-blue-100">
+client/src/pages/AIAssistant.jsx:1310:              <label className="flex items-start gap-2 font-semibold">
+client/src/pages/AIAssistant.jsx:1330:                  <label className="block font-semibold">
+client/src/pages/AIAssistant.jsx:1341:                  <label className="block font-semibold">
+client/src/pages/AIAssistant.jsx:1355:                  <label className="block font-semibold sm:col-span-2">
+client/src/pages/AIAssistant.jsx:1365:                  <label className="flex items-start gap-2 font-semibold sm:col-span-2">
+client/src/pages/AIAssistant.jsx:1429:            <div className="text-xs font-semibold uppercase text-blue-700 dark:text-blue-200">
+client/src/pages/AIAssistant.jsx:1437:                <div className="font-semibold text-blue-700 dark:text-blue-200">{change.field}</div>
+client/src/pages/AIAssistant.jsx:1440:                    <span className="font-semibold">AI extracted value: </span>
+client/src/pages/AIAssistant.jsx:1444:                    <span className="font-semibold">Reviewed value: </span>
+client/src/pages/AIAssistant.jsx:1490:            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">
+client/src/pages/AIAssistant.jsx:1493:            <div className="mt-1 text-lg font-semibold">
+client/src/pages/AIAssistant.jsx:1498:          <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 dark:bg-slate-950 dark:text-blue-200 dark:ring-blue-900">
+client/src/pages/AIAssistant.jsx:1505:            <div className="font-semibold">Review extracted fields required</div>
+client/src/pages/AIAssistant.jsx:1515:            <div className="font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+client/src/pages/AIAssistant.jsx:1524:                  <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
+client/src/pages/AIAssistant.jsx:1527:                  <div className="mt-1 break-words text-sm font-semibold text-gray-900 dark:text-gray-100">
+client/src/pages/AIAssistant.jsx:1535:                <div className="font-semibold">Decision explanation</div>
+client/src/pages/AIAssistant.jsx:1553:                <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-500">
+client/src/pages/AIAssistant.jsx:1602:              className={`text-xs font-semibold uppercase tracking-wide ${
+client/src/pages/AIAssistant.jsx:1726:          <span className="font-semibold">Why is AI unavailable?</span> The assistant may be
+client/src/pages/AIAssistant.jsx:1741:            <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+client/src/pages/AIAssistant.jsx:1745:              <h1 className="text-3xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-4xl">AI Accounting Assistant</h1>
+client/src/pages/AIAssistant.jsx:1753:            <div className="text-sm font-semibold text-gray-900 mb-2">Next steps</div>
+client/src/pages/AIAssistant.jsx:1777:            <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+client/src/pages/AIAssistant.jsx:1781:              <h1 className="text-3xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-4xl">AI Accounting Assistant</h1>
+client/src/pages/AIAssistant.jsx:1792:            <div className="font-semibold text-gray-700 dark:text-gray-200">Session ID</div>
+client/src/pages/AIAssistant.jsx:1802:            <div className="font-semibold">Review context from AI Manager</div>
+client/src/pages/AIAssistant.jsx:1813:              <span className="font-semibold text-gray-950 dark:text-white">Company context</span>
+client/src/pages/AIAssistant.jsx:1827:              <span className="font-semibold text-gray-950 dark:text-white">Invoices</span>
+client/src/pages/AIAssistant.jsx:1848:              <span className="font-semibold text-gray-950 dark:text-white">Expenses</span>
+client/src/pages/AIAssistant.jsx:1871:              <span className="font-semibold text-gray-950 dark:text-white">Bank statements</span>
+client/src/pages/AIAssistant.jsx:1895:              <span className="font-semibold text-gray-950 dark:text-white">AI insights</span>
+client/src/pages/AIAssistant.jsx:1906:                      <span className="flex items-center text-sm font-semibold text-gray-950 dark:text-white">
+client/src/pages/AIAssistant.jsx:1983:                <h2 className="text-xl font-bold text-gray-950 dark:text-white">Assistant chat</h2>
+client/src/pages/AIAssistant.jsx:1989:              <span className="mr-5 mt-5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900">
+client/src/pages/AIAssistant.jsx:2022:                      <span className="font-semibold">{intent.label}</span>
+client/src/pages/AIAssistant.jsx:2116:                    className="min-h-[54px] max-h-40 flex-1 resize-none rounded-xl border-0 bg-transparent px-2 py-2 text-sm leading-6 text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-100 dark:placeholder:text-gray-500"
+client/src/pages/AIAssistant.jsx:2117:                    placeholder="Message the accounting assistant..."
+client/src/pages/AIAssistant.jsx:2164:                  <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-200 dark:ring-red-900">
+client/src/pages/AIAssistant.jsx:2190:            <h3 className="text-lg font-bold text-gray-950 dark:text-white">Session tracking</h3>
+client/src/components/AIDrawer.jsx:28:          <span className="font-bold text-lg" id="ai-insights-drawer-label">
+src/routes/expenses.js:184:    // const oldExpense = await expenseService.getExpenseById(req.params.expenseId, req.companyId);
+client/src/components/invoices/InvoiceForm.jsx:201:    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-primary-500';
+client/src/components/invoices/InvoiceForm.jsx:212:        <div className="bg-yellow-50 border border-yellow-300 text-yellow-900 rounded p-3 mb-2 text-sm font-semibold">
+client/src/components/invoices/InvoiceForm.jsx:219:          <h3 className="text-lg font-semibold text-gray-700 mb-2">Audit Trail</h3>
+client/src/components/invoices/InvoiceForm.jsx:269:            placeholder="Müller GmbH"
+client/src/components/invoices/InvoiceForm.jsx:435:            placeholder="0.00"
+client/src/components/invoices/InvoiceForm.jsx:449:            placeholder="Auto = subtotal"
+client/src/components/invoices/InvoiceForm.jsx:457:          <h3 className="text-md font-semibold text-primary-700 mb-2">VAT Breakdown</h3>
+client/src/App.jsx:106:      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>404 - Page Not Found</h1>
+client/src/components/ExplainWhy.jsx:5:    <span className="font-semibold text-blue-700">Why this matters:</span>
+client/src/components/ExplainWhy.jsx:9:        <span className="font-semibold">Legal context:</span> {why.legal}
+client/src/components/ExplainWhy.jsx:14:        <span className="font-semibold">Compliance hint:</span> {why.hint}
+client/src/components/AIBadge.jsx:13:      className={`flex items-center gap-1 px-2 py-0.5 rounded font-semibold uppercase tracking-wide shadow-sm ${className} transition-all duration-200`}
+src/routes/aiReadOnly.js:427:      // Skip flushHeaders in test environment as mocked responses don't support internal Node.js buffer structures
+src/routes/aiReadOnly.js:436:          // ignore in test/mocked environments
+client/src/pages/AIInsights.jsx:184:        <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+client/src/pages/AIInsights.jsx:187:        <h1 className="text-2xl font-bold text-gray-900">AI Insights</h1>
+src/routes/invoiceImport.js:158:          oldValues: null,
+client/src/components/CompanySelector.jsx:42:        {t('company_selector.placeholder')}
+src/services/ai/aiAuditLogger.js:46:    oldValues: null,
+src/services/ai/aiAuditLogger.js:83:    oldValues: null,
+src/services/ai/aiAuditLogger.js:119:    oldValues: null,
+src/services/ai/aiAuditLogger.js:161:    oldValues: null,
+src/services/ai/aiAuditLogger.js:197:    oldValues: null,
+src/services/ai/aiAuditLogger.js:229:    oldValues: null,
+client/src/pages/Calculator.jsx:88:                  placeholder="0.00"
+client/src/pages/Calculator.jsx:104:                  placeholder="0.00"
+client/src/pages/Calculator.jsx:149:                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Income Summary</h4>
+client/src/pages/Calculator.jsx:159:                  <div className="flex justify-between font-semibold pt-2 border-t">
+client/src/pages/Calculator.jsx:167:                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Tax Breakdown</h4>
+client/src/pages/Calculator.jsx:181:                  <div className="flex justify-between font-bold text-lg pt-2 border-t text-red-600">
+client/src/pages/Calculator.jsx:189:                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Net After Tax</h4>
+client/src/pages/Calculator.jsx:190:                <div className="text-2xl font-bold text-emerald-600">
+client/src/pages/Calculator.jsx:215:            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">VAT Rates</h4>
+client/src/pages/Calculator.jsx:223:            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Income Tax</h4>
+client/src/pages/Calculator.jsx:231:            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Solidarity Tax</h4>
+client/src/components/MetricCard.jsx:74:              className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getChangeColor()}`}
+client/src/components/MetricCard.jsx:84:          <div className="text-3xl font-bold text-gray-900 dark:text-white leading-none">
+src/services/ai/insightTypes.js:25: * Invoice anomaly detection (duplicates, outliers)
+src/services/ai/insightTypes.js:29:  const duplicate = allInvoices.find(i => i.number === invoice.number && i.id !== invoice.id);
+src/services/ai/insightTypes.js:30:  if (duplicate) {
+src/services/ai/insightTypes.js:33:      anomaly: 'duplicate',
+src/routes/users.js:142:          oldValues: { role: before.role },
+src/routes/users.js:157:          oldValues: { isActive: before.isActive },
+src/routes/users.js:199:      oldValues: { isActive: user.isActive },
+src/services/ai/providers/index.js:3:const mockProvider = require('./mockProvider');
+src/services/ai/providers/index.js:9:  if (!config.enabled || config.provider === 'mock') {
+src/services/ai/providers/index.js:10:    return mockProvider;
+src/services/ai/providers/index.js:15:  return mockProvider;
+src/services/ai/providers/index.js:35:    model: config.provider === 'openai' ? config.openaiModel : 'mock',
+client/src/pages/Landing.jsx:44:              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+client/src/pages/Landing.jsx:47:              <h1 className="text-4xl font-bold leading-tight lg:text-5xl">
+client/src/pages/Landing.jsx:77:              <p className="text-sm font-semibold uppercase text-slate-500 tracking-[0.3em]">
+client/src/pages/Landing.jsx:84:                      <h3 className="text-lg font-semibold text-slate-900">{feature.title}</h3>
+client/src/pages/Landing.jsx:101:                <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+client/src/pages/Landing.jsx:110:            <h2 className="text-center text-2xl font-semibold text-slate-900">Trusted by teams like yours</h2>
+client/src/pages/Landing.jsx:111:            <div className="grid grid-cols-2 gap-4 text-center text-sm font-semibold uppercase tracking-[0.3em] text-slate-500 md:grid-cols-4">
+client/src/pages/Landing.jsx:124:              <h3 className="text-2xl font-semibold">End-to-end accounting + compliance</h3>
+client/src/pages/Landing.jsx:135:              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">Next steps</p>
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:7:        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:10:        <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:25:      <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:35:      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:38:      <p className="mt-1 font-semibold text-slate-900 dark:text-white">{value}</p>
+src/services/ai/aiSuggestionService.js:18:  // Generate suggestion (stub: replace with actual AI logic)
+src/services/ai/providers/mockProvider.js:48:    provider: 'mock',
+src/services/ai/providers/mockProvider.js:61:      provider: 'mock',
+src/services/ai/providers/mockProvider.js:70:  name: 'mock',
+client/src/pages/Onboarding.jsx:51:          <span className="text-red-600 font-semibold mb-2">{error}</span>
+client/src/pages/Onboarding.jsx:66:      <h1 className="text-3xl font-bold mb-4">Welcome to SmartAccounting™</h1>
+src/services/ai/providers/providerConfig.js:3:const SUPPORTED_PROVIDERS = new Set(['mock', 'openai']);
+src/services/ai/providers/providerConfig.js:6:  provider: 'mock',
+src/services/ai/providers/providerConfig.js:98:    model: config.provider === 'openai' ? config.openaiModel : 'mock',
+client/src/components/ChatTypingIndicator.jsx:8:          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+client/src/components/PlanBadge.jsx:41:          return 'bg-gold-100 text-gold-800';
+client/src/components/ai/cfo/CFOIntelligenceEngine.jsx:19:      <div className="mb-3 font-bold">
+client/src/components/ai/cfo/CFOIntelligenceEngine.jsx:30:      <div className="mt-3 font-semibold text-emerald-700 dark:text-emerald-200">
+client/src/pages/ProfileSettings.jsx:161:        <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-300">
+client/src/pages/ProfileSettings.jsx:164:        <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
+client/src/pages/ProfileSettings.jsx:179:            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Personal profile</h2>
+client/src/pages/ProfileSettings.jsx:184:          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+client/src/pages/ProfileSettings.jsx:254:          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Change password</h2>
+client/src/pages/ProfileSettings.jsx:312:            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Active sessions</h2>
+client/src/pages/ProfileSettings.jsx:314:              Review recent login sessions and revoke older tokens you no longer need. Showing the latest 10 sessions.
+client/src/pages/ProfileSettings.jsx:361:        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Logout</h2>
+client/src/pages/BankStatementImport.jsx:134:        <p className="font-semibold">Import will save data to the server.</p>
+client/src/pages/BankStatementImport.jsx:145:          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
+client/src/pages/BankStatementImport.jsx:146:          <h1 className="text-3xl font-bold text-gray-900">{activeCompany.name}</h1>
+client/src/pages/BankStatementImport.jsx:153:          <label className="block text-sm font-semibold text-gray-700">
+client/src/pages/BankStatementImport.jsx:237:              <p className="text-sm font-semibold text-gray-500">Import successful</p>
+client/src/pages/BankStatementImport.jsx:238:              <p className="text-lg font-bold text-gray-900">
+client/src/pages/BankStatementImport.jsx:263:              <p className="text-lg font-semibold text-gray-900">
+client/src/pages/BankStatementImport.jsx:269:              <p className="text-lg font-semibold text-gray-900">
+src/routes/system.js:74:    const oldValues = {};
+src/routes/system.js:76:      oldValues[k] = company[k];
+src/routes/system.js:87:      oldValues,
+src/routes/system.js:138:    const oldValues = {};
+src/routes/system.js:140:      oldValues[k] = company[k];
+src/routes/system.js:151:      oldValues,
+src/routes/system.js:677:        'oldValues',
+client/src/pages/Terms.jsx:5:    <h1 className="text-3xl font-bold mb-6">Terms of Service</h1>
+client/src/pages/Terms.jsx:11:    <h2 className="text-xl font-semibold mt-8 mb-2">1. Use of Service</h2>
+client/src/pages/Terms.jsx:16:    <h2 className="text-xl font-semibold mt-8 mb-2">2. Data & Privacy</h2>
+client/src/pages/Terms.jsx:21:    <h2 className="text-xl font-semibold mt-8 mb-2">3. Limitation of Liability</h2>
+client/src/pages/Terms.jsx:26:    <h2 className="text-xl font-semibold mt-8 mb-2">4. Changes</h2>
+client/src/pages/Terms.jsx:31:    <h2 className="text-xl font-semibold mt-8 mb-2">5. Contact</h2>
+client/src/index.css:103:    @apply block w-full px-4 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 transition-all duration-200;
+client/src/index.css:134:    @apply text-3xl font-bold text-gray-900 dark:text-white;
+client/src/index.css:143:    @apply text-xs font-semibold flex items-center;
+client/src/index.css:164:    @apply px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400;
+client/src/index.css:236:    @apply text-3xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-4xl;
+client/src/index.css:257:    @apply text-xl font-semibold text-gray-900 dark:text-white;
+client/src/index.css:267:    @apply block text-sm font-semibold text-gray-700 dark:text-gray-300;
+client/src/pages/InvoiceImport.jsx:95:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+client/src/pages/InvoiceImport.jsx:96:          <h1 className="text-3xl font-bold text-gray-900">Import invoices</h1>
+client/src/pages/InvoiceImport.jsx:191:                <h2 className="text-lg font-semibold text-gray-900">Validation preview</h2>
+client/src/pages/InvoiceImport.jsx:205:                  <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+client/src/pages/InvoiceImport.jsx:220:                          className={`rounded px-2 py-1 text-xs font-semibold ${
+client/src/pages/InvoiceImport.jsx:249:            <h2 className="text-lg font-semibold text-gray-900">Import complete</h2>
+src/routes/telemetry.js:13:  legacyHeaders: false,
+client/src/pages/BankStatementPreview.jsx:178:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:181:            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:191:            <span className="block font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:201:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:204:            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:212:          <span className="text-xs font-semibold uppercase tracking-wide text-primary-600">
+client/src/pages/BankStatementPreview.jsx:222:            <span className="text-sm font-semibold">Select a bank statement file</span>
+client/src/pages/BankStatementPreview.jsx:237:            <p className="text-sm font-semibold text-red-600" role="alert">
+client/src/pages/BankStatementPreview.jsx:248:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">File name</p>
+client/src/pages/BankStatementPreview.jsx:249:            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:254:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:257:            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:262:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
+client/src/pages/BankStatementPreview.jsx:263:            <p className="text-sm font-semibold text-gray-900 dark:text-white">{statusLabel}</p>
+client/src/pages/BankStatementPreview.jsx:269:        <p className="font-semibold">Preview only – no data has been imported yet</p>
+client/src/pages/BankStatementPreview.jsx:281:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:284:                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:295:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:298:                <p className="text-lg font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:303:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:306:                <p className="text-lg font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:311:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:314:                <p className="text-lg font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:319:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:322:                <p className="text-lg font-bold text-gray-900 dark:text-white">{currencyLabel}</p>
+client/src/pages/BankStatementPreview.jsx:327:              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Date range</p>
+client/src/pages/BankStatementPreview.jsx:328:              <p className="text-sm font-semibold text-gray-900 dark:text-white">{dateRangeLabel}</p>
+client/src/pages/BankStatementPreview.jsx:335:                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+client/src/pages/BankStatementPreview.jsx:338:                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+client/src/pages/BankStatementPreview.jsx:374:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:377:                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:397:                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:401:                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:404:                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:410:                      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-500">
+client/src/pages/BankStatementPreview.jsx:437:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:440:                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:461:                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:485:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:488:                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:509:                      <p className="font-semibold">{warning.message}</p>
+client/src/pages/BankStatementPreview.jsx:510:                      <span className="text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">
+client/src/pages/BankStatementPreview.jsx:533:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementPreview.jsx:536:                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:543:              <span className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">
+client/src/pages/BankStatementPreview.jsx:570:                  <p className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementPreview.jsx:574:                    The backend only executes the real import after this confirmation and never bypasses the dry-run.
+client/src/pages/BankStatementPreview.jsx:627:          className="text-sm font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+client/src/pages/Login.jsx:106:          <h1 className="text-3xl font-extrabold text-blue-700 dark:text-blue-300 mb-1 tracking-tight">
+client/src/pages/Login.jsx:121:                className="text-sm font-semibold text-gray-700 dark:text-gray-200"
+client/src/pages/Login.jsx:130:                placeholder="hello@demo.com"
+client/src/pages/Login.jsx:139:                className="text-sm font-semibold text-gray-700 dark:text-gray-200"
+client/src/pages/Login.jsx:149:                  placeholder="Enter your password"
+client/src/pages/Login.jsx:221:                className="text-sm font-semibold text-primary-600 hover:text-primary-500 focus:outline-none focus-visible:underline"
+client/src/pages/Login.jsx:239:                className="rounded bg-red-50 border border-red-200 py-3 px-4 text-center text-sm font-semibold text-red-700"
+client/src/pages/Login.jsx:252:              className="w-full text-base font-semibold mt-2"
+client/src/tests/routeConfig.test.jsx:32:    const duplicates = paths.filter((path, index) => paths.indexOf(path) !== index);
+client/src/tests/routeConfig.test.jsx:33:    expect(duplicates).toEqual([]);
+client/src/tests/routeConfig.test.jsx:47:    const duplicates = hrefs.filter((href, index) => hrefs.indexOf(href) !== index);
+client/src/tests/routeConfig.test.jsx:48:    expect(duplicates).toEqual([]);
+src/routes/bankStatements.js:64:  oldValues,
+src/routes/bankStatements.js:73:    oldValues: oldValues || null,
+src/routes/bankStatements.js:100:        oldValues: { isActive: company.isActive, suspendedAt: company.suspendedAt },
+src/routes/bankStatements.js:115:        oldValues: { subscriptionStatus: company.subscriptionStatus || null },
+src/routes/bankStatements.js:156:      oldValues: {
+src/routes/bankStatements.js:292:          oldValues: null,
+src/routes/bankStatements.js:404:        oldValues: null,
+client/src/components/AppErrorBoundary.jsx:102:            className="w-full max-w-[220px] px-4 py-2 rounded-md border border-transparent bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500"
+client/src/tests/routes.smoke.test.jsx:6:vi.mock('react-i18next', () => ({
+client/src/tests/routes.smoke.test.jsx:10:vi.mock('../pages/Analytics', () => ({
+client/src/tests/routes.smoke.test.jsx:14:vi.mock('../pages/AIInsights', () => ({
+client/src/tests/routes.smoke.test.jsx:18:vi.mock('../pages/AIAssistant', () => ({
+client/src/tests/routes.smoke.test.jsx:22:vi.mock('../pages/AIManager', () => ({
+client/src/tests/routes.smoke.test.jsx:26:vi.mock('../pages/Dashboard', () => ({
+client/src/tests/routes.smoke.test.jsx:30:vi.mock('../pages/Invoices', () => ({
+client/src/tests/routes.smoke.test.jsx:34:vi.mock('../pages/InvoiceCreate', () => ({
+client/src/tests/routes.smoke.test.jsx:38:vi.mock('../pages/InvoiceEdit', () => ({
+client/src/tests/routes.smoke.test.jsx:42:vi.mock('../pages/Expenses', () => ({
+client/src/tests/routes.smoke.test.jsx:46:vi.mock('../pages/ExpensesCreate', () => ({
+client/src/tests/routes.smoke.test.jsx:50:vi.mock('../pages/BankStatements', () => ({
+client/src/tests/routes.smoke.test.jsx:54:vi.mock('../pages/OCRPreview', () => ({
+client/src/tests/routes.smoke.test.jsx:58:vi.mock('../pages/BankStatementDetail', () => ({
+client/src/tests/routes.smoke.test.jsx:62:vi.mock('../pages/Billing', () => ({
+client/src/tests/routes.smoke.test.jsx:66:vi.mock('../pages/Companies', () => ({
+client/src/tests/routes.smoke.test.jsx:70:vi.mock('../pages/Users', () => ({
+client/src/tests/routes.smoke.test.jsx:74:vi.mock('../pages/Login', () => ({
+client/src/tests/routes.smoke.test.jsx:78:vi.mock('../pages/GermanTaxReports', () => ({
+client/src/tests/routes.smoke.test.jsx:82:vi.mock('../pages/OnboardingWizard', () => ({
+client/src/tests/routes.smoke.test.jsx:86:vi.mock('../pages/InvestorDashboard', () => ({
+client/src/tests/routes.smoke.test.jsx:90:vi.mock('../pages/AuditLogs', () => ({
+client/src/tests/routes.smoke.test.jsx:94:vi.mock('../pages/GDPRActions', () => ({
+client/src/tests/routes.smoke.test.jsx:99:vi.mock('../services/plansAPI', () => ({
+client/src/tests/routes.smoke.test.jsx:101:  fetchPublicPlans: vi.fn().mockResolvedValue({
+client/src/tests/routes.smoke.test.jsx:115:vi.mock('../components/Layout', () => ({
+client/src/tests/routes.smoke.test.jsx:120:vi.mock('../context/AuthContext', () => ({
+client/src/tests/routes.smoke.test.jsx:141:vi.mock('../context/CompanyContext', () => ({
+client/src/tests/routes.smoke.test.jsx:151:vi.mock('../context/RoleContext', () => ({
+client/src/pages/__tests__/AIInsights.test.jsx:10:const mockNavigate = vi.fn();
+client/src/pages/__tests__/AIInsights.test.jsx:12:vi.mock('react-router-dom', async () => {
+client/src/pages/__tests__/AIInsights.test.jsx:16:    useNavigate: () => mockNavigate,
+client/src/pages/__tests__/AIInsights.test.jsx:20:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/AIInsights.test.jsx:28:vi.mock('../../services/aiInsightsAPI', () => ({
+client/src/pages/__tests__/AIInsights.test.jsx:34:vi.mock('../../lib/featureFlags', () => ({
+client/src/pages/__tests__/AIInsights.test.jsx:62:    mockNavigate.mockReset();
+client/src/pages/ExpensesCreate.jsx:118:      <h2 className="text-2xl font-bold mb-4">Create Expense</h2>
+client/src/pages/ExpensesCreate.jsx:199:          <div className="flex justify-between font-semibold text-gray-900">
+client/src/tests/sidebar.test.jsx:9:vi.mock('react-i18next', () => ({
+client/src/tests/sidebar.test.jsx:32:vi.mock('../context/CompanyContext', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:7:vi.mock('../../context/AuthContext', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:13:vi.mock('../../context/CompanyContext', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:19:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:25:vi.mock('../Sidebar', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:29:vi.mock('../TopBar', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:33:vi.mock('../Footer', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:40:    aiAssistantAPI.askIntent.mockResolvedValue({
+client/src/pages/__tests__/Dashboard.test.jsx:15:vi.mock('react-i18next', () => ({
+client/src/pages/__tests__/Dashboard.test.jsx:19:vi.mock('../../services/dashboardAPI', () => ({
+client/src/pages/__tests__/Dashboard.test.jsx:26:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/Dashboard.test.jsx:40:vi.mock('../../context/CompanyContext', () => ({
+client/src/pages/__tests__/Dashboard.test.jsx:53:    dashboardAPI.getStats.mockResolvedValue({
+client/src/tests/InvoiceForm.test.jsx:8:  consoleErrorMock.mock.calls.some((call) =>
+client/src/tests/InvoiceForm.test.jsx:18:    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {});
+client/src/tests/InvoiceForm.test.jsx:25:      consoleErrorMock.mockRestore();
+client/src/tests/InvoiceForm.test.jsx:30:    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {});
+client/src/tests/InvoiceForm.test.jsx:70:      consoleErrorMock.mockRestore();
+client/src/components/__tests__/TopBar.test.jsx:9:vi.mock('../../hooks/useLoadCompanies', () => ({
+client/src/components/__tests__/TopBar.test.jsx:12:vi.mock('../../context/CompanyContext', () => ({
+client/src/components/__tests__/TopBar.test.jsx:15:vi.mock('../../context/AuthContext', () => ({
+client/src/components/__tests__/TopBar.test.jsx:32:vi.mock('react-i18next', () => ({
+client/src/pages/Dashboard.jsx:166:  const [cooldownExpiresAt, setCooldownExpiresAt] = useState(null);
+client/src/pages/Dashboard.jsx:182:      setCooldownExpiresAt(null);
+client/src/pages/Dashboard.jsx:203:          setCooldownExpiresAt(Date.now() + (err.cooldownMs || 60000));
+client/src/pages/Dashboard.jsx:224:    if (!cooldownExpiresAt) {
+client/src/pages/Dashboard.jsx:233:  }, [cooldownExpiresAt]);
+client/src/pages/Dashboard.jsx:236:    if (cooldownExpiresAt && timeNow >= cooldownExpiresAt) {
+client/src/pages/Dashboard.jsx:237:      setCooldownExpiresAt(null);
+client/src/pages/Dashboard.jsx:240:  }, [cooldownExpiresAt, timeNow]);
+client/src/pages/Dashboard.jsx:307:  const cooldownRemaining = cooldownExpiresAt
+client/src/pages/Dashboard.jsx:308:    ? Math.max(0, Math.ceil((cooldownExpiresAt - timeNow) / 1000))
+client/src/pages/Dashboard.jsx:343:        <p className="text-lg font-semibold">Rate limit reached</p>
+client/src/pages/Dashboard.jsx:345:        {cooldownRemaining > 0 && (
+client/src/pages/Dashboard.jsx:347:            Cooldown resets in {cooldownRemaining} second{cooldownRemaining !== 1 ? 's' : ''}
+client/src/pages/Dashboard.jsx:354:          disabled={cooldownRemaining > 0}
+client/src/pages/Dashboard.jsx:386:            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-300">
+client/src/pages/Dashboard.jsx:389:            <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white">
+client/src/pages/Dashboard.jsx:395:                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-200">
+client/src/pages/Dashboard.jsx:398:                <p className="mt-1 text-sm font-semibold text-emerald-950 dark:text-white">
+client/src/pages/Dashboard.jsx:403:                <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-200">
+client/src/pages/Dashboard.jsx:411:                <p className="text-xs font-bold uppercase tracking-widest text-violet-700 dark:text-violet-200">
+client/src/pages/Dashboard.jsx:425:            <div className="text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-200">
+client/src/pages/Dashboard.jsx:428:            <div className="mt-2 font-semibold">{activeCompany.name}</div>
+client/src/pages/Dashboard.jsx:429:            <div className="mt-4 grid gap-2 text-xs font-semibold">
+client/src/pages/Dashboard.jsx:447:              className="font-bold shadow-sm border border-red-200 dark:border-red-700"
+client/src/pages/Dashboard.jsx:482:                  className="font-bold shadow-sm border border-red-200 dark:border-red-700"
+client/src/pages/Dashboard.jsx:517:                <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+client/src/pages/Dashboard.jsx:520:                <h2 className="text-xl font-semibold text-gray-900">Investor dashboard</h2>
+client/src/pages/Dashboard.jsx:536:            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Quick actions</h2>
+client/src/pages/Dashboard.jsx:550:                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/Dashboard.jsx:553:                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-950/50 dark:text-blue-200">
+client/src/pages/Dashboard.jsx:560:                <span className="mt-4 inline-flex text-xs font-semibold text-blue-700 group-hover:text-blue-600 dark:text-blue-300">
+client/src/pages/Dashboard.jsx:570:            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Executive KPIs</h2>
+client/src/pages/Dashboard.jsx:572:              <span className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+client/src/pages/Dashboard.jsx:587:                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+client/src/pages/Dashboard.jsx:591:                        className="text-3xl font-extrabold tracking-tight text-blue-700 dark:text-blue-300"
+client/src/pages/Dashboard.jsx:614:          <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">Trends</h2>
+client/src/pages/Dashboard.jsx:618:                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/pages/Dashboard.jsx:656:                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/pages/Dashboard.jsx:695:          <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Details</h2>
+client/src/pages/Dashboard.jsx:702:              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/pages/Dashboard.jsx:712:                      <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/Dashboard.jsx:727:                <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/pages/Dashboard.jsx:735:                        className="font-semibold text-gray-900 dark:text-white"
+client/src/pages/Dashboard.jsx:751:                  <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+client/src/pages/Dashboard.jsx:754:                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold uppercase text-amber-700 dark:bg-amber-950 dark:text-amber-200">
+client/src/pages/Dashboard.jsx:765:                        <p className="text-sm font-semibold text-amber-950 dark:text-white">
+client/src/pages/Dashboard.jsx:768:                        <span className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-200">
+client/src/pages/Dashboard.jsx:788:                <h3 className="mb-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+client/src/pages/Dashboard.jsx:794:                    <span className="font-semibold text-emerald-950 dark:text-white">
+client/src/pages/Dashboard.jsx:803:                    <span className="font-semibold text-emerald-950 dark:text-white">
+client/src/pages/Dashboard.jsx:814:                    <span className="font-semibold text-emerald-950 dark:text-white">
+client/src/pages/Dashboard.jsx:829:              <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
+client/src/pages/Dashboard.jsx:836:                    <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/Dashboard.jsx:842:                    <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/Dashboard.jsx:848:                    <span className="font-semibold text-gray-900 dark:text-white">
+client/src/pages/Dashboard.jsx:859:                      <span className="font-semibold text-gray-900 dark:text-white">
+client/src/test/AISuggestionCard.test.jsx:8:      explanation: 'Possible duplicate detected.',
+client/src/pages/__tests__/Companies.test.jsx:6:const mockNavigate = vi.fn();
+client/src/pages/__tests__/Companies.test.jsx:8:vi.mock('react-router-dom', async () => {
+client/src/pages/__tests__/Companies.test.jsx:12:    useNavigate: () => mockNavigate,
+client/src/pages/__tests__/Companies.test.jsx:16:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/Companies.test.jsx:24:vi.mock('../../services/companiesAPI', () => ({
+client/src/pages/__tests__/Companies.test.jsx:66:    mockNavigate.mockReset();
+client/src/pages/__tests__/Companies.test.jsx:69:  it('fetches companies only once per mount (no duplicate calls)', async () => {
+client/src/pages/__tests__/Companies.test.jsx:70:    companiesAPI.list.mockResolvedValueOnce([{ id: 1, name: 'TestCo' }]);
+client/src/pages/__tests__/Companies.test.jsx:89:        .mockRejectedValueOnce({ response: { status: 429 } })
+client/src/pages/__tests__/Companies.test.jsx:90:        .mockRejectedValueOnce({ response: { status: 429 } })
+client/src/pages/__tests__/Companies.test.jsx:91:        .mockResolvedValueOnce([{ id: 2, name: 'BackoffCo' }]);
+client/src/pages/__tests__/Companies.test.jsx:115:    companiesAPI.list.mockResolvedValueOnce([{ id: 3, name: 'NoActiveCo' }]);
+client/src/components/ProtectedRoute.jsx:48:          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Access Denied</h2>
+client/src/pages/Billing.jsx:85:        <h2 className="text-2xl font-semibold text-gray-900 mb-4">{t('billingTitle')}</h2>
+client/src/pages/Billing.jsx:192:        <h2 className="text-2xl font-semibold text-gray-900 mb-4">{t('billingTitle')}</h2>
+client/src/pages/Billing.jsx:207:      <h1 className="text-2xl font-bold text-gray-900 mb-2">Billing</h1>
+client/src/pages/Billing.jsx:216:            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('currentSubscription')}</h2>
+client/src/pages/Billing.jsx:275:            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+client/src/pages/Billing.jsx:320:          <h2 className="text-lg font-semibold text-gray-900 mb-4">Billing History</h2>
+client/src/pages/Billing.jsx:324:              <p className="font-semibold">No billing history yet</p>
+client/src/pages/__tests__/AIManager.test.jsx:8:vi.mock('../../context/CompanyContext', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:14:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:20:vi.mock('../../services/aiInsightsAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:33:  const mockContext = (overrides = {}) => {
+client/src/pages/__tests__/AIManager.test.jsx:34:    aiAssistantAPI.getContext.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:42:  const mockInsights = (insights = []) => {
+client/src/pages/__tests__/AIManager.test.jsx:43:    aiInsightsAPI.list.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:51:    mockContext({
+client/src/pages/__tests__/AIManager.test.jsx:62:    mockInsights([
+client/src/pages/__tests__/AIManager.test.jsx:67:        summary: 'Potential duplicate invoice needs review.',
+client/src/pages/__tests__/AIManager.test.jsx:111:    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:143:    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:149:    mockInsights([
+client/src/pages/__tests__/AIManager.test.jsx:168:    mockContext({
+client/src/pages/__tests__/AIManager.test.jsx:178:    mockInsights([]);
+client/src/components/Layout.jsx:79:          <span className="text-lg font-semibold">Loading...</span>
+client/src/pages/AuditorDashboard.jsx:9:      <h1 className="text-3xl font-bold mb-4">Auditor Mode — Read-Only</h1>
+client/src/pages/AuditorDashboard.jsx:12:        <h2 className="text-xl font-semibold mb-2">Audit Log Summary</h2>
+client/src/pages/AuditorDashboard.jsx:14:        {/* TODO: Add audit log summary table or component here */}
+client/src/pages/AuditorDashboard.jsx:17:        <h2 className="text-xl font-semibold mb-2">GDPR Activity Summary</h2>
+client/src/pages/AuditorDashboard.jsx:19:        {/* TODO: Add GDPR summary component here */}
+client/src/pages/AuditorDashboard.jsx:22:        <h2 className="text-xl font-semibold mb-2">AI Insights (Read-Only)</h2>
+client/src/pages/AuditorDashboard.jsx:24:        {/* TODO: Add AI insights summary here */}
+client/src/pages/AuditorDashboard.jsx:27:        <h2 className="text-xl font-semibold mb-2">Explain This System</h2>
+client/src/pages/Expenses.jsx:175:        <span className="font-semibold">What does AI see?</span> The assistant will only see your
+client/src/pages/Expenses.jsx:181:        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
+client/src/pages/Expenses.jsx:199:                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Expenses.jsx:205:                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Expenses.jsx:211:                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Expenses.jsx:217:                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Expenses.jsx:223:                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Expenses.jsx:229:                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+client/src/pages/Expenses.jsx:280:                          className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[status]}`}
+client/src/pages/Expenses.jsx:318:                              <dt className="font-semibold text-gray-600 dark:text-gray-300">Net</dt>
+client/src/pages/Expenses.jsx:324:                              <dt className="font-semibold text-gray-600 dark:text-gray-300">VAT</dt>
+client/src/pages/Expenses.jsx:331:                              <dt className="font-semibold text-gray-600 dark:text-gray-300">
+client/src/pages/Expenses.jsx:339:                              <dt className="font-semibold text-gray-600 dark:text-gray-300">
+client/src/components/TopBar.jsx:307:                className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white/80 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800/80 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 transition-all duration-200"
+client/src/components/TopBar.jsx:308:                placeholder={t('search.enhanced_placeholder')}
+client/src/components/TopBar.jsx:309:                aria-label={t('search.enhanced_placeholder')}
+client/src/components/TopBar.jsx:312:                <kbd className="hidden sm:inline-block px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600">
+client/src/components/TopBar.jsx:327:                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+client/src/components/TopBar.jsx:421:                    <span className="text-xs font-bold text-white">
+client/src/components/TopBar.jsx:436:                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:86:            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementReconciliationPreview.jsx:89:            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:142:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementReconciliationPreview.jsx:145:                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:165:                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementReconciliationPreview.jsx:169:                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:172:                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:177:                    <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-gray-500">
+client/src/pages/BankStatementReconciliationPreview.jsx:193:                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+client/src/pages/BankStatementReconciliationPreview.jsx:196:                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:214:                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:221:                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/pages/BankStatementReconciliationPreview.jsx:273:    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+client/src/pages/BankStatementReconciliationPreview.jsx:274:    <p className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+client/src/pages/AuditLogs.jsx:38:      <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Audit Logs</h1>
+client/src/pages/__tests__/AIAssistant.test.jsx:17:const mockNavigate = vi.fn();
+client/src/pages/__tests__/AIAssistant.test.jsx:19:vi.mock('react-router-dom', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:23:    useNavigate: () => mockNavigate,
+client/src/pages/__tests__/AIAssistant.test.jsx:27:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:36:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:47:vi.mock('../../services/ocrAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:53:vi.mock('../../services/expensesAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:59:vi.mock('../../services/invoicesAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:65:vi.mock('../../lib/featureFlags', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:104:  aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:120:    mockNavigate.mockReset();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:230:    analyzeIntake.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:335:    analyzeIntake.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:399:    recheckIntakeDocument.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:486:    createDraftFromReviewedIntake.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:603:    analyzeIntake.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:662:    recheckIntakeDocument.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:792:    analyzeIntake.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:934:    aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/components/ui/ErrorBoundaryFallback.jsx:15:        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+client/src/pages/__tests__/DocumentInbox.test.jsx:8:vi.mock('../../services/ocrAPI', () => ({
+client/src/pages/__tests__/DocumentInbox.test.jsx:12:vi.mock('../../services/api', () => ({
+client/src/pages/__tests__/DocumentInbox.test.jsx:16:vi.mock('../../context/CompanyContext', () => ({
+client/src/pages/__tests__/DocumentInbox.test.jsx:81:    listDocumentInbox.mockResolvedValueOnce(inboxPayload);
+client/src/pages/__tests__/DocumentInbox.test.jsx:101:      .mockResolvedValueOnce(inboxPayload)
+client/src/pages/__tests__/DocumentInbox.test.jsx:102:      .mockResolvedValueOnce({ success: true, count: 1, documents: [inboxPayload.documents[1]] });
+client/src/pages/__tests__/DocumentInbox.test.jsx:118:    listDocumentInbox.mockResolvedValueOnce({ success: true, count: 0, documents: [] });
+client/src/pages/__tests__/DocumentInbox.test.jsx:127:    listDocumentInbox.mockRejectedValueOnce(new Error('network'));
+client/src/pages/InvoiceEdit.jsx:72:          <div className="flex h-14 w-14 items-center justify-center rounded border border-gray-200 bg-gray-50 text-lg font-bold text-gray-700">
+client/src/pages/InvoiceEdit.jsx:75:          <h2 className="mt-3 text-xl font-semibold text-gray-900">{company?.name || 'Company'}</h2>
+client/src/pages/InvoiceEdit.jsx:80:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoice</p>
+client/src/pages/InvoiceEdit.jsx:81:          <p className="text-2xl font-bold text-gray-900">{invoice.invoiceNumber}</p>
+client/src/pages/InvoiceEdit.jsx:90:          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Bill to</p>
+client/src/pages/InvoiceEdit.jsx:94:          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Issue date</p>
+client/src/pages/InvoiceEdit.jsx:98:          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Due date</p>
+client/src/pages/InvoiceEdit.jsx:106:            <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+client/src/pages/InvoiceEdit.jsx:134:          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Notes</p>
+client/src/pages/InvoiceEdit.jsx:136:          <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+client/src/pages/InvoiceEdit.jsx:157:            <span className="font-semibold text-gray-900">Total</span>
+client/src/pages/InvoiceEdit.jsx:158:            <span className="font-bold text-gray-900">
+client/src/pages/InvoiceEdit.jsx:172:        <h2 className="text-lg font-semibold text-gray-900">Audit trail</h2>
+client/src/pages/InvoiceEdit.jsx:189:                  Status: {formatStatus(entry.oldValues?.status)} to {formatStatus(entry.newValues.status)}
+client/src/pages/InvoiceEdit.jsx:362:          <p className="text-sm font-semibold text-red-600">{error.message}</p>
+client/src/pages/InvoiceEdit.jsx:392:            <h1 className="text-3xl font-bold text-gray-900">Invoice {invoice.invoiceNumber}</h1>
+client/src/locales/en/translation.json:34:    "placeholder": "Select company"
+client/src/locales/en/translation.json:204:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/en/translation.json:205:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:5:const mockNavigate = vi.fn();
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:6:const mockLocation = {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:11:vi.mock('react-router-dom', async () => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:15:    useNavigate: () => mockNavigate,
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:16:    useLocation: () => mockLocation,
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:22:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:41:vi.mock('../../context/CompanyContext', () => ({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:87:vi.mock('../../services/bankStatementsAPI', async () => {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:100:vi.mock('../../services/invoicesAPI', () => ({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:106:vi.mock('../../services/expensesAPI', () => ({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:126:  mockNavigate.mockReset();
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:127:  bankStatementsAPI.transactions.mockResolvedValue(sampleTransactions);
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:128:  bankStatementsAPI.updateTransaction.mockResolvedValue(sampleTransactions[0]);
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:129:  bankStatementsAPI.reconcileTransaction.mockResolvedValue({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:136:  invoicesAPI.list.mockResolvedValue(sampleInvoices);
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:137:  expensesAPI.list.mockResolvedValue(sampleExpenses);
+client/src/pages/__tests__/OCRPreview.test.jsx:5:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/OCRPreview.test.jsx:24:vi.mock('../../context/CompanyContext', () => ({
+client/src/pages/__tests__/OCRPreview.test.jsx:33:vi.mock('../../services/ocrAPI', () => ({
+client/src/pages/__tests__/OCRPreview.test.jsx:50:  previewDocument.mockReset();
+client/src/pages/__tests__/OCRPreview.test.jsx:69:    previewDocument.mockResolvedValue(previewPayload);
+client/src/pages/__tests__/BankStatementPreview.test.jsx:5:const mockNavigate = vi.fn();
+client/src/pages/__tests__/BankStatementPreview.test.jsx:8:vi.mock('react-router-dom', async () => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:12:    useNavigate: () => mockNavigate,
+client/src/pages/__tests__/BankStatementPreview.test.jsx:16:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/BankStatementPreview.test.jsx:35:vi.mock('../../context/CompanyContext', () => ({
+client/src/pages/__tests__/BankStatementPreview.test.jsx:44:vi.mock('../../services/bankStatementsAPI', async () => {
+client/src/pages/__tests__/BankStatementPreview.test.jsx:83:  mockNavigate.mockReset();
+client/src/pages/__tests__/BankStatementPreview.test.jsx:108:    bankStatementsAPI.previewDryRun.mockResolvedValue(previewResponse);
+client/src/pages/__tests__/BankStatementPreview.test.jsx:127:    bankStatementsAPI.previewDryRun.mockResolvedValue(previewResponse);
+client/src/pages/__tests__/BankStatementPreview.test.jsx:144:    bankStatementsAPI.previewDryRun.mockResolvedValue(previewResponse);
+client/src/pages/__tests__/BankStatementPreview.test.jsx:145:    bankStatementsAPI.confirmImport.mockResolvedValue({
+client/src/pages/__tests__/BankStatementPreview.test.jsx:169:      expect(mockNavigate).toHaveBeenCalledWith('/bank-statements/123', {
+client/src/pages/GDPRActions.jsx:53:      <h1 className="text-3xl font-bold mb-4">GDPR Actions</h1>
+client/src/pages/GDPRActions.jsx:55:        Under the GDPR, you have the right to export your data and request anonymization. Anonymization is <span className="font-semibold text-red-600">irreversible</span> and will remove all personal identifiers. Only admins can anonymize users.
+client/src/pages/GDPRActions.jsx:61:                <span className="text-red-600 font-semibold mb-2">{error}</span>
+client/src/components/ui/Badge.jsx:15:        'inline-block rounded px-2 py-0.5 text-xs font-semibold',
+client/src/pages/Pricing.jsx:143:          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+client/src/pages/Pricing.jsx:146:          <h1 className="text-4xl font-bold leading-tight">{copy.headline}</h1>
+client/src/pages/Pricing.jsx:180:                  <h2 className="text-xl font-semibold text-slate-900">{plan.name}</h2>
+client/src/pages/Pricing.jsx:184:                <p className="mt-6 text-3xl font-bold text-slate-900">{formatPrice(plan.price)}</p>
+client/src/pages/Pricing.jsx:193:                    <div className="font-semibold text-slate-900">Nutzer</div>
+client/src/pages/Pricing.jsx:197:                    <div className="font-semibold text-slate-900">Unternehmen</div>
+client/src/pages/Pricing.jsx:210:                  <div className="font-semibold text-slate-900">Rahmen & Limits</div>
+client/src/pages/Pricing.jsx:244:          <h3 className="text-2xl font-semibold text-slate-900">{copy.comparisonTitle}</h3>
+client/src/pages/Pricing.jsx:247:            <span className="font-semibold text-slate-700">Funktion</span>
+client/src/pages/Pricing.jsx:249:              <span key={plan.id} className="font-semibold text-center text-slate-700">
+client/src/pages/Pricing.jsx:261:                  <span className="text-sm font-semibold text-slate-900">{row.label}</span>
+client/src/pages/Pricing.jsx:290:          <h3 className="text-3xl font-semibold">{copy.customTitle}</h3>
+client/src/components/AISeverityPill.jsx:33:        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+client/src/components/NotificationToast.jsx:102:              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</h4>
+client/src/components/ConfirmDangerModal.jsx:31:          className={`text-xl font-bold mb-2 ${danger ? 'text-red-600' : 'text-gray-900'}`}
+client/src/pages/InvoiceCreate.jsx:67:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+client/src/pages/InvoiceCreate.jsx:68:          <h1 className="text-3xl font-bold text-gray-900">Create invoice</h1>
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:10:const mockNavigate = vi.fn();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:12:vi.mock('react-router-dom', async () => {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:16:    useNavigate: () => mockNavigate,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:20:vi.mock('../../context/AuthContext', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:29:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:38:vi.mock('../../lib/featureFlags', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:67:    mockNavigate.mockReset();
+client/src/components/RateLimitBanner.jsx:5:    <p className="font-bold">Rate Limit Exceeded</p>
+client/src/pages/GermanTaxReports.jsx:156:            <h2 className="text-lg font-semibold text-gray-900 mt-1">German tax reporting</h2>
+client/src/pages/GermanTaxReports.jsx:215:        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tax Reports</h1>
+client/src/pages/GermanTaxReports.jsx:228:          <span className="inline-block px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-semibold mr-2">
+client/src/components/Sidebar.jsx:223:              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold shadow-lg shadow-primary-500/25 before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-white/80 before:content-[\'\']'
+client/src/components/Sidebar.jsx:249:                    className={`ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+client/src/components/Sidebar.jsx:292:          <p className="font-semibold">{tooltipPrimary}</p>
+client/src/components/Sidebar.jsx:318:              <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest dark:text-gray-400">
+client/src/components/Sidebar.jsx:371:              <span className="text-white font-bold text-sm">SA</span>
+client/src/components/Sidebar.jsx:374:              <h1 className="text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+src/utils/demoPayloadNormalizer.js:62:  invoiceNumber: null, // Handled separately to avoid duplicates
+client/src/pages/SystemAdminDashboard.jsx:308:        <p className="text-lg font-semibold text-red-600">{error.message}</p>
+client/src/pages/SystemAdminDashboard.jsx:327:        <h1 className="text-2xl font-bold text-gray-900">System Admin Dashboard</h1>
+client/src/pages/SystemAdminDashboard.jsx:343:              <h2 className="text-lg font-semibold text-gray-900">System Overview</h2>
+client/src/pages/SystemAdminDashboard.jsx:353:              <p className="text-sm font-semibold text-gray-900">{overview?.version || '—'}</p>
+client/src/pages/SystemAdminDashboard.jsx:357:              <p className="text-sm font-semibold text-gray-900">
+client/src/pages/SystemAdminDashboard.jsx:363:              <p className="text-sm font-semibold text-gray-900">
+client/src/pages/SystemAdminDashboard.jsx:369:              <p className="text-sm font-semibold text-gray-900">
+client/src/pages/SystemAdminDashboard.jsx:381:              <h2 className="text-lg font-semibold text-gray-900">Companies Management</h2>
+client/src/pages/SystemAdminDashboard.jsx:443:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:446:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:449:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:452:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:455:                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:543:              <h2 className="text-lg font-semibold text-gray-900">Users Management</h2>
+client/src/pages/SystemAdminDashboard.jsx:613:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:616:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:619:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:622:                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:625:                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">
+client/src/pages/SystemAdminDashboard.jsx:685:          <h2 className="text-lg font-semibold text-gray-900">Plans & Pricing</h2>
+client/src/pages/SystemAdminDashboard.jsx:704:          <h2 className="text-lg font-semibold text-gray-900">Subscriptions & Billing</h2>
+client/src/pages/SystemAdminDashboard.jsx:730:          <h2 className="text-lg font-semibold text-gray-900">Feature Flags & AI Governance</h2>
+client/src/pages/SystemAdminDashboard.jsx:757:          <h2 className="text-lg font-semibold text-gray-900">Maintenance Mode</h2>
+client/src/pages/SystemAdminDashboard.jsx:778:                placeholder="Scheduled maintenance window details"
+client/src/pages/SystemAdminDashboard.jsx:790:          <h2 className="text-lg font-semibold text-gray-900">Audit Logs (System-wide)</h2>
+client/src/pages/SystemAdminDashboard.jsx:809:          <h2 className="text-lg font-semibold text-gray-900">Backups & Restore</h2>
+client/src/pages/SystemAdminDashboard.jsx:828:          <h2 className="text-lg font-semibold text-gray-900">Environment & Config</h2>
+client/src/pages/SystemAdminDashboard.jsx:842:          <h2 className="text-lg font-semibold text-gray-900">Monitoring & Telemetry</h2>
+src/routes/taxReports.js:296:      const oldValues = { status: taxReport.status, reportType: taxReport.reportType };
+src/routes/taxReports.js:304:        oldValues,
+client/src/components/GlobalAICompanion.jsx:114:                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-50">
+client/src/components/GlobalAICompanion.jsx:178:                <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+client/src/components/GlobalAICompanion.jsx:194:                placeholder="Ask a read-only question"
+client/src/locales/de/translation.json:34:    "placeholder": "Select company"
+client/src/locales/de/translation.json:202:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/de/translation.json:203:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/components/EmptyState.jsx:27:        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+src/lib/telemetryReporter.js:2:// Zero side-effect stub for error telemetry
+client/src/components/ReadOnlyBanner.jsx:25:      <span className="block text-base font-semibold tracking-wide mb-1">{label}</span>
+src/templates/email/invoice-created.html:14:        .amount { font-size: 24px; font-weight: bold; color: #059669; }
+client/src/components/ui/Button.jsx:69:        'inline-flex items-center justify-center gap-2 rounded font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed',
+client/src/components/ui/Modal.jsx:114:              className="text-xl font-semibold text-gray-900 dark:text-white"
+client/src/components/ui/Toast.jsx:66:                className="text-sm font-semibold ml-3 text-primary-600 hover:text-primary-800"
+client/src/components/ui/EmptyState.jsx:30:      <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
+client/src/components/ui/PageStates.jsx:21:      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+client/src/locales/ar/translation.json:34:    "placeholder": "Select company"
+client/src/locales/ar/translation.json:202:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/ar/translation.json:203:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/context/__tests__/AuthContext.test.jsx:8:vi.mock('../../services/authAPI', () => ({
+client/src/context/__tests__/AuthContext.test.jsx:17:vi.mock('../../services/companiesAPI', () => ({
+client/src/context/__tests__/AuthContext.test.jsx:23:vi.mock('../../lib/logger', () => ({
+client/src/context/__tests__/AuthContext.test.jsx:38:    authAPI.login.mockResolvedValue({ success: true, token: 'jwt-123', user: { id: 1 } });
+client/src/context/__tests__/AuthContext.test.jsx:53:    authAPI.me.mockResolvedValueOnce({ success: false });
+client/src/context/__tests__/AuthContext.test.jsx:54:    authAPI.login.mockRejectedValue({
+client/src/components/AISuggestionCard.jsx:61:          <span className="text-xs font-semibold text-blue-700 dark:text-blue-300" id="ai-suggestion-label">
+client/src/components/BankStatementStatusBadge.jsx:39:      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${meta.classes} ${className}`}
+src/models/AuditLog.js:25:      oldValues: {
+src/utils/bank/ocrStatementParser.js:1:// OCR Fallback Parser (stub)
+src/utils/bank/ocrStatementParser.js:5:  // TODO: Integrate real OCR (e.g. Tesseract)
+src/middleware/apiTimeout.js:64:      logger.warn('API request exceeded timeout threshold', {
+src/utils/errorHandler.js:4:// Thin bridge for legacy imports; prefer requiring from src/middleware/errorHandler directly.
+src/middleware/security.js:85:    legacyHeaders: false,
+src/utils/validateEnv.js:24:    'LOG_SLOW_REQUEST_MS adjusts the slow request warning threshold in milliseconds (default 1000).',
+src/utils/validateEnv.js:30:const allowedAiProviders = ['mock', 'openai'];
+src/utils/validateEnv.js:121:    const threshold = Number(process.env.LOG_SLOW_REQUEST_MS);
+src/utils/validateEnv.js:122:    if (!Number.isFinite(threshold) || threshold <= 0) {
+src/utils/validateEnv.js:128:    const queryThreshold = Number(process.env.LOG_SLOW_QUERY_MS);
+src/utils/validateEnv.js:129:    if (!Number.isFinite(queryThreshold) || queryThreshold < 0) {
+src/utils/validateEnv.js:163:  const aiProvider = (process.env.AI_PROVIDER || 'mock').toLowerCase();
+src/utils/datev/datevFormatter.js:25:  // TODO: Implement strict DATEV column order and formatting
+src/middleware/rateLimiter.js:27:    legacyHeaders: false,
+src/utils/datev/datevValidators.js:5:  // TODO: Implement VAT consistency checks
+src/utils/datev/datevValidators.js:10:  // TODO: Implement fiscal year boundary checks
+src/middleware/performance.js:64:      threshold: 1024,
+src/middleware/upload.js:3: * @deprecated use `createSecureUploader` from `./secureUpload.js` instead.
+src/middleware/upload.js:4: * This helper remains for legacy routes only and is intentionally not updated to
+src/middleware/upload.js:11:if (!global.__legacyUploadDeprecatedWarning) {
+src/middleware/upload.js:12:  global.__legacyUploadDeprecatedWarning = true;
+src/config/database.js:23:  const rawThreshold = process.env.LOG_SLOW_QUERY_MS;
+src/config/database.js:24:  let threshold;
+src/config/database.js:26:  if (rawThreshold === undefined || rawThreshold === null) {
+src/config/database.js:27:    threshold = DEFAULT_SLOW_QUERY_THRESHOLD_MS;
+src/config/database.js:29:    const parsed = parseNumberEnv(rawThreshold);
+src/config/database.js:30:    threshold = parsed === undefined ? DEFAULT_SLOW_QUERY_THRESHOLD_MS : parsed;
+src/config/database.js:34:  const shouldLogSlowQueries = !isTestEnv && threshold > 0;
+src/config/database.js:54:        if (timing >= threshold) {
+src/config/database.js:58:            thresholdMs: threshold,
+src/utils/germanTaxUtils.js:11:  static taxThresholds = {
+src/utils/germanTaxUtils.js:65:    return previousRevenue <= 17500 && currentRevenue <= this.taxThresholds.kleinunternehmer;
+src/middleware/auth.js:1:// Thin alias for legacy imports; prefer requiring ./authMiddleware directly.
+
+===== 7. AI SERVICE INVENTORY =====
+src/services/ai/README.md
+src/services/ai/aiAssistantService.js
+src/services/ai/aiAuditLogger.js
+src/services/ai/aiDataService.js
+src/services/ai/aiInsightsService.js
+src/services/ai/aiReadGateway.js
+src/services/ai/aiSuggestionService.js
+src/services/ai/approvalState.js
+src/services/ai/assistantAuthorization.js
+src/services/ai/assistantCapabilityContract.js
+src/services/ai/assistantResponseSchema.js
+src/services/ai/auditLogger.js
+src/services/ai/automation/automationAuditLogger.js
+src/services/ai/automation/automationContract.js
+src/services/ai/automation/automationEngine.js
+src/services/ai/automation/automationGuard.js
+src/services/ai/automation/detectors/anomalyDetector.js
+src/services/ai/automation/detectors/cashFlowRiskDetector.js
+src/services/ai/automation/detectors/duplicateInvoiceDetector.js
+src/services/ai/automation/detectors/unmatchedBankTransactionDetector.js
+src/services/ai/automation/recommendationBuilder.js
+src/services/ai/cfo/cfoEngine.js
+src/services/ai/contextContract.js
+src/services/ai/documentIntakeAssistantService.js
+src/services/ai/eventBus.js
+src/services/ai/explainability.js
+src/services/ai/germanAccountingKnowledgeContract.js
+src/services/ai/governance.js
+src/services/ai/insightTypes.js
+src/services/ai/mutationIntent.js
+src/services/ai/orchestrator/AIOrchestrator.js
+src/services/ai/promptRegistry.js
+src/services/ai/providerBudgetGuard.js
+src/services/ai/providerTimeout.js
+src/services/ai/providers/index.js
+src/services/ai/providers/mockProvider.js
+src/services/ai/providers/openaiProvider.js
+src/services/ai/providers/providerConfig.js
+src/services/ai/suggestionContract.js
+
+===== 8. FRONTEND AI STRUCTURE MAP =====
+client/src/assets/ai-premium.svg
+client/src/components/AIBadge.jsx
+client/src/components/AIDrawer.jsx
+client/src/components/AIInsightCard.jsx
+client/src/components/AIMetadataLine.jsx
+client/src/components/AISeverityPill.jsx
+client/src/components/AISuggestionCard.jsx
+client/src/components/AITrustBanner.jsx
+client/src/components/ExplainWhy.jsx
+client/src/components/GlobalAICompanion.jsx
+client/src/components/__tests__/GlobalAICompanion.test.jsx
+client/src/components/ai/cfo/CFOIntelligenceEngine.jsx
+client/src/components/ai/orchestrator/AIOrchestrator.jsx
+client/src/lib/__tests__/aiPageContext.test.js
+client/src/lib/aiChatAttachments.js
+client/src/lib/aiChatIntent.js
+client/src/lib/aiConstants.js
+client/src/lib/aiPageContext.js
+client/src/main.jsx
+client/src/pages/AIAssistant.jsx
+client/src/pages/AIInsights.jsx
+client/src/pages/AIManager.jsx
+client/src/pages/BankStatementDetail.jsx
+client/src/pages/__tests__/AIAssistant.test.jsx
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx
+client/src/pages/__tests__/AIInsights.test.jsx
+client/src/pages/__tests__/AIManager.test.jsx
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx
+client/src/services/__tests__/aiAssistantAPI.test.jsx
+client/src/services/__tests__/aiInsightsAPI.test.jsx
+client/src/services/aiAssistantAPI.js
+client/src/services/aiInsightsAPI.js
+client/src/services/aiInsightsMappers.js
+client/src/shared/ai/mutationIntentConfig.json
+client/src/test/AISuggestionCard.test.jsx
+
+===== 9. GIT STATE =====
+## main...origin/main
+ D client/src/components/ai/AIDecisionLayer.jsx
+ D client/src/components/ai/AIFinancialControlPanel.jsx
+ D client/src/components/ai/core/AIIntelligenceZone.jsx
+ D client/src/components/ai/engine/AIFinancialEngine.jsx
+ D client/src/components/ai/live/AILiveFeed.jsx
+ D client/src/components/ai/live/AILiveStreamBridge.jsx
+ D client/src/components/ai/stream/AIStreamEngine.jsx
+ D client/src/hooks/useAIStream.js
+ M client/src/pages/AIAssistant.jsx
+ M client/src/pages/Dashboard.jsx
+ M src/services/ai/README.md
+ M src/services/ai/aiReadGateway.js
+ D src/services/ai/decision/decisionContract.js
+ D src/services/ai/decision/decisionService.js
+ D src/services/ai/decision/decisionValidator.js
+?? .architecture-archive/
+?? client/src/components/ai/cfo/
+?? client/src/components/ai/orchestrator/
+?? docs/AUDIT/
+?? src/services/ai/cfo/
+?? src/services/ai/eventBus.js
+?? src/services/ai/orchestrator/
+40afbdc feat: UI-4C real-time backend-to-frontend AI streaming integration
+8ca62e1 feat: UI-3B final AI financial intelligence engine layer
+c26cbcd chore: checkpoint before UI-3B financial control upgrade
+c0b65ae feat: polish dashboard KPI and trends visuals
+7725d49 feat: upgrade dashboard premium command center UX
+e5d4390 feat: polish dashboard command center hero
+2afee02 docs: add frontend design system contract
+9fe770c docs: add final release handover
+1840633 fix: stabilize VAT and DATEV accounting exports
+a93450e fix: serialize invoice creation for stable numbering
+
+=======================================
+END FULL AI CONTROL PLANE AUDIT
+=======================================

@@ -57,7 +57,7 @@ const ProfileSettings = () => {
       });
       setSessions(response.data?.sessions || []);
     } catch (err) {
-      setSessionsError(formatApiError(err, 'Unable to load active sessions.').message);
+      setSessionsError(formatApiError(err, 'Unable to load active sessions.'));
     } finally {
       setSessionsLoading(false);
     }
@@ -119,7 +119,7 @@ const ProfileSettings = () => {
       setSuccess('Profile updated successfully.');
       setEditing(false);
     } catch (err) {
-      setError(formatApiError(err, 'Unable to update profile.').message);
+      setError(formatApiError(err, 'Unable to update profile.'));
     } finally {
       setSaving(false);
     }
@@ -138,7 +138,7 @@ const ProfileSettings = () => {
       setPasswordForm({ currentPassword: '', newPassword: '' });
       setSuccess('Password changed successfully.');
     } catch (err) {
-      setPasswordError(formatApiError(err, 'Unable to change password.').message);
+      setPasswordError(formatApiError(err, 'Unable to change password.'));
     } finally {
       setPasswordSaving(false);
     }
@@ -151,7 +151,7 @@ const ProfileSettings = () => {
       });
       setSessions((prev) => prev.filter((session) => session.id !== id));
     } catch (err) {
-      setSessionsError(formatApiError(err, 'Unable to revoke session.').message);
+      setSessionsError(formatApiError(err, 'Unable to revoke session.'));
     }
   };
 

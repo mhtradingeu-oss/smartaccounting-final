@@ -1,0 +1,1864 @@
+
+====================================
+🎤 AI VOICE SYSTEM TRUTH SCAN
+====================================
+
+
+[1. VOICE / AUDIO KEYWORDS IN FRONTEND]
+client/src/services/dashboardAPI.js:13:const resolveCurrency = (stats, invoiceStats, financialOverview) =>
+client/src/services/dashboardAPI.js:17:  invoiceStats?.latestInvoice?.currency ||
+client/src/services/dashboardAPI.js:26:const buildMetricsFromStats = (stats = {}, invoiceStats = {}, financialOverview = null) => {
+client/src/services/dashboardAPI.js:28:  const currency = resolveCurrency(stats, invoiceStats, financialOverview);
+client/src/services/dashboardAPI.js:33:      : stats.totalRevenue ?? stats.revenue?.total ?? stats.revenue ?? invoiceStats.totalRevenue,
+client/src/services/dashboardAPI.js:43:  const invoiceCount = toNumber(
+client/src/services/dashboardAPI.js:44:    stats.invoiceCount ?? stats.invoices?.total ?? stats.invoicesCount ?? invoiceStats.invoiceCount,
+client/src/services/dashboardAPI.js:46:  const overdueInvoices = toNumber(stats.overdue ?? stats.invoices?.overdue);
+client/src/services/dashboardAPI.js:58:        : 'Paid invoice revenue',
+client/src/services/dashboardAPI.js:88:  if (invoiceCount !== null) {
+client/src/services/dashboardAPI.js:90:      id: 'invoices-count',
+client/src/services/dashboardAPI.js:91:      label: 'Invoices',
+client/src/services/dashboardAPI.js:92:      value: invoiceCount,
+client/src/services/dashboardAPI.js:94:      description: 'Total invoices',
+client/src/services/dashboardAPI.js:98:  if (overdueInvoices !== null) {
+client/src/services/dashboardAPI.js:100:      id: 'overdue-invoices',
+client/src/services/dashboardAPI.js:102:      value: overdueInvoices,
+client/src/services/dashboardAPI.js:104:      description: 'Invoices past due',
+client/src/services/dashboardAPI.js:139:  const invoiceStats =
+client/src/services/dashboardAPI.js:140:    payload.invoiceStats ?? payload.data?.invoiceStats ?? payload.details ?? payload.data?.details;
+client/src/services/dashboardAPI.js:149:  const safeInvoiceStats = invoiceStats && typeof invoiceStats === 'object' ? invoiceStats : {};
+client/src/services/dashboardAPI.js:154:  const metrics = buildMetricsFromStats(safeStats, safeInvoiceStats, safeFinancialOverview);
+client/src/services/dashboardAPI.js:155:  const currency = resolveCurrency(safeStats, safeInvoiceStats, safeFinancialOverview);
+client/src/services/dashboardAPI.js:165:      safeInvoiceStats?.statusBreakdown ?? safeStats?.statusBreakdown ?? payload.statusBreakdown ?? null,
+client/src/services/dashboardAPI.js:166:    latestInvoice:
+client/src/services/dashboardAPI.js:167:      safeInvoiceStats?.latestInvoice ?? safeStats?.latestInvoice ?? payload.latestInvoice ?? null,
+client/src/services/dashboardAPI.js:168:    invoiceCount:
+client/src/services/dashboardAPI.js:169:      safeStats?.invoiceCount ?? safeStats?.invoices?.total ?? safeInvoiceStats?.invoiceCount ?? null,
+client/src/services/dashboardAPI.js:171:      safeStats?.totalRevenue ?? safeStats?.revenue?.total ?? safeInvoiceStats?.totalRevenue ?? null,
+client/src/services/dashboardAPI.js:177:    !normalized.latestInvoice &&
+client/src/services/invoicesAPI.js:53:const normalizeInvoiceItem = (item = {}) => ({
+client/src/services/invoicesAPI.js:66:  action: entry.action || 'invoice_update',
+client/src/services/invoicesAPI.js:73:const normalizeInvoice = (invoice = {}) => ({
+client/src/services/invoicesAPI.js:74:  ...invoice,
+client/src/services/invoicesAPI.js:75:  status: normalizeStatusFromBackend(invoice.status),
+client/src/services/invoicesAPI.js:76:  currency: (invoice.currency || 'EUR').toUpperCase(),
+client/src/services/invoicesAPI.js:77:  items: Array.isArray(invoice.items) ? invoice.items.map(normalizeInvoiceItem) : [],
+client/src/services/invoicesAPI.js:78:  attachments: Array.isArray(invoice.attachments) ? invoice.attachments : [],
+client/src/services/invoicesAPI.js:86:  if (response.invoices) {
+client/src/services/invoicesAPI.js:87:    return response.invoices;
+client/src/services/invoicesAPI.js:94:  if (response.invoice) {
+client/src/services/invoicesAPI.js:95:    return response.invoice;
+client/src/services/invoicesAPI.js:98:  if (response.data?.invoices) {
+client/src/services/invoicesAPI.js:99:    return response.data.invoices;
+client/src/services/invoicesAPI.js:102:  if (response.data?.invoice) {
+client/src/services/invoicesAPI.js:103:    return response.data.invoice;
+client/src/services/invoicesAPI.js:109:const normalizeDemoInvoices = (items = []) =>
+client/src/services/invoicesAPI.js:110:  items.map((invoice, index) => {
+client/src/services/invoicesAPI.js:111:    const rawStatus = invoice.status ?? (index === 0 ? 'draft' : 'issued');
+client/src/services/invoicesAPI.js:113:    return normalizeInvoice({
+client/src/services/invoicesAPI.js:114:      id: invoice.id ?? `demo-invoice-${index + 1}`,
+client/src/services/invoicesAPI.js:115:      invoiceNumber: invoice.invoiceNumber ?? invoice.number ?? `INV-DEMO-${index + 1}`,
+client/src/services/invoicesAPI.js:116:      clientName: invoice.clientName ?? invoice.client ?? 'Demo Client',
+client/src/services/invoicesAPI.js:117:      date: invoice.date ?? invoice.issueDate ?? new Date().toISOString().split('T')[0],
+client/src/services/invoicesAPI.js:118:      dueDate: invoice.dueDate ?? invoice.date ?? new Date().toISOString().split('T')[0],
+client/src/services/invoicesAPI.js:119:      total: invoice.total ?? invoice.amount ?? 0,
+client/src/services/invoicesAPI.js:120:      currency: invoice.currency ?? 'EUR',
+client/src/services/invoicesAPI.js:122:      items: invoice.items || [],
+client/src/services/invoicesAPI.js:136:const isStatusOnlyPayload = (invoiceData = {}) => {
+client/src/services/invoicesAPI.js:137:  const keys = Object.keys(invoiceData).filter((key) => key !== 'companyId');
+client/src/services/invoicesAPI.js:141:const mapInvoicePayloadToBackend = (invoiceData = {}, { requireItems = false } = {}) => {
+client/src/services/invoicesAPI.js:144:    currency: invoiceData.currency || 'EUR',
+client/src/services/invoicesAPI.js:145:    date: invoiceData.date || invoiceData.invoiceDate || today,
+client/src/services/invoicesAPI.js:146:    dueDate: invoiceData.dueDate || invoiceData.dueDateDate || today,
+client/src/services/invoicesAPI.js:147:    clientName: invoiceData.clientName || invoiceData.customerName,
+client/src/services/invoicesAPI.js:148:    ...(Array.isArray(invoiceData.items) || requireItems
+client/src/services/invoicesAPI.js:150:          items: Array.isArray(invoiceData.items)
+client/src/services/invoicesAPI.js:151:            ? invoiceData.items.map((item) => ({
+client/src/services/invoicesAPI.js:160:    ...(invoiceData.attachments ? { attachments: invoiceData.attachments } : {}),
+client/src/services/invoicesAPI.js:161:    ...(Object.prototype.hasOwnProperty.call(invoiceData, 'notes')
+client/src/services/invoicesAPI.js:162:      ? { notes: invoiceData.notes }
+client/src/services/invoicesAPI.js:164:    ...(invoiceData.reason ? { reason: invoiceData.reason } : {}),
+client/src/services/invoicesAPI.js:165:    ...(invoiceData.systemContext ? { systemContext: invoiceData.systemContext } : {}),
+client/src/services/invoicesAPI.js:168:  const backendStatus = mapStatusToBackend(invoiceData.status);
+client/src/services/invoicesAPI.js:176:export const invoicesAPI = {
+client/src/services/invoicesAPI.js:179:    const response = await api.get('/invoices', {
+client/src/services/invoicesAPI.js:185:      throw new Error('Unexpected invoices response shape.');
+client/src/services/invoicesAPI.js:188:      return normalizeDemoInvoices(DEMO_DATA.invoices);
+client/src/services/invoicesAPI.js:190:    return data.map(normalizeInvoice);
+client/src/services/invoicesAPI.js:193:  get: async (invoiceId, params = {}) => {
+client/src/services/invoicesAPI.js:195:    const response = await api.get(`/invoices/${invoiceId}`, {
+client/src/services/invoicesAPI.js:198:    return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:201:  create: async (invoiceData) => {
+client/src/services/invoicesAPI.js:202:    const { companyId } = invoiceData || {};
+client/src/services/invoicesAPI.js:204:      '/invoices',
+client/src/services/invoicesAPI.js:205:      mapInvoicePayloadToBackend(invoiceData, { requireItems: true }),
+client/src/services/invoicesAPI.js:208:    return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:211:  update: async (invoiceId, invoiceData) => {
+client/src/services/invoicesAPI.js:212:    const { companyId } = invoiceData || {};
+client/src/services/invoicesAPI.js:214:    if (isStatusOnlyPayload(invoiceData)) {
+client/src/services/invoicesAPI.js:216:        `/invoices/${invoiceId}/status`,
+client/src/services/invoicesAPI.js:217:        { status: mapStatusToBackend(invoiceData.status) },
+client/src/services/invoicesAPI.js:220:      return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:223:      `/invoices/${invoiceId}`,
+client/src/services/invoicesAPI.js:224:      mapInvoicePayloadToBackend(invoiceData),
+client/src/services/invoicesAPI.js:227:    return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:230:  auditLog: async (invoiceId, params = {}) => {
+client/src/services/invoicesAPI.js:232:    const response = await api.get(`/invoices/${invoiceId}/audit-log`, {
+client/src/services/invoicesAPI.js:242:    const response = await api.post('/invoice-import/preview', formData, {
+client/src/services/invoicesAPI.js:254:    const response = await api.post('/invoice-import/commit', formData, {
+client/src/services/invoicesAPI.js:264:export default invoicesAPI;
+client/src/lib/aiChatAttachments.js:14:  name: file?.name || (kind === 'audio' ? 'Voice recording.webm' : 'Attachment'),
+client/src/services/ocrAPI.js:3:export const previewDocument = async (file, documentType = 'invoice', companyId) => {
+client/src/services/ocrAPI.js:20:export const processDocument = async (file, documentType = 'invoice', companyId) => {
+client/src/pages/BankStatementDetail.jsx:13:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/BankStatementDetail.jsx:119:  { id: 'invoices', label: 'Invoices' },
+client/src/pages/BankStatementDetail.jsx:136:  const [activeTargetTab, setActiveTargetTab] = useState('invoices');
+client/src/pages/BankStatementDetail.jsx:137:  const [invoiceTargets, setInvoiceTargets] = useState([]);
+client/src/pages/BankStatementDetail.jsx:138:  const [invoiceLoading, setInvoiceLoading] = useState(false);
+client/src/pages/BankStatementDetail.jsx:139:  const [invoiceError, setInvoiceError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:349:        targetType: selectedTarget.type === 'invoices' ? 'invoice' : 'expense',
+client/src/pages/BankStatementDetail.jsx:365:      const targetTypeLabel = selectedTarget.type === 'invoices' ? 'Invoice' : 'Expense';
+client/src/pages/BankStatementDetail.jsx:465:    setInvoiceTargets([]);
+client/src/pages/BankStatementDetail.jsx:467:    setInvoiceError(null);
+client/src/pages/BankStatementDetail.jsx:469:    setActiveTargetTab('invoices');
+client/src/pages/BankStatementDetail.jsx:472:    const loadInvoices = async () => {
+client/src/pages/BankStatementDetail.jsx:473:      setInvoiceLoading(true);
+client/src/pages/BankStatementDetail.jsx:475:        const data = await invoicesAPI.list({ companyId: activeCompany.id });
+client/src/pages/BankStatementDetail.jsx:477:          setInvoiceTargets(Array.isArray(data) ? data : []);
+client/src/pages/BankStatementDetail.jsx:481:          setInvoiceError(fetchError);
+client/src/pages/BankStatementDetail.jsx:482:          setInvoiceTargets([]);
+client/src/pages/BankStatementDetail.jsx:486:          setInvoiceLoading(false);
+client/src/pages/BankStatementDetail.jsx:510:    loadInvoices();
+client/src/pages/BankStatementDetail.jsx:521:    setActiveTargetTab('invoices');
+client/src/pages/BankStatementDetail.jsx:542:    if (type === 'invoices') {
+client/src/pages/BankStatementDetail.jsx:543:      return item.invoiceNumber || item.number || `Invoice ${item.id ?? ''}`.trim();
+client/src/pages/BankStatementDetail.jsx:549:    if (type === 'invoices') {
+client/src/pages/BankStatementDetail.jsx:560:    if (type === 'invoices') {
+client/src/pages/BankStatementDetail.jsx:567:    const items = type === 'invoices' ? invoiceTargets : expenseTargets;
+client/src/pages/BankStatementDetail.jsx:568:    const loading = type === 'invoices' ? invoiceLoading : expenseLoading;
+client/src/pages/BankStatementDetail.jsx:569:    const error = type === 'invoices' ? invoiceError : expenseError;
+client/src/pages/BankStatementDetail.jsx:575:          Loading {type === 'invoices' ? 'invoices' : 'expenses'}…
+client/src/pages/BankStatementDetail.jsx:591:          No {type === 'invoices' ? 'invoices' : 'expenses'} are available to link right now.
+client/src/pages/BankStatementDetail.jsx:896:                Manual reconciliation links this bank transaction to an invoice or expense so your books stay accurate.
+client/src/pages/BankStatementDetail.jsx:944:              {activeTargetTab === 'invoices'
+client/src/pages/BankStatementDetail.jsx:945:                ? renderTargetList('invoices')
+client/src/pages/BankStatementDetail.jsx:968:                        {selectedTarget.type === 'invoices'
+client/src/pages/BankStatementDetail.jsx:969:                          ? `Will be linked to Invoice ${getTargetLabel(
+client/src/pages/BankStatementDetail.jsx:970:                              'invoices',
+client/src/lib/permissions.js:15:  'invoice.create': ['admin', 'accountant'],
+client/src/lib/permissions.js:16:  'invoice.edit': ['admin', 'accountant'],
+client/src/lib/permissions.js:17:  'invoice.updateStatus': ['admin', 'accountant'],
+client/src/services/aiAssistantAPI.js:152:    const response = await api.post("/ai/voice/assistant", payload, {
+client/src/services/__tests__/api.interceptor.test.js:45:    const config = await requestInterceptor({ url: '/invoices', headers: {} });
+client/src/services/__tests__/api.interceptor.test.js:68:      config: { url: '/invoices' },
+client/src/pages/AIAssistant.jsx:58:      'See a prioritized summary of overdue invoices, pending approvals, and unreconciled transactions.',
+client/src/pages/AIAssistant.jsx:116:  const invoiceCount = context.invoices?.length ?? 0;
+client/src/pages/AIAssistant.jsx:118:  return `مرحبًا، كيف أقدر أساعدك اليوم؟ أراقب ${context.company?.name ?? 'شركتك'} بشكل استشاري فقط: ${insightCount} insights, ${invoiceCount} invoices, ${transactionCount} transactions.`;
+client/src/pages/AIAssistant.jsx:223:    if (context.invoices?.length) {
+client/src/pages/AIAssistant.jsx:224:      sources.push('Invoices');
+client/src/pages/AIAssistant.jsx:248:    context.invoices?.forEach((invoice) => {
+client/src/pages/AIAssistant.jsx:249:      if (invoice.date || invoice.dueDate) {
+client/src/pages/AIAssistant.jsx:250:        candidates.push(invoice.date || invoice.dueDate);
+client/src/pages/AIAssistant.jsx:446:  const invoiceStatusBreakdown = useMemo(() => {
+client/src/pages/AIAssistant.jsx:447:    if (!context?.invoices) {
+client/src/pages/AIAssistant.jsx:451:    context.invoices.forEach((invoice) => {
+client/src/pages/AIAssistant.jsx:452:      const status = invoice.status || 'unknown';
+client/src/pages/AIAssistant.jsx:557:    if (!navigator.mediaDevices?.getUserMedia) {
+client/src/pages/AIAssistant.jsx:562:      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+client/src/pages/AIAssistant.jsx:575:          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+client/src/pages/AIAssistant.jsx:576:          const file = new File([blob], `voice-recording-${Date.now()}.webm`, {
+client/src/pages/AIAssistant.jsx:577:            type: blob.type || 'audio/webm',
+client/src/pages/AIAssistant.jsx:579:          setAttachments((prev) => [...prev, buildAttachmentChip(file, 'audio')]);
+client/src/pages/AIAssistant.jsx:594:          : 'Unable to start voice recording.',
+client/src/pages/AIAssistant.jsx:721:          'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+client/src/pages/AIAssistant.jsx:810:                'I can help conversationally and keep the advice read-only. Ask me about invoices, accounting risks, bank transactions, or why an insight was flagged.',
+client/src/pages/AIAssistant.jsx:1232:            draftType === 'invoice'
+client/src/pages/AIAssistant.jsx:1233:              ? 'Invoice draft created from reviewed values'
+client/src/pages/AIAssistant.jsx:1379:                      I acknowledge that input VAT will not be deducted unless the invoice requirements are complete.
+client/src/pages/AIAssistant.jsx:1761:              <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/AIAssistant.jsx:1762:                Review Related Invoices
+client/src/pages/AIAssistant.jsx:1827:              <span className="font-semibold text-gray-950 dark:text-white">Invoices</span>
+client/src/pages/AIAssistant.jsx:1829:                {context?.invoices?.length ?? 0} records
+client/src/pages/AIAssistant.jsx:1832:            {Object.keys(invoiceStatusBreakdown).length ? (
+client/src/pages/AIAssistant.jsx:1834:                {Object.entries(invoiceStatusBreakdown).map(([status, count]) => (
+client/src/pages/AIAssistant.jsx:1842:              <p className="text-xs text-gray-500 dark:text-gray-400">No invoices available yet.</p>
+client/src/pages/AIAssistant.jsx:1909:                          text={`Why am I seeing this?\n\nThis insight was generated because: ${insight.why || 'AI detected a pattern or anomaly based on your accounting data.'}\n\nData source: ${insight.dataSource || 'Relevant invoices, transactions, or expenses.'}`}
+client/src/pages/AIAssistant.jsx:1920:                      dataSource={insight.dataSource || 'Invoices, expenses, and transactions'}
+client/src/pages/AIAssistant.jsx:1972:                  Tip: Upload more invoices, expenses, or bank data to surface insights.
+client/src/pages/AIAssistant.jsx:1985:                  The assistant references invoices, expenses, bank statements, and AI insights.
+client/src/pages/AIAssistant.jsx:2104:                      aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+client/src/pages/AIAssistant.jsx:2105:                      title={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+client/src/services/aiInsightsMappers.js:6:// Example: Map an invoice to an AI insight (advisory, explainable, field-referenced)
+client/src/services/aiInsightsMappers.js:7:export function mapInvoiceToAIInsight(invoice) {
+client/src/services/aiInsightsMappers.js:9:  if (invoice.amount >= threshold) {
+client/src/services/aiInsightsMappers.js:11:      id: `invoice-${invoice.id}`,
+client/src/services/aiInsightsMappers.js:12:      type: 'High-Value Invoice',
+client/src/services/aiInsightsMappers.js:13:      summary: `Invoice #${invoice.number} for ${formatCurrency(invoice.amount)} exceeds the advisory threshold.`,
+client/src/services/aiInsightsMappers.js:16:        text: `Invoice amount (<b>amount</b>: ${formatCurrency(invoice.amount)}) is above the typical threshold.`,
+client/src/services/aiInsightsMappers.js:17:        legal: 'Large invoices may require additional documentation (GoBD §153).',
+client/src/services/aiInsightsMappers.js:18:        hint: `Review invoice <b>number</b>: ${invoice.number}, <b>date</b>: ${formatDate(invoice.date)}, <b>amount</b>: ${formatCurrency(invoice.amount)} for supporting documents.`,
+client/src/components/ChatEmptyState.jsx:14:        <li>Answer questions about invoices, expenses, and bank statements.</li>
+client/src/services/__tests__/dashboardAPI.test.jsx:55:          invoiceCount: 2,
+client/src/services/__tests__/dashboardAPI.test.jsx:59:        invoiceStats: {
+client/src/services/__tests__/dashboardAPI.test.jsx:61:          invoiceCount: 2,
+client/src/services/__tests__/dashboardAPI.test.jsx:63:          latestInvoice: {
+client/src/services/__tests__/dashboardAPI.test.jsx:64:            invoiceNumber: 'INV-FO-1',
+client/src/services/__tests__/dashboardAPI.test.jsx:81:        monthlyData: [{ month: 'Jan', revenue: 119, invoices: 2 }],
+client/src/services/__tests__/dashboardAPI.test.jsx:115:        expect.objectContaining({ id: 'invoices-count', value: 2 }),
+client/src/services/__tests__/dashboardAPI.test.jsx:116:        expect.objectContaining({ id: 'overdue-invoices', value: 1 }),
+client/src/services/__tests__/dashboardAPI.test.jsx:122:  it('normalizes dashboard payloads with stats, invoiceStats, and monthlyData', async () => {
+client/src/services/__tests__/dashboardAPI.test.jsx:131:          invoiceCount: 42,
+client/src/services/__tests__/dashboardAPI.test.jsx:135:        invoiceStats: {
+client/src/services/__tests__/dashboardAPI.test.jsx:137:          latestInvoice: {
+client/src/services/__tests__/dashboardAPI.test.jsx:139:            invoiceNumber: 'INV-700',
+client/src/services/__tests__/dashboardAPI.test.jsx:146:          { month: 'Jan', revenue: 1000, invoices: 2 },
+client/src/services/__tests__/dashboardAPI.test.jsx:147:          { month: 'Feb', revenue: 2000, invoices: 3 },
+client/src/services/__tests__/dashboardAPI.test.jsx:159:      invoiceCount: 42,
+client/src/services/__tests__/dashboardAPI.test.jsx:161:      latestInvoice: {
+client/src/services/__tests__/dashboardAPI.test.jsx:162:        invoiceNumber: 'INV-700',
+client/src/services/__tests__/dashboardAPI.test.jsx:172:        expect.objectContaining({ id: 'invoices-count', value: 42, format: 'number' }),
+client/src/services/__tests__/dashboardAPI.test.jsx:173:        expect.objectContaining({ id: 'overdue-invoices', value: 2, format: 'number' }),
+client/src/services/__tests__/invoicesAPI.test.js:2:import { invoicesAPI } from '../invoicesAPI';
+client/src/services/__tests__/invoicesAPI.test.js:17:  DEMO_DATA: { invoices: [] },
+client/src/services/__tests__/invoicesAPI.test.js:20:describe('invoicesAPI', () => {
+client/src/services/__tests__/invoicesAPI.test.js:25:  it('normalizes backend invoices into the frontend invoice contract', async () => {
+client/src/services/__tests__/invoicesAPI.test.js:29:        invoices: [
+client/src/services/__tests__/invoicesAPI.test.js:50:    const result = await invoicesAPI.list({ companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:52:    expect(api.get).toHaveBeenCalledWith('/invoices', {
+client/src/services/__tests__/invoicesAPI.test.js:72:      data: { success: true, invoice: { id: 2, status: 'DRAFT', currency: 'EUR', items: [] } },
+client/src/services/__tests__/invoicesAPI.test.js:75:    await invoicesAPI.create({
+client/src/services/__tests__/invoicesAPI.test.js:92:      '/invoices',
+client/src/services/__tests__/invoicesAPI.test.js:116:      data: { success: true, invoice: { id: 3, status: 'SENT', currency: 'EUR', items: [] } },
+client/src/services/__tests__/invoicesAPI.test.js:119:    const result = await invoicesAPI.update(3, { companyId: 7, status: 'issued' });
+client/src/services/__tests__/invoicesAPI.test.js:122:      '/invoices/3/status',
+client/src/services/__tests__/invoicesAPI.test.js:133:        invoices: [
+client/src/services/__tests__/invoicesAPI.test.js:140:    const result = await invoicesAPI.list({ companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:142:    expect(result.map((invoice) => invoice.status)).toEqual(['issued', 'issued']);
+client/src/services/__tests__/invoicesAPI.test.js:147:      data: { success: true, invoice: { id: 4, status: 'DRAFT', currency: 'EUR', items: [] } },
+client/src/services/__tests__/invoicesAPI.test.js:150:    await invoicesAPI.update(4, {
+client/src/services/__tests__/invoicesAPI.test.js:166:  it('loads invoice audit logs with company scope', async () => {
+client/src/services/__tests__/invoicesAPI.test.js:170:        auditLog: [{ id: 9, action: 'invoice_status_change', userId: 4 }],
+client/src/services/__tests__/invoicesAPI.test.js:174:    const result = await invoicesAPI.auditLog(3, { companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:176:    expect(api.get).toHaveBeenCalledWith('/invoices/3/audit-log', {
+client/src/services/__tests__/invoicesAPI.test.js:179:    expect(result[0]).toMatchObject({ action: 'invoice_status_change', user: 4 });
+client/src/services/__tests__/invoicesAPI.test.js:183:    const file = new File(['[]'], 'invoices.json', { type: 'application/json' });
+client/src/services/__tests__/invoicesAPI.test.js:187:    await invoicesAPI.previewImport({ file, companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:188:    await invoicesAPI.commitImport({ file, companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:192:      '/invoice-import/preview',
+client/src/services/__tests__/invoicesAPI.test.js:198:      '/invoice-import/commit',
+client/src/lib/__tests__/aiPageContext.test.js:6:    expect(getAIPageContext('/invoices')).toMatchObject({
+client/src/lib/__tests__/aiPageContext.test.js:7:      module: 'invoices',
+client/src/lib/__tests__/aiPageContext.test.js:8:      routeName: 'invoice_list',
+client/src/lib/__tests__/aiPageContext.test.js:11:      label: 'Invoices',
+client/src/lib/__tests__/aiPageContext.test.js:14:    expect(getAIPageContext('/invoices/123/edit')).toMatchObject({
+client/src/lib/__tests__/aiPageContext.test.js:15:      module: 'invoices',
+client/src/lib/__tests__/aiPageContext.test.js:16:      routeName: 'invoice_edit',
+client/src/lib/__tests__/aiPageContext.test.js:17:      entityType: 'invoice',
+client/src/lib/__tests__/aiPageContext.test.js:19:      label: 'Invoice edit',
+client/src/lib/__tests__/aiPageContext.test.js:32:    expect(getAIPageContext('/invoices/<script>/edit')).toMatchObject({
+client/src/lib/__tests__/aiPageContext.test.js:33:      module: 'invoices',
+client/src/lib/__tests__/aiPageContext.test.js:34:      routeName: 'invoice_edit',
+client/src/lib/__tests__/aiPageContext.test.js:35:      entityType: 'invoice',
+client/src/components/invoices/InvoiceStatusBadge.jsx:30:const InvoiceStatusBadge = ({ status, className = '' }) => {
+client/src/components/invoices/InvoiceStatusBadge.jsx:46:export default InvoiceStatusBadge;
+client/src/services/__tests__/aiInsightsAPI.test.jsx:38:              type: 'Duplicate invoice',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:41:              summary: 'Duplicate invoice detected.',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:42:              why: 'Same invoice number',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:43:              entityType: 'invoice',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:59:      relatedEntity: 'invoice',
+client/src/components/AIDrawer.jsx:59:            No insights available yet. Sync data or review recent invoices and transactions to
+client/src/pages/SystemAdminDashboard.jsx:182:        ttsEnabled: false,
+client/src/pages/SystemAdminDashboard.jsx:490:                          onClick={() => handleToggleCompanyFlag(company, 'ttsEnabled')}
+client/src/pages/SystemAdminDashboard.jsx:492:                          Voice: {company.ttsEnabled ? 'On' : 'Off'}
+client/src/pages/SystemAdminDashboard.jsx:749:                {featureFlags?.companyAI?.ttsEnabledCount ?? 0} /{' '}
+client/src/pages/SystemAdminDashboard.jsx:750:                {featureFlags?.companyAI?.totalCompanies ?? 0} companies have voice enabled
+client/src/lib/aiPageContext.js:35:    pattern: /^\/invoices\/import\/?$/,
+client/src/lib/aiPageContext.js:37:      module: 'invoices',
+client/src/lib/aiPageContext.js:38:      routeName: 'invoice_import',
+client/src/lib/aiPageContext.js:40:      label: 'Invoice import',
+client/src/lib/aiPageContext.js:44:    pattern: /^\/invoices\/create\/?$/,
+client/src/lib/aiPageContext.js:46:      module: 'invoices',
+client/src/lib/aiPageContext.js:47:      routeName: 'invoice_create',
+client/src/lib/aiPageContext.js:49:      label: 'Create invoice',
+client/src/lib/aiPageContext.js:53:    pattern: /^\/invoices\/([^/]+)\/edit\/?$/,
+client/src/lib/aiPageContext.js:55:      module: 'invoices',
+client/src/lib/aiPageContext.js:56:      routeName: 'invoice_edit',
+client/src/lib/aiPageContext.js:57:      entityType: 'invoice',
+client/src/lib/aiPageContext.js:58:      label: 'Invoice edit',
+client/src/lib/aiPageContext.js:60:    entityKey: 'invoiceId',
+client/src/lib/aiPageContext.js:63:    pattern: /^\/invoices\/?$/,
+client/src/lib/aiPageContext.js:65:      module: 'invoices',
+client/src/lib/aiPageContext.js:66:      routeName: 'invoice_list',
+client/src/lib/aiPageContext.js:68:      label: 'Invoices',
+client/src/components/invoices/InvoiceForm.jsx:43:const InvoiceForm = ({
+client/src/components/invoices/InvoiceForm.jsx:47:  submitLabel = 'Save invoice',
+client/src/components/invoices/InvoiceForm.jsx:213:          This invoice is locked after issue. Draft fields are read-only; use allowed status actions
+client/src/components/invoices/InvoiceForm.jsx:260:        {/* Invoice Number input removed: must not be entered or sent by client */}
+client/src/components/invoices/InvoiceForm.jsx:502:export default InvoiceForm;
+client/src/components/AISuggestionCard.jsx:36:    || (sourceHint.includes('invoice')
+client/src/components/AISuggestionCard.jsx:37:      ? 'Invoices'
+client/src/pages/InvoiceCreate.jsx:6:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/pages/InvoiceCreate.jsx:8:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/InvoiceCreate.jsx:12:import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+client/src/pages/InvoiceCreate.jsx:15:const InvoiceCreate = () => {
+client/src/pages/InvoiceCreate.jsx:21:  const canCreateInvoices = canEditInvoices(user?.role);
+client/src/pages/InvoiceCreate.jsx:27:    if (!canCreateInvoices) {
+client/src/pages/InvoiceCreate.jsx:28:      setError({ message: 'You do not have permission to create invoices.' });
+client/src/pages/InvoiceCreate.jsx:35:      await invoicesAPI.create({
+client/src/pages/InvoiceCreate.jsx:41:      navigate('/invoices', { replace: true });
+client/src/pages/InvoiceCreate.jsx:43:      setError(formatApiError(creationError, 'Failed to create invoice.'));
+client/src/pages/InvoiceCreate.jsx:53:        description="Invoices are scoped per entity. Choose an active company before creating your first invoice."
+client/src/pages/InvoiceCreate.jsx:67:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+client/src/pages/InvoiceCreate.jsx:68:          <h1 className="text-3xl font-bold text-gray-900">Create invoice</h1>
+client/src/pages/InvoiceCreate.jsx:70:            This invoice will be linked to {activeCompany.name} and saved as a draft until you publish it.
+client/src/pages/InvoiceCreate.jsx:73:        <Button variant="secondary" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceCreate.jsx:74:          Back to invoices
+client/src/pages/InvoiceCreate.jsx:81:          message="You have read-only access. Invoice creation is disabled for your role."
+client/src/pages/InvoiceCreate.jsx:91:      {canCreateInvoices ? (
+client/src/pages/InvoiceCreate.jsx:93:          <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/InvoiceCreate.jsx:94:            <InvoiceForm
+client/src/pages/InvoiceCreate.jsx:95:              submitLabel="Create invoice"
+client/src/pages/InvoiceCreate.jsx:105:            Your role can view invoices, but invoice creation is restricted to admins and accountants.
+client/src/pages/InvoiceCreate.jsx:113:export default InvoiceCreate;
+client/src/components/TopBar.jsx:40:    type: 'invoice',
+client/src/components/TopBar.jsx:41:    title: 'Invoice #2024-0156',
+client/src/components/TopBar.jsx:43:    // href: '/invoices/2024-0156',
+client/src/components/TopBar.jsx:44:    href: '/invoices',
+client/src/components/TopBar.jsx:50:    subtitle: 'Client • 15 invoices',
+client/src/components/TopBar.jsx:119:        title: t('notifications.invoice_processed'),
+client/src/components/TopBar.jsx:120:        message: 'Invoice #2024-0156 has been successfully processed and sent to Müller GmbH',
+client/src/components/TopBar.jsx:124:        action: 'View Invoice',
+client/src/components/TopBar.jsx:125:        href: '/invoices',
+client/src/components/__tests__/GlobalAICompanion.test.jsx:42:      answer: { message: 'Review overdue invoices and unreconciled transactions.' },
+client/src/components/__tests__/GlobalAICompanion.test.jsx:48:      <MemoryRouter initialEntries={['/invoices/123/edit']}>
+client/src/components/__tests__/GlobalAICompanion.test.jsx:71:    expect(screen.getByText('Current page: Invoice edit')).toBeInTheDocument();
+client/src/components/__tests__/GlobalAICompanion.test.jsx:119:      await screen.findByText('Review overdue invoices and unreconciled transactions.'),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:138:          'Explain the current accounting page and what I should pay attention to. Safe page context: module=invoices, routeName=invoice_edit, entityType=invoice, entityId=123.',
+client/src/components/__tests__/GlobalAICompanion.test.jsx:152:    const forbiddenButtonNames = /approve|create invoice|upload|pay|delete|export|post|submit approval/i;
+client/src/lib/rbac.js:2:// Usage: import { canEditUsers, canEditInvoices, ... } from './rbac';
+client/src/lib/rbac.js:9:export function canEditInvoices(role) {
+client/src/lib/demoMode.js:10:    invoicesCount: 42,
+client/src/lib/demoMode.js:15:  invoices: [
+client/src/lib/demoMode.js:56:      type: 'Overdue invoice',
+client/src/lib/demoMode.js:57:      summary: 'Invoice INV-1002 is overdue by 18 days with no payment dates.',
+client/src/lib/demoMode.js:61:      relatedEntity: 'Invoice INV-1002',
+client/src/lib/demoMode.js:69:      summary: 'Vendor Berlin Advisory GmbH submitted three invoices in the same week.',
+client/src/lib/demoMode.js:195:        reason: 'Matched to Invoice INV-1001',
+client/src/lib/demoMode.js:198:            targetType: 'invoice',
+client/src/shared/ai/mutationIntentConfig.json:41:      "pattern": "\\b(force|clear|wipe|zero|truncate)\\b.*\\b(invoices?|records?|balances?)\\b",
+client/src/shared/ai/mutationIntentConfig.json:46:      "pattern": "\\b(close|finalize|settle|complete)\\b.*\\b(invoices?|batch|payment)s?\\b",
+client/src/shared/ai/mutationIntentConfig.json:51:      "pattern": "\\b(cancel|void|terminate)\\b.*\\b(invoice|payment|subscription)\\b",
+client/src/shared/ai/mutationIntentConfig.json:56:      "pattern": "\\b(approve|reject)\\b.*\\b(invoices?|transactions?|expenses?)\\b",
+client/src/shared/ai/mutationIntentConfig.json:66:      "pattern": "\\b(archive|purge)\\b.*\\b(records|invoices|transactions)\\b",
+client/src/lib/constants.js:7: * - Enabled: Auth, company profile, user management, invoices, dashboard stats, bank statements.
+client/src/lib/constants.js:29:  INVOICES: '/invoices',
+client/src/pages/Billing.jsx:131:  const handleDownloadInvoicePDF = async (invoice) => {
+client/src/pages/Billing.jsx:133:      if (invoice.pdfUrl) {
+client/src/pages/Billing.jsx:134:        window.open(invoice.pdfUrl, '_blank');
+client/src/pages/Billing.jsx:135:      } else if (invoice.invoiceUrl) {
+client/src/pages/Billing.jsx:136:        window.open(invoice.invoiceUrl, '_blank');
+client/src/pages/Billing.jsx:138:        alert('PDF not available for this invoice');
+client/src/pages/Billing.jsx:304:                    handleDownloadInvoicePDF(billingHistory[0]);
+client/src/pages/Billing.jsx:306:                    alert('No invoices available');
+client/src/pages/Billing.jsx:310:                Download Latest Invoice
+client/src/pages/Billing.jsx:326:                Your invoices and payment records will appear here once you activate a subscription.
+client/src/pages/Billing.jsx:341:                      Invoice
+client/src/pages/Billing.jsx:370:                  {billingHistory.map((invoice) => (
+client/src/pages/Billing.jsx:371:                    <tr key={invoice.id}>
+client/src/pages/Billing.jsx:373:                        {invoice.number || invoice.id}
+client/src/pages/Billing.jsx:376:                        {formatDate(invoice.created)}
+client/src/pages/Billing.jsx:379:                        {formatCurrency(invoice.amount, invoice.currency)}
+client/src/pages/Billing.jsx:382:                        {getStatusBadge(invoice.status)}
+client/src/pages/Billing.jsx:386:                          {invoice.invoiceUrl && (
+client/src/pages/Billing.jsx:388:                              href={invoice.invoiceUrl}
+client/src/pages/Billing.jsx:396:                          {invoice.pdfUrl && (
+client/src/pages/Billing.jsx:398:                              href={invoice.pdfUrl}
+client/src/pages/Billing.jsx:407:                            onClick={() => handleDownloadInvoicePDF(invoice)}
+client/src/pages/OCRPreview.jsx:16:  { value: 'invoice', label: 'Invoice' },
+client/src/pages/OCRPreview.jsx:23:  invoice: 'Invoice',
+client/src/App.jsx:54:const Invoices = lazy(() => import('./pages/Invoices'));
+client/src/App.jsx:55:const InvoiceCreate = lazy(() => import('./pages/InvoiceCreate'));
+client/src/App.jsx:57:const InvoiceEdit = lazy(() => import('./pages/InvoiceEdit'));
+client/src/App.jsx:58:const InvoiceImport = lazy(() => import('./pages/InvoiceImport'));
+client/src/App.jsx:233:    path: '/invoices/import',
+client/src/App.jsx:234:    element: renderProtectedRoute(<InvoiceImport />),
+client/src/App.jsx:235:    componentFile: 'client/src/pages/InvoiceImport.jsx',
+client/src/App.jsx:321:    path: '/invoices',
+client/src/App.jsx:322:    element: renderProtectedRoute(<Invoices />),
+client/src/App.jsx:323:    componentFile: 'client/src/pages/Invoices.jsx',
+client/src/App.jsx:345:    path: '/invoices/create',
+client/src/App.jsx:346:    element: renderProtectedRoute(<InvoiceCreate />),
+client/src/App.jsx:347:    componentFile: 'client/src/pages/InvoiceCreate.jsx',
+client/src/App.jsx:353:    path: '/invoices/:invoiceId/edit',
+client/src/App.jsx:354:    element: renderProtectedRoute(<InvoiceEdit />),
+client/src/App.jsx:355:    componentFile: 'client/src/pages/InvoiceEdit.jsx',
+client/src/navigation/sidebarNavigation.js:65:    nameKey: 'navigation.invoices',
+client/src/navigation/sidebarNavigation.js:66:    href: '/invoices',
+client/src/navigation/sidebarNavigation.js:70:    description: 'Invoices',
+client/src/pages/Landing.jsx:126:                Automate bookkeeping, monitor invoices, and lock down compliance reports without toggling multiple tools.
+client/src/pages/AIInsights.jsx:145:        help="Next steps: upload invoices or expenses, sync bank data, or check the latest imports."
+client/src/pages/AIInsights.jsx:176:            <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/AIInsights.jsx:177:              Review Related Invoices
+client/src/pages/AIManager.jsx:33:const isPendingInvoice = (invoice) => {
+client/src/pages/AIManager.jsx:34:  const status = String(invoice?.status || '').toUpperCase();
+client/src/pages/AIManager.jsx:40:const getInvoiceSeverity = (invoice) => (
+client/src/pages/AIManager.jsx:41:  String(invoice?.status || '').toUpperCase() === 'OVERDUE' ? 'high' : 'medium'
+client/src/pages/AIManager.jsx:46:  if (entityType === 'invoice') {return '/invoices';}
+client/src/pages/AIManager.jsx:110:  const openInvoice = (context?.invoices || []).find(isPendingInvoice);
+client/src/pages/AIManager.jsx:111:  if (openInvoice) {
+client/src/pages/AIManager.jsx:113:      title: `Invoice #${openInvoice.id}`,
+client/src/pages/AIManager.jsx:114:      severity: getInvoiceSeverity(openInvoice),
+client/src/pages/AIManager.jsx:115:      reason: 'Open invoices are useful starting points for receivables follow-up and cash planning.',
+client/src/pages/AIManager.jsx:117:      entityType: 'invoice',
+client/src/pages/AIManager.jsx:118:      entityId: openInvoice.id,
+client/src/pages/AIManager.jsx:119:      actionLabel: 'Review invoices',
+client/src/pages/AIManager.jsx:123:          rule: 'Priority 3: overdue, pending, or draft invoices',
+client/src/pages/AIManager.jsx:124:          entityType: 'invoice',
+client/src/pages/AIManager.jsx:125:          entityId: openInvoice.id,
+client/src/pages/AIManager.jsx:126:          detail: `Status: ${openInvoice.status || 'pending'}`,
+client/src/pages/AIManager.jsx:159:    reason: 'No high-priority AI insight, unreconciled bank transaction, or open invoice is visible.',
+client/src/pages/AIManager.jsx:194:  const openInvoiceCount = (context?.invoices || []).filter(isPendingInvoice).length;
+client/src/pages/AIManager.jsx:213:      rule: 'Open invoice count',
+client/src/pages/AIManager.jsx:214:      entityType: 'invoice',
+client/src/pages/AIManager.jsx:216:      detail: `${openInvoiceCount} overdue, pending, or draft invoice${openInvoiceCount === 1 ? '' : 's'}`,
+client/src/pages/AIManager.jsx:260:  (context?.invoices || [])
+client/src/pages/AIManager.jsx:261:    .filter(isPendingInvoice)
+client/src/pages/AIManager.jsx:263:    .forEach((invoice) => {
+client/src/pages/AIManager.jsx:265:        id: `invoice-${invoice.id}`,
+client/src/pages/AIManager.jsx:266:        title: `Invoice #${invoice.id}`,
+client/src/pages/AIManager.jsx:267:        reason: `Status: ${invoice.status || 'pending'}`,
+client/src/pages/AIManager.jsx:268:        severity: getInvoiceSeverity(invoice),
+client/src/pages/AIManager.jsx:270:        entityType: 'invoice',
+client/src/pages/AIManager.jsx:271:        entityId: invoice.id,
+client/src/pages/AIManager.jsx:272:        route: '/invoices',
+client/src/pages/AIManager.jsx:273:        actionLabel: 'Review invoices',
+client/src/pages/AIManager.jsx:346:      invoices: countItems(context?.invoices),
+client/src/pages/AIManager.jsx:388:        id: 'invoices',
+client/src/pages/AIManager.jsx:389:        title: 'Invoices',
+client/src/pages/AIManager.jsx:390:        description: 'Overdue, draft, or pending invoice records that may need follow-up.',
+client/src/pages/AIManager.jsx:391:        items: reviewQueue.filter((item) => item.entityType === 'invoice' || String(item.id || '').startsWith('invoice-')),
+client/src/pages/AIManager.jsx:517:            ['Invoices', 'Review overdue, pending, and missing-evidence invoices.'],
+client/src/pages/AIManager.jsx:579:              ['Invoices', briefingCounts.invoices],
+client/src/pages/BankStatementReconciliationPreview.jsx:166:                      Match for {match.invoice.number}
+client/src/pages/BankStatementReconciliationPreview.jsx:180:                        {match.dateDifferenceDays === 1 ? '' : 's'} of {renderDate(match.invoice.date)}
+client/src/pages/BankStatementReconciliationPreview.jsx:256:            is read-only: no invoices, expenses, or bank transactions were changed.
+client/src/pages/BankStatementReconciliationPreview.jsx:301:  const invoiceDate = new Date(baseDate);
+client/src/pages/BankStatementReconciliationPreview.jsx:302:  invoiceDate.setDate(invoiceDate.getDate() + ((index % 5) - 2));
+client/src/pages/BankStatementReconciliationPreview.jsx:306:  const invoiceAmount = Math.max(1, normalizedAmount + adjustment);
+client/src/pages/BankStatementReconciliationPreview.jsx:307:  const amountDifference = Math.abs(normalizedAmount - invoiceAmount);
+client/src/pages/BankStatementReconciliationPreview.jsx:309:    invoiceAmount === 0
+client/src/pages/BankStatementReconciliationPreview.jsx:311:      : Math.max(0, Math.min(1, 1 - amountDifference / Math.max(invoiceAmount, 1)));
+client/src/pages/BankStatementReconciliationPreview.jsx:314:    Math.abs(invoiceDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24),
+client/src/pages/BankStatementReconciliationPreview.jsx:321:  )} of the invoice and the dates are only ${dateDifferenceDays} days apart.`;
+client/src/pages/BankStatementReconciliationPreview.jsx:326:    invoice: {
+client/src/pages/BankStatementReconciliationPreview.jsx:328:      amount: invoiceAmount,
+client/src/pages/BankStatementReconciliationPreview.jsx:329:      date: invoiceDate.toISOString(),
+client/src/tests/routes.smoke.test.jsx:30:vi.mock('../pages/Invoices', () => ({
+client/src/tests/routes.smoke.test.jsx:32:  default: () => <div>Invoices page</div>,
+client/src/tests/routes.smoke.test.jsx:34:vi.mock('../pages/InvoiceCreate', () => ({
+client/src/tests/routes.smoke.test.jsx:36:  default: () => <div>Invoice create page</div>,
+client/src/tests/routes.smoke.test.jsx:38:vi.mock('../pages/InvoiceEdit', () => ({
+client/src/tests/routes.smoke.test.jsx:40:  default: () => <div>Invoice edit page</div>,
+client/src/tests/routes.smoke.test.jsx:180:  { path: '/invoices', expectedText: 'Invoices page' },
+client/src/tests/routes.smoke.test.jsx:183:  { path: '/invoices/create', expectedText: 'Invoice create page' },
+client/src/tests/routes.smoke.test.jsx:184:  { path: '/invoices/42/edit', expectedText: 'Invoice edit page' },
+client/src/pages/Analytics.jsx:50:const totalInvoicesLabel = (count, t) => {
+client/src/pages/Analytics.jsx:52:    return t('analytics_page.total_invoices_none');
+client/src/pages/Analytics.jsx:54:  return t('analytics_page.total_invoices_count', { count });
+client/src/pages/Analytics.jsx:143:  const invoiceCount = data?.invoiceCount || 0;
+client/src/pages/Analytics.jsx:144:  const paidPercentage = invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0;
+client/src/pages/Analytics.jsx:145:  const unpaidCount = Math.max(invoiceCount - paidCount, 0);
+client/src/pages/Analytics.jsx:147:  const latestInvoice = data?.latestInvoice;
+client/src/pages/Analytics.jsx:303:          <p className="text-sm text-gray-500 dark:text-gray-400">{totalInvoicesLabel(invoiceCount, t)}</p>
+client/src/pages/Analytics.jsx:308:            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.invoices')}</p>
+client/src/pages/Analytics.jsx:311:          <p className="stat-value">{invoiceCount || 0}</p>
+client/src/pages/Analytics.jsx:318:          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.paid_invoice_ratio')}</p>
+client/src/pages/Analytics.jsx:321:            {invoiceCount > 0
+client/src/pages/Analytics.jsx:322:              ? t('analytics_page.paid_ratio_summary', { paidCount, invoiceCount })
+client/src/pages/Analytics.jsx:323:              : t('analytics_page.no_invoices_recorded')}
+client/src/pages/Analytics.jsx:330:            <h3 className="section-title mb-2">{t('analytics_page.invoice_status')}</h3>
+client/src/pages/Analytics.jsx:349:                  {t('analytics_page.no_invoice_statuses')}
+client/src/pages/Analytics.jsx:356:            <h3 className="section-title mb-2">{t('analytics_page.latest_invoice')}</h3>
+client/src/pages/Analytics.jsx:357:            {latestInvoice ? (
+client/src/pages/Analytics.jsx:359:                <div className="text-gray-500 dark:text-gray-400">{t('analytics_page.invoice_number', { invoiceNumber: latestInvoice.invoiceNumber })}</div>
+client/src/pages/Analytics.jsx:361:                  {formatCurrency(latestInvoice.amount || 0)}
+client/src/pages/Analytics.jsx:366:                    {statusLabel(latestInvoice.status || 'unknown')}
+client/src/pages/Analytics.jsx:370:                  to={`/invoices/${latestInvoice.id}/edit`}
+client/src/pages/Analytics.jsx:373:                  {t('analytics_page.view_invoice')}
+client/src/pages/Analytics.jsx:377:              <p className="text-sm text-gray-500 dark:text-gray-400">{t('analytics_page.no_latest_invoice')}</p>
+client/src/pages/__tests__/Dashboard.test.jsx:105:          { month: 'Jan', revenue: 1000, invoices: 2 },
+client/src/pages/__tests__/Dashboard.test.jsx:106:          { month: 'Feb', revenue: 2000, invoices: 3 },
+client/src/pages/__tests__/Dashboard.test.jsx:109:        latestInvoice: {
+client/src/pages/__tests__/Dashboard.test.jsx:111:          invoiceNumber: 'INV-099',
+client/src/pages/__tests__/Dashboard.test.jsx:134:    expect(screen.getByText('Invoice status mix')).toBeInTheDocument();
+client/src/pages/__tests__/Dashboard.test.jsx:135:    expect(screen.getByText('Latest invoice')).toBeInTheDocument();
+client/src/tests/InvoiceForm.test.jsx:5:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/tests/InvoiceForm.test.jsx:12:describe('InvoiceForm', () => {
+client/src/tests/InvoiceForm.test.jsx:20:      render(<InvoiceForm submitLabel="Create invoice" />);
+client/src/tests/InvoiceForm.test.jsx:32:      invoiceNumber: 'INV-123',
+client/src/tests/InvoiceForm.test.jsx:53:      const { rerender } = render(<InvoiceForm initialValues={initialValues} />);
+client/src/tests/InvoiceForm.test.jsx:54:      // Invoice number should not be editable or visible as a value
+client/src/tests/InvoiceForm.test.jsx:55:      expect(screen.queryByLabelText(/invoice number/i)).toBeNull();
+client/src/tests/InvoiceForm.test.jsx:63:      rerender(<InvoiceForm initialValues={updatedValues} />);
+client/src/pages/Invoices.jsx:12:import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
+client/src/pages/Invoices.jsx:14:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/Invoices.jsx:18:import { canEditInvoices, isReadOnlyRole } from '../lib/rbac';
+client/src/pages/Invoices.jsx:55:  draft: 'Draft: You can edit or issue this invoice.',
+client/src/pages/Invoices.jsx:56:  issued: 'Issued: This invoice is legally binding and cannot be edited.',
+client/src/pages/Invoices.jsx:57:  partially_paid: 'Partially paid: A payment has been recorded and the invoice remains locked.',
+client/src/pages/Invoices.jsx:58:  overdue: 'Overdue: Payment is past due and the invoice remains locked.',
+client/src/pages/Invoices.jsx:59:  paid: 'Paid: This invoice is settled and locked.',
+client/src/pages/Invoices.jsx:60:  cancelled: 'Cancelled: This invoice is void and locked.',
+client/src/pages/Invoices.jsx:68:const Invoices = () => {
+client/src/pages/Invoices.jsx:74:  const [invoices, setInvoices] = useState([]);
+client/src/pages/Invoices.jsx:80:  const canWriteInvoices = canEditInvoices(user?.role);
+client/src/pages/Invoices.jsx:82:  const fetchInvoices = useCallback(async () => {
+client/src/pages/Invoices.jsx:90:      const data = await invoicesAPI.list({ companyId: activeCompany.id });
+client/src/pages/Invoices.jsx:91:      setInvoices(Array.isArray(data) ? data : []);
+client/src/pages/Invoices.jsx:93:      setError(formatApiError(fetchError, 'Unable to load invoices.'));
+client/src/pages/Invoices.jsx:101:      setInvoices([]);
+client/src/pages/Invoices.jsx:108:    fetchInvoices();
+client/src/pages/Invoices.jsx:109:  }, [activeCompany, fetchInvoices]);
+client/src/pages/Invoices.jsx:119:  const filteredInvoices = useMemo(() => {
+client/src/pages/Invoices.jsx:120:    return invoices.filter((invoice) => {
+client/src/pages/Invoices.jsx:121:      const matchesStatus = filters.status === 'all' || invoice.status === filters.status;
+client/src/pages/Invoices.jsx:125:        invoice.invoiceNumber?.toLowerCase().includes(search) ||
+client/src/pages/Invoices.jsx:126:        invoice.clientName?.toLowerCase().includes(search);
+client/src/pages/Invoices.jsx:129:  }, [filters, invoices]);
+client/src/pages/Invoices.jsx:131:  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+client/src/pages/Invoices.jsx:139:  const paginatedInvoices = useMemo(() => {
+client/src/pages/Invoices.jsx:141:    return filteredInvoices.slice(start, start + PAGE_SIZE);
+client/src/pages/Invoices.jsx:142:  }, [filteredInvoices, page]);
+client/src/pages/Invoices.jsx:144:  const showingStart = filteredInvoices.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+client/src/pages/Invoices.jsx:145:  const showingEnd = Math.min(filteredInvoices.length, page * PAGE_SIZE);
+client/src/pages/Invoices.jsx:163:          title="Ask AI about invoices"
+client/src/pages/Invoices.jsx:166:              new CustomEvent('open-ai-assistant', { detail: { context: 'invoices' } }),
+client/src/pages/Invoices.jsx:178:        current company’s invoices, status, and visible details on this page. No generic
+client/src/pages/Invoices.jsx:179:        questions—AI answers are always based on the invoices you see here.
+client/src/pages/Invoices.jsx:184:          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Invoices</h1>
+client/src/pages/Invoices.jsx:186:            All invoices for <span className="font-semibold">{activeCompany.name}</span>
+client/src/pages/Invoices.jsx:189:        {canWriteInvoices && (
+client/src/pages/Invoices.jsx:191:            <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/Invoices.jsx:192:              <Link to="/invoices/create">
+client/src/pages/Invoices.jsx:194:                  New Invoice
+client/src/pages/Invoices.jsx:198:            <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/Invoices.jsx:199:              <Link to="/invoices/import">
+client/src/pages/Invoices.jsx:201:                  Import Invoices
+client/src/pages/Invoices.jsx:209:        <ReadOnlyBanner mode="Read-only" message={t('states.read_only.invoices_notice')} />
+client/src/pages/Invoices.jsx:219:                placeholder="Invoice number or client"
+client/src/pages/Invoices.jsx:224:                aria-label="Search invoices"
+client/src/pages/Invoices.jsx:247:            <PageErrorState onRetry={fetchInvoices} />
+client/src/pages/Invoices.jsx:248:          ) : filteredInvoices.length === 0 ? (
+client/src/pages/Invoices.jsx:251:                canWriteInvoices ? (
+client/src/pages/Invoices.jsx:252:                  <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/Invoices.jsx:253:                    <Link to="/invoices/create">
+client/src/pages/Invoices.jsx:261:              title={filters.search || filters.status !== 'all' ? 'No invoices match your filters' : 'No invoices yet'}
+client/src/pages/Invoices.jsx:265:                  : 'Create a draft invoice or import a batch to start tracking receivables.'
+client/src/pages/Invoices.jsx:278:                        Invoice #
+client/src/pages/Invoices.jsx:319:                    {paginatedInvoices.map((invoice) => {
+client/src/pages/Invoices.jsx:320:                      const isLocked = invoice.status !== 'draft';
+client/src/pages/Invoices.jsx:322:                        !isLocked || canViewLegalData ? invoice.clientName : 'Masked';
+client/src/pages/Invoices.jsx:330:                          key={invoice.id}
+client/src/pages/Invoices.jsx:334:                            {invoice.invoiceNumber}
+client/src/pages/Invoices.jsx:343:                            {formatDate(invoice.date)}
+client/src/pages/Invoices.jsx:346:                            {formatDate(invoice.dueDate)}
+client/src/pages/Invoices.jsx:349:                            {formatCurrency(invoice.total, invoice.currency)}
+client/src/pages/Invoices.jsx:353:                              <InvoiceStatusBadge status={invoice.status} />
+client/src/pages/Invoices.jsx:364:                              {STATUS_HELP[invoice.status] || ''}
+client/src/pages/Invoices.jsx:368:                            {invoice.status === 'draft' && canWriteInvoices ? (
+client/src/pages/Invoices.jsx:369:                              <PermissionGuard action="invoice.edit" role={user?.role}>
+client/src/pages/Invoices.jsx:371:                                  to={`/invoices/${invoice.id}/edit`}
+client/src/pages/Invoices.jsx:380:                                  to={`/invoices/${invoice.id}/edit`}
+client/src/pages/Invoices.jsx:386:                                  {invoice.status === 'draft'
+client/src/pages/Invoices.jsx:388:                                    : `${formatStatusLabel(invoice.status)} invoices are locked for editing.`}
+client/src/pages/Invoices.jsx:402:                  Showing {showingStart} - {showingEnd} of {filteredInvoices.length} invoices
+client/src/pages/Invoices.jsx:434:export default Invoices;
+client/src/pages/__tests__/OCRPreview.test.jsx:61:      type: 'invoice',
+client/src/pages/__tests__/OCRPreview.test.jsx:74:    const file = new File(['dummy'], 'invoice.pdf', { type: 'application/pdf' });
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:62:const sampleInvoices = [
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:65:    invoiceNumber: 'INV-001',
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:100:vi.mock('../../services/invoicesAPI', () => ({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:101:  invoicesAPI: {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:114:import { invoicesAPI } from '../../services/invoicesAPI';
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:136:  invoicesAPI.list.mockResolvedValue(sampleInvoices);
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:192:        targetType: 'invoice',
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:221:        screen.getByText(/Transaction reconciled with Invoice INV-001\./i),
+client/src/pages/InvoiceImport.jsx:10:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/InvoiceImport.jsx:11:import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+client/src/pages/InvoiceImport.jsx:19:const InvoiceImportPage = () => {
+client/src/pages/InvoiceImport.jsx:29:  const canImport = canEditInvoices(user?.role);
+client/src/pages/InvoiceImport.jsx:51:      const data = await invoicesAPI.previewImport({ file, companyId: activeCompany.id });
+client/src/pages/InvoiceImport.jsx:55:      setError(formatApiError(previewError, 'Unable to preview invoice import.'));
+client/src/pages/InvoiceImport.jsx:68:      const data = await invoicesAPI.commitImport({ file, companyId: activeCompany.id });
+client/src/pages/InvoiceImport.jsx:71:      setError(formatApiError(commitError, 'Unable to import invoices.'));
+client/src/pages/InvoiceImport.jsx:81:        description="Invoice imports are scoped per company. Choose an active company before importing invoices."
+client/src/pages/InvoiceImport.jsx:95:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+client/src/pages/InvoiceImport.jsx:96:          <h1 className="text-3xl font-bold text-gray-900">Import invoices</h1>
+client/src/pages/InvoiceImport.jsx:98:            Upload CSV or JSON invoices for {activeCompany.name}. Imported invoices are created as drafts.
+client/src/pages/InvoiceImport.jsx:101:        <Button variant="secondary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceImport.jsx:102:          Back to invoices
+client/src/pages/InvoiceImport.jsx:109:          message="You have read-only access. Invoice import is disabled for your role."
+client/src/pages/InvoiceImport.jsx:136:            <label className="block text-sm font-medium text-gray-700" htmlFor="invoice-import-file">
+client/src/pages/InvoiceImport.jsx:140:              id="invoice-import-file"
+client/src/pages/InvoiceImport.jsx:174:              Your role can view invoices, but importing is restricted to admins and accountants.
+client/src/pages/InvoiceImport.jsx:229:                      <td className="px-3 py-2 text-gray-700">{row.invoice?.clientName || '-'}</td>
+client/src/pages/InvoiceImport.jsx:231:                        {row.invoice?.date || '-'} / {row.invoice?.dueDate || '-'}
+client/src/pages/InvoiceImport.jsx:233:                      <td className="px-3 py-2 text-gray-700">{row.invoice?.itemCount ?? '-'}</td>
+client/src/pages/InvoiceImport.jsx:251:              Imported {result.importedCount || result.invoices?.length || 0} draft invoices.
+client/src/pages/InvoiceImport.jsx:253:            <Button variant="primary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceImport.jsx:254:              View invoices
+client/src/pages/InvoiceImport.jsx:263:export default InvoiceImportPage;
+client/src/test/AISuggestionCard.test.jsx:10:      relatedEntity: 'invoice',
+client/src/pages/Dashboard.jsx:63:    title: 'Create invoice',
+client/src/pages/Dashboard.jsx:64:    description: 'Issue compliant invoices and keep revenue, VAT, and audit signals current.',
+client/src/pages/Dashboard.jsx:65:    to: '/invoices/create',
+client/src/pages/Dashboard.jsx:250:  const maxInvoices = Math.max(...trendSeries.map((item) => Number(item.invoices) || 0), 0);
+client/src/pages/Dashboard.jsx:263:  const latestInvoice = dashboardData?.latestInvoice;
+client/src/pages/Dashboard.jsx:280:    (point) => (Number(point.revenue) || 0) > 0 || (Number(point.invoices) || 0) > 0,
+client/src/pages/Dashboard.jsx:283:    statusEntries.length > 0 || latestInvoice || hasVatSummary || hasAuditReadiness;
+client/src/pages/Dashboard.jsx:369:        description="Create invoices or expenses to populate executive KPIs and trend insights."
+client/src/pages/Dashboard.jsx:371:          <Link to="/invoices">
+client/src/pages/Dashboard.jsx:420:              Live financial overview for {activeCompany.name}: revenue, expenses, invoice status,
+client/src/pages/Dashboard.jsx:462:                This will generate demo invoices, expenses, and bank statements for this company.
+client/src/pages/Dashboard.jsx:657:                  Invoice volume
+client/src/pages/Dashboard.jsx:666:                        maxInvoices > 0 ? Math.max(6, (point.invoices / maxInvoices) * 96) : 6;
+client/src/pages/Dashboard.jsx:672:                            title={formatNumber(point.invoices)}
+client/src/pages/Dashboard.jsx:687:                  <p className="text-sm font-medium">No invoice trend data yet.</p>
+client/src/pages/Dashboard.jsx:703:                Invoice status mix
+client/src/pages/Dashboard.jsx:720:                  No invoice status data yet.
+client/src/pages/Dashboard.jsx:830:                Latest invoice
+client/src/pages/Dashboard.jsx:832:              {latestInvoice ? (
+client/src/pages/Dashboard.jsx:835:                    <span>Invoice</span>
+client/src/pages/Dashboard.jsx:837:                      {latestInvoice.invoiceNumber || latestInvoice.id}
+client/src/pages/Dashboard.jsx:843:                      {statusLabel(latestInvoice.status)}
+client/src/pages/Dashboard.jsx:849:                      {Number.isFinite(Number(latestInvoice.amount))
+client/src/pages/Dashboard.jsx:850:                        ? latestInvoice.currency
+client/src/pages/Dashboard.jsx:851:                          ? formatCurrency(latestInvoice.amount, latestInvoice.currency)
+client/src/pages/Dashboard.jsx:852:                          : formatNumber(latestInvoice.amount, { maximumFractionDigits: 2 })
+client/src/pages/Dashboard.jsx:856:                  {latestInvoice.createdAt && (
+client/src/pages/Dashboard.jsx:860:                        {formatDate(latestInvoice.createdAt)}
+client/src/pages/Dashboard.jsx:866:                <p className="text-sm text-gray-500 dark:text-gray-400">No invoice activity yet.</p>
+client/src/pages/InvoiceEdit.jsx:7:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/pages/InvoiceEdit.jsx:8:import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
+client/src/pages/InvoiceEdit.jsx:10:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/InvoiceEdit.jsx:14:import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+client/src/pages/InvoiceEdit.jsx:19:    { label: 'Issue invoice', nextStatus: 'issued', variant: 'primary' },
+client/src/pages/InvoiceEdit.jsx:26:    { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
+client/src/pages/InvoiceEdit.jsx:34:    { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
+client/src/pages/InvoiceEdit.jsx:67:const InvoiceTemplatePreview = ({ invoice, company }) => (
+client/src/pages/InvoiceEdit.jsx:80:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoice</p>
+client/src/pages/InvoiceEdit.jsx:81:          <p className="text-2xl font-bold text-gray-900">{invoice.invoiceNumber}</p>
+client/src/pages/InvoiceEdit.jsx:83:            <InvoiceStatusBadge status={invoice.status} />
+client/src/pages/InvoiceEdit.jsx:91:          <p className="mt-1 text-sm font-medium text-gray-900">{invoice.clientName || '-'}</p>
+client/src/pages/InvoiceEdit.jsx:95:          <p className="mt-1 text-sm text-gray-700">{formatDate(invoice.date)}</p>
+client/src/pages/InvoiceEdit.jsx:99:          <p className="mt-1 text-sm text-gray-700">{formatDate(invoice.dueDate)}</p>
+client/src/pages/InvoiceEdit.jsx:115:            {(invoice.items || []).map((item, idx) => (
+client/src/pages/InvoiceEdit.jsx:120:                  {formatCurrency(item.unitPrice, invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:124:                  {formatCurrency(getLineGross(item), invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:135:          <p className="mt-2 text-sm text-gray-700">{invoice.notes || 'No notes added.'}</p>
+client/src/pages/InvoiceEdit.jsx:147:              {formatCurrency(invoice.subtotal, invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:153:              {formatCurrency((invoice.items || []).reduce((sum, item) => sum + getLineVat(item), 0), invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:159:              {formatCurrency(invoice.total, invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:173:        <p className="text-sm text-gray-500">Status and invoice changes recorded for this invoice.</p>
+client/src/pages/InvoiceEdit.jsx:178:        <p className="text-sm text-gray-500">No audit entries recorded for this invoice yet.</p>
+client/src/pages/InvoiceEdit.jsx:201:const InvoiceEdit = () => {
+client/src/pages/InvoiceEdit.jsx:202:  const { invoiceId } = useParams();
+client/src/pages/InvoiceEdit.jsx:207:  const [invoice, setInvoice] = useState(null);
+client/src/pages/InvoiceEdit.jsx:216:  const loadInvoice = useCallback(async () => {
+client/src/pages/InvoiceEdit.jsx:224:      const found = await invoicesAPI.get(invoiceId, { companyId: activeCompany.id });
+client/src/pages/InvoiceEdit.jsx:226:        setError({ message: 'Invoice not found.', status: 404 });
+client/src/pages/InvoiceEdit.jsx:227:        setInvoice(null);
+client/src/pages/InvoiceEdit.jsx:230:      setInvoice(found);
+client/src/pages/InvoiceEdit.jsx:232:      setError(formatApiError(fetchError, 'Unable to load invoice.'));
+client/src/pages/InvoiceEdit.jsx:233:      setInvoice(null);
+client/src/pages/InvoiceEdit.jsx:237:  }, [activeCompany, invoiceId]);
+client/src/pages/InvoiceEdit.jsx:240:    loadInvoice();
+client/src/pages/InvoiceEdit.jsx:241:  }, [loadInvoice]);
+client/src/pages/InvoiceEdit.jsx:244:    if (!activeCompany || !invoiceId) {
+client/src/pages/InvoiceEdit.jsx:249:      const entries = await invoicesAPI.auditLog(invoiceId, { companyId: activeCompany.id });
+client/src/pages/InvoiceEdit.jsx:256:  }, [activeCompany, invoiceId]);
+client/src/pages/InvoiceEdit.jsx:263:    if (!invoice || invoice.status !== 'draft') {
+client/src/pages/InvoiceEdit.jsx:264:      setActionError({ message: 'Only draft invoices can be edited.' });
+client/src/pages/InvoiceEdit.jsx:271:      const updated = await invoicesAPI.update(invoiceId, {
+client/src/pages/InvoiceEdit.jsx:275:      setInvoice(updated);
+client/src/pages/InvoiceEdit.jsx:284:    if (!invoice || statusUpdating) {
+client/src/pages/InvoiceEdit.jsx:291:      const updated = await invoicesAPI.update(invoiceId, {
+client/src/pages/InvoiceEdit.jsx:295:      setInvoice(updated);
+client/src/pages/InvoiceEdit.jsx:304:  const canWriteInvoices = canEditInvoices(user?.role);
+client/src/pages/InvoiceEdit.jsx:305:  const canEdit = invoice?.status === 'draft' && canWriteInvoices;
+client/src/pages/InvoiceEdit.jsx:309:    if (!invoice) {
+client/src/pages/InvoiceEdit.jsx:312:    return STATUS_TRANSITIONS[invoice.status] || [];
+client/src/pages/InvoiceEdit.jsx:313:  }, [invoice]);
+client/src/pages/InvoiceEdit.jsx:316:    if (!invoice) {
+client/src/pages/InvoiceEdit.jsx:320:      invoiceNumber: invoice.invoiceNumber,
+client/src/pages/InvoiceEdit.jsx:321:      clientName: invoice.clientName,
+client/src/pages/InvoiceEdit.jsx:322:      date: invoice.date,
+client/src/pages/InvoiceEdit.jsx:323:      dueDate: invoice.dueDate,
+client/src/pages/InvoiceEdit.jsx:324:      currency: invoice.currency,
+client/src/pages/InvoiceEdit.jsx:325:      subtotal: invoice.subtotal,
+client/src/pages/InvoiceEdit.jsx:326:      total: invoice.total,
+client/src/pages/InvoiceEdit.jsx:327:      notes: invoice.notes || '',
+client/src/pages/InvoiceEdit.jsx:328:      status: invoice.status,
+client/src/pages/InvoiceEdit.jsx:329:      items: invoice.items || [],
+client/src/pages/InvoiceEdit.jsx:330:      vatSummary: invoice.vatSummary,
+client/src/pages/InvoiceEdit.jsx:331:      createdAt: invoice.createdAt,
+client/src/pages/InvoiceEdit.jsx:333:  }, [invoice]);
+client/src/pages/InvoiceEdit.jsx:339:        description="Select a company before editing invoices."
+client/src/pages/InvoiceEdit.jsx:353:        <p className="mt-3 text-sm text-gray-500">Loading invoice...</p>
+client/src/pages/InvoiceEdit.jsx:364:            <Button variant="secondary" onClick={loadInvoice}>
+client/src/pages/InvoiceEdit.jsx:367:            <Link to="/invoices" className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-1 text-sm font-medium text-blue-600">
+client/src/pages/InvoiceEdit.jsx:368:              Back to invoices
+client/src/pages/InvoiceEdit.jsx:376:  if (!invoice) {
+client/src/pages/InvoiceEdit.jsx:379:        <p className="text-sm text-gray-600">Invoice not found.</p>
+client/src/pages/InvoiceEdit.jsx:387:        <ReadOnlyBanner mode={readOnlyBannerMode(user?.role)} message="You have read-only access. Invoice changes and status actions are disabled." />
+client/src/pages/InvoiceEdit.jsx:392:            <h1 className="text-3xl font-bold text-gray-900">Invoice {invoice.invoiceNumber}</h1>
+client/src/pages/InvoiceEdit.jsx:393:            <InvoiceStatusBadge status={invoice.status} />
+client/src/pages/InvoiceEdit.jsx:396:            {invoice.clientName} · {isReadOnly ? 'Read-only invoice view' : 'Editable draft'}
+client/src/pages/InvoiceEdit.jsx:400:          <Button variant="secondary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceEdit.jsx:403:          <Button variant="outline" onClick={loadInvoice}>
+client/src/pages/InvoiceEdit.jsx:412:          {canWriteInvoices &&
+client/src/pages/InvoiceEdit.jsx:414:              <PermissionGuard action="invoice.updateStatus" role={user?.role} key={action.nextStatus}>
+client/src/pages/InvoiceEdit.jsx:437:            <InvoiceForm
+client/src/pages/InvoiceEdit.jsx:445:              Draft invoices can be edited until they are issued or cancelled.
+client/src/pages/InvoiceEdit.jsx:452:            {!canWriteInvoices
+client/src/pages/InvoiceEdit.jsx:453:              ? 'Your role can view invoices, but editing and status changes are restricted to admins and accountants.'
+client/src/pages/InvoiceEdit.jsx:454:              : `This invoice is ${formatStatus(invoice.status)} and cannot be edited. Use available status actions only.`}
+client/src/pages/InvoiceEdit.jsx:459:      <InvoiceTemplatePreview invoice={invoice} company={activeCompany} />
+client/src/pages/InvoiceEdit.jsx:465:export default InvoiceEdit;
+client/src/pages/__tests__/AIManager.test.jsx:35:      invoices: [],
+client/src/pages/__tests__/AIManager.test.jsx:52:      invoices: [
+client/src/pages/__tests__/AIManager.test.jsx:66:        type: 'Duplicate invoice risk',
+client/src/pages/__tests__/AIManager.test.jsx:67:        summary: 'Potential duplicate invoice needs review.',
+client/src/pages/__tests__/AIManager.test.jsx:106:    expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
+client/src/pages/__tests__/AIManager.test.jsx:111:    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:113:    expect(screen.getByText('Invoice #1')).toBeInTheDocument();
+client/src/pages/__tests__/AIManager.test.jsx:116:    expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
+client/src/pages/__tests__/AIManager.test.jsx:143:    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:167:  it('selects a pending or draft invoice when no higher priority exists', async () => {
+client/src/pages/__tests__/AIManager.test.jsx:169:      invoices: [
+client/src/pages/__tests__/AIManager.test.jsx:184:    expect(screen.getAllByText('Invoice #77')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:185:    expect(screen.getAllByText('Review invoices')).not.toHaveLength(0);
+client/src/pages/__tests__/AIAssistant.test.jsx:15:import { invoicesAPI } from '../../services/invoicesAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:59:vi.mock('../../services/invoicesAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:60:  invoicesAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:93:  invoices: [],
+client/src/pages/__tests__/AIAssistant.test.jsx:219:    const file = new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' });
+client/src/pages/__tests__/AIAssistant.test.jsx:224:    expect(await screen.findByText(/invoice\.pdf/i)).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:225:    fireEvent.click(screen.getByRole('button', { name: /Remove invoice\.pdf/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:226:    expect(screen.queryByText(/invoice\.pdf/i)).not.toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:331:    expect(screen.queryByRole('button', { name: /Confirm create invoice draft/i })).not.toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:598:    expect(invoicesAPI.create).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:791:  it('does not create an invoice draft directly from raw document analysis', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:793:      requestId: 'req-invoice-doc',
+client/src/pages/__tests__/AIAssistant.test.jsx:794:      document: { id: 'doc-invoice-1', originalName: 'invoice.pdf' },
+client/src/pages/__tests__/AIAssistant.test.jsx:796:        documentType: 'invoice',
+client/src/pages/__tests__/AIAssistant.test.jsx:797:        suggestedAction: 'create_invoice_draft',
+client/src/pages/__tests__/AIAssistant.test.jsx:842:        targetRoute: 'POST /api/invoices',
+client/src/pages/__tests__/AIAssistant.test.jsx:845:          systemContext: { source: 'ai_document_intake', documentId: 'doc-invoice-1' },
+client/src/pages/__tests__/AIAssistant.test.jsx:857:    const file = new File(['%PDF-1.4'], 'invoice.pdf', { type: 'application/pdf' });
+client/src/pages/__tests__/AIAssistant.test.jsx:865:    expect(screen.queryByRole('button', { name: /Confirm create invoice draft/i })).not.toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:868:    expect(invoicesAPI.create).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:880:  it('microphone button renders and handles unsupported MediaRecorder gracefully', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:883:    fireEvent.click(screen.getByRole('button', { name: /Start voice recording/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:894:        highlights: ['Overdue invoice found'],
+client/src/pages/__tests__/AIAssistant.test.jsx:896:        references: ['Invoice INV-1'],
+client/src/pages/__tests__/AIAssistant.test.jsx:907:    expect(screen.getByText('Overdue invoice found')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:911:    expect(screen.getByText('Invoice INV-1')).toBeInTheDocument();
+client/src/locales/en/translation.json:48:    "active_invoices": "Active Invoices",
+client/src/locales/en/translation.json:49:    "avg_invoice": "Avg. Invoice Value",
+client/src/locales/en/translation.json:63:    "new_invoice": "New Invoice",
+client/src/locales/en/translation.json:70:    "create_invoice": "Create Invoice",
+client/src/locales/en/translation.json:71:    "create_invoice_desc": "Generate a new invoice quickly",
+client/src/locales/en/translation.json:95:    "invoices": "Invoices",
+client/src/locales/en/translation.json:146:      "invoices_notice": "Rechnungserstellung und -bearbeitung sind für Ihre Rolle gemäß GoBD gesperrt.",
+client/src/locales/en/translation.json:151:  "invoices": "Invoices",
+client/src/locales/en/translation.json:155:  "billingSubtitle": "Manage subscriptions and invoices for your company.",
+client/src/locales/en/translation.json:176:  "uploadInvoice": "Upload Invoice",
+client/src/locales/en/translation.json:177:  "processInvoice": "Process Invoice",
+client/src/locales/en/translation.json:178:  "viewInvoice": "View Invoice",
+client/src/locales/en/translation.json:179:  "deleteInvoice": "Delete Invoice",
+client/src/locales/en/translation.json:180:  "editInvoice": "Edit Invoice",
+client/src/locales/en/translation.json:204:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/en/translation.json:205:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/locales/en/translation.json:233:    "invoice_processed": "Invoice Processed Successfully",
+client/src/locales/en/translation.json:234:    "invoice_processed_desc": "Your invoice has been successfully processed",
+client/src/locales/en/translation.json:286:    "no_data_description": "There is no analytics data to display yet. Invoice data will appear here once documents are processed for this company.",
+client/src/locales/en/translation.json:296:    "invoices": "Invoices",
+client/src/locales/en/translation.json:297:    "paid_invoice_ratio": "Paid invoice ratio",
+client/src/locales/en/translation.json:299:    "paid_ratio_summary": "{{paidCount}} of {{invoiceCount}} invoices marked as paid.",
+client/src/locales/en/translation.json:300:    "no_invoices_recorded": "No invoices recorded yet.",
+client/src/locales/en/translation.json:301:    "invoice_status": "Invoice Status",
+client/src/locales/en/translation.json:302:    "no_invoice_statuses": "No invoice statuses are available for this period.",
+client/src/locales/en/translation.json:303:    "latest_invoice": "Latest Invoice",
+client/src/locales/en/translation.json:304:    "invoice_number": "Invoice #{{invoiceNumber}}",
+client/src/locales/en/translation.json:306:    "view_invoice": "View invoice",
+client/src/locales/en/translation.json:307:    "no_latest_invoice": "No invoices exist yet for this company.",
+client/src/locales/en/translation.json:310:    "total_invoices_none": "No invoices processed yet.",
+client/src/locales/en/translation.json:311:    "total_invoices_count": "{{count}} invoices processed to date."
+client/src/locales/de/translation.json:47:    "active_invoices": "Aktive Rechnungen",
+client/src/locales/de/translation.json:48:    "avg_invoice": "Durchschnittlicher Rechnungswert",
+client/src/locales/de/translation.json:62:    "new_invoice": "Neue Rechnung",
+client/src/locales/de/translation.json:69:    "create_invoice": "Rechnung erstellen",
+client/src/locales/de/translation.json:70:    "create_invoice_desc": "Neue Rechnung schnell erstellen",
+client/src/locales/de/translation.json:92:    "invoices": "Rechnungen",
+client/src/locales/de/translation.json:144:      "invoices_notice": "Rechnungsstellung und -bearbeitung sind für Ihre Rolle deaktiviert.",
+client/src/locales/de/translation.json:149:  "invoices": "Rechnungen",
+client/src/locales/de/translation.json:174:  "uploadInvoice": "Upload Invoice",
+client/src/locales/de/translation.json:175:  "processInvoice": "Process Invoice",
+client/src/locales/de/translation.json:176:  "viewInvoice": "View Invoice",
+client/src/locales/de/translation.json:177:  "deleteInvoice": "Delete Invoice",
+client/src/locales/de/translation.json:178:  "editInvoice": "Edit Invoice",
+client/src/locales/de/translation.json:202:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/de/translation.json:203:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/locales/de/translation.json:231:    "invoice_processed": "Invoice Processed Successfully",
+client/src/locales/de/translation.json:232:    "invoice_processed_desc": "Your invoice has been successfully processed",
+client/src/locales/de/translation.json:295:    "invoices": "Rechnungen",
+client/src/locales/de/translation.json:296:    "paid_invoice_ratio": "Anteil bezahlter Rechnungen",
+client/src/locales/de/translation.json:298:    "paid_ratio_summary": "{{paidCount}} von {{invoiceCount}} Rechnungen sind als bezahlt markiert.",
+client/src/locales/de/translation.json:299:    "no_invoices_recorded": "Noch keine Rechnungen erfasst.",
+client/src/locales/de/translation.json:300:    "invoice_status": "Rechnungsstatus",
+client/src/locales/de/translation.json:301:    "no_invoice_statuses": "Für diesen Zeitraum sind keine Rechnungsstatus verfügbar.",
+client/src/locales/de/translation.json:302:    "latest_invoice": "Neueste Rechnung",
+client/src/locales/de/translation.json:303:    "invoice_number": "Rechnung #{{invoiceNumber}}",
+client/src/locales/de/translation.json:305:    "view_invoice": "Rechnung anzeigen",
+client/src/locales/de/translation.json:306:    "no_latest_invoice": "Für dieses Unternehmen existieren noch keine Rechnungen.",
+client/src/locales/de/translation.json:309:    "total_invoices_none": "Noch keine Rechnungen verarbeitet.",
+client/src/locales/de/translation.json:310:    "total_invoices_count": "{{count}} Rechnungen bisher verarbeitet."
+client/src/locales/ar/translation.json:47:    "active_invoices": "Active Invoices",
+client/src/locales/ar/translation.json:48:    "avg_invoice": "Avg. Invoice Value",
+client/src/locales/ar/translation.json:62:    "new_invoice": "New Invoice",
+client/src/locales/ar/translation.json:69:    "create_invoice": "Create Invoice",
+client/src/locales/ar/translation.json:70:    "create_invoice_desc": "Generate a new invoice quickly",
+client/src/locales/ar/translation.json:92:    "invoices": "الفواتير",
+client/src/locales/ar/translation.json:144:      "invoices_notice": "تم تعطيل إنشاء الفواتير وتحريرها لدورك.",
+client/src/locales/ar/translation.json:149:  "invoices": "الفواتير",
+client/src/locales/ar/translation.json:174:  "uploadInvoice": "Upload Invoice",
+client/src/locales/ar/translation.json:175:  "processInvoice": "Process Invoice",
+client/src/locales/ar/translation.json:176:  "viewInvoice": "View Invoice",
+client/src/locales/ar/translation.json:177:  "deleteInvoice": "Delete Invoice",
+client/src/locales/ar/translation.json:178:  "editInvoice": "Edit Invoice",
+client/src/locales/ar/translation.json:202:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/ar/translation.json:203:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/locales/ar/translation.json:231:    "invoice_processed": "Invoice Processed Successfully",
+client/src/locales/ar/translation.json:232:    "invoice_processed_desc": "Your invoice has been successfully processed",
+client/src/locales/ar/translation.json:295:    "invoices": "الفواتير",
+client/src/locales/ar/translation.json:296:    "paid_invoice_ratio": "نسبة الفواتير المدفوعة",
+client/src/locales/ar/translation.json:298:    "paid_ratio_summary": "{{paidCount}} من أصل {{invoiceCount}} فاتورة تم تعليمها كمدفوعة.",
+client/src/locales/ar/translation.json:299:    "no_invoices_recorded": "لا توجد فواتير مسجلة بعد.",
+client/src/locales/ar/translation.json:300:    "invoice_status": "حالة الفواتير",
+client/src/locales/ar/translation.json:301:    "no_invoice_statuses": "لا توجد حالات فواتير متاحة لهذه الفترة.",
+client/src/locales/ar/translation.json:302:    "latest_invoice": "آخر فاتورة",
+client/src/locales/ar/translation.json:303:    "invoice_number": "فاتورة #{{invoiceNumber}}",
+client/src/locales/ar/translation.json:305:    "view_invoice": "عرض الفاتورة",
+client/src/locales/ar/translation.json:306:    "no_latest_invoice": "لا توجد فواتير بعد لهذه الشركة.",
+client/src/locales/ar/translation.json:309:    "total_invoices_none": "لم تتم معالجة أي فواتير بعد.",
+client/src/locales/ar/translation.json:310:    "total_invoices_count": "تمت معالجة {{count}} فاتورة حتى الآن."
+
+
+[2. VOICE IN AI HUB]
+Command failed: rg -n "voice|speech|microphone|audio|tts|stt" client/src/pages/ai-hub
+
+[3. VOICE IN AI ASSISTANT]
+58:      'See a prioritized summary of overdue invoices, pending approvals, and unreconciled transactions.',
+116:  const invoiceCount = context.invoices?.length ?? 0;
+118:  return `مرحبًا، كيف أقدر أساعدك اليوم؟ أراقب ${context.company?.name ?? 'شركتك'} بشكل استشاري فقط: ${insightCount} insights, ${invoiceCount} invoices, ${transactionCount} transactions.`;
+223:    if (context.invoices?.length) {
+224:      sources.push('Invoices');
+248:    context.invoices?.forEach((invoice) => {
+249:      if (invoice.date || invoice.dueDate) {
+250:        candidates.push(invoice.date || invoice.dueDate);
+446:  const invoiceStatusBreakdown = useMemo(() => {
+447:    if (!context?.invoices) {
+451:    context.invoices.forEach((invoice) => {
+452:      const status = invoice.status || 'unknown';
+562:      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+575:          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+576:          const file = new File([blob], `voice-recording-${Date.now()}.webm`, {
+577:            type: blob.type || 'audio/webm',
+579:          setAttachments((prev) => [...prev, buildAttachmentChip(file, 'audio')]);
+594:          : 'Unable to start voice recording.',
+721:          'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+810:                'I can help conversationally and keep the advice read-only. Ask me about invoices, accounting risks, bank transactions, or why an insight was flagged.',
+1232:            draftType === 'invoice'
+1233:              ? 'Invoice draft created from reviewed values'
+1379:                      I acknowledge that input VAT will not be deducted unless the invoice requirements are complete.
+1761:              <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+1762:                Review Related Invoices
+1827:              <span className="font-semibold text-gray-950 dark:text-white">Invoices</span>
+1829:                {context?.invoices?.length ?? 0} records
+1832:            {Object.keys(invoiceStatusBreakdown).length ? (
+1834:                {Object.entries(invoiceStatusBreakdown).map(([status, count]) => (
+1842:              <p className="text-xs text-gray-500 dark:text-gray-400">No invoices available yet.</p>
+1909:                          text={`Why am I seeing this?\n\nThis insight was generated because: ${insight.why || 'AI detected a pattern or anomaly based on your accounting data.'}\n\nData source: ${insight.dataSource || 'Relevant invoices, transactions, or expenses.'}`}
+1920:                      dataSource={insight.dataSource || 'Invoices, expenses, and transactions'}
+1972:                  Tip: Upload more invoices, expenses, or bank data to surface insights.
+1985:                  The assistant references invoices, expenses, bank statements, and AI insights.
+2104:                      aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+2105:                      title={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+
+
+[4. GLOBAL VOICE USAGE]
+client/src/services/dashboardAPI.js:13:const resolveCurrency = (stats, invoiceStats, financialOverview) =>
+client/src/services/dashboardAPI.js:17:  invoiceStats?.latestInvoice?.currency ||
+client/src/services/dashboardAPI.js:26:const buildMetricsFromStats = (stats = {}, invoiceStats = {}, financialOverview = null) => {
+client/src/services/dashboardAPI.js:28:  const currency = resolveCurrency(stats, invoiceStats, financialOverview);
+client/src/services/dashboardAPI.js:33:      : stats.totalRevenue ?? stats.revenue?.total ?? stats.revenue ?? invoiceStats.totalRevenue,
+client/src/services/dashboardAPI.js:43:  const invoiceCount = toNumber(
+client/src/services/dashboardAPI.js:44:    stats.invoiceCount ?? stats.invoices?.total ?? stats.invoicesCount ?? invoiceStats.invoiceCount,
+client/src/services/dashboardAPI.js:46:  const overdueInvoices = toNumber(stats.overdue ?? stats.invoices?.overdue);
+client/src/services/dashboardAPI.js:58:        : 'Paid invoice revenue',
+client/src/services/dashboardAPI.js:88:  if (invoiceCount !== null) {
+client/src/services/dashboardAPI.js:90:      id: 'invoices-count',
+client/src/services/dashboardAPI.js:91:      label: 'Invoices',
+client/src/services/dashboardAPI.js:92:      value: invoiceCount,
+client/src/services/dashboardAPI.js:94:      description: 'Total invoices',
+client/src/services/dashboardAPI.js:98:  if (overdueInvoices !== null) {
+client/src/services/dashboardAPI.js:100:      id: 'overdue-invoices',
+client/src/services/dashboardAPI.js:102:      value: overdueInvoices,
+client/src/services/dashboardAPI.js:104:      description: 'Invoices past due',
+client/src/services/dashboardAPI.js:139:  const invoiceStats =
+client/src/services/dashboardAPI.js:140:    payload.invoiceStats ?? payload.data?.invoiceStats ?? payload.details ?? payload.data?.details;
+client/src/services/dashboardAPI.js:149:  const safeInvoiceStats = invoiceStats && typeof invoiceStats === 'object' ? invoiceStats : {};
+client/src/services/dashboardAPI.js:154:  const metrics = buildMetricsFromStats(safeStats, safeInvoiceStats, safeFinancialOverview);
+client/src/services/dashboardAPI.js:155:  const currency = resolveCurrency(safeStats, safeInvoiceStats, safeFinancialOverview);
+client/src/services/dashboardAPI.js:165:      safeInvoiceStats?.statusBreakdown ?? safeStats?.statusBreakdown ?? payload.statusBreakdown ?? null,
+client/src/services/dashboardAPI.js:166:    latestInvoice:
+client/src/services/dashboardAPI.js:167:      safeInvoiceStats?.latestInvoice ?? safeStats?.latestInvoice ?? payload.latestInvoice ?? null,
+client/src/services/dashboardAPI.js:168:    invoiceCount:
+client/src/services/dashboardAPI.js:169:      safeStats?.invoiceCount ?? safeStats?.invoices?.total ?? safeInvoiceStats?.invoiceCount ?? null,
+client/src/services/dashboardAPI.js:171:      safeStats?.totalRevenue ?? safeStats?.revenue?.total ?? safeInvoiceStats?.totalRevenue ?? null,
+client/src/services/dashboardAPI.js:177:    !normalized.latestInvoice &&
+client/src/services/__tests__/api.interceptor.test.js:45:    const config = await requestInterceptor({ url: '/invoices', headers: {} });
+client/src/services/__tests__/api.interceptor.test.js:68:      config: { url: '/invoices' },
+client/src/services/__tests__/invoicesAPI.test.js:2:import { invoicesAPI } from '../invoicesAPI';
+client/src/services/__tests__/invoicesAPI.test.js:17:  DEMO_DATA: { invoices: [] },
+client/src/services/__tests__/invoicesAPI.test.js:20:describe('invoicesAPI', () => {
+client/src/services/__tests__/invoicesAPI.test.js:25:  it('normalizes backend invoices into the frontend invoice contract', async () => {
+client/src/services/__tests__/invoicesAPI.test.js:29:        invoices: [
+client/src/services/__tests__/invoicesAPI.test.js:50:    const result = await invoicesAPI.list({ companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:52:    expect(api.get).toHaveBeenCalledWith('/invoices', {
+client/src/services/__tests__/invoicesAPI.test.js:72:      data: { success: true, invoice: { id: 2, status: 'DRAFT', currency: 'EUR', items: [] } },
+client/src/services/__tests__/invoicesAPI.test.js:75:    await invoicesAPI.create({
+client/src/services/__tests__/invoicesAPI.test.js:92:      '/invoices',
+client/src/services/__tests__/invoicesAPI.test.js:116:      data: { success: true, invoice: { id: 3, status: 'SENT', currency: 'EUR', items: [] } },
+client/src/services/__tests__/invoicesAPI.test.js:119:    const result = await invoicesAPI.update(3, { companyId: 7, status: 'issued' });
+client/src/services/__tests__/invoicesAPI.test.js:122:      '/invoices/3/status',
+client/src/services/__tests__/invoicesAPI.test.js:133:        invoices: [
+client/src/services/__tests__/invoicesAPI.test.js:140:    const result = await invoicesAPI.list({ companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:142:    expect(result.map((invoice) => invoice.status)).toEqual(['issued', 'issued']);
+client/src/services/__tests__/invoicesAPI.test.js:147:      data: { success: true, invoice: { id: 4, status: 'DRAFT', currency: 'EUR', items: [] } },
+client/src/services/__tests__/invoicesAPI.test.js:150:    await invoicesAPI.update(4, {
+client/src/services/__tests__/invoicesAPI.test.js:166:  it('loads invoice audit logs with company scope', async () => {
+client/src/services/__tests__/invoicesAPI.test.js:170:        auditLog: [{ id: 9, action: 'invoice_status_change', userId: 4 }],
+client/src/services/__tests__/invoicesAPI.test.js:174:    const result = await invoicesAPI.auditLog(3, { companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:176:    expect(api.get).toHaveBeenCalledWith('/invoices/3/audit-log', {
+client/src/services/__tests__/invoicesAPI.test.js:179:    expect(result[0]).toMatchObject({ action: 'invoice_status_change', user: 4 });
+client/src/services/__tests__/invoicesAPI.test.js:183:    const file = new File(['[]'], 'invoices.json', { type: 'application/json' });
+client/src/services/__tests__/invoicesAPI.test.js:187:    await invoicesAPI.previewImport({ file, companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:188:    await invoicesAPI.commitImport({ file, companyId: 7 });
+client/src/services/__tests__/invoicesAPI.test.js:192:      '/invoice-import/preview',
+client/src/services/__tests__/invoicesAPI.test.js:198:      '/invoice-import/commit',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:38:              type: 'Duplicate invoice',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:41:              summary: 'Duplicate invoice detected.',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:42:              why: 'Same invoice number',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:43:              entityType: 'invoice',
+client/src/services/__tests__/aiInsightsAPI.test.jsx:59:      relatedEntity: 'invoice',
+client/src/services/ocrAPI.js:3:export const previewDocument = async (file, documentType = 'invoice', companyId) => {
+client/src/services/ocrAPI.js:20:export const processDocument = async (file, documentType = 'invoice', companyId) => {
+client/src/services/__tests__/dashboardAPI.test.jsx:55:          invoiceCount: 2,
+client/src/services/__tests__/dashboardAPI.test.jsx:59:        invoiceStats: {
+client/src/services/__tests__/dashboardAPI.test.jsx:61:          invoiceCount: 2,
+client/src/services/__tests__/dashboardAPI.test.jsx:63:          latestInvoice: {
+client/src/services/__tests__/dashboardAPI.test.jsx:64:            invoiceNumber: 'INV-FO-1',
+client/src/services/__tests__/dashboardAPI.test.jsx:81:        monthlyData: [{ month: 'Jan', revenue: 119, invoices: 2 }],
+client/src/services/__tests__/dashboardAPI.test.jsx:115:        expect.objectContaining({ id: 'invoices-count', value: 2 }),
+client/src/services/__tests__/dashboardAPI.test.jsx:116:        expect.objectContaining({ id: 'overdue-invoices', value: 1 }),
+client/src/services/__tests__/dashboardAPI.test.jsx:122:  it('normalizes dashboard payloads with stats, invoiceStats, and monthlyData', async () => {
+client/src/services/__tests__/dashboardAPI.test.jsx:131:          invoiceCount: 42,
+client/src/services/__tests__/dashboardAPI.test.jsx:135:        invoiceStats: {
+client/src/services/__tests__/dashboardAPI.test.jsx:137:          latestInvoice: {
+client/src/services/__tests__/dashboardAPI.test.jsx:139:            invoiceNumber: 'INV-700',
+client/src/services/__tests__/dashboardAPI.test.jsx:146:          { month: 'Jan', revenue: 1000, invoices: 2 },
+client/src/services/__tests__/dashboardAPI.test.jsx:147:          { month: 'Feb', revenue: 2000, invoices: 3 },
+client/src/services/__tests__/dashboardAPI.test.jsx:159:      invoiceCount: 42,
+client/src/services/__tests__/dashboardAPI.test.jsx:161:      latestInvoice: {
+client/src/services/__tests__/dashboardAPI.test.jsx:162:        invoiceNumber: 'INV-700',
+client/src/services/__tests__/dashboardAPI.test.jsx:172:        expect.objectContaining({ id: 'invoices-count', value: 42, format: 'number' }),
+client/src/services/__tests__/dashboardAPI.test.jsx:173:        expect.objectContaining({ id: 'overdue-invoices', value: 2, format: 'number' }),
+client/src/services/aiAssistantAPI.js:152:    const response = await api.post("/ai/voice/assistant", payload, {
+client/src/pages/BankStatementDetail.jsx:13:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/BankStatementDetail.jsx:119:  { id: 'invoices', label: 'Invoices' },
+client/src/pages/BankStatementDetail.jsx:136:  const [activeTargetTab, setActiveTargetTab] = useState('invoices');
+client/src/pages/BankStatementDetail.jsx:137:  const [invoiceTargets, setInvoiceTargets] = useState([]);
+client/src/pages/BankStatementDetail.jsx:138:  const [invoiceLoading, setInvoiceLoading] = useState(false);
+client/src/pages/BankStatementDetail.jsx:139:  const [invoiceError, setInvoiceError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:349:        targetType: selectedTarget.type === 'invoices' ? 'invoice' : 'expense',
+client/src/pages/BankStatementDetail.jsx:365:      const targetTypeLabel = selectedTarget.type === 'invoices' ? 'Invoice' : 'Expense';
+client/src/pages/BankStatementDetail.jsx:465:    setInvoiceTargets([]);
+client/src/pages/BankStatementDetail.jsx:467:    setInvoiceError(null);
+client/src/pages/BankStatementDetail.jsx:469:    setActiveTargetTab('invoices');
+client/src/pages/BankStatementDetail.jsx:472:    const loadInvoices = async () => {
+client/src/pages/BankStatementDetail.jsx:473:      setInvoiceLoading(true);
+client/src/pages/BankStatementDetail.jsx:475:        const data = await invoicesAPI.list({ companyId: activeCompany.id });
+client/src/pages/BankStatementDetail.jsx:477:          setInvoiceTargets(Array.isArray(data) ? data : []);
+client/src/pages/BankStatementDetail.jsx:481:          setInvoiceError(fetchError);
+client/src/pages/BankStatementDetail.jsx:482:          setInvoiceTargets([]);
+client/src/pages/BankStatementDetail.jsx:486:          setInvoiceLoading(false);
+client/src/pages/BankStatementDetail.jsx:510:    loadInvoices();
+client/src/pages/BankStatementDetail.jsx:521:    setActiveTargetTab('invoices');
+client/src/pages/BankStatementDetail.jsx:542:    if (type === 'invoices') {
+client/src/pages/BankStatementDetail.jsx:543:      return item.invoiceNumber || item.number || `Invoice ${item.id ?? ''}`.trim();
+client/src/pages/BankStatementDetail.jsx:549:    if (type === 'invoices') {
+client/src/pages/BankStatementDetail.jsx:560:    if (type === 'invoices') {
+client/src/pages/BankStatementDetail.jsx:567:    const items = type === 'invoices' ? invoiceTargets : expenseTargets;
+client/src/pages/BankStatementDetail.jsx:568:    const loading = type === 'invoices' ? invoiceLoading : expenseLoading;
+client/src/pages/BankStatementDetail.jsx:569:    const error = type === 'invoices' ? invoiceError : expenseError;
+client/src/pages/BankStatementDetail.jsx:575:          Loading {type === 'invoices' ? 'invoices' : 'expenses'}…
+client/src/pages/BankStatementDetail.jsx:591:          No {type === 'invoices' ? 'invoices' : 'expenses'} are available to link right now.
+client/src/pages/BankStatementDetail.jsx:896:                Manual reconciliation links this bank transaction to an invoice or expense so your books stay accurate.
+client/src/pages/BankStatementDetail.jsx:944:              {activeTargetTab === 'invoices'
+client/src/pages/BankStatementDetail.jsx:945:                ? renderTargetList('invoices')
+client/src/pages/BankStatementDetail.jsx:968:                        {selectedTarget.type === 'invoices'
+client/src/pages/BankStatementDetail.jsx:969:                          ? `Will be linked to Invoice ${getTargetLabel(
+client/src/pages/BankStatementDetail.jsx:970:                              'invoices',
+client/src/services/aiInsightsMappers.js:6:// Example: Map an invoice to an AI insight (advisory, explainable, field-referenced)
+client/src/services/aiInsightsMappers.js:7:export function mapInvoiceToAIInsight(invoice) {
+client/src/services/aiInsightsMappers.js:9:  if (invoice.amount >= threshold) {
+client/src/services/aiInsightsMappers.js:11:      id: `invoice-${invoice.id}`,
+client/src/services/aiInsightsMappers.js:12:      type: 'High-Value Invoice',
+client/src/services/aiInsightsMappers.js:13:      summary: `Invoice #${invoice.number} for ${formatCurrency(invoice.amount)} exceeds the advisory threshold.`,
+client/src/services/aiInsightsMappers.js:16:        text: `Invoice amount (<b>amount</b>: ${formatCurrency(invoice.amount)}) is above the typical threshold.`,
+client/src/services/aiInsightsMappers.js:17:        legal: 'Large invoices may require additional documentation (GoBD §153).',
+client/src/services/aiInsightsMappers.js:18:        hint: `Review invoice <b>number</b>: ${invoice.number}, <b>date</b>: ${formatDate(invoice.date)}, <b>amount</b>: ${formatCurrency(invoice.amount)} for supporting documents.`,
+client/src/test/AISuggestionCard.test.jsx:10:      relatedEntity: 'invoice',
+client/src/pages/AIAssistant.jsx:58:      'See a prioritized summary of overdue invoices, pending approvals, and unreconciled transactions.',
+client/src/pages/AIAssistant.jsx:116:  const invoiceCount = context.invoices?.length ?? 0;
+client/src/pages/AIAssistant.jsx:118:  return `مرحبًا، كيف أقدر أساعدك اليوم؟ أراقب ${context.company?.name ?? 'شركتك'} بشكل استشاري فقط: ${insightCount} insights, ${invoiceCount} invoices, ${transactionCount} transactions.`;
+client/src/pages/AIAssistant.jsx:223:    if (context.invoices?.length) {
+client/src/pages/AIAssistant.jsx:224:      sources.push('Invoices');
+client/src/pages/AIAssistant.jsx:248:    context.invoices?.forEach((invoice) => {
+client/src/pages/AIAssistant.jsx:249:      if (invoice.date || invoice.dueDate) {
+client/src/pages/AIAssistant.jsx:250:        candidates.push(invoice.date || invoice.dueDate);
+client/src/pages/AIAssistant.jsx:446:  const invoiceStatusBreakdown = useMemo(() => {
+client/src/pages/AIAssistant.jsx:447:    if (!context?.invoices) {
+client/src/pages/AIAssistant.jsx:451:    context.invoices.forEach((invoice) => {
+client/src/pages/AIAssistant.jsx:452:      const status = invoice.status || 'unknown';
+client/src/pages/AIAssistant.jsx:562:      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+client/src/pages/AIAssistant.jsx:575:          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+client/src/pages/AIAssistant.jsx:576:          const file = new File([blob], `voice-recording-${Date.now()}.webm`, {
+client/src/pages/AIAssistant.jsx:577:            type: blob.type || 'audio/webm',
+client/src/pages/AIAssistant.jsx:579:          setAttachments((prev) => [...prev, buildAttachmentChip(file, 'audio')]);
+client/src/pages/AIAssistant.jsx:594:          : 'Unable to start voice recording.',
+client/src/pages/AIAssistant.jsx:721:          'No invoice, expense, bank transaction, posting, approval, deletion, or reconciliation was created.',
+client/src/pages/AIAssistant.jsx:810:                'I can help conversationally and keep the advice read-only. Ask me about invoices, accounting risks, bank transactions, or why an insight was flagged.',
+client/src/pages/AIAssistant.jsx:1232:            draftType === 'invoice'
+client/src/pages/AIAssistant.jsx:1233:              ? 'Invoice draft created from reviewed values'
+client/src/pages/AIAssistant.jsx:1379:                      I acknowledge that input VAT will not be deducted unless the invoice requirements are complete.
+client/src/pages/AIAssistant.jsx:1761:              <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/AIAssistant.jsx:1762:                Review Related Invoices
+client/src/pages/AIAssistant.jsx:1827:              <span className="font-semibold text-gray-950 dark:text-white">Invoices</span>
+client/src/pages/AIAssistant.jsx:1829:                {context?.invoices?.length ?? 0} records
+client/src/pages/AIAssistant.jsx:1832:            {Object.keys(invoiceStatusBreakdown).length ? (
+client/src/pages/AIAssistant.jsx:1834:                {Object.entries(invoiceStatusBreakdown).map(([status, count]) => (
+client/src/pages/AIAssistant.jsx:1842:              <p className="text-xs text-gray-500 dark:text-gray-400">No invoices available yet.</p>
+client/src/pages/AIAssistant.jsx:1909:                          text={`Why am I seeing this?\n\nThis insight was generated because: ${insight.why || 'AI detected a pattern or anomaly based on your accounting data.'}\n\nData source: ${insight.dataSource || 'Relevant invoices, transactions, or expenses.'}`}
+client/src/pages/AIAssistant.jsx:1920:                      dataSource={insight.dataSource || 'Invoices, expenses, and transactions'}
+client/src/pages/AIAssistant.jsx:1972:                  Tip: Upload more invoices, expenses, or bank data to surface insights.
+client/src/pages/AIAssistant.jsx:1985:                  The assistant references invoices, expenses, bank statements, and AI insights.
+client/src/pages/AIAssistant.jsx:2104:                      aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+client/src/pages/AIAssistant.jsx:2105:                      title={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+client/src/services/invoicesAPI.js:53:const normalizeInvoiceItem = (item = {}) => ({
+client/src/services/invoicesAPI.js:66:  action: entry.action || 'invoice_update',
+client/src/services/invoicesAPI.js:73:const normalizeInvoice = (invoice = {}) => ({
+client/src/services/invoicesAPI.js:74:  ...invoice,
+client/src/services/invoicesAPI.js:75:  status: normalizeStatusFromBackend(invoice.status),
+client/src/services/invoicesAPI.js:76:  currency: (invoice.currency || 'EUR').toUpperCase(),
+client/src/services/invoicesAPI.js:77:  items: Array.isArray(invoice.items) ? invoice.items.map(normalizeInvoiceItem) : [],
+client/src/services/invoicesAPI.js:78:  attachments: Array.isArray(invoice.attachments) ? invoice.attachments : [],
+client/src/services/invoicesAPI.js:86:  if (response.invoices) {
+client/src/services/invoicesAPI.js:87:    return response.invoices;
+client/src/services/invoicesAPI.js:94:  if (response.invoice) {
+client/src/services/invoicesAPI.js:95:    return response.invoice;
+client/src/services/invoicesAPI.js:98:  if (response.data?.invoices) {
+client/src/services/invoicesAPI.js:99:    return response.data.invoices;
+client/src/services/invoicesAPI.js:102:  if (response.data?.invoice) {
+client/src/services/invoicesAPI.js:103:    return response.data.invoice;
+client/src/services/invoicesAPI.js:109:const normalizeDemoInvoices = (items = []) =>
+client/src/services/invoicesAPI.js:110:  items.map((invoice, index) => {
+client/src/services/invoicesAPI.js:111:    const rawStatus = invoice.status ?? (index === 0 ? 'draft' : 'issued');
+client/src/services/invoicesAPI.js:113:    return normalizeInvoice({
+client/src/services/invoicesAPI.js:114:      id: invoice.id ?? `demo-invoice-${index + 1}`,
+client/src/services/invoicesAPI.js:115:      invoiceNumber: invoice.invoiceNumber ?? invoice.number ?? `INV-DEMO-${index + 1}`,
+client/src/services/invoicesAPI.js:116:      clientName: invoice.clientName ?? invoice.client ?? 'Demo Client',
+client/src/services/invoicesAPI.js:117:      date: invoice.date ?? invoice.issueDate ?? new Date().toISOString().split('T')[0],
+client/src/services/invoicesAPI.js:118:      dueDate: invoice.dueDate ?? invoice.date ?? new Date().toISOString().split('T')[0],
+client/src/services/invoicesAPI.js:119:      total: invoice.total ?? invoice.amount ?? 0,
+client/src/services/invoicesAPI.js:120:      currency: invoice.currency ?? 'EUR',
+client/src/services/invoicesAPI.js:122:      items: invoice.items || [],
+client/src/services/invoicesAPI.js:136:const isStatusOnlyPayload = (invoiceData = {}) => {
+client/src/services/invoicesAPI.js:137:  const keys = Object.keys(invoiceData).filter((key) => key !== 'companyId');
+client/src/services/invoicesAPI.js:141:const mapInvoicePayloadToBackend = (invoiceData = {}, { requireItems = false } = {}) => {
+client/src/services/invoicesAPI.js:144:    currency: invoiceData.currency || 'EUR',
+client/src/services/invoicesAPI.js:145:    date: invoiceData.date || invoiceData.invoiceDate || today,
+client/src/services/invoicesAPI.js:146:    dueDate: invoiceData.dueDate || invoiceData.dueDateDate || today,
+client/src/services/invoicesAPI.js:147:    clientName: invoiceData.clientName || invoiceData.customerName,
+client/src/services/invoicesAPI.js:148:    ...(Array.isArray(invoiceData.items) || requireItems
+client/src/services/invoicesAPI.js:150:          items: Array.isArray(invoiceData.items)
+client/src/services/invoicesAPI.js:151:            ? invoiceData.items.map((item) => ({
+client/src/services/invoicesAPI.js:160:    ...(invoiceData.attachments ? { attachments: invoiceData.attachments } : {}),
+client/src/services/invoicesAPI.js:161:    ...(Object.prototype.hasOwnProperty.call(invoiceData, 'notes')
+client/src/services/invoicesAPI.js:162:      ? { notes: invoiceData.notes }
+client/src/services/invoicesAPI.js:164:    ...(invoiceData.reason ? { reason: invoiceData.reason } : {}),
+client/src/services/invoicesAPI.js:165:    ...(invoiceData.systemContext ? { systemContext: invoiceData.systemContext } : {}),
+client/src/services/invoicesAPI.js:168:  const backendStatus = mapStatusToBackend(invoiceData.status);
+client/src/services/invoicesAPI.js:176:export const invoicesAPI = {
+client/src/services/invoicesAPI.js:179:    const response = await api.get('/invoices', {
+client/src/services/invoicesAPI.js:185:      throw new Error('Unexpected invoices response shape.');
+client/src/services/invoicesAPI.js:188:      return normalizeDemoInvoices(DEMO_DATA.invoices);
+client/src/services/invoicesAPI.js:190:    return data.map(normalizeInvoice);
+client/src/services/invoicesAPI.js:193:  get: async (invoiceId, params = {}) => {
+client/src/services/invoicesAPI.js:195:    const response = await api.get(`/invoices/${invoiceId}`, {
+client/src/services/invoicesAPI.js:198:    return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:201:  create: async (invoiceData) => {
+client/src/services/invoicesAPI.js:202:    const { companyId } = invoiceData || {};
+client/src/services/invoicesAPI.js:204:      '/invoices',
+client/src/services/invoicesAPI.js:205:      mapInvoicePayloadToBackend(invoiceData, { requireItems: true }),
+client/src/services/invoicesAPI.js:208:    return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:211:  update: async (invoiceId, invoiceData) => {
+client/src/services/invoicesAPI.js:212:    const { companyId } = invoiceData || {};
+client/src/services/invoicesAPI.js:214:    if (isStatusOnlyPayload(invoiceData)) {
+client/src/services/invoicesAPI.js:216:        `/invoices/${invoiceId}/status`,
+client/src/services/invoicesAPI.js:217:        { status: mapStatusToBackend(invoiceData.status) },
+client/src/services/invoicesAPI.js:220:      return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:223:      `/invoices/${invoiceId}`,
+client/src/services/invoicesAPI.js:224:      mapInvoicePayloadToBackend(invoiceData),
+client/src/services/invoicesAPI.js:227:    return normalizeInvoice(extractPayload(response.data));
+client/src/services/invoicesAPI.js:230:  auditLog: async (invoiceId, params = {}) => {
+client/src/services/invoicesAPI.js:232:    const response = await api.get(`/invoices/${invoiceId}/audit-log`, {
+client/src/services/invoicesAPI.js:242:    const response = await api.post('/invoice-import/preview', formData, {
+client/src/services/invoicesAPI.js:254:    const response = await api.post('/invoice-import/commit', formData, {
+client/src/services/invoicesAPI.js:264:export default invoicesAPI;
+client/src/navigation/sidebarNavigation.js:65:    nameKey: 'navigation.invoices',
+client/src/navigation/sidebarNavigation.js:66:    href: '/invoices',
+client/src/navigation/sidebarNavigation.js:70:    description: 'Invoices',
+client/src/pages/OCRPreview.jsx:16:  { value: 'invoice', label: 'Invoice' },
+client/src/pages/OCRPreview.jsx:23:  invoice: 'Invoice',
+client/src/pages/AIInsights.jsx:145:        help="Next steps: upload invoices or expenses, sync bank data, or check the latest imports."
+client/src/pages/AIInsights.jsx:176:            <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/AIInsights.jsx:177:              Review Related Invoices
+client/src/locales/en/translation.json:48:    "active_invoices": "Active Invoices",
+client/src/locales/en/translation.json:49:    "avg_invoice": "Avg. Invoice Value",
+client/src/locales/en/translation.json:63:    "new_invoice": "New Invoice",
+client/src/locales/en/translation.json:70:    "create_invoice": "Create Invoice",
+client/src/locales/en/translation.json:71:    "create_invoice_desc": "Generate a new invoice quickly",
+client/src/locales/en/translation.json:95:    "invoices": "Invoices",
+client/src/locales/en/translation.json:146:      "invoices_notice": "Rechnungserstellung und -bearbeitung sind für Ihre Rolle gemäß GoBD gesperrt.",
+client/src/locales/en/translation.json:151:  "invoices": "Invoices",
+client/src/locales/en/translation.json:155:  "billingSubtitle": "Manage subscriptions and invoices for your company.",
+client/src/locales/en/translation.json:176:  "uploadInvoice": "Upload Invoice",
+client/src/locales/en/translation.json:177:  "processInvoice": "Process Invoice",
+client/src/locales/en/translation.json:178:  "viewInvoice": "View Invoice",
+client/src/locales/en/translation.json:179:  "deleteInvoice": "Delete Invoice",
+client/src/locales/en/translation.json:180:  "editInvoice": "Edit Invoice",
+client/src/locales/en/translation.json:204:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/en/translation.json:205:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/locales/en/translation.json:233:    "invoice_processed": "Invoice Processed Successfully",
+client/src/locales/en/translation.json:234:    "invoice_processed_desc": "Your invoice has been successfully processed",
+client/src/locales/en/translation.json:286:    "no_data_description": "There is no analytics data to display yet. Invoice data will appear here once documents are processed for this company.",
+client/src/locales/en/translation.json:296:    "invoices": "Invoices",
+client/src/locales/en/translation.json:297:    "paid_invoice_ratio": "Paid invoice ratio",
+client/src/locales/en/translation.json:299:    "paid_ratio_summary": "{{paidCount}} of {{invoiceCount}} invoices marked as paid.",
+client/src/locales/en/translation.json:300:    "no_invoices_recorded": "No invoices recorded yet.",
+client/src/locales/en/translation.json:301:    "invoice_status": "Invoice Status",
+client/src/locales/en/translation.json:302:    "no_invoice_statuses": "No invoice statuses are available for this period.",
+client/src/locales/en/translation.json:303:    "latest_invoice": "Latest Invoice",
+client/src/locales/en/translation.json:304:    "invoice_number": "Invoice #{{invoiceNumber}}",
+client/src/locales/en/translation.json:306:    "view_invoice": "View invoice",
+client/src/locales/en/translation.json:307:    "no_latest_invoice": "No invoices exist yet for this company.",
+client/src/locales/en/translation.json:310:    "total_invoices_none": "No invoices processed yet.",
+client/src/locales/en/translation.json:311:    "total_invoices_count": "{{count}} invoices processed to date."
+client/src/pages/AIManager.jsx:33:const isPendingInvoice = (invoice) => {
+client/src/pages/AIManager.jsx:34:  const status = String(invoice?.status || '').toUpperCase();
+client/src/pages/AIManager.jsx:40:const getInvoiceSeverity = (invoice) => (
+client/src/pages/AIManager.jsx:41:  String(invoice?.status || '').toUpperCase() === 'OVERDUE' ? 'high' : 'medium'
+client/src/pages/AIManager.jsx:46:  if (entityType === 'invoice') {return '/invoices';}
+client/src/pages/AIManager.jsx:110:  const openInvoice = (context?.invoices || []).find(isPendingInvoice);
+client/src/pages/AIManager.jsx:111:  if (openInvoice) {
+client/src/pages/AIManager.jsx:113:      title: `Invoice #${openInvoice.id}`,
+client/src/pages/AIManager.jsx:114:      severity: getInvoiceSeverity(openInvoice),
+client/src/pages/AIManager.jsx:115:      reason: 'Open invoices are useful starting points for receivables follow-up and cash planning.',
+client/src/pages/AIManager.jsx:117:      entityType: 'invoice',
+client/src/pages/AIManager.jsx:118:      entityId: openInvoice.id,
+client/src/pages/AIManager.jsx:119:      actionLabel: 'Review invoices',
+client/src/pages/AIManager.jsx:123:          rule: 'Priority 3: overdue, pending, or draft invoices',
+client/src/pages/AIManager.jsx:124:          entityType: 'invoice',
+client/src/pages/AIManager.jsx:125:          entityId: openInvoice.id,
+client/src/pages/AIManager.jsx:126:          detail: `Status: ${openInvoice.status || 'pending'}`,
+client/src/pages/AIManager.jsx:159:    reason: 'No high-priority AI insight, unreconciled bank transaction, or open invoice is visible.',
+client/src/pages/AIManager.jsx:194:  const openInvoiceCount = (context?.invoices || []).filter(isPendingInvoice).length;
+client/src/pages/AIManager.jsx:213:      rule: 'Open invoice count',
+client/src/pages/AIManager.jsx:214:      entityType: 'invoice',
+client/src/pages/AIManager.jsx:216:      detail: `${openInvoiceCount} overdue, pending, or draft invoice${openInvoiceCount === 1 ? '' : 's'}`,
+client/src/pages/AIManager.jsx:260:  (context?.invoices || [])
+client/src/pages/AIManager.jsx:261:    .filter(isPendingInvoice)
+client/src/pages/AIManager.jsx:263:    .forEach((invoice) => {
+client/src/pages/AIManager.jsx:265:        id: `invoice-${invoice.id}`,
+client/src/pages/AIManager.jsx:266:        title: `Invoice #${invoice.id}`,
+client/src/pages/AIManager.jsx:267:        reason: `Status: ${invoice.status || 'pending'}`,
+client/src/pages/AIManager.jsx:268:        severity: getInvoiceSeverity(invoice),
+client/src/pages/AIManager.jsx:270:        entityType: 'invoice',
+client/src/pages/AIManager.jsx:271:        entityId: invoice.id,
+client/src/pages/AIManager.jsx:272:        route: '/invoices',
+client/src/pages/AIManager.jsx:273:        actionLabel: 'Review invoices',
+client/src/pages/AIManager.jsx:346:      invoices: countItems(context?.invoices),
+client/src/pages/AIManager.jsx:388:        id: 'invoices',
+client/src/pages/AIManager.jsx:389:        title: 'Invoices',
+client/src/pages/AIManager.jsx:390:        description: 'Overdue, draft, or pending invoice records that may need follow-up.',
+client/src/pages/AIManager.jsx:391:        items: reviewQueue.filter((item) => item.entityType === 'invoice' || String(item.id || '').startsWith('invoice-')),
+client/src/pages/AIManager.jsx:517:            ['Invoices', 'Review overdue, pending, and missing-evidence invoices.'],
+client/src/pages/AIManager.jsx:579:              ['Invoices', briefingCounts.invoices],
+client/src/pages/Landing.jsx:126:                Automate bookkeeping, monitor invoices, and lock down compliance reports without toggling multiple tools.
+client/src/App.jsx:54:const Invoices = lazy(() => import('./pages/Invoices'));
+client/src/App.jsx:55:const InvoiceCreate = lazy(() => import('./pages/InvoiceCreate'));
+client/src/App.jsx:57:const InvoiceEdit = lazy(() => import('./pages/InvoiceEdit'));
+client/src/App.jsx:58:const InvoiceImport = lazy(() => import('./pages/InvoiceImport'));
+client/src/App.jsx:233:    path: '/invoices/import',
+client/src/App.jsx:234:    element: renderProtectedRoute(<InvoiceImport />),
+client/src/App.jsx:235:    componentFile: 'client/src/pages/InvoiceImport.jsx',
+client/src/App.jsx:321:    path: '/invoices',
+client/src/App.jsx:322:    element: renderProtectedRoute(<Invoices />),
+client/src/App.jsx:323:    componentFile: 'client/src/pages/Invoices.jsx',
+client/src/App.jsx:345:    path: '/invoices/create',
+client/src/App.jsx:346:    element: renderProtectedRoute(<InvoiceCreate />),
+client/src/App.jsx:347:    componentFile: 'client/src/pages/InvoiceCreate.jsx',
+client/src/App.jsx:353:    path: '/invoices/:invoiceId/edit',
+client/src/App.jsx:354:    element: renderProtectedRoute(<InvoiceEdit />),
+client/src/App.jsx:355:    componentFile: 'client/src/pages/InvoiceEdit.jsx',
+client/src/shared/ai/mutationIntentConfig.json:41:      "pattern": "\\b(force|clear|wipe|zero|truncate)\\b.*\\b(invoices?|records?|balances?)\\b",
+client/src/shared/ai/mutationIntentConfig.json:46:      "pattern": "\\b(close|finalize|settle|complete)\\b.*\\b(invoices?|batch|payment)s?\\b",
+client/src/shared/ai/mutationIntentConfig.json:51:      "pattern": "\\b(cancel|void|terminate)\\b.*\\b(invoice|payment|subscription)\\b",
+client/src/shared/ai/mutationIntentConfig.json:56:      "pattern": "\\b(approve|reject)\\b.*\\b(invoices?|transactions?|expenses?)\\b",
+client/src/shared/ai/mutationIntentConfig.json:66:      "pattern": "\\b(archive|purge)\\b.*\\b(records|invoices|transactions)\\b",
+client/src/locales/de/translation.json:47:    "active_invoices": "Aktive Rechnungen",
+client/src/locales/de/translation.json:48:    "avg_invoice": "Durchschnittlicher Rechnungswert",
+client/src/locales/de/translation.json:62:    "new_invoice": "Neue Rechnung",
+client/src/locales/de/translation.json:69:    "create_invoice": "Rechnung erstellen",
+client/src/locales/de/translation.json:70:    "create_invoice_desc": "Neue Rechnung schnell erstellen",
+client/src/locales/de/translation.json:92:    "invoices": "Rechnungen",
+client/src/locales/de/translation.json:144:      "invoices_notice": "Rechnungsstellung und -bearbeitung sind für Ihre Rolle deaktiviert.",
+client/src/locales/de/translation.json:149:  "invoices": "Rechnungen",
+client/src/locales/de/translation.json:174:  "uploadInvoice": "Upload Invoice",
+client/src/locales/de/translation.json:175:  "processInvoice": "Process Invoice",
+client/src/locales/de/translation.json:176:  "viewInvoice": "View Invoice",
+client/src/locales/de/translation.json:177:  "deleteInvoice": "Delete Invoice",
+client/src/locales/de/translation.json:178:  "editInvoice": "Edit Invoice",
+client/src/locales/de/translation.json:202:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/de/translation.json:203:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/locales/de/translation.json:231:    "invoice_processed": "Invoice Processed Successfully",
+client/src/locales/de/translation.json:232:    "invoice_processed_desc": "Your invoice has been successfully processed",
+client/src/locales/de/translation.json:295:    "invoices": "Rechnungen",
+client/src/locales/de/translation.json:296:    "paid_invoice_ratio": "Anteil bezahlter Rechnungen",
+client/src/locales/de/translation.json:298:    "paid_ratio_summary": "{{paidCount}} von {{invoiceCount}} Rechnungen sind als bezahlt markiert.",
+client/src/locales/de/translation.json:299:    "no_invoices_recorded": "Noch keine Rechnungen erfasst.",
+client/src/locales/de/translation.json:300:    "invoice_status": "Rechnungsstatus",
+client/src/locales/de/translation.json:301:    "no_invoice_statuses": "Für diesen Zeitraum sind keine Rechnungsstatus verfügbar.",
+client/src/locales/de/translation.json:302:    "latest_invoice": "Neueste Rechnung",
+client/src/locales/de/translation.json:303:    "invoice_number": "Rechnung #{{invoiceNumber}}",
+client/src/locales/de/translation.json:305:    "view_invoice": "Rechnung anzeigen",
+client/src/locales/de/translation.json:306:    "no_latest_invoice": "Für dieses Unternehmen existieren noch keine Rechnungen.",
+client/src/locales/de/translation.json:309:    "total_invoices_none": "Noch keine Rechnungen verarbeitet.",
+client/src/locales/de/translation.json:310:    "total_invoices_count": "{{count}} Rechnungen bisher verarbeitet."
+client/src/locales/ar/translation.json:47:    "active_invoices": "Active Invoices",
+client/src/locales/ar/translation.json:48:    "avg_invoice": "Avg. Invoice Value",
+client/src/locales/ar/translation.json:62:    "new_invoice": "New Invoice",
+client/src/locales/ar/translation.json:69:    "create_invoice": "Create Invoice",
+client/src/locales/ar/translation.json:70:    "create_invoice_desc": "Generate a new invoice quickly",
+client/src/locales/ar/translation.json:92:    "invoices": "الفواتير",
+client/src/locales/ar/translation.json:144:      "invoices_notice": "تم تعطيل إنشاء الفواتير وتحريرها لدورك.",
+client/src/locales/ar/translation.json:149:  "invoices": "الفواتير",
+client/src/locales/ar/translation.json:174:  "uploadInvoice": "Upload Invoice",
+client/src/locales/ar/translation.json:175:  "processInvoice": "Process Invoice",
+client/src/locales/ar/translation.json:176:  "viewInvoice": "View Invoice",
+client/src/locales/ar/translation.json:177:  "deleteInvoice": "Delete Invoice",
+client/src/locales/ar/translation.json:178:  "editInvoice": "Edit Invoice",
+client/src/locales/ar/translation.json:202:    "placeholder": "Search invoices, clients, transactions...",
+client/src/locales/ar/translation.json:203:    "enhanced_placeholder": "Search invoices, clients, reports... (⌘K)"
+client/src/locales/ar/translation.json:231:    "invoice_processed": "Invoice Processed Successfully",
+client/src/locales/ar/translation.json:232:    "invoice_processed_desc": "Your invoice has been successfully processed",
+client/src/locales/ar/translation.json:295:    "invoices": "الفواتير",
+client/src/locales/ar/translation.json:296:    "paid_invoice_ratio": "نسبة الفواتير المدفوعة",
+client/src/locales/ar/translation.json:298:    "paid_ratio_summary": "{{paidCount}} من أصل {{invoiceCount}} فاتورة تم تعليمها كمدفوعة.",
+client/src/locales/ar/translation.json:299:    "no_invoices_recorded": "لا توجد فواتير مسجلة بعد.",
+client/src/locales/ar/translation.json:300:    "invoice_status": "حالة الفواتير",
+client/src/locales/ar/translation.json:301:    "no_invoice_statuses": "لا توجد حالات فواتير متاحة لهذه الفترة.",
+client/src/locales/ar/translation.json:302:    "latest_invoice": "آخر فاتورة",
+client/src/locales/ar/translation.json:303:    "invoice_number": "فاتورة #{{invoiceNumber}}",
+client/src/locales/ar/translation.json:305:    "view_invoice": "عرض الفاتورة",
+client/src/locales/ar/translation.json:306:    "no_latest_invoice": "لا توجد فواتير بعد لهذه الشركة.",
+client/src/locales/ar/translation.json:309:    "total_invoices_none": "لم تتم معالجة أي فواتير بعد.",
+client/src/locales/ar/translation.json:310:    "total_invoices_count": "تمت معالجة {{count}} فاتورة حتى الآن."
+client/src/lib/aiChatAttachments.js:14:  name: file?.name || (kind === 'audio' ? 'Voice recording.webm' : 'Attachment'),
+client/src/lib/permissions.js:15:  'invoice.create': ['admin', 'accountant'],
+client/src/lib/permissions.js:16:  'invoice.edit': ['admin', 'accountant'],
+client/src/lib/permissions.js:17:  'invoice.updateStatus': ['admin', 'accountant'],
+client/src/lib/__tests__/aiPageContext.test.js:6:    expect(getAIPageContext('/invoices')).toMatchObject({
+client/src/lib/__tests__/aiPageContext.test.js:7:      module: 'invoices',
+client/src/lib/__tests__/aiPageContext.test.js:8:      routeName: 'invoice_list',
+client/src/lib/__tests__/aiPageContext.test.js:11:      label: 'Invoices',
+client/src/lib/__tests__/aiPageContext.test.js:14:    expect(getAIPageContext('/invoices/123/edit')).toMatchObject({
+client/src/lib/__tests__/aiPageContext.test.js:15:      module: 'invoices',
+client/src/lib/__tests__/aiPageContext.test.js:16:      routeName: 'invoice_edit',
+client/src/lib/__tests__/aiPageContext.test.js:17:      entityType: 'invoice',
+client/src/lib/__tests__/aiPageContext.test.js:19:      label: 'Invoice edit',
+client/src/lib/__tests__/aiPageContext.test.js:32:    expect(getAIPageContext('/invoices/<script>/edit')).toMatchObject({
+client/src/lib/__tests__/aiPageContext.test.js:33:      module: 'invoices',
+client/src/lib/__tests__/aiPageContext.test.js:34:      routeName: 'invoice_edit',
+client/src/lib/__tests__/aiPageContext.test.js:35:      entityType: 'invoice',
+client/src/lib/demoMode.js:10:    invoicesCount: 42,
+client/src/lib/demoMode.js:15:  invoices: [
+client/src/lib/demoMode.js:56:      type: 'Overdue invoice',
+client/src/lib/demoMode.js:57:      summary: 'Invoice INV-1002 is overdue by 18 days with no payment dates.',
+client/src/lib/demoMode.js:61:      relatedEntity: 'Invoice INV-1002',
+client/src/lib/demoMode.js:69:      summary: 'Vendor Berlin Advisory GmbH submitted three invoices in the same week.',
+client/src/lib/demoMode.js:195:        reason: 'Matched to Invoice INV-1001',
+client/src/lib/demoMode.js:198:            targetType: 'invoice',
+client/src/lib/aiPageContext.js:35:    pattern: /^\/invoices\/import\/?$/,
+client/src/lib/aiPageContext.js:37:      module: 'invoices',
+client/src/lib/aiPageContext.js:38:      routeName: 'invoice_import',
+client/src/lib/aiPageContext.js:40:      label: 'Invoice import',
+client/src/lib/aiPageContext.js:44:    pattern: /^\/invoices\/create\/?$/,
+client/src/lib/aiPageContext.js:46:      module: 'invoices',
+client/src/lib/aiPageContext.js:47:      routeName: 'invoice_create',
+client/src/lib/aiPageContext.js:49:      label: 'Create invoice',
+client/src/lib/aiPageContext.js:53:    pattern: /^\/invoices\/([^/]+)\/edit\/?$/,
+client/src/lib/aiPageContext.js:55:      module: 'invoices',
+client/src/lib/aiPageContext.js:56:      routeName: 'invoice_edit',
+client/src/lib/aiPageContext.js:57:      entityType: 'invoice',
+client/src/lib/aiPageContext.js:58:      label: 'Invoice edit',
+client/src/lib/aiPageContext.js:60:    entityKey: 'invoiceId',
+client/src/lib/aiPageContext.js:63:    pattern: /^\/invoices\/?$/,
+client/src/lib/aiPageContext.js:65:      module: 'invoices',
+client/src/lib/aiPageContext.js:66:      routeName: 'invoice_list',
+client/src/lib/aiPageContext.js:68:      label: 'Invoices',
+client/src/lib/rbac.js:2:// Usage: import { canEditUsers, canEditInvoices, ... } from './rbac';
+client/src/lib/rbac.js:9:export function canEditInvoices(role) {
+client/src/pages/BankStatementReconciliationPreview.jsx:166:                      Match for {match.invoice.number}
+client/src/pages/BankStatementReconciliationPreview.jsx:180:                        {match.dateDifferenceDays === 1 ? '' : 's'} of {renderDate(match.invoice.date)}
+client/src/pages/BankStatementReconciliationPreview.jsx:256:            is read-only: no invoices, expenses, or bank transactions were changed.
+client/src/pages/BankStatementReconciliationPreview.jsx:301:  const invoiceDate = new Date(baseDate);
+client/src/pages/BankStatementReconciliationPreview.jsx:302:  invoiceDate.setDate(invoiceDate.getDate() + ((index % 5) - 2));
+client/src/pages/BankStatementReconciliationPreview.jsx:306:  const invoiceAmount = Math.max(1, normalizedAmount + adjustment);
+client/src/pages/BankStatementReconciliationPreview.jsx:307:  const amountDifference = Math.abs(normalizedAmount - invoiceAmount);
+client/src/pages/BankStatementReconciliationPreview.jsx:309:    invoiceAmount === 0
+client/src/pages/BankStatementReconciliationPreview.jsx:311:      : Math.max(0, Math.min(1, 1 - amountDifference / Math.max(invoiceAmount, 1)));
+client/src/pages/BankStatementReconciliationPreview.jsx:314:    Math.abs(invoiceDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24),
+client/src/pages/BankStatementReconciliationPreview.jsx:321:  )} of the invoice and the dates are only ${dateDifferenceDays} days apart.`;
+client/src/pages/BankStatementReconciliationPreview.jsx:326:    invoice: {
+client/src/pages/BankStatementReconciliationPreview.jsx:328:      amount: invoiceAmount,
+client/src/pages/BankStatementReconciliationPreview.jsx:329:      date: invoiceDate.toISOString(),
+client/src/pages/SystemAdminDashboard.jsx:182:        ttsEnabled: false,
+client/src/pages/SystemAdminDashboard.jsx:490:                          onClick={() => handleToggleCompanyFlag(company, 'ttsEnabled')}
+client/src/pages/SystemAdminDashboard.jsx:492:                          Voice: {company.ttsEnabled ? 'On' : 'Off'}
+client/src/pages/SystemAdminDashboard.jsx:749:                {featureFlags?.companyAI?.ttsEnabledCount ?? 0} /{' '}
+client/src/pages/SystemAdminDashboard.jsx:750:                {featureFlags?.companyAI?.totalCompanies ?? 0} companies have voice enabled
+client/src/pages/Invoices.jsx:12:import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
+client/src/pages/Invoices.jsx:14:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/Invoices.jsx:18:import { canEditInvoices, isReadOnlyRole } from '../lib/rbac';
+client/src/pages/Invoices.jsx:55:  draft: 'Draft: You can edit or issue this invoice.',
+client/src/pages/Invoices.jsx:56:  issued: 'Issued: This invoice is legally binding and cannot be edited.',
+client/src/pages/Invoices.jsx:57:  partially_paid: 'Partially paid: A payment has been recorded and the invoice remains locked.',
+client/src/pages/Invoices.jsx:58:  overdue: 'Overdue: Payment is past due and the invoice remains locked.',
+client/src/pages/Invoices.jsx:59:  paid: 'Paid: This invoice is settled and locked.',
+client/src/pages/Invoices.jsx:60:  cancelled: 'Cancelled: This invoice is void and locked.',
+client/src/pages/Invoices.jsx:68:const Invoices = () => {
+client/src/pages/Invoices.jsx:74:  const [invoices, setInvoices] = useState([]);
+client/src/pages/Invoices.jsx:80:  const canWriteInvoices = canEditInvoices(user?.role);
+client/src/pages/Invoices.jsx:82:  const fetchInvoices = useCallback(async () => {
+client/src/pages/Invoices.jsx:90:      const data = await invoicesAPI.list({ companyId: activeCompany.id });
+client/src/pages/Invoices.jsx:91:      setInvoices(Array.isArray(data) ? data : []);
+client/src/pages/Invoices.jsx:93:      setError(formatApiError(fetchError, 'Unable to load invoices.'));
+client/src/pages/Invoices.jsx:101:      setInvoices([]);
+client/src/pages/Invoices.jsx:108:    fetchInvoices();
+client/src/pages/Invoices.jsx:109:  }, [activeCompany, fetchInvoices]);
+client/src/pages/Invoices.jsx:119:  const filteredInvoices = useMemo(() => {
+client/src/pages/Invoices.jsx:120:    return invoices.filter((invoice) => {
+client/src/pages/Invoices.jsx:121:      const matchesStatus = filters.status === 'all' || invoice.status === filters.status;
+client/src/pages/Invoices.jsx:125:        invoice.invoiceNumber?.toLowerCase().includes(search) ||
+client/src/pages/Invoices.jsx:126:        invoice.clientName?.toLowerCase().includes(search);
+client/src/pages/Invoices.jsx:129:  }, [filters, invoices]);
+client/src/pages/Invoices.jsx:131:  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+client/src/pages/Invoices.jsx:139:  const paginatedInvoices = useMemo(() => {
+client/src/pages/Invoices.jsx:141:    return filteredInvoices.slice(start, start + PAGE_SIZE);
+client/src/pages/Invoices.jsx:142:  }, [filteredInvoices, page]);
+client/src/pages/Invoices.jsx:144:  const showingStart = filteredInvoices.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+client/src/pages/Invoices.jsx:145:  const showingEnd = Math.min(filteredInvoices.length, page * PAGE_SIZE);
+client/src/pages/Invoices.jsx:163:          title="Ask AI about invoices"
+client/src/pages/Invoices.jsx:166:              new CustomEvent('open-ai-assistant', { detail: { context: 'invoices' } }),
+client/src/pages/Invoices.jsx:178:        current company’s invoices, status, and visible details on this page. No generic
+client/src/pages/Invoices.jsx:179:        questions—AI answers are always based on the invoices you see here.
+client/src/pages/Invoices.jsx:184:          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Invoices</h1>
+client/src/pages/Invoices.jsx:186:            All invoices for <span className="font-semibold">{activeCompany.name}</span>
+client/src/pages/Invoices.jsx:189:        {canWriteInvoices && (
+client/src/pages/Invoices.jsx:191:            <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/Invoices.jsx:192:              <Link to="/invoices/create">
+client/src/pages/Invoices.jsx:194:                  New Invoice
+client/src/pages/Invoices.jsx:198:            <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/Invoices.jsx:199:              <Link to="/invoices/import">
+client/src/pages/Invoices.jsx:201:                  Import Invoices
+client/src/pages/Invoices.jsx:209:        <ReadOnlyBanner mode="Read-only" message={t('states.read_only.invoices_notice')} />
+client/src/pages/Invoices.jsx:219:                placeholder="Invoice number or client"
+client/src/pages/Invoices.jsx:224:                aria-label="Search invoices"
+client/src/pages/Invoices.jsx:247:            <PageErrorState onRetry={fetchInvoices} />
+client/src/pages/Invoices.jsx:248:          ) : filteredInvoices.length === 0 ? (
+client/src/pages/Invoices.jsx:251:                canWriteInvoices ? (
+client/src/pages/Invoices.jsx:252:                  <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/Invoices.jsx:253:                    <Link to="/invoices/create">
+client/src/pages/Invoices.jsx:261:              title={filters.search || filters.status !== 'all' ? 'No invoices match your filters' : 'No invoices yet'}
+client/src/pages/Invoices.jsx:265:                  : 'Create a draft invoice or import a batch to start tracking receivables.'
+client/src/pages/Invoices.jsx:278:                        Invoice #
+client/src/pages/Invoices.jsx:319:                    {paginatedInvoices.map((invoice) => {
+client/src/pages/Invoices.jsx:320:                      const isLocked = invoice.status !== 'draft';
+client/src/pages/Invoices.jsx:322:                        !isLocked || canViewLegalData ? invoice.clientName : 'Masked';
+client/src/pages/Invoices.jsx:330:                          key={invoice.id}
+client/src/pages/Invoices.jsx:334:                            {invoice.invoiceNumber}
+client/src/pages/Invoices.jsx:343:                            {formatDate(invoice.date)}
+client/src/pages/Invoices.jsx:346:                            {formatDate(invoice.dueDate)}
+client/src/pages/Invoices.jsx:349:                            {formatCurrency(invoice.total, invoice.currency)}
+client/src/pages/Invoices.jsx:353:                              <InvoiceStatusBadge status={invoice.status} />
+client/src/pages/Invoices.jsx:364:                              {STATUS_HELP[invoice.status] || ''}
+client/src/pages/Invoices.jsx:368:                            {invoice.status === 'draft' && canWriteInvoices ? (
+client/src/pages/Invoices.jsx:369:                              <PermissionGuard action="invoice.edit" role={user?.role}>
+client/src/pages/Invoices.jsx:371:                                  to={`/invoices/${invoice.id}/edit`}
+client/src/pages/Invoices.jsx:380:                                  to={`/invoices/${invoice.id}/edit`}
+client/src/pages/Invoices.jsx:386:                                  {invoice.status === 'draft'
+client/src/pages/Invoices.jsx:388:                                    : `${formatStatusLabel(invoice.status)} invoices are locked for editing.`}
+client/src/pages/Invoices.jsx:402:                  Showing {showingStart} - {showingEnd} of {filteredInvoices.length} invoices
+client/src/pages/Invoices.jsx:434:export default Invoices;
+client/src/pages/Dashboard.jsx:63:    title: 'Create invoice',
+client/src/pages/Dashboard.jsx:64:    description: 'Issue compliant invoices and keep revenue, VAT, and audit signals current.',
+client/src/pages/Dashboard.jsx:65:    to: '/invoices/create',
+client/src/pages/Dashboard.jsx:250:  const maxInvoices = Math.max(...trendSeries.map((item) => Number(item.invoices) || 0), 0);
+client/src/pages/Dashboard.jsx:263:  const latestInvoice = dashboardData?.latestInvoice;
+client/src/pages/Dashboard.jsx:280:    (point) => (Number(point.revenue) || 0) > 0 || (Number(point.invoices) || 0) > 0,
+client/src/pages/Dashboard.jsx:283:    statusEntries.length > 0 || latestInvoice || hasVatSummary || hasAuditReadiness;
+client/src/pages/Dashboard.jsx:369:        description="Create invoices or expenses to populate executive KPIs and trend insights."
+client/src/pages/Dashboard.jsx:371:          <Link to="/invoices">
+client/src/pages/Dashboard.jsx:420:              Live financial overview for {activeCompany.name}: revenue, expenses, invoice status,
+client/src/pages/Dashboard.jsx:462:                This will generate demo invoices, expenses, and bank statements for this company.
+client/src/pages/Dashboard.jsx:657:                  Invoice volume
+client/src/pages/Dashboard.jsx:666:                        maxInvoices > 0 ? Math.max(6, (point.invoices / maxInvoices) * 96) : 6;
+client/src/pages/Dashboard.jsx:672:                            title={formatNumber(point.invoices)}
+client/src/pages/Dashboard.jsx:687:                  <p className="text-sm font-medium">No invoice trend data yet.</p>
+client/src/pages/Dashboard.jsx:703:                Invoice status mix
+client/src/pages/Dashboard.jsx:720:                  No invoice status data yet.
+client/src/pages/Dashboard.jsx:830:                Latest invoice
+client/src/pages/Dashboard.jsx:832:              {latestInvoice ? (
+client/src/pages/Dashboard.jsx:835:                    <span>Invoice</span>
+client/src/pages/Dashboard.jsx:837:                      {latestInvoice.invoiceNumber || latestInvoice.id}
+client/src/pages/Dashboard.jsx:843:                      {statusLabel(latestInvoice.status)}
+client/src/pages/Dashboard.jsx:849:                      {Number.isFinite(Number(latestInvoice.amount))
+client/src/pages/Dashboard.jsx:850:                        ? latestInvoice.currency
+client/src/pages/Dashboard.jsx:851:                          ? formatCurrency(latestInvoice.amount, latestInvoice.currency)
+client/src/pages/Dashboard.jsx:852:                          : formatNumber(latestInvoice.amount, { maximumFractionDigits: 2 })
+client/src/pages/Dashboard.jsx:856:                  {latestInvoice.createdAt && (
+client/src/pages/Dashboard.jsx:860:                        {formatDate(latestInvoice.createdAt)}
+client/src/pages/Dashboard.jsx:866:                <p className="text-sm text-gray-500 dark:text-gray-400">No invoice activity yet.</p>
+client/src/pages/Billing.jsx:131:  const handleDownloadInvoicePDF = async (invoice) => {
+client/src/pages/Billing.jsx:133:      if (invoice.pdfUrl) {
+client/src/pages/Billing.jsx:134:        window.open(invoice.pdfUrl, '_blank');
+client/src/pages/Billing.jsx:135:      } else if (invoice.invoiceUrl) {
+client/src/pages/Billing.jsx:136:        window.open(invoice.invoiceUrl, '_blank');
+client/src/pages/Billing.jsx:138:        alert('PDF not available for this invoice');
+client/src/pages/Billing.jsx:304:                    handleDownloadInvoicePDF(billingHistory[0]);
+client/src/pages/Billing.jsx:306:                    alert('No invoices available');
+client/src/pages/Billing.jsx:310:                Download Latest Invoice
+client/src/pages/Billing.jsx:326:                Your invoices and payment records will appear here once you activate a subscription.
+client/src/pages/Billing.jsx:341:                      Invoice
+client/src/pages/Billing.jsx:370:                  {billingHistory.map((invoice) => (
+client/src/pages/Billing.jsx:371:                    <tr key={invoice.id}>
+client/src/pages/Billing.jsx:373:                        {invoice.number || invoice.id}
+client/src/pages/Billing.jsx:376:                        {formatDate(invoice.created)}
+client/src/pages/Billing.jsx:379:                        {formatCurrency(invoice.amount, invoice.currency)}
+client/src/pages/Billing.jsx:382:                        {getStatusBadge(invoice.status)}
+client/src/pages/Billing.jsx:386:                          {invoice.invoiceUrl && (
+client/src/pages/Billing.jsx:388:                              href={invoice.invoiceUrl}
+client/src/pages/Billing.jsx:396:                          {invoice.pdfUrl && (
+client/src/pages/Billing.jsx:398:                              href={invoice.pdfUrl}
+client/src/pages/Billing.jsx:407:                            onClick={() => handleDownloadInvoicePDF(invoice)}
+client/src/tests/routes.smoke.test.jsx:30:vi.mock('../pages/Invoices', () => ({
+client/src/tests/routes.smoke.test.jsx:32:  default: () => <div>Invoices page</div>,
+client/src/tests/routes.smoke.test.jsx:34:vi.mock('../pages/InvoiceCreate', () => ({
+client/src/tests/routes.smoke.test.jsx:36:  default: () => <div>Invoice create page</div>,
+client/src/tests/routes.smoke.test.jsx:38:vi.mock('../pages/InvoiceEdit', () => ({
+client/src/tests/routes.smoke.test.jsx:40:  default: () => <div>Invoice edit page</div>,
+client/src/tests/routes.smoke.test.jsx:180:  { path: '/invoices', expectedText: 'Invoices page' },
+client/src/tests/routes.smoke.test.jsx:183:  { path: '/invoices/create', expectedText: 'Invoice create page' },
+client/src/tests/routes.smoke.test.jsx:184:  { path: '/invoices/42/edit', expectedText: 'Invoice edit page' },
+client/src/lib/constants.js:7: * - Enabled: Auth, company profile, user management, invoices, dashboard stats, bank statements.
+client/src/lib/constants.js:29:  INVOICES: '/invoices',
+client/src/pages/Analytics.jsx:50:const totalInvoicesLabel = (count, t) => {
+client/src/pages/Analytics.jsx:52:    return t('analytics_page.total_invoices_none');
+client/src/pages/Analytics.jsx:54:  return t('analytics_page.total_invoices_count', { count });
+client/src/pages/Analytics.jsx:143:  const invoiceCount = data?.invoiceCount || 0;
+client/src/pages/Analytics.jsx:144:  const paidPercentage = invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0;
+client/src/pages/Analytics.jsx:145:  const unpaidCount = Math.max(invoiceCount - paidCount, 0);
+client/src/pages/Analytics.jsx:147:  const latestInvoice = data?.latestInvoice;
+client/src/pages/Analytics.jsx:303:          <p className="text-sm text-gray-500 dark:text-gray-400">{totalInvoicesLabel(invoiceCount, t)}</p>
+client/src/pages/Analytics.jsx:308:            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.invoices')}</p>
+client/src/pages/Analytics.jsx:311:          <p className="stat-value">{invoiceCount || 0}</p>
+client/src/pages/Analytics.jsx:318:          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics_page.paid_invoice_ratio')}</p>
+client/src/pages/Analytics.jsx:321:            {invoiceCount > 0
+client/src/pages/Analytics.jsx:322:              ? t('analytics_page.paid_ratio_summary', { paidCount, invoiceCount })
+client/src/pages/Analytics.jsx:323:              : t('analytics_page.no_invoices_recorded')}
+client/src/pages/Analytics.jsx:330:            <h3 className="section-title mb-2">{t('analytics_page.invoice_status')}</h3>
+client/src/pages/Analytics.jsx:349:                  {t('analytics_page.no_invoice_statuses')}
+client/src/pages/Analytics.jsx:356:            <h3 className="section-title mb-2">{t('analytics_page.latest_invoice')}</h3>
+client/src/pages/Analytics.jsx:357:            {latestInvoice ? (
+client/src/pages/Analytics.jsx:359:                <div className="text-gray-500 dark:text-gray-400">{t('analytics_page.invoice_number', { invoiceNumber: latestInvoice.invoiceNumber })}</div>
+client/src/pages/Analytics.jsx:361:                  {formatCurrency(latestInvoice.amount || 0)}
+client/src/pages/Analytics.jsx:366:                    {statusLabel(latestInvoice.status || 'unknown')}
+client/src/pages/Analytics.jsx:370:                  to={`/invoices/${latestInvoice.id}/edit`}
+client/src/pages/Analytics.jsx:373:                  {t('analytics_page.view_invoice')}
+client/src/pages/Analytics.jsx:377:              <p className="text-sm text-gray-500 dark:text-gray-400">{t('analytics_page.no_latest_invoice')}</p>
+client/src/pages/InvoiceEdit.jsx:7:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/pages/InvoiceEdit.jsx:8:import InvoiceStatusBadge from '../components/invoices/InvoiceStatusBadge';
+client/src/pages/InvoiceEdit.jsx:10:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/InvoiceEdit.jsx:14:import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+client/src/pages/InvoiceEdit.jsx:19:    { label: 'Issue invoice', nextStatus: 'issued', variant: 'primary' },
+client/src/pages/InvoiceEdit.jsx:26:    { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
+client/src/pages/InvoiceEdit.jsx:34:    { label: 'Cancel invoice', nextStatus: 'cancelled', variant: 'danger' },
+client/src/pages/InvoiceEdit.jsx:67:const InvoiceTemplatePreview = ({ invoice, company }) => (
+client/src/pages/InvoiceEdit.jsx:80:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoice</p>
+client/src/pages/InvoiceEdit.jsx:81:          <p className="text-2xl font-bold text-gray-900">{invoice.invoiceNumber}</p>
+client/src/pages/InvoiceEdit.jsx:83:            <InvoiceStatusBadge status={invoice.status} />
+client/src/pages/InvoiceEdit.jsx:91:          <p className="mt-1 text-sm font-medium text-gray-900">{invoice.clientName || '-'}</p>
+client/src/pages/InvoiceEdit.jsx:95:          <p className="mt-1 text-sm text-gray-700">{formatDate(invoice.date)}</p>
+client/src/pages/InvoiceEdit.jsx:99:          <p className="mt-1 text-sm text-gray-700">{formatDate(invoice.dueDate)}</p>
+client/src/pages/InvoiceEdit.jsx:115:            {(invoice.items || []).map((item, idx) => (
+client/src/pages/InvoiceEdit.jsx:120:                  {formatCurrency(item.unitPrice, invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:124:                  {formatCurrency(getLineGross(item), invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:135:          <p className="mt-2 text-sm text-gray-700">{invoice.notes || 'No notes added.'}</p>
+client/src/pages/InvoiceEdit.jsx:147:              {formatCurrency(invoice.subtotal, invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:153:              {formatCurrency((invoice.items || []).reduce((sum, item) => sum + getLineVat(item), 0), invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:159:              {formatCurrency(invoice.total, invoice.currency)}
+client/src/pages/InvoiceEdit.jsx:173:        <p className="text-sm text-gray-500">Status and invoice changes recorded for this invoice.</p>
+client/src/pages/InvoiceEdit.jsx:178:        <p className="text-sm text-gray-500">No audit entries recorded for this invoice yet.</p>
+client/src/pages/InvoiceEdit.jsx:201:const InvoiceEdit = () => {
+client/src/pages/InvoiceEdit.jsx:202:  const { invoiceId } = useParams();
+client/src/pages/InvoiceEdit.jsx:207:  const [invoice, setInvoice] = useState(null);
+client/src/pages/InvoiceEdit.jsx:216:  const loadInvoice = useCallback(async () => {
+client/src/pages/InvoiceEdit.jsx:224:      const found = await invoicesAPI.get(invoiceId, { companyId: activeCompany.id });
+client/src/pages/InvoiceEdit.jsx:226:        setError({ message: 'Invoice not found.', status: 404 });
+client/src/pages/InvoiceEdit.jsx:227:        setInvoice(null);
+client/src/pages/InvoiceEdit.jsx:230:      setInvoice(found);
+client/src/pages/InvoiceEdit.jsx:232:      setError(formatApiError(fetchError, 'Unable to load invoice.'));
+client/src/pages/InvoiceEdit.jsx:233:      setInvoice(null);
+client/src/pages/InvoiceEdit.jsx:237:  }, [activeCompany, invoiceId]);
+client/src/pages/InvoiceEdit.jsx:240:    loadInvoice();
+client/src/pages/InvoiceEdit.jsx:241:  }, [loadInvoice]);
+client/src/pages/InvoiceEdit.jsx:244:    if (!activeCompany || !invoiceId) {
+client/src/pages/InvoiceEdit.jsx:249:      const entries = await invoicesAPI.auditLog(invoiceId, { companyId: activeCompany.id });
+client/src/pages/InvoiceEdit.jsx:256:  }, [activeCompany, invoiceId]);
+client/src/pages/InvoiceEdit.jsx:263:    if (!invoice || invoice.status !== 'draft') {
+client/src/pages/InvoiceEdit.jsx:264:      setActionError({ message: 'Only draft invoices can be edited.' });
+client/src/pages/InvoiceEdit.jsx:271:      const updated = await invoicesAPI.update(invoiceId, {
+client/src/pages/InvoiceEdit.jsx:275:      setInvoice(updated);
+client/src/pages/InvoiceEdit.jsx:284:    if (!invoice || statusUpdating) {
+client/src/pages/InvoiceEdit.jsx:291:      const updated = await invoicesAPI.update(invoiceId, {
+client/src/pages/InvoiceEdit.jsx:295:      setInvoice(updated);
+client/src/pages/InvoiceEdit.jsx:304:  const canWriteInvoices = canEditInvoices(user?.role);
+client/src/pages/InvoiceEdit.jsx:305:  const canEdit = invoice?.status === 'draft' && canWriteInvoices;
+client/src/pages/InvoiceEdit.jsx:309:    if (!invoice) {
+client/src/pages/InvoiceEdit.jsx:312:    return STATUS_TRANSITIONS[invoice.status] || [];
+client/src/pages/InvoiceEdit.jsx:313:  }, [invoice]);
+client/src/pages/InvoiceEdit.jsx:316:    if (!invoice) {
+client/src/pages/InvoiceEdit.jsx:320:      invoiceNumber: invoice.invoiceNumber,
+client/src/pages/InvoiceEdit.jsx:321:      clientName: invoice.clientName,
+client/src/pages/InvoiceEdit.jsx:322:      date: invoice.date,
+client/src/pages/InvoiceEdit.jsx:323:      dueDate: invoice.dueDate,
+client/src/pages/InvoiceEdit.jsx:324:      currency: invoice.currency,
+client/src/pages/InvoiceEdit.jsx:325:      subtotal: invoice.subtotal,
+client/src/pages/InvoiceEdit.jsx:326:      total: invoice.total,
+client/src/pages/InvoiceEdit.jsx:327:      notes: invoice.notes || '',
+client/src/pages/InvoiceEdit.jsx:328:      status: invoice.status,
+client/src/pages/InvoiceEdit.jsx:329:      items: invoice.items || [],
+client/src/pages/InvoiceEdit.jsx:330:      vatSummary: invoice.vatSummary,
+client/src/pages/InvoiceEdit.jsx:331:      createdAt: invoice.createdAt,
+client/src/pages/InvoiceEdit.jsx:333:  }, [invoice]);
+client/src/pages/InvoiceEdit.jsx:339:        description="Select a company before editing invoices."
+client/src/pages/InvoiceEdit.jsx:353:        <p className="mt-3 text-sm text-gray-500">Loading invoice...</p>
+client/src/pages/InvoiceEdit.jsx:364:            <Button variant="secondary" onClick={loadInvoice}>
+client/src/pages/InvoiceEdit.jsx:367:            <Link to="/invoices" className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-1 text-sm font-medium text-blue-600">
+client/src/pages/InvoiceEdit.jsx:368:              Back to invoices
+client/src/pages/InvoiceEdit.jsx:376:  if (!invoice) {
+client/src/pages/InvoiceEdit.jsx:379:        <p className="text-sm text-gray-600">Invoice not found.</p>
+client/src/pages/InvoiceEdit.jsx:387:        <ReadOnlyBanner mode={readOnlyBannerMode(user?.role)} message="You have read-only access. Invoice changes and status actions are disabled." />
+client/src/pages/InvoiceEdit.jsx:392:            <h1 className="text-3xl font-bold text-gray-900">Invoice {invoice.invoiceNumber}</h1>
+client/src/pages/InvoiceEdit.jsx:393:            <InvoiceStatusBadge status={invoice.status} />
+client/src/pages/InvoiceEdit.jsx:396:            {invoice.clientName} · {isReadOnly ? 'Read-only invoice view' : 'Editable draft'}
+client/src/pages/InvoiceEdit.jsx:400:          <Button variant="secondary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceEdit.jsx:403:          <Button variant="outline" onClick={loadInvoice}>
+client/src/pages/InvoiceEdit.jsx:412:          {canWriteInvoices &&
+client/src/pages/InvoiceEdit.jsx:414:              <PermissionGuard action="invoice.updateStatus" role={user?.role} key={action.nextStatus}>
+client/src/pages/InvoiceEdit.jsx:437:            <InvoiceForm
+client/src/pages/InvoiceEdit.jsx:445:              Draft invoices can be edited until they are issued or cancelled.
+client/src/pages/InvoiceEdit.jsx:452:            {!canWriteInvoices
+client/src/pages/InvoiceEdit.jsx:453:              ? 'Your role can view invoices, but editing and status changes are restricted to admins and accountants.'
+client/src/pages/InvoiceEdit.jsx:454:              : `This invoice is ${formatStatus(invoice.status)} and cannot be edited. Use available status actions only.`}
+client/src/pages/InvoiceEdit.jsx:459:      <InvoiceTemplatePreview invoice={invoice} company={activeCompany} />
+client/src/pages/InvoiceEdit.jsx:465:export default InvoiceEdit;
+client/src/pages/InvoiceCreate.jsx:6:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/pages/InvoiceCreate.jsx:8:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/InvoiceCreate.jsx:12:import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+client/src/pages/InvoiceCreate.jsx:15:const InvoiceCreate = () => {
+client/src/pages/InvoiceCreate.jsx:21:  const canCreateInvoices = canEditInvoices(user?.role);
+client/src/pages/InvoiceCreate.jsx:27:    if (!canCreateInvoices) {
+client/src/pages/InvoiceCreate.jsx:28:      setError({ message: 'You do not have permission to create invoices.' });
+client/src/pages/InvoiceCreate.jsx:35:      await invoicesAPI.create({
+client/src/pages/InvoiceCreate.jsx:41:      navigate('/invoices', { replace: true });
+client/src/pages/InvoiceCreate.jsx:43:      setError(formatApiError(creationError, 'Failed to create invoice.'));
+client/src/pages/InvoiceCreate.jsx:53:        description="Invoices are scoped per entity. Choose an active company before creating your first invoice."
+client/src/pages/InvoiceCreate.jsx:67:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+client/src/pages/InvoiceCreate.jsx:68:          <h1 className="text-3xl font-bold text-gray-900">Create invoice</h1>
+client/src/pages/InvoiceCreate.jsx:70:            This invoice will be linked to {activeCompany.name} and saved as a draft until you publish it.
+client/src/pages/InvoiceCreate.jsx:73:        <Button variant="secondary" size="sm" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceCreate.jsx:74:          Back to invoices
+client/src/pages/InvoiceCreate.jsx:81:          message="You have read-only access. Invoice creation is disabled for your role."
+client/src/pages/InvoiceCreate.jsx:91:      {canCreateInvoices ? (
+client/src/pages/InvoiceCreate.jsx:93:          <PermissionGuard action="invoice.create" role={user?.role}>
+client/src/pages/InvoiceCreate.jsx:94:            <InvoiceForm
+client/src/pages/InvoiceCreate.jsx:95:              submitLabel="Create invoice"
+client/src/pages/InvoiceCreate.jsx:105:            Your role can view invoices, but invoice creation is restricted to admins and accountants.
+client/src/pages/InvoiceCreate.jsx:113:export default InvoiceCreate;
+client/src/pages/InvoiceImport.jsx:10:import { invoicesAPI } from '../services/invoicesAPI';
+client/src/pages/InvoiceImport.jsx:11:import { canEditInvoices, isReadOnlyRole, readOnlyBannerMode } from '../lib/rbac';
+client/src/pages/InvoiceImport.jsx:19:const InvoiceImportPage = () => {
+client/src/pages/InvoiceImport.jsx:29:  const canImport = canEditInvoices(user?.role);
+client/src/pages/InvoiceImport.jsx:51:      const data = await invoicesAPI.previewImport({ file, companyId: activeCompany.id });
+client/src/pages/InvoiceImport.jsx:55:      setError(formatApiError(previewError, 'Unable to preview invoice import.'));
+client/src/pages/InvoiceImport.jsx:68:      const data = await invoicesAPI.commitImport({ file, companyId: activeCompany.id });
+client/src/pages/InvoiceImport.jsx:71:      setError(formatApiError(commitError, 'Unable to import invoices.'));
+client/src/pages/InvoiceImport.jsx:81:        description="Invoice imports are scoped per company. Choose an active company before importing invoices."
+client/src/pages/InvoiceImport.jsx:95:          <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Invoices</p>
+client/src/pages/InvoiceImport.jsx:96:          <h1 className="text-3xl font-bold text-gray-900">Import invoices</h1>
+client/src/pages/InvoiceImport.jsx:98:            Upload CSV or JSON invoices for {activeCompany.name}. Imported invoices are created as drafts.
+client/src/pages/InvoiceImport.jsx:101:        <Button variant="secondary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceImport.jsx:102:          Back to invoices
+client/src/pages/InvoiceImport.jsx:109:          message="You have read-only access. Invoice import is disabled for your role."
+client/src/pages/InvoiceImport.jsx:136:            <label className="block text-sm font-medium text-gray-700" htmlFor="invoice-import-file">
+client/src/pages/InvoiceImport.jsx:140:              id="invoice-import-file"
+client/src/pages/InvoiceImport.jsx:174:              Your role can view invoices, but importing is restricted to admins and accountants.
+client/src/pages/InvoiceImport.jsx:229:                      <td className="px-3 py-2 text-gray-700">{row.invoice?.clientName || '-'}</td>
+client/src/pages/InvoiceImport.jsx:231:                        {row.invoice?.date || '-'} / {row.invoice?.dueDate || '-'}
+client/src/pages/InvoiceImport.jsx:233:                      <td className="px-3 py-2 text-gray-700">{row.invoice?.itemCount ?? '-'}</td>
+client/src/pages/InvoiceImport.jsx:251:              Imported {result.importedCount || result.invoices?.length || 0} draft invoices.
+client/src/pages/InvoiceImport.jsx:253:            <Button variant="primary" onClick={() => navigate('/invoices')}>
+client/src/pages/InvoiceImport.jsx:254:              View invoices
+client/src/pages/InvoiceImport.jsx:263:export default InvoiceImportPage;
+client/src/pages/__tests__/Dashboard.test.jsx:105:          { month: 'Jan', revenue: 1000, invoices: 2 },
+client/src/pages/__tests__/Dashboard.test.jsx:106:          { month: 'Feb', revenue: 2000, invoices: 3 },
+client/src/pages/__tests__/Dashboard.test.jsx:109:        latestInvoice: {
+client/src/pages/__tests__/Dashboard.test.jsx:111:          invoiceNumber: 'INV-099',
+client/src/pages/__tests__/Dashboard.test.jsx:134:    expect(screen.getByText('Invoice status mix')).toBeInTheDocument();
+client/src/pages/__tests__/Dashboard.test.jsx:135:    expect(screen.getByText('Latest invoice')).toBeInTheDocument();
+client/src/tests/InvoiceForm.test.jsx:5:import InvoiceForm from '../components/invoices/InvoiceForm';
+client/src/tests/InvoiceForm.test.jsx:12:describe('InvoiceForm', () => {
+client/src/tests/InvoiceForm.test.jsx:20:      render(<InvoiceForm submitLabel="Create invoice" />);
+client/src/tests/InvoiceForm.test.jsx:32:      invoiceNumber: 'INV-123',
+client/src/tests/InvoiceForm.test.jsx:53:      const { rerender } = render(<InvoiceForm initialValues={initialValues} />);
+client/src/tests/InvoiceForm.test.jsx:54:      // Invoice number should not be editable or visible as a value
+client/src/tests/InvoiceForm.test.jsx:55:      expect(screen.queryByLabelText(/invoice number/i)).toBeNull();
+client/src/tests/InvoiceForm.test.jsx:63:      rerender(<InvoiceForm initialValues={updatedValues} />);
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:62:const sampleInvoices = [
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:65:    invoiceNumber: 'INV-001',
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:100:vi.mock('../../services/invoicesAPI', () => ({
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:101:  invoicesAPI: {
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:114:import { invoicesAPI } from '../../services/invoicesAPI';
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:136:  invoicesAPI.list.mockResolvedValue(sampleInvoices);
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:192:        targetType: 'invoice',
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:221:        screen.getByText(/Transaction reconciled with Invoice INV-001\./i),
+client/src/pages/__tests__/AIManager.test.jsx:35:      invoices: [],
+client/src/pages/__tests__/AIManager.test.jsx:52:      invoices: [
+client/src/pages/__tests__/AIManager.test.jsx:66:        type: 'Duplicate invoice risk',
+client/src/pages/__tests__/AIManager.test.jsx:67:        summary: 'Potential duplicate invoice needs review.',
+client/src/pages/__tests__/AIManager.test.jsx:106:    expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
+client/src/pages/__tests__/AIManager.test.jsx:111:    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:113:    expect(screen.getByText('Invoice #1')).toBeInTheDocument();
+client/src/pages/__tests__/AIManager.test.jsx:116:    expect(screen.getAllByText('Invoices').length).toBeGreaterThan(0);
+client/src/pages/__tests__/AIManager.test.jsx:143:    expect(screen.getAllByText('Potential duplicate invoice needs review.')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:167:  it('selects a pending or draft invoice when no higher priority exists', async () => {
+client/src/pages/__tests__/AIManager.test.jsx:169:      invoices: [
+client/src/pages/__tests__/AIManager.test.jsx:184:    expect(screen.getAllByText('Invoice #77')).not.toHaveLength(0);
+client/src/pages/__tests__/AIManager.test.jsx:185:    expect(screen.getAllByText('Review invoices')).not.toHaveLength(0);
+client/src/pages/__tests__/OCRPreview.test.jsx:61:      type: 'invoice',
+client/src/pages/__tests__/OCRPreview.test.jsx:74:    const file = new File(['dummy'], 'invoice.pdf', { type: 'application/pdf' });
+client/src/pages/__tests__/AIAssistant.test.jsx:15:import { invoicesAPI } from '../../services/invoicesAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:59:vi.mock('../../services/invoicesAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:60:  invoicesAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:93:  invoices: [],
+client/src/pages/__tests__/AIAssistant.test.jsx:219:    const file = new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' });
+client/src/pages/__tests__/AIAssistant.test.jsx:224:    expect(await screen.findByText(/invoice\.pdf/i)).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:225:    fireEvent.click(screen.getByRole('button', { name: /Remove invoice\.pdf/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:226:    expect(screen.queryByText(/invoice\.pdf/i)).not.toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:331:    expect(screen.queryByRole('button', { name: /Confirm create invoice draft/i })).not.toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:598:    expect(invoicesAPI.create).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:791:  it('does not create an invoice draft directly from raw document analysis', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:793:      requestId: 'req-invoice-doc',
+client/src/pages/__tests__/AIAssistant.test.jsx:794:      document: { id: 'doc-invoice-1', originalName: 'invoice.pdf' },
+client/src/pages/__tests__/AIAssistant.test.jsx:796:        documentType: 'invoice',
+client/src/pages/__tests__/AIAssistant.test.jsx:797:        suggestedAction: 'create_invoice_draft',
+client/src/pages/__tests__/AIAssistant.test.jsx:842:        targetRoute: 'POST /api/invoices',
+client/src/pages/__tests__/AIAssistant.test.jsx:845:          systemContext: { source: 'ai_document_intake', documentId: 'doc-invoice-1' },
+client/src/pages/__tests__/AIAssistant.test.jsx:857:    const file = new File(['%PDF-1.4'], 'invoice.pdf', { type: 'application/pdf' });
+client/src/pages/__tests__/AIAssistant.test.jsx:865:    expect(screen.queryByRole('button', { name: /Confirm create invoice draft/i })).not.toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:868:    expect(invoicesAPI.create).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:880:  it('microphone button renders and handles unsupported MediaRecorder gracefully', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:883:    fireEvent.click(screen.getByRole('button', { name: /Start voice recording/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:894:        highlights: ['Overdue invoice found'],
+client/src/pages/__tests__/AIAssistant.test.jsx:896:        references: ['Invoice INV-1'],
+client/src/pages/__tests__/AIAssistant.test.jsx:907:    expect(screen.getByText('Overdue invoice found')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:911:    expect(screen.getByText('Invoice INV-1')).toBeInTheDocument();
+client/src/components/AISuggestionCard.jsx:36:    || (sourceHint.includes('invoice')
+client/src/components/AISuggestionCard.jsx:37:      ? 'Invoices'
+client/src/components/__tests__/GlobalAICompanion.test.jsx:42:      answer: { message: 'Review overdue invoices and unreconciled transactions.' },
+client/src/components/__tests__/GlobalAICompanion.test.jsx:48:      <MemoryRouter initialEntries={['/invoices/123/edit']}>
+client/src/components/__tests__/GlobalAICompanion.test.jsx:71:    expect(screen.getByText('Current page: Invoice edit')).toBeInTheDocument();
+client/src/components/__tests__/GlobalAICompanion.test.jsx:119:      await screen.findByText('Review overdue invoices and unreconciled transactions.'),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:138:          'Explain the current accounting page and what I should pay attention to. Safe page context: module=invoices, routeName=invoice_edit, entityType=invoice, entityId=123.',
+client/src/components/__tests__/GlobalAICompanion.test.jsx:152:    const forbiddenButtonNames = /approve|create invoice|upload|pay|delete|export|post|submit approval/i;
+client/src/components/invoices/InvoiceStatusBadge.jsx:30:const InvoiceStatusBadge = ({ status, className = '' }) => {
+client/src/components/invoices/InvoiceStatusBadge.jsx:46:export default InvoiceStatusBadge;
+client/src/components/invoices/InvoiceForm.jsx:43:const InvoiceForm = ({
+client/src/components/invoices/InvoiceForm.jsx:47:  submitLabel = 'Save invoice',
+client/src/components/invoices/InvoiceForm.jsx:213:          This invoice is locked after issue. Draft fields are read-only; use allowed status actions
+client/src/components/invoices/InvoiceForm.jsx:260:        {/* Invoice Number input removed: must not be entered or sent by client */}
+client/src/components/invoices/InvoiceForm.jsx:502:export default InvoiceForm;
+client/src/components/TopBar.jsx:40:    type: 'invoice',
+client/src/components/TopBar.jsx:41:    title: 'Invoice #2024-0156',
+client/src/components/TopBar.jsx:43:    // href: '/invoices/2024-0156',
+client/src/components/TopBar.jsx:44:    href: '/invoices',
+client/src/components/TopBar.jsx:50:    subtitle: 'Client • 15 invoices',
+client/src/components/TopBar.jsx:119:        title: t('notifications.invoice_processed'),
+client/src/components/TopBar.jsx:120:        message: 'Invoice #2024-0156 has been successfully processed and sent to Müller GmbH',
+client/src/components/TopBar.jsx:124:        action: 'View Invoice',
+client/src/components/TopBar.jsx:125:        href: '/invoices',
+client/src/components/ChatEmptyState.jsx:14:        <li>Answer questions about invoices, expenses, and bank statements.</li>
+client/src/components/AIDrawer.jsx:59:            No insights available yet. Sync data or review recent invoices and transactions to
+
+
+[5. BROWSER VOICE API CHECK]
+client/src/pages/AIAssistant.jsx:204:    () => typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined',
+client/src/pages/AIAssistant.jsx:563:      const recorder = new window.MediaRecorder(stream);
+client/src/pages/__tests__/AIAssistant.test.jsx:102:  delete window.MediaRecorder;
+client/src/pages/__tests__/AIAssistant.test.jsx:880:  it('microphone button renders and handles unsupported MediaRecorder gracefully', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:932:    delete window.MediaRecorder;
+
+
+[6. UI VOICE CONTROLS]
+client/src/services/aiInsightsAPI.js:50:    relatedEntity: insight.relatedEntity || insight.entityType || 'record',
+client/src/index.css:624:/* Custom Properties for Dynamic Theming */
+client/src/services/aiInsightsMappers.js:32:      summary: `A record (ID: ${log.recordId || 'unknown'}) was deleted by user ${log.user}.`,
+client/src/services/aiInsightsMappers.js:35:        text: `Record with <b>recordId</b>: ${log.recordId || 'unknown'} deleted by <b>user</b>: ${log.user} on <b>timestamp</b>: ${formatDate(log.timestamp)}.`,
+client/src/services/aiInsightsMappers.js:36:        legal: 'Deletion of records must be justified and documented (GoBD §146).',
+client/src/services/aiInsightsMappers.js:37:        hint: 'Ensure deletion reason is documented for audit trail. Reference: <b>recordId</b>, <b>user</b>, <b>timestamp</b>.',
+client/src/locales/en/translation.json:300:    "no_invoices_recorded": "No invoices recorded yet.",
+client/src/pages/BankStatementDetail.jsx:880:            No audit entries recorded for this statement yet.
+client/src/pages/BankStatementDetail.jsx:1001:                    &quot;I understand this action will be recorded and can only be undone manually.&quot;
+client/src/pages/BankStatementDetail.jsx:1063:                This reinstates immutability safeguards and records the undo action with a new audit entry.
+client/src/locales/de/translation.json:299:    "no_invoices_recorded": "Noch keine Rechnungen erfasst.",
+client/src/locales/ar/translation.json:299:    "no_invoices_recorded": "لا توجد فواتير مسجلة بعد.",
+client/src/lib/aiChatAttachments.js:14:  name: file?.name || (kind === 'audio' ? 'Voice recording.webm' : 'Attachment'),
+client/src/pages/AIAssistant.jsx:135:      'You can interact with the AI assistant for advisory insights, but all actions are non-binding and do not change records.',
+client/src/pages/AIAssistant.jsx:165:  const [recordingSeconds, setRecordingSeconds] = useState(0);
+client/src/pages/AIAssistant.jsx:166:  const [recordingError, setRecordingError] = useState(null);
+client/src/pages/AIAssistant.jsx:182:  const recordingChunksRef = useRef([]);
+client/src/pages/AIAssistant.jsx:183:  const recordingTimerRef = useRef(null);
+client/src/pages/AIAssistant.jsx:214:    items.push('Voice recordings stay local as advisory attachments unless a transcript path is connected.');
+client/src/pages/AIAssistant.jsx:420:      if (recordingTimerRef.current) {
+client/src/pages/AIAssistant.jsx:421:        window.clearInterval(recordingTimerRef.current);
+client/src/pages/AIAssistant.jsx:534:    if (recordingTimerRef.current) {
+client/src/pages/AIAssistant.jsx:535:      window.clearInterval(recordingTimerRef.current);
+client/src/pages/AIAssistant.jsx:536:      recordingTimerRef.current = null;
+client/src/pages/AIAssistant.jsx:538:    if (mediaRecorderRef.current?.state === 'recording') {
+client/src/pages/AIAssistant.jsx:547:    recordingChunksRef.current = [];
+client/src/pages/AIAssistant.jsx:554:      setRecordingError('Voice recording is not available in this browser.');
+client/src/pages/AIAssistant.jsx:563:      const recorder = new window.MediaRecorder(stream);
+client/src/pages/AIAssistant.jsx:564:      recordingChunksRef.current = [];
+client/src/pages/AIAssistant.jsx:566:      mediaRecorderRef.current = recorder;
+client/src/pages/AIAssistant.jsx:567:      recorder.ondataavailable = (event) => {
+client/src/pages/AIAssistant.jsx:569:          recordingChunksRef.current.push(event.data);
+client/src/pages/AIAssistant.jsx:572:      recorder.onstop = () => {
+client/src/pages/AIAssistant.jsx:573:        const chunks = recordingChunksRef.current;
+client/src/pages/AIAssistant.jsx:575:          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+client/src/pages/AIAssistant.jsx:576:          const file = new File([blob], `voice-recording-${Date.now()}.webm`, {
+client/src/pages/AIAssistant.jsx:581:        recordingChunksRef.current = [];
+client/src/pages/AIAssistant.jsx:583:      recorder.start();
+client/src/pages/AIAssistant.jsx:587:      recordingTimerRef.current = window.setInterval(() => {
+client/src/pages/AIAssistant.jsx:594:          : 'Unable to start voice recording.',
+client/src/pages/AIAssistant.jsx:684:        highlights: ['Audio recordings and unsupported files are not sent for document intake analysis.'],
+client/src/pages/AIAssistant.jsx:716:        'Unable to analyze the document. The attachment was not used to create or change accounting records.',
+client/src/pages/AIAssistant.jsx:747:            'This assistant is read-only. I can explain and summarize, but I cannot modify records.',
+client/src/pages/AIAssistant.jsx:813:                : ['No accounting records are changed from this chat.'],
+client/src/pages/AIAssistant.jsx:1386:                  Manual override recorded. Expense draft will use no input VAT and requires accountant review.
+client/src/pages/AIAssistant.jsx:1829:                {context?.invoices?.length ?? 0} records
+client/src/pages/AIAssistant.jsx:1850:                {context?.expenses?.length ?? 0} records
+client/src/pages/AIAssistant.jsx:2104:                      aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+client/src/pages/AIAssistant.jsx:2105:                      title={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+client/src/pages/AIAssistant.jsx:2162:                <span>Enter sends. Shift+Enter adds a line. Attachments and recordings stay advisory-only.</span>
+client/src/pages/AIAssistant.jsx:2165:                    Recording {recordingSeconds}s
+client/src/pages/AIAssistant.jsx:2174:            {recordingError && <div className="px-5 pb-3 text-xs text-red-600">{recordingError}</div>}
+client/src/pages/AIAssistant.jsx:2177:                Voice recording is unavailable in this browser. Text, files, and camera input remain available.
+client/src/lib/__tests__/aiPageContext.test.js:40:  it('formats safe prompt context without adding record data', () => {
+client/src/pages/OCRPreview.jsx:407:                Uploads are stored as draft records. Nothing is posted without explicit confirmation.
+client/src/pages/BankStatementImport.jsx:183:            I understand this will import statement data into my company records.
+client/src/pages/AIManager.jsx:390:        description: 'Overdue, draft, or pending invoice records that may need follow-up.',
+client/src/pages/AIManager.jsx:470:              explanations without changing records.
+client/src/pages/AIManager.jsx:532:          Advisory only: AI does not post, pay, file, delete, reconcile, or certify records. Compliance-critical German tax, VAT filing, payment, or legal decisions must be reviewed by a qualified Steuerberater.
+client/src/pages/AIInsights.jsx:167:            details="Review supporting records and audit history for each insight."
+client/src/pages/DocumentInbox.jsx:336:              but it does not post, approve, delete, reconcile, or submit accounting records.
+client/src/pages/Analytics.jsx:323:              : t('analytics_page.no_invoices_recorded')}
+client/src/pages/Billing.jsx:326:                Your invoices and payment records will appear here once you activate a subscription.
+client/src/pages/AuditLogs.jsx:48:            description="Gathering the latest activity records."
+client/src/pages/BankStatements.jsx:453:                        This record is legally locked (GoBD). Edits and deletions are prohibited by
+client/src/pages/Expenses.jsx:154:        Locked accounting records cannot be edited or deleted. Personal data may be masked depending
+client/src/pages/Invoices.jsx:57:  partially_paid: 'Partially paid: A payment has been recorded and the invoice remains locked.',
+client/src/pages/Invoices.jsx:156:        Locked accounting records cannot be edited or deleted. Personal data may be masked depending
+client/src/pages/Invoices.jsx:357:                                  title="Locked accounting records cannot be edited or deleted under GoBD retention rules."
+client/src/pages/__tests__/AIAssistant.test.jsx:787:    expect(await screen.findByText('Manual override recorded. Expense draft will use no input VAT and requires accountant review.')).toBeInTheDocument();
+client/src/pages/__tests__/AIAssistant.test.jsx:880:  it('microphone button renders and handles unsupported MediaRecorder gracefully', async () => {
+client/src/pages/__tests__/AIAssistant.test.jsx:883:    fireEvent.click(screen.getByRole('button', { name: /Start voice recording/i }));
+client/src/pages/__tests__/AIAssistant.test.jsx:886:      await screen.findByText(/Voice recording is not available in this browser/i),
+client/src/pages/InvoiceEdit.jsx:173:        <p className="text-sm text-gray-500">Status and invoice changes recorded for this invoice.</p>
+client/src/pages/InvoiceEdit.jsx:178:        <p className="text-sm text-gray-500">No audit entries recorded for this invoice yet.</p>
+client/src/components/invoices/InvoiceForm.jsx:240:                <li>No status changes recorded.</li>
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:162:      name: /I understand this action will be recorded and can only be undone manually\./i,
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:180:      name: /I understand this action will be recorded and can only be undone manually\./i,
+client/src/pages/__tests__/BankStatementDetailManualReconciliation.test.jsx:208:      name: /I understand this action will be recorded and can only be undone manually\./i,
+client/src/components/TopBar.jsx:377:              aria-atomic="true"
+client/src/shared/ai/mutationIntentConfig.json:41:      "pattern": "\\b(force|clear|wipe|zero|truncate)\\b.*\\b(invoices?|records?|balances?)\\b",
+client/src/shared/ai/mutationIntentConfig.json:43:      "reason": "pattern:force-clear-records"
+client/src/shared/ai/mutationIntentConfig.json:66:      "pattern": "\\b(archive|purge)\\b.*\\b(records|invoices|transactions)\\b",
+client/src/shared/ai/mutationIntentConfig.json:68:      "reason": "pattern:archive-records"
+client/src/components/ui/EmptyState.jsx:27:      aria-atomic="true"
+
+
+[7. AI STREAMING VS VOICE CHECK]
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:22:  async askIntentStream(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:26:      fallback: () => aiAssistantAPI.askIntentStream(params),
+client/src/services/aiAssistantAPI.js:87:  async askIntentStream({
+
+
+[8. FILE STRUCTURE CHECK (VOICE MODULES)]
+client/src/tests/InvoiceForm.test.jsx
+client/src/components/invoices/InvoiceForm.jsx
+client/src/components/invoices/InvoiceStatusBadge.jsx
+client/src/pages/Invoices.jsx
+client/src/pages/InvoiceImport.jsx
+client/src/pages/InvoiceEdit.jsx
+client/src/pages/InvoiceCreate.jsx
+client/src/services/invoicesAPI.js
+client/src/services/__tests__/invoicesAPI.test.js
+
+
+====================================
+📌 END VOICE TRUTH SCAN
+====================================
