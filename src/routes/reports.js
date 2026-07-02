@@ -10,7 +10,7 @@ const escapeCsvValue = (value) => {
     return '';
   }
 
-  return `\"${String(value).replace(/"/g, '""')}\"`;
+  return `"${String(value).replace(/"/g, '""')}"`;
 };
 
 const REPORT_EXPORT_COLUMNS = {
