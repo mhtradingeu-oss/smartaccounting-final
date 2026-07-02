@@ -1,0 +1,137 @@
+
+==============================
+🧠 AI FRONTEND DEEP TRUTH SCAN
+==============================
+
+
+[1. AI ROUTES MAP]
+79:const AIInsights = lazy(() => import('./pages/AIInsights'));
+80:const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+81:const AIManager = lazy(() => import('./pages/AIManager'));
+282:    element: renderProtectedRoute(<AIInsights />),
+283:    componentFile: 'client/src/pages/AIInsights.jsx',
+290:    element: renderProtectedRoute(<AIAssistant />),
+291:    componentFile: 'client/src/pages/AIAssistant.jsx',
+298:    element: renderProtectedRoute(<AIManager />),
+299:    componentFile: 'client/src/pages/AIManager.jsx',
+558:        <Route path="/ai" element={<AiHub />} />
+
+
+[2. AI HUB STATUS]
+total 0
+drwxr-xr-x@  4 nadeemnour  staff   128 Jun 30 11:52 .
+drwxr-xr-x@ 44 nadeemnour  staff  1408 Jun 30 11:52 ..
+-rw-r--r--@  1 nadeemnour  staff     0 Jun 30 11:52 AiHub.jsx
+-rw-r--r--@  1 nadeemnour  staff     0 Jun 30 11:52 aiHub.css
+
+
+[3. AI PAGES STRUCTURE]
+AIAssistant.jsx
+AIInsights.jsx
+AIManager.jsx
+BankStatementDetail.jsx
+ai-hub
+
+
+[4. AI CORE API LAYER]
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:4:import aiAssistantAPI from "../aiAssistantAPI";
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:11:  async askIntent(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:15:      fallback: () => aiAssistantAPI.askIntent(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:22:  async askIntentStream(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:26:      fallback: () => aiAssistantAPI.askIntentStream(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:33:  async startSession(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:37:      fallback: () => aiAssistantAPI.startSession(params),
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:44:  async getContext(params) {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:48:      fallback: () => aiAssistantAPI.getContext(params),
+client/src/services/aiAssistantAPI.js:48:export const aiAssistantAPI = {
+client/src/services/aiAssistantAPI.js:53:  async getContext({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:75:  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
+client/src/services/aiAssistantAPI.js:87:  async askIntentStream({
+client/src/services/aiAssistantAPI.js:157:  async startSession({ companyId } = {}) {
+client/src/services/aiAssistantAPI.js:187:export default aiAssistantAPI;
+client/src/services/__tests__/aiAssistantAPI.test.jsx:2:import { aiAssistantAPI } from '../aiAssistantAPI';
+client/src/services/__tests__/aiAssistantAPI.test.jsx:14:describe('aiAssistantAPI', () => {
+client/src/services/__tests__/aiAssistantAPI.test.jsx:16:    aiAssistantAPI.reset();
+client/src/services/__tests__/aiAssistantAPI.test.jsx:22:    const firstContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:23:    const secondContext = await aiAssistantAPI.getContext({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:28:    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:29:    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:34:    const otherContext = await aiAssistantAPI.getContext({ companyId: 22 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:41:    await aiAssistantAPI.getContext({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:50:    await aiAssistantAPI.startSession({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:59:    await aiAssistantAPI.askIntent({
+
+
+[5. CONTROL PLANE STATUS]
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:3:import { routeToOrchestrator } from "./useAIOrchestrator";
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:7:export const AIControlRouter = {
+client/src/services/ai/orchestratorBridge/AIControlRouter.js:53:export default AIControlRouter;
+client/src/services/ai/orchestratorBridge/useAIOrchestrator.js:2:// This layer safely routes AI calls to AIOrchestrator WITHOUT breaking existing API
+client/src/services/ai/orchestratorBridge/useAIOrchestrator.js:25:    console.warn("[AIOrchestrator fallback]", error.message);
+
+
+[6. FRONTEND AI ENTRY POINTS]
+client/src/tests/routes.smoke.test.jsx:14:vi.mock('../pages/AIInsights', () => ({
+client/src/tests/routes.smoke.test.jsx:18:vi.mock('../pages/AIAssistant', () => ({
+client/src/tests/routes.smoke.test.jsx:22:vi.mock('../pages/AIManager', () => ({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:37:describe('GlobalAICompanion in authenticated layout', () => {
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/components/GlobalAICompanion.jsx:55:export default function GlobalAICompanion() {
+client/src/components/Layout.jsx:7:import GlobalAICompanion from './GlobalAICompanion';
+client/src/components/Layout.jsx:128:      {status === 'authenticated' && <GlobalAICompanion />}
+client/src/pages/AIInsights.jsx:18:const AIInsights = () => {
+client/src/pages/AIInsights.jsx:207:export default AIInsights;
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/App.jsx:79:const AIInsights = lazy(() => import('./pages/AIInsights'));
+client/src/App.jsx:80:const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+client/src/App.jsx:81:const AIManager = lazy(() => import('./pages/AIManager'));
+client/src/App.jsx:282:    element: renderProtectedRoute(<AIInsights />),
+client/src/App.jsx:283:    componentFile: 'client/src/pages/AIInsights.jsx',
+client/src/App.jsx:290:    element: renderProtectedRoute(<AIAssistant />),
+client/src/App.jsx:291:    componentFile: 'client/src/pages/AIAssistant.jsx',
+client/src/App.jsx:298:    element: renderProtectedRoute(<AIManager />),
+client/src/App.jsx:299:    componentFile: 'client/src/pages/AIManager.jsx',
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/pages/__tests__/AIInsights.test.jsx:6:import AIInsights from '../AIInsights';
+client/src/pages/__tests__/AIInsights.test.jsx:69:          <AIInsights />
+client/src/lib/featureFlags.js:37:export const isAIAssistantEnabled = () => aiAssistantEnabled;
+client/src/lib/featureFlags.js:39:export const setAIAssistantEnabled = (value) => {
+client/src/lib/featureFlags.js:43:export const resetAIAssistantEnabled = () => {
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/lib/constants.js:3:import { isAIAssistantEnabled } from './featureFlags';
+client/src/lib/constants.js:19:  AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+
+
+[7. ROUTER STRUCTURE VERIFICATION]
+557:    <Routes>
+558:        <Route path="/ai" element={<AiHub />} />
+
+
+==============================
+📌 END OF TRUTH SCAN
+==============================

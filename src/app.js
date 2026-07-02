@@ -37,10 +37,17 @@ const { cache } = require('./lib/cache');
 const { sequelize } = require('./models');
 
 const app = express();
-const API_PREFIX = process.env.API_BASE_URL || '/api';
+const normalizeApiPrefix = (value) => {
+  if (!value || /^https?:\/\//i.test(value)) {
+    return '/api';
+  }
+  const prefixed = value.startsWith('/') ? value : `/${value}`;
+  return prefixed.replace(/\/$/, '') || '/api';
+};
+const API_PREFIX = normalizeApiPrefix(process.env.API_BASE_URL);
 const EXPRESS_API_PREFIX = '/api';
 app.set('apiPrefix', API_PREFIX);
-const normalizedApiPrefix = API_PREFIX.replace(/\/$/, '');
+const normalizedApiPrefix = API_PREFIX;
 
 const registerPublicMonitorEndpoint = (path, handler) => {
   app.get(path, handler);
@@ -113,6 +120,7 @@ const journalEntryRoutes = require('./routes/journalEntries');
 const reportRoutes = require('./routes/reports');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
+const voiceRoutes = require('./routes/ai/voice');
 const adminRoutes = require('./routes/admin');
 const gdprRoutes = require('./routes/gdpr');
 const publicRoutes = require('./routes/public');
@@ -278,6 +286,7 @@ registerPublicMonitorEndpoint('/metrics', metricsHandler);
 app.use(EXPRESS_API_PREFIX, createApiTimeoutMiddleware());
 
 // Mount public auth routes BEFORE authentication middleware
+app.use('/auth', authRoutes);
 app.use(`${EXPRESS_API_PREFIX}/auth`, authRoutes);
 
 // Authentication & RBAC (protect all other /api routes)
@@ -305,6 +314,7 @@ app.use(`${EXPRESS_API_PREFIX}/compliance`, complianceRoutes);
 app.use(`${EXPRESS_API_PREFIX}/german-tax-compliance`, germanTaxComplianceRoutes);
 app.use(`${EXPRESS_API_PREFIX}/elster`, elsterRoutes);
 app.use(`${EXPRESS_API_PREFIX}/ai`, aiRoutes);
+app.use(`${EXPRESS_API_PREFIX}/voice`, voiceRoutes);
 app.use(`${EXPRESS_API_PREFIX}/admin`, adminRoutes);
 app.use(`${EXPRESS_API_PREFIX}/gdpr`, gdprRoutes);
 app.use(`${EXPRESS_API_PREFIX}/ocr`, ocrRoutes);

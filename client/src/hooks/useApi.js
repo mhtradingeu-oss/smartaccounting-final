@@ -22,7 +22,7 @@ export const useApi = () => {
           throw new Error('Session expired. Please log in again.');
         }
 
-        const { message } = formatApiError(err, 'An error occurred.');
+        const message = formatApiError(err, 'An error occurred.');
         setError(message);
         throw new Error(message);
       } finally {

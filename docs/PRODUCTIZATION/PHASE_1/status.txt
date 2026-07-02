@@ -1,0 +1,3 @@
+PHASE 1: AI UI CONSOLIDATION PLAN STARTED
+Target: unify AIAssistant, AIManager, AIInsights into single AI Hub UI
+STEP 1: define AI Hub architecture

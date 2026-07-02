@@ -1,7 +1,7 @@
 const cors = require('cors');
 const logger = require('../lib/logger'); // central logger lives under src/lib/logger
 
-const { FRONTEND_URL, NODE_ENV = 'development' } = process.env;
+const { FRONTEND_URL, CLIENT_URL, CORS_ORIGIN, NODE_ENV = 'development' } = process.env;
 const isProduction = NODE_ENV === 'production';
 
 const defaultOrigins = [
@@ -15,8 +15,19 @@ const defaultOrigins = [
   'http://host.docker.internal:3001',
 ];
 
+const parseOrigins = (value) =>
+  String(value || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 const allowedOrigins = new Set(
-  [FRONTEND_URL, ...(!isProduction ? defaultOrigins : [])].filter(Boolean),
+  [
+    ...parseOrigins(FRONTEND_URL),
+    ...parseOrigins(CLIENT_URL),
+    ...parseOrigins(CORS_ORIGIN),
+    ...(!isProduction ? defaultOrigins : []),
+  ].filter(Boolean),
 );
 
 const corsOptions = {
@@ -25,10 +36,15 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    const requestOrigin = origin.toLowerCase();
-    const matchesAllowed = Array.from(allowedOrigins).some(
-      (allowed) => requestOrigin === allowed.toLowerCase(),
-    );
+    const requestOrigin = String(origin).toLowerCase();
+    const matchesAllowed = Array.from(allowedOrigins).some((allowed) => {
+      try {
+        return requestOrigin === String(allowed).toLowerCase();
+      } catch (error) {
+        logger.warn('Invalid CORS allowlist origin ignored:', allowed);
+        return false;
+      }
+    });
 
     if (matchesAllowed) {
       return callback(null, true);

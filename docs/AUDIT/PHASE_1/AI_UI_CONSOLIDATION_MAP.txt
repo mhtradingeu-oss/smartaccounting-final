@@ -1,0 +1,40 @@
+client/src/components/__tests__/GlobalAICompanion.test.jsx:37:describe('GlobalAICompanion in authenticated layout', () => {
+client/src/components/Layout.jsx:7:import GlobalAICompanion from './GlobalAICompanion';
+client/src/components/Layout.jsx:128:      {status === 'authenticated' && <GlobalAICompanion />}
+client/src/components/GlobalAICompanion.jsx:55:export default function GlobalAICompanion() {
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:3:export default function AIOrchestrator({ state = {} }) {
+client/src/pages/AIInsights.jsx:18:const AIInsights = () => {
+client/src/pages/AIInsights.jsx:207:export default AIInsights;
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:499:        <AIOrchestrator
+client/src/pages/__tests__/AIInsights.test.jsx:6:import AIInsights from '../AIInsights';
+client/src/pages/__tests__/AIInsights.test.jsx:69:          <AIInsights />
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />

@@ -38,8 +38,8 @@ async function aggregateVAT({ companyId, periodFrom, periodTo }) {
   const breakdown = [];
 
   function normalizeRate(rate) {
-    if (rate === 0.19 || rate === '0.19') return '19';
-    if (rate === 0.07 || rate === '0.07') return '7';
+    if (rate === 0.19 || rate === '0.19') {return '19';}
+    if (rate === 0.07 || rate === '0.07') {return '7';}
     return String(rate);
   }
 

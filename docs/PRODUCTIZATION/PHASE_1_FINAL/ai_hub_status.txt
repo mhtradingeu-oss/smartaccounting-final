@@ -1,0 +1,3 @@
+AI HUB DESIGN PHASE STARTED
+Target: convert multi-AI UI into single AI Hub product
+Next step: define tab architecture + merge strategy

@@ -1,7 +1,15 @@
 const logger = require('../lib/logger');
 const ApiError = require('../lib/errors/apiError');
 
-const API_PREFIX = process.env.API_BASE_URL || '/api';
+const normalizeApiPrefix = (value) => {
+  if (!value || /^https?:\/\//i.test(value)) {
+    return '/api';
+  }
+  const prefixed = value.startsWith('/') ? value : `/${value}`;
+  return prefixed.replace(/\/$/, '') || '/api';
+};
+
+const API_PREFIX = normalizeApiPrefix(process.env.API_BASE_URL);
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.API_REQUEST_TIMEOUT_MS) || 500;
 const DASHBOARD_TIMEOUT_MS = Number(process.env.DASHBOARD_REQUEST_TIMEOUT_MS) || 800;

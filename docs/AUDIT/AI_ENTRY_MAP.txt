@@ -1,0 +1,93 @@
+src/services/ai/aiInsightsService.js:154:        '[aiInsightsService] listInsightsForClient: schema or query error in demo mode',
+src/services/ai/aiInsightsService.js:269:      console.debug('[aiInsightsService] exportInsights: schema or query error in demo mode', {
+src/services/ai/README.md:4:- `aiReadGateway.js` orchestrates every `/api/ai` read request, enforces read-only contracts, attaches disclaimers, and now logs the `requestId`/`companyId` pair into the immutable audit trail.
+src/services/ai/README.md:7:- `aiDataService.js`, `aiAssistantService.js`, and `aiSuggestionService.js` contain the read-only AI handlers (summaries, assistant prompts, suggestions) and all bubble through `requiresHumanApproval`/`rateLimit` guards before returning advisory-only responses.
+src/services/ai/README.md:8:- `aiInsightsService.js` covers insight generation, listing, exporting, and user decision recording (with explainable metadata) while checking company flags and schema integrity.
+src/services/ai/README.md:21:routes -> aiReadGateway -> cfoEngine
+src/services/ai/aiReadGateway.js:2:async function aiReadGateway(input) {
+src/services/ai/aiReadGateway.js:207:    console.error('[aiReadGateway][DEBUG] meta:', meta);
+src/services/ai/aiReadGateway.js:209:    console.error('[aiReadGateway][DEBUG] handler:', meta && meta.handler);
+src/services/ai/aiReadGateway.js:324:module.exports = aiReadGateway;
+client/src/services/aiAssistantAPI.js:74:  async askIntent({ intent, prompt, targetInsightId, sessionId, companyId }) {
+client/src/services/aiAssistantAPI.js:86:  async askIntentStream({
+client/src/services/aiAssistantAPI.js:156:  async startSession({ companyId } = {}) {
+client/src/tests/routes.smoke.test.jsx:18:vi.mock('../pages/AIAssistant', () => ({
+client/src/tests/routes.smoke.test.jsx:22:vi.mock('../pages/AIManager', () => ({
+client/src/services/__tests__/aiAssistantAPI.test.jsx:28:    const firstSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:29:    const secondSession = await aiAssistantAPI.startSession({ companyId: 10 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:50:    await aiAssistantAPI.startSession({ companyId: 42 });
+client/src/services/__tests__/aiAssistantAPI.test.jsx:59:    await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/components/GlobalAICompanion.jsx:81:      const response = await aiAssistantAPI.askIntent({
+client/src/components/ai/orchestrator/AIOrchestrator.jsx:3:export default function AIOrchestrator({ state = {} }) {
+client/src/components/__tests__/GlobalAICompanion.test.jsx:21:    askIntent: vi.fn(),
+client/src/components/__tests__/GlobalAICompanion.test.jsx:40:    aiAssistantAPI.askIntent.mockResolvedValue({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:91:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:111:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/components/__tests__/GlobalAICompanion.test.jsx:135:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith({
+client/src/pages/Dashboard.jsx:1:import AIOrchestrator from '../components/ai/orchestrator/AIOrchestrator';
+client/src/pages/Dashboard.jsx:499:        <AIOrchestrator
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:38:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:40:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:41:    askIntentStream: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:31:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:33:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/lib/featureFlags.js:37:export const isAIAssistantEnabled = () => aiAssistantEnabled;
+client/src/lib/featureFlags.js:39:export const setAIAssistantEnabled = (value) => {
+client/src/lib/featureFlags.js:43:export const resetAIAssistantEnabled = () => {
+client/src/lib/constants.js:3:import { isAIAssistantEnabled } from './featureFlags';
+client/src/lib/constants.js:19:  AI_ASSISTANT: { enabled: isAIAssistantEnabled(), label: 'AI Assistant' },
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/App.jsx:80:const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+client/src/App.jsx:81:const AIManager = lazy(() => import('./pages/AIManager'));
+client/src/App.jsx:290:    element: renderProtectedRoute(<AIAssistant />),
+client/src/App.jsx:291:    componentFile: 'client/src/pages/AIAssistant.jsx',
+client/src/App.jsx:298:    element: renderProtectedRoute(<AIManager />),
+client/src/App.jsx:299:    componentFile: 'client/src/pages/AIManager.jsx',

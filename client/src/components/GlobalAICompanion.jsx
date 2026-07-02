@@ -87,7 +87,7 @@ export default function GlobalAICompanion() {
       setSessionId(response?.sessionId || sessionId);
       setMessages((current) => [...current, { role: 'assistant', text: getAnswerText(response) }]);
     } catch (err) {
-      setError(formatApiError(err, 'Unable to reach the AI Manager.').message);
+      setError(formatApiError(err, 'Unable to reach the AI Manager.'));
     } finally {
       setIsSending(false);
     }

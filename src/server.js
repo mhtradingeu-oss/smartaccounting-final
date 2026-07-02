@@ -4,7 +4,7 @@ const app = require('./app');
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
-const API_PREFIX = app.get('apiPrefix') || process.env.API_BASE_URL || '/api';
+const API_PREFIX = app.get('apiPrefix') || '/api';
 const swaggerDocsPath = `${API_PREFIX.replace(/\/$/, '')}/docs`;
 
 let serverInstance = null;

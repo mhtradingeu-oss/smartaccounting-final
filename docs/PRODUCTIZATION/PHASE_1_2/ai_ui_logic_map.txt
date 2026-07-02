@@ -1,0 +1,376 @@
+client/src/pages/BankStatements.jsx:1:import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+client/src/pages/BankStatements.jsx:28:const planIncludesAIAssistant = (planId, planMap) => {
+client/src/pages/BankStatements.jsx:46:  const [statements, setStatements] = useState([]);
+client/src/pages/BankStatements.jsx:47:  const [loading, setLoading] = useState(false);
+client/src/pages/BankStatements.jsx:48:  const [error, setError] = useState(null);
+client/src/pages/BankStatements.jsx:57:  const planAllowsAIAdvisor = planIncludesAIAssistant(activePlanId, planMap);
+client/src/pages/BankStatements.jsx:109:  useEffect(() => {
+client/src/pages/BankStatements.jsx:126:  useEffect(() => {
+client/src/pages/InvoiceEdit.jsx:1:import { useCallback, useEffect, useMemo, useState } from 'react';
+client/src/pages/InvoiceEdit.jsx:207:  const [invoice, setInvoice] = useState(null);
+client/src/pages/InvoiceEdit.jsx:208:  const [loading, setLoading] = useState(true);
+client/src/pages/InvoiceEdit.jsx:209:  const [error, setError] = useState(null);
+client/src/pages/InvoiceEdit.jsx:210:  const [formSubmitting, setFormSubmitting] = useState(false);
+client/src/pages/InvoiceEdit.jsx:211:  const [statusUpdating, setStatusUpdating] = useState(null);
+client/src/pages/InvoiceEdit.jsx:212:  const [actionError, setActionError] = useState(null);
+client/src/pages/InvoiceEdit.jsx:213:  const [auditLog, setAuditLog] = useState([]);
+client/src/pages/InvoiceEdit.jsx:214:  const [auditLoading, setAuditLoading] = useState(false);
+client/src/pages/InvoiceEdit.jsx:239:  useEffect(() => {
+client/src/pages/InvoiceEdit.jsx:258:  useEffect(() => {
+client/src/pages/BankStatementPreview.jsx:1:import { useState } from 'react';
+client/src/pages/BankStatementPreview.jsx:44:  const [fileError, setFileError] = useState('');
+client/src/pages/BankStatementPreview.jsx:45:  const [fileName, setFileName] = useState('');
+client/src/pages/BankStatementPreview.jsx:46:  const [detectedFormat, setDetectedFormat] = useState('');
+client/src/pages/BankStatementPreview.jsx:47:  const [previewResponse, setPreviewResponse] = useState(null);
+client/src/pages/BankStatementPreview.jsx:48:  const [reading, setReading] = useState(false);
+client/src/pages/BankStatementPreview.jsx:49:  const [confirmationChecked, setConfirmationChecked] = useState(false);
+client/src/pages/BankStatementPreview.jsx:50:  const [confirming, setConfirming] = useState(false);
+client/src/pages/BankStatementPreview.jsx:51:  const [confirmError, setConfirmError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:1:import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+client/src/pages/BankStatementDetail.jsx:129:  const [transactions, setTransactions] = useState([]);
+client/src/pages/BankStatementDetail.jsx:130:  const [loading, setLoading] = useState(false);
+client/src/pages/BankStatementDetail.jsx:131:  const [error, setError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:132:  const [actionError, setActionError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:133:  const [busyIds, setBusyIds] = useState([]);
+client/src/pages/BankStatementDetail.jsx:134:  const [selectedTransaction, setSelectedTransaction] = useState(null);
+client/src/pages/BankStatementDetail.jsx:135:  const [selectedTarget, setSelectedTarget] = useState(null);
+client/src/pages/BankStatementDetail.jsx:136:  const [activeTargetTab, setActiveTargetTab] = useState('invoices');
+client/src/pages/BankStatementDetail.jsx:137:  const [invoiceTargets, setInvoiceTargets] = useState([]);
+client/src/pages/BankStatementDetail.jsx:138:  const [invoiceLoading, setInvoiceLoading] = useState(false);
+client/src/pages/BankStatementDetail.jsx:139:  const [invoiceError, setInvoiceError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:140:  const [expenseTargets, setExpenseTargets] = useState([]);
+client/src/pages/BankStatementDetail.jsx:141:  const [expenseLoading, setExpenseLoading] = useState(false);
+client/src/pages/BankStatementDetail.jsx:142:  const [expenseError, setExpenseError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:143:  const [manualConfirmChecked, setManualConfirmChecked] = useState(false);
+client/src/pages/BankStatementDetail.jsx:144:  const [manualReason, setManualReason] = useState('');
+client/src/pages/BankStatementDetail.jsx:145:  const [manualError, setManualError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:146:  const [isReconcilingManually, setIsReconcilingManually] = useState(false);
+client/src/pages/BankStatementDetail.jsx:147:  const [manualSuccessMessage, setManualSuccessMessage] = useState('');
+client/src/pages/BankStatementDetail.jsx:148:  const [auditLogs, setAuditLogs] = useState([]);
+client/src/pages/BankStatementDetail.jsx:149:  const [auditLoading, setAuditLoading] = useState(false);
+client/src/pages/BankStatementDetail.jsx:150:  const [auditError, setAuditError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:152:  const [selectedUndoTransaction, setSelectedUndoTransaction] = useState(null);
+client/src/pages/BankStatementDetail.jsx:153:  const [undoReason, setUndoReason] = useState('');
+client/src/pages/BankStatementDetail.jsx:154:  const [undoError, setUndoError] = useState(null);
+client/src/pages/BankStatementDetail.jsx:155:  const [undoSuccessMessage, setUndoSuccessMessage] = useState('');
+client/src/pages/BankStatementDetail.jsx:156:  const [isUndoing, setIsUndoing] = useState(false);
+client/src/pages/BankStatementDetail.jsx:157:  const [undoConfirmChecked, setUndoConfirmChecked] = useState(false);
+client/src/pages/BankStatementDetail.jsx:207:  useEffect(() => {
+client/src/pages/BankStatementDetail.jsx:263:  useEffect(() => {
+client/src/pages/BankStatementDetail.jsx:459:  useEffect(() => {
+client/src/pages/Pricing.jsx:1:import React, { useEffect, useMemo, useState } from 'react';
+client/src/pages/Pricing.jsx:52:  const [payload, setPayload] = useState(null);
+client/src/pages/Pricing.jsx:53:  const [error, setError] = useState(false);
+client/src/pages/Pricing.jsx:54:  const [loading, setLoading] = useState(true);
+client/src/pages/Pricing.jsx:56:  useEffect(() => {
+client/src/pages/Companies.jsx:1:import { useCallback, useEffect, useRef, useState } from 'react';
+client/src/pages/Companies.jsx:20:  const [loadError, setLoadError] = useState(null);
+client/src/pages/Companies.jsx:21:  const [formState, setFormState] = useState({
+client/src/pages/Companies.jsx:28:  const [isSaving, setIsSaving] = useState(false);
+client/src/pages/Companies.jsx:29:  const [saveError, setSaveError] = useState(null);
+client/src/pages/Companies.jsx:30:  const [successMessage, setSuccessMessage] = useState('');
+client/src/pages/Companies.jsx:89:  useEffect(() => {
+client/src/pages/Companies.jsx:97:  useEffect(() => {
+client/src/pages/Companies.jsx:110:  useEffect(() => {
+client/src/pages/__tests__/AIInsights.test.jsx:1:import { useState } from 'react';
+client/src/pages/__tests__/AIInsights.test.jsx:6:import AIInsights from '../AIInsights';
+client/src/pages/__tests__/AIInsights.test.jsx:39:  const [activeCompany, setActiveCompany] = useState(initialCompany);
+client/src/pages/__tests__/AIInsights.test.jsx:69:          <AIInsights />
+client/src/pages/GermanTaxReports.jsx:1:import React, { useEffect, useState } from 'react';
+client/src/pages/GermanTaxReports.jsx:28:  const [selectedPeriod, setSelectedPeriod] = useState('current-quarter');
+client/src/pages/GermanTaxReports.jsx:29:  const [reportType, setReportType] = useState('ust');
+client/src/pages/GermanTaxReports.jsx:30:  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+client/src/pages/GermanTaxReports.jsx:31:  const [availability, setAvailability] = useState({ status: 'idle', detail: null });
+client/src/pages/GermanTaxReports.jsx:60:  useEffect(() => {
+client/src/pages/GDPRActions.jsx:1:import React, { useState } from 'react';
+client/src/pages/GDPRActions.jsx:10:  const [loading, setLoading] = useState(false);
+client/src/pages/GDPRActions.jsx:11:  const [error, setError] = useState(null);
+client/src/pages/GDPRActions.jsx:12:  const [modal, setModal] = useState(null); // 'export' | 'anonymize' | null
+client/src/pages/GDPRActions.jsx:13:  const [result, setResult] = useState(null);
+client/src/pages/GDPRActions.jsx:14:  const [exporting, setExporting] = useState(false);
+client/src/pages/GDPRActions.jsx:15:  const [anonymizing, setAnonymizing] = useState(false);
+client/src/pages/Users.jsx:1:import { useCallback, useEffect, useState } from 'react';
+client/src/pages/Users.jsx:30:  const [users, setUsers] = useState([]);
+client/src/pages/Users.jsx:31:  const [loading, setLoading] = useState(true);
+client/src/pages/Users.jsx:32:  const [error, setError] = useState(null);
+client/src/pages/Users.jsx:33:  const [updatingUserId, setUpdatingUserId] = useState(null);
+client/src/pages/Users.jsx:34:  const [actionError, setActionError] = useState(null);
+client/src/pages/Users.jsx:51:  useEffect(() => {
+client/src/pages/InvoiceCreate.jsx:1:import { useState } from 'react';
+client/src/pages/InvoiceCreate.jsx:19:  const [submitting, setSubmitting] = useState(false);
+client/src/pages/InvoiceCreate.jsx:20:  const [error, setError] = useState(null);
+client/src/pages/Onboarding.jsx:1:import React, { useEffect, useState } from 'react';
+client/src/pages/Onboarding.jsx:9:  const [loading, setLoading] = useState(true);
+client/src/pages/Onboarding.jsx:10:  const [error, setError] = useState(null);
+client/src/pages/Onboarding.jsx:11:  const [hasCompany, setHasCompany] = useState(false);
+client/src/pages/Onboarding.jsx:13:  useEffect(() => {
+client/src/pages/InvoiceImport.jsx:1:import { useMemo, useState } from 'react';
+client/src/pages/InvoiceImport.jsx:23:  const [file, setFile] = useState(null);
+client/src/pages/InvoiceImport.jsx:24:  const [preview, setPreview] = useState([]);
+client/src/pages/InvoiceImport.jsx:25:  const [result, setResult] = useState(null);
+client/src/pages/InvoiceImport.jsx:26:  const [error, setError] = useState(null);
+client/src/pages/InvoiceImport.jsx:27:  const [previewing, setPreviewing] = useState(false);
+client/src/pages/InvoiceImport.jsx:28:  const [committing, setCommitting] = useState(false);
+client/src/pages/DatevExport.jsx:1:import React, { useState } from 'react';
+client/src/pages/DatevExport.jsx:5:  const [from, setFrom] = useState('');
+client/src/pages/DatevExport.jsx:6:  const [to, setTo] = useState('');
+client/src/pages/DatevExport.jsx:7:  const [kontenrahmen, setKontenrahmen] = useState('skr03');
+client/src/pages/DatevExport.jsx:8:  const [loading, setLoading] = useState(false);
+client/src/pages/DatevExport.jsx:9:  const [error, setError] = useState(null);
+client/src/pages/AIInsights.jsx:1:import React, { useCallback, useEffect, useState } from 'react';
+client/src/pages/AIInsights.jsx:18:const AIInsights = () => {
+client/src/pages/AIInsights.jsx:25:  const [insights, setInsights] = useState([]);
+client/src/pages/AIInsights.jsx:26:  const [loading, setLoading] = useState(true);
+client/src/pages/AIInsights.jsx:27:  const [error, setError] = useState(null);
+client/src/pages/AIInsights.jsx:28:  const [viewerLimited, setViewerLimited] = useState(false);
+client/src/pages/AIInsights.jsx:64:  useEffect(() => {
+client/src/pages/AIInsights.jsx:68:  useEffect(() => {
+client/src/pages/AIInsights.jsx:207:export default AIInsights;
+client/src/pages/BankStatementImport.jsx:1:import { useMemo, useState } from 'react';
+client/src/pages/BankStatementImport.jsx:51:  const [selectedFile, setSelectedFile] = useState(null);
+client/src/pages/BankStatementImport.jsx:52:  const [confirmationChecked, setConfirmationChecked] = useState(false);
+client/src/pages/BankStatementImport.jsx:53:  const [status, setStatus] = useState('idle');
+client/src/pages/BankStatementImport.jsx:54:  const [error, setError] = useState(null);
+client/src/pages/BankStatementImport.jsx:55:  const [result, setResult] = useState(null);
+client/src/pages/__tests__/Companies.test.jsx:1:import { useState } from 'react';
+client/src/pages/__tests__/Companies.test.jsx:36:  const [activeCompany, setActiveCompany] = useState(initialCompany);
+client/src/pages/__tests__/Companies.test.jsx:37:  const [companies, setCompanies] = useState(null);
+client/src/pages/__tests__/Companies.test.jsx:38:  const [companiesError, setCompaniesError] = useState(null);
+client/src/pages/Login.jsx:1:import React, { useState } from 'react';
+client/src/pages/Login.jsx:18:  const [formData, setFormData] = useState({
+client/src/pages/Login.jsx:23:  const [error, setError] = useState('');
+client/src/pages/Login.jsx:24:  const [isSubmitting, setIsSubmitting] = useState(false);
+client/src/pages/Login.jsx:25:  const [showPassword, setShowPassword] = useState(false);
+client/src/pages/Login.jsx:26:  const [forgotMessage, setForgotMessage] = useState('');
+client/src/pages/Invoices.jsx:1:import { useCallback, useEffect, useMemo, useState } from 'react';
+client/src/pages/Invoices.jsx:74:  const [invoices, setInvoices] = useState([]);
+client/src/pages/Invoices.jsx:75:  const [loading, setLoading] = useState(false);
+client/src/pages/Invoices.jsx:76:  const [error, setError] = useState(null);
+client/src/pages/Invoices.jsx:77:  const [filters, setFilters] = useState({ status: 'all', search: '' });
+client/src/pages/Invoices.jsx:78:  const [page, setPage] = useState(1);
+client/src/pages/Invoices.jsx:99:  useEffect(() => {
+client/src/pages/Invoices.jsx:133:  useEffect(() => {
+client/src/pages/AIAssistant.jsx:1:import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+client/src/pages/AIAssistant.jsx:27:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIAssistant.jsx:33:import { isAIAssistantEnabled } from '../lib/featureFlags';
+client/src/pages/AIAssistant.jsx:144:const AIAssistant = () => {
+client/src/pages/AIAssistant.jsx:151:  const [context, setContext] = useState(null);
+client/src/pages/AIAssistant.jsx:152:  const [messages, setMessages] = useState([]);
+client/src/pages/AIAssistant.jsx:153:  const [sessionId, setSessionId] = useState(null);
+client/src/pages/AIAssistant.jsx:154:  const [loading, setLoading] = useState(true);
+client/src/pages/AIAssistant.jsx:155:  const [contextError, setContextError] = useState(null);
+client/src/pages/AIAssistant.jsx:157:  const [isAsking, setIsAsking] = useState(false);
+client/src/pages/AIAssistant.jsx:158:  const [userTyping, setUserTyping] = useState(false);
+client/src/pages/AIAssistant.jsx:159:  const [draftMessage, setDraftMessage] = useState('');
+client/src/pages/AIAssistant.jsx:160:  const [inputError, setInputError] = useState(null);
+client/src/pages/AIAssistant.jsx:161:  const [showRequestIds, setShowRequestIds] = useState(false);
+client/src/pages/AIAssistant.jsx:162:  const [isStreaming, setIsStreaming] = useState(false);
+client/src/pages/AIAssistant.jsx:163:  const [attachments, setAttachments] = useState([]);
+client/src/pages/AIAssistant.jsx:164:  const [isRecording, setIsRecording] = useState(false);
+client/src/pages/AIAssistant.jsx:165:  const [recordingSeconds, setRecordingSeconds] = useState(0);
+client/src/pages/AIAssistant.jsx:166:  const [recordingError, setRecordingError] = useState(null);
+client/src/pages/AIAssistant.jsx:167:  const [documentIntakeProgress, setDocumentIntakeProgress] = useState(null);
+client/src/pages/AIAssistant.jsx:168:  const [documentReviewOpen, setDocumentReviewOpen] = useState({});
+client/src/pages/AIAssistant.jsx:169:  const [documentReviewForms, setDocumentReviewForms] = useState({});
+client/src/pages/AIAssistant.jsx:170:  const [documentReviewReasons, setDocumentReviewReasons] = useState({});
+client/src/pages/AIAssistant.jsx:171:  const [documentManualOverrideForms, setDocumentManualOverrideForms] = useState({});
+client/src/pages/AIAssistant.jsx:172:  const [documentManualOverrideEnabled, setDocumentManualOverrideEnabled] = useState({});
+client/src/pages/AIAssistant.jsx:173:  const [documentRecheckStatus, setDocumentRecheckStatus] = useState({});
+client/src/pages/AIAssistant.jsx:174:  const [documentDraftStatus, setDocumentDraftStatus] = useState({});
+client/src/pages/AIAssistant.jsx:184:  const aiAssistantEnabled = isAIAssistantEnabled();
+client/src/pages/AIAssistant.jsx:341:  useEffect(() => {
+client/src/pages/AIAssistant.jsx:343:      aiAssistantAPI.reset();
+client/src/pages/AIAssistant.jsx:370:            aiAssistantAPI.startSession({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:374:            aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIAssistant.jsx:418:  useEffect(() => {
+client/src/pages/AIAssistant.jsx:427:  useEffect(() => {
+client/src/pages/AIAssistant.jsx:828:        const response = await aiAssistantAPI.askIntent({
+client/src/pages/AIAssistant.jsx:916:      await aiAssistantAPI.askIntentStream({
+client/src/pages/AIAssistant.jsx:2221:export default AIAssistant;
+client/src/pages/SystemAdminDashboard.jsx:1:import { useCallback, useEffect, useMemo, useState } from 'react';
+client/src/pages/SystemAdminDashboard.jsx:52:  const [overview, setOverview] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:53:  const [companies, setCompanies] = useState([]);
+client/src/pages/SystemAdminDashboard.jsx:54:  const [users, setUsers] = useState([]);
+client/src/pages/SystemAdminDashboard.jsx:55:  const [plans, setPlans] = useState([]);
+client/src/pages/SystemAdminDashboard.jsx:56:  const [subscriptions, setSubscriptions] = useState([]);
+client/src/pages/SystemAdminDashboard.jsx:57:  const [featureFlags, setFeatureFlags] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:58:  const [auditLogs, setAuditLogs] = useState([]);
+client/src/pages/SystemAdminDashboard.jsx:59:  const [backups, setBackups] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:60:  const [maintenance, setMaintenance] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:81:  const [config, setConfig] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:82:  const [monitoring, setMonitoring] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:83:  const [loading, setLoading] = useState(true);
+client/src/pages/SystemAdminDashboard.jsx:84:  const [error, setError] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:85:  const [actionError, setActionError] = useState(null);
+client/src/pages/SystemAdminDashboard.jsx:86:  const [companyForm, setCompanyForm] = useState(defaultCompanyForm);
+client/src/pages/SystemAdminDashboard.jsx:87:  const [userForm, setUserForm] = useState(defaultUserForm);
+client/src/pages/SystemAdminDashboard.jsx:88:  const [maintenanceReason, setMaintenanceReason] = useState('');
+client/src/pages/SystemAdminDashboard.jsx:138:  useEffect(() => {
+client/src/pages/ExpensesCreate.jsx:1:import { useState } from 'react';
+client/src/pages/ExpensesCreate.jsx:25:  const [form, setForm] = useState(INITIAL_FORM);
+client/src/pages/ExpensesCreate.jsx:26:  const [loading, setLoading] = useState(false);
+client/src/pages/ExpensesCreate.jsx:27:  const [error, setError] = useState('');
+client/src/pages/ProfileSettings.jsx:1:import { useEffect, useMemo, useState } from 'react';
+client/src/pages/ProfileSettings.jsx:18:  const [form, setForm] = useState({
+client/src/pages/ProfileSettings.jsx:24:  const [editing, setEditing] = useState(false);
+client/src/pages/ProfileSettings.jsx:25:  const [saving, setSaving] = useState(false);
+client/src/pages/ProfileSettings.jsx:26:  const [error, setError] = useState(null);
+client/src/pages/ProfileSettings.jsx:27:  const [success, setSuccess] = useState(null);
+client/src/pages/ProfileSettings.jsx:29:  const [showPassword, setShowPassword] = useState(false);
+client/src/pages/ProfileSettings.jsx:30:  const [passwordForm, setPasswordForm] = useState({
+client/src/pages/ProfileSettings.jsx:34:  const [passwordSaving, setPasswordSaving] = useState(false);
+client/src/pages/ProfileSettings.jsx:35:  const [passwordError, setPasswordError] = useState(null);
+client/src/pages/ProfileSettings.jsx:37:  const [sessions, setSessions] = useState([]);
+client/src/pages/ProfileSettings.jsx:38:  const [sessionsLoading, setSessionsLoading] = useState(false);
+client/src/pages/ProfileSettings.jsx:39:  const [sessionsError, setSessionsError] = useState(null);
+client/src/pages/ProfileSettings.jsx:43:  useEffect(() => {
+client/src/pages/ProfileSettings.jsx:66:  useEffect(() => {
+client/src/pages/Calculator.jsx:2:import React, { useState } from 'react';
+client/src/pages/Calculator.jsx:11:  const [income, setIncome] = useState('');
+client/src/pages/Calculator.jsx:12:  const [expenses, setExpenses] = useState('');
+client/src/pages/Calculator.jsx:13:  const [vatRate, setVatRate] = useState('19');
+client/src/pages/Calculator.jsx:14:  const [results, setResults] = useState(null);
+client/src/pages/Calculator.jsx:15:  const [error, setError] = useState(null);
+client/src/pages/__tests__/AIManager.test.jsx:4:import AIManager from '../AIManager';
+client/src/pages/__tests__/AIManager.test.jsx:5:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIManager.test.jsx:14:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIManager.test.jsx:15:  aiAssistantAPI: {
+client/src/pages/__tests__/AIManager.test.jsx:27:  const renderAIManager = () => render(
+client/src/pages/__tests__/AIManager.test.jsx:29:      <AIManager />
+client/src/pages/__tests__/AIManager.test.jsx:34:    aiAssistantAPI.getContext.mockResolvedValue({
+client/src/pages/__tests__/AIManager.test.jsx:73:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:79:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/__tests__/AIManager.test.jsx:139:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:158:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:180:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:190:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:204:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:213:    renderAIManager();
+client/src/pages/__tests__/AIManager.test.jsx:217:    expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
+client/src/pages/OCRPreview.jsx:1:import { useMemo, useState } from 'react';
+client/src/pages/OCRPreview.jsx:67:  const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0].value);
+client/src/pages/OCRPreview.jsx:68:  const [selectedFile, setSelectedFile] = useState(null);
+client/src/pages/OCRPreview.jsx:69:  const [selectedFileName, setSelectedFileName] = useState('');
+client/src/pages/OCRPreview.jsx:70:  const [selectedFileSize, setSelectedFileSize] = useState(0);
+client/src/pages/OCRPreview.jsx:71:  const [previewResponse, setPreviewResponse] = useState(null);
+client/src/pages/OCRPreview.jsx:72:  const [fileError, setFileError] = useState('');
+client/src/pages/OCRPreview.jsx:73:  const [reading, setReading] = useState(false);
+client/src/pages/OCRPreview.jsx:74:  const [processConfirmed, setProcessConfirmed] = useState(false);
+client/src/pages/OCRPreview.jsx:75:  const [processStatus, setProcessStatus] = useState('idle');
+client/src/pages/OCRPreview.jsx:76:  const [processError, setProcessError] = useState('');
+client/src/pages/OCRPreview.jsx:77:  const [processResult, setProcessResult] = useState(null);
+client/src/pages/OnboardingWizard.jsx:1:import React, { useEffect, useState } from 'react';
+client/src/pages/OnboardingWizard.jsx:41:  const [step, setStep] = useState(getInitialStep());
+client/src/pages/OnboardingWizard.jsx:42:  const [completed, setCompleted] = useState(false);
+client/src/pages/OnboardingWizard.jsx:45:  useEffect(() => {
+client/src/pages/RequestAccess.jsx:1:import React, { useState } from 'react';
+client/src/pages/RequestAccess.jsx:17:  const [formData, setFormData] = useState(initialForm);
+client/src/pages/RequestAccess.jsx:18:  const [submissionState, setSubmissionState] = useState('idle');
+client/src/pages/RequestAccess.jsx:19:  const [error, setError] = useState('');
+client/src/pages/DocumentInbox.jsx:1:import { useCallback, useEffect, useMemo, useState } from 'react';
+client/src/pages/DocumentInbox.jsx:72:  const [activeFilter, setActiveFilter] = useState('all');
+client/src/pages/DocumentInbox.jsx:73:  const [documents, setDocuments] = useState([]);
+client/src/pages/DocumentInbox.jsx:74:  const [count, setCount] = useState(0);
+client/src/pages/DocumentInbox.jsx:75:  const [status, setStatus] = useState('idle');
+client/src/pages/DocumentInbox.jsx:76:  const [errorMessage, setErrorMessage] = useState('');
+client/src/pages/DocumentInbox.jsx:105:  useEffect(() => {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:1:import { useState } from 'react';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:29:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:30:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:31:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:33:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:39:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:44:  const [activeCompany, setActiveCompany] = useState(null);
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:74:          <AIAssistant />
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:80:    expect(aiAssistantAPI.startSession).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistantSystemAdmin.test.jsx:81:    expect(aiAssistantAPI.getContext).not.toHaveBeenCalled();
+client/src/pages/Dashboard.jsx:2:import { useEffect, useState, useCallback, useMemo } from 'react';
+client/src/pages/Dashboard.jsx:161:  const [dashboardData, setDashboardData] = useState(null);
+client/src/pages/Dashboard.jsx:162:  const [loading, setLoading] = useState(true);
+client/src/pages/Dashboard.jsx:163:  const [disabled, setDisabled] = useState(false);
+client/src/pages/Dashboard.jsx:164:  const [error, setError] = useState(null);
+client/src/pages/Dashboard.jsx:165:  const [rateLimitMessage, setRateLimitMessage] = useState(null);
+client/src/pages/Dashboard.jsx:166:  const [cooldownExpiresAt, setCooldownExpiresAt] = useState(null);
+client/src/pages/Dashboard.jsx:167:  const [timeNow, setTimeNow] = useState(Date.now());
+client/src/pages/Dashboard.jsx:169:  const [showDemoModal, setShowDemoModal] = useState(false);
+client/src/pages/Dashboard.jsx:170:  const [demoLoading, setDemoLoading] = useState(false);
+client/src/pages/Dashboard.jsx:171:  const [demoError, setDemoError] = useState(null);
+client/src/pages/Dashboard.jsx:172:  const [demoSuccess, setDemoSuccess] = useState(false);
+client/src/pages/Dashboard.jsx:214:  useEffect(() => {
+client/src/pages/Dashboard.jsx:223:  useEffect(() => {
+client/src/pages/Dashboard.jsx:235:  useEffect(() => {
+client/src/pages/Expenses.jsx:1:import { Fragment, useCallback, useEffect, useState } from 'react';
+client/src/pages/Expenses.jsx:59:  const [expenses, setExpenses] = useState([]);
+client/src/pages/Expenses.jsx:60:  const [loading, setLoading] = useState(false);
+client/src/pages/Expenses.jsx:61:  const [error, setError] = useState(null);
+client/src/pages/Expenses.jsx:62:  const [expandedExpenseId, setExpandedExpenseId] = useState(null);
+client/src/pages/Expenses.jsx:63:  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+client/src/pages/Expenses.jsx:111:  useEffect(() => {
+client/src/pages/AuditLogs.jsx:1:import React, { useEffect, useState } from 'react';
+client/src/pages/AuditLogs.jsx:12:  const [logs, setLogs] = useState([]);
+client/src/pages/AuditLogs.jsx:13:  const [loading, setLoading] = useState(true);
+client/src/pages/AuditLogs.jsx:14:  const [error, setError] = useState(null);
+client/src/pages/AuditLogs.jsx:17:  useEffect(() => {
+client/src/pages/Analytics.jsx:1:import React, { useState, useEffect, useCallback, useMemo } from 'react';
+client/src/pages/Analytics.jsx:73:  const [analyticsState, setAnalyticsState] = useState(createInitialState);
+client/src/pages/Analytics.jsx:119:  useEffect(() => {
+client/src/pages/AIManager.jsx:1:import { useCallback, useEffect, useMemo, useState } from 'react';
+client/src/pages/AIManager.jsx:12:import { aiAssistantAPI } from '../services/aiAssistantAPI';
+client/src/pages/AIManager.jsx:299:export default function AIManager() {
+client/src/pages/AIManager.jsx:302:  const [context, setContext] = useState(null);
+client/src/pages/AIManager.jsx:303:  const [insights, setInsights] = useState([]);
+client/src/pages/AIManager.jsx:304:  const [viewerLimited, setViewerLimited] = useState(false);
+client/src/pages/AIManager.jsx:305:  const [loading, setLoading] = useState(true);
+client/src/pages/AIManager.jsx:306:  const [error, setError] = useState(null);
+client/src/pages/AIManager.jsx:308:  const loadAIManagerData = useCallback(async () => {
+client/src/pages/AIManager.jsx:323:        aiAssistantAPI.getContext({ companyId: activeCompanyId }),
+client/src/pages/AIManager.jsx:340:  useEffect(() => {
+client/src/pages/AIManager.jsx:341:    loadAIManagerData();
+client/src/pages/AIManager.jsx:342:  }, [loadAIManagerData]);
+client/src/pages/AIManager.jsx:441:          <Button variant="primary" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/AIManager.jsx:475:            <Button variant="outline" size="sm" onClick={loadAIManagerData} disabled={loading}>
+client/src/pages/Billing.jsx:4:import { useState, useEffect } from 'react';
+client/src/pages/Billing.jsx:23:  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+client/src/pages/Billing.jsx:24:  const [billingHistory, setBillingHistory] = useState([]);
+client/src/pages/Billing.jsx:25:  const [loading, setLoading] = useState(true);
+client/src/pages/Billing.jsx:26:  const [cancelLoading, setCancelLoading] = useState(false);
+client/src/pages/Billing.jsx:27:  const [error, setError] = useState(null);
+client/src/pages/Billing.jsx:30:  useEffect(() => {
+client/src/pages/BankStatementReconciliationPreview.jsx:1:import { useEffect, useMemo, useState } from 'react';
+client/src/pages/BankStatementReconciliationPreview.jsx:31:  const [transactions, setTransactions] = useState(initialTransactions ?? []);
+client/src/pages/BankStatementReconciliationPreview.jsx:32:  const [loading, setLoading] = useState(!initialTransactions?.length);
+client/src/pages/BankStatementReconciliationPreview.jsx:33:  const [error, setError] = useState('');
+client/src/pages/BankStatementReconciliationPreview.jsx:34:  const [infoOpen, setInfoOpen] = useState(false);
+client/src/pages/BankStatementReconciliationPreview.jsx:39:  useEffect(() => {
+client/src/pages/__tests__/AIAssistant.test.jsx:1:import { useState } from 'react';
+client/src/pages/__tests__/AIAssistant.test.jsx:6:import AIAssistant from '../AIAssistant';
+client/src/pages/__tests__/AIAssistant.test.jsx:8:import { aiAssistantAPI } from '../../services/aiAssistantAPI';
+client/src/pages/__tests__/AIAssistant.test.jsx:36:vi.mock('../../services/aiAssistantAPI', () => ({
+client/src/pages/__tests__/AIAssistant.test.jsx:37:  aiAssistantAPI: {
+client/src/pages/__tests__/AIAssistant.test.jsx:38:    startSession: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:40:    askIntent: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:41:    askIntentStream: vi.fn(),
+client/src/pages/__tests__/AIAssistant.test.jsx:66:  isAIAssistantEnabled: () => true,
+client/src/pages/__tests__/AIAssistant.test.jsx:71:  const [activeCompany, setActiveCompany] = useState(initialCompany);
+client/src/pages/__tests__/AIAssistant.test.jsx:103:  aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:104:  aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:109:        <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:130:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:133:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:149:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:153:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:162:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:170:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:179:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:193:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();
+client/src/pages/__tests__/AIAssistant.test.jsx:197:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:210:      expect(aiAssistantAPI.askIntent).toHaveBeenCalledWith(
+client/src/pages/__tests__/AIAssistant.test.jsx:891:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:915:    aiAssistantAPI.askIntent.mockResolvedValueOnce({
+client/src/pages/__tests__/AIAssistant.test.jsx:933:    aiAssistantAPI.startSession.mockResolvedValueOnce({ sessionId: 'session-test' });
+client/src/pages/__tests__/AIAssistant.test.jsx:934:    aiAssistantAPI.getContext.mockResolvedValueOnce(contextPayload);
+client/src/pages/__tests__/AIAssistant.test.jsx:935:    aiAssistantAPI.askIntentStream.mockImplementation(async ({ onEvent }) => {
+client/src/pages/__tests__/AIAssistant.test.jsx:944:          <AIAssistant />
+client/src/pages/__tests__/AIAssistant.test.jsx:953:    expect(aiAssistantAPI.askIntent).not.toHaveBeenCalled();

@@ -9,7 +9,6 @@ import RateLimitBanner from '../components/RateLimitBanner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Input } from '../components/ui/Input';
 import { getSafeErrorMeta } from '../lib/errorMeta';
-import { getDefaultRouteForUser } from '../lib/systemAdmin';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -50,7 +49,7 @@ const Login = () => {
     try {
       const result = await login(formData);
       if (result.success) {
-        navigate(getDefaultRouteForUser(result.user), { replace: true });
+        navigate('/dashboard', { replace: true });
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
       }

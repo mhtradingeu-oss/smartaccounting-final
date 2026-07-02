@@ -169,7 +169,7 @@ export const AuthProvider = ({ children }) => {
       }
       return {
         success: false,
-        error: sanitizedError.message,
+        error: sanitizedError,
       };
     }
   };

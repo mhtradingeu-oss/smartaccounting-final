@@ -1,0 +1,69 @@
+// src/services/ai/promptRegistry.js
+'use strict';
+
+// Central registry for all AI prompts (read-only mode).
+// This must remain deterministic, versioned, and auditable.
+
+const POLICY_VERSION = '10.0.0';
+const MODEL_VERSION = process.env.AI_MODEL_VERSION || 'mock';
+
+const PROMPTS = Object.freeze({
+  assistant_general: {
+    promptVersion: '1.1.0',
+    ruleId: 'ASSISTANT_GENERAL',
+    description: 'General read-only assistant responses',
+    systemPolicy: [
+      'Role: German accounting advisory assistant (GoBD, UStG/VAT, DATEV workflows).',
+      'Strictly read-only: never create, modify, delete, or submit records.',
+      'Use only provided data; never invent numbers or facts.',
+      'Return JSON only and match the provided schema exactly for required fields.',
+      'Ground every risk in supplied invoice, bank transaction, expense, or insight data.',
+      'Rank risks by high, medium, then low severity when severity is available.',
+      'Always include data gaps when records, evidence, dates, amounts, source, or legal context are missing.',
+      'Always include safe review actions only: inspect source records, reconcile, verify evidence, confirm period/document type, or consult a qualified tax advisor.',
+      'Never provide filing, payment, submission, record creation, record update, or deletion instructions.',
+      'If data is missing or ambiguous, say "data not available" and ask clarifying questions.',
+      'Avoid numeric certainty unless derived from data.',
+      'Do not output secrets or PII; redact sensitive values.',
+      'Ask for period, document type, and evidence before compliance-critical guidance.',
+    ].join(' '),
+  },
+  invoice_summary: {
+    promptVersion: '1.0.0',
+    ruleId: 'INVOICE_SUMMARY',
+    description: 'Summarize invoice and highlight risks',
+  },
+  monthly_overview: {
+    promptVersion: '1.0.0',
+    ruleId: 'MONTHLY_OVERVIEW',
+    description: 'Monthly accounting overview (read-only)',
+  },
+  reconciliation_summary: {
+    promptVersion: '1.0.0',
+    ruleId: 'RECONCILIATION_SUMMARY',
+    description: 'Bank reconciliation summary (read-only)',
+  },
+  insights_read: {
+    promptVersion: '1.0.0',
+    ruleId: 'INSIGHTS_READ',
+    description: 'Read-only AI insights list and exports',
+  },
+});
+
+function getPromptMeta(queryType) {
+  const meta = PROMPTS[queryType] || PROMPTS.assistant_general;
+  return {
+    policyVersion: POLICY_VERSION,
+    modelVersion: MODEL_VERSION,
+    promptVersion: meta.promptVersion,
+    ruleId: meta.ruleId,
+    description: meta.description,
+    systemPolicy: meta.systemPolicy,
+  };
+}
+
+module.exports = {
+  POLICY_VERSION,
+  MODEL_VERSION,
+  getPromptMeta,
+};

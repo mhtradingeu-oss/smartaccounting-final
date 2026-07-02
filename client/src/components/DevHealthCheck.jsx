@@ -37,8 +37,7 @@ const resolveHealthBaseUrl = (apiBaseUrl) => {
 const DevHealthCheck = () => {
   const isDev = import.meta.env.DEV;
   const { user } = useAuth();
-  const envOverride = import.meta.env.VITE_API_URL?.trim();
-  const displayBase = envOverride || API_BASE_URL;
+  const displayBase = API_BASE_URL;
   const fetchBase = useMemo(() => resolveHealthBaseUrl(API_BASE_URL || '/api'), []);
   const [health, setHealth] = useState({ status: 'pending', message: 'awaiting check' });
   const [ready, setReady] = useState({ status: 'pending', message: 'awaiting check' });
@@ -123,9 +122,7 @@ const DevHealthCheck = () => {
       <div className="px-4 py-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
         <p>
           API base: <span className="font-mono text-xs">{displayBase}</span>{' '}
-          <span className="text-gray-400 dark:text-gray-500">
-            ({envOverride ? 'VITE_API_URL' : 'fallback /api proxy'})
-          </span>
+          <span className="text-gray-400 dark:text-gray-500">(fixed /api proxy)</span>
         </p>
         <p>
           User identity:{' '}
@@ -155,9 +152,7 @@ const DevHealthCheck = () => {
             <strong className="text-sm">API unreachable</strong>
             <span>
               Verify the backend is running at <span className="font-mono">{displayBase}</span>,
-              adjust
-              <span className="font-mono ml-1">VITE_API_URL</span>, or restart the backend/docker
-              stack.
+              then restart the backend/docker stack if needed.
             </span>
           </div>
         )}
