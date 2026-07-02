@@ -57,6 +57,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    const resolveUserFromMePayload = (payload) => {
+      if (!payload) {
+        return null;
+      }
+      if (payload.user) {
+        return payload.user;
+      }
+      return null;
+    };
+
     const restoreSession = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -67,8 +77,9 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await authAPI.me();
         const payload = response?.data ?? response;
-        if (payload?.success && payload.user) {
-          applyAuthenticated(payload.user, token);
+        const currentUser = resolveUserFromMePayload(payload);
+        if (currentUser) {
+          applyAuthenticated(currentUser, token);
           return;
         }
 
@@ -79,8 +90,9 @@ export const AuthProvider = ({ children }) => {
             if (refreshResp?.success && refreshResp.token) {
               localStorage.setItem('token', refreshResp.token);
               const meResp = await authAPI.me();
-              if (meResp?.success && meResp.user) {
-                applyAuthenticated(meResp.user, refreshResp.token);
+              const refreshedUser = resolveUserFromMePayload(meResp);
+              if (refreshedUser) {
+                applyAuthenticated(refreshedUser, refreshResp.token);
                 return;
               }
             }
@@ -97,8 +109,9 @@ export const AuthProvider = ({ children }) => {
             if (refreshResp?.success && refreshResp.token) {
               localStorage.setItem('token', refreshResp.token);
               const meResp = await authAPI.me();
-              if (meResp?.success && meResp.user) {
-                applyAuthenticated(meResp.user, refreshResp.token);
+              const refreshedUser = resolveUserFromMePayload(meResp);
+              if (refreshedUser) {
+                applyAuthenticated(refreshedUser, refreshResp.token);
                 return;
               }
             }

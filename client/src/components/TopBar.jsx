@@ -95,9 +95,17 @@ const TopBar = ({
   const isReadOnlySession = isReadOnlyRole(user?.role);
   const { planMap } = usePlanCatalog();
   useLoadCompanies();
-  const { companies, activeCompany } = useCompany();
+  const { companies, activeCompany, activeCompanyId } = useCompany();
+  const resolvedCompany =
+    activeCompany ||
+    (Array.isArray(companies)
+      ? companies.find((company) => String(company.id) === String(activeCompanyId || user?.companyId))
+      : null) ||
+    user?.company ||
+    null;
+
   const planId =
-    activeCompany?.subscriptionPlan || user?.company?.subscriptionPlan || user?.subscriptionPlan;
+    resolvedCompany?.subscriptionPlan || user?.company?.subscriptionPlan || user?.subscriptionPlan;
   const planLabel = resolveDisplayPlanLabel(planId, planMap);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);

@@ -108,6 +108,8 @@ export default function Companies() {
   }, [activeCompany]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
       if (retryTimeoutRef.current) {

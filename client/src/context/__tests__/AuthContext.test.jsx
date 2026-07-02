@@ -1,6 +1,6 @@
 // ...existing code...
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { authAPI } from '../../services/authAPI';
 import { companiesAPI } from '../../services/companiesAPI';
@@ -65,5 +65,21 @@ describe('AuthContext', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.status).toBe('unauthenticated');
     expect(companiesAPI.clearCache).toHaveBeenCalled();
+  });
+
+  it('restores session when /auth/me returns user without success flag', async () => {
+    window.localStorage.setItem('token', 'jwt-existing');
+    authAPI.me.mockResolvedValue({ user: { id: 6, email: 'demo-admin@demo.com' } });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    await waitFor(() => {
+      expect(result.current.isAuthenticated).toBe(true);
+    });
+
+    expect(result.current.user).toEqual(
+      expect.objectContaining({ id: 6, email: 'demo-admin@demo.com' }),
+    );
+    expect(window.localStorage.getItem('token')).toBe('jwt-existing');
   });
 });
