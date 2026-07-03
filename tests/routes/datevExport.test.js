@@ -1,5 +1,5 @@
 const app = require('../../src/app');
-const { Invoice, InvoiceItem, Expense, FileAttachment, Company } = require('../../src/models');
+const { Invoice, InvoiceItem, Expense, FileAttachment } = require('../../src/models');
 const testUtils = require('../utils/testHelpers');
 
 describe('DATEV export preparation', () => {
@@ -74,20 +74,11 @@ describe('DATEV export preparation', () => {
   });
 
   afterAll(async () => {
-    if (invoiceAttachment) {
-      await invoiceAttachment.destroy({ force: true });
-    }
-    if (invoice) {
-      await invoice.destroy({ force: true });
-    }
-    if (expense) {
-      await expense.destroy({ force: true });
-    }
-    if (admin) {
-      await admin.destroy({ force: true });
-    }
     if (companyId) {
-      await Company.destroy({ where: { id: companyId }, force: true });
+      await FileAttachment.destroy({ where: { companyId }, force: true });
+      await InvoiceItem.destroy({ where: { invoiceId: invoice?.id }, force: true });
+      await Invoice.destroy({ where: { companyId }, force: true });
+      await Expense.destroy({ where: { companyId }, force: true });
     }
   });
 

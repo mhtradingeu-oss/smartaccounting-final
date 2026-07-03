@@ -13,6 +13,16 @@
  * @param {string} params.belegnummer
  * @returns {string}
  */
+function formatGermanAmount(value) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return '0,00';
+  }
+
+  return amount.toFixed(2).replace('.', ',');
+}
+
 export function formatDatevLine({
   belegdatum,
   buchungstext,
@@ -22,14 +32,15 @@ export function formatDatevLine({
   steuerkennzeichen,
   belegnummer,
 }) {
-  // TODO: Implement strict DATEV column order and formatting
   return [
     belegdatum,
     buchungstext,
     sollKonto,
     habenKonto,
-    betrag,
+    formatGermanAmount(betrag),
     steuerkennzeichen,
     belegnummer,
   ].join(';');
 }
+
+export { formatGermanAmount };
