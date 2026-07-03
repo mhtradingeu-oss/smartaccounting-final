@@ -1,18 +1,26 @@
 import React from 'react';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CompanyProvider } from './context/CompanyContext';
 import { RoleProvider } from './context/RoleContext';
 
 import AppRoutes from './AppRoutes';
 
+function RoleAwareAppRoutes() {
+  const { user } = useAuth();
+
+  return (
+    <RoleProvider user={user}>
+      <AppRoutes />
+    </RoleProvider>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <CompanyProvider>
-        <RoleProvider>
-          <AppRoutes />
-        </RoleProvider>
+        <RoleAwareAppRoutes />
       </CompanyProvider>
     </AuthProvider>
   );
