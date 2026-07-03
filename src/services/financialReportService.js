@@ -39,7 +39,7 @@ async function getTrialBalance({ companyId, from = null, to = null }) {
             model: ChartAccount,
             as: 'account',
             required: true,
-            attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+            attributes: ['id', 'code', 'name', 'type', 'normalBalance', 'taxCategory'],
           },
         ],
       },
@@ -128,7 +128,7 @@ async function getProfitAndLoss({ companyId, from = null, to = null }) {
             model: ChartAccount,
             as: 'account',
             required: true,
-            attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+            attributes: ['id', 'code', 'name', 'type', 'normalBalance', 'taxCategory'],
           },
         ],
       },
@@ -238,7 +238,7 @@ async function getBalanceSheet({ companyId, asOf = null }) {
             model: ChartAccount,
             as: 'account',
             required: true,
-            attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+            attributes: ['id', 'code', 'name', 'type', 'normalBalance', 'taxCategory'],
           },
         ],
       },
@@ -255,16 +255,62 @@ async function getBalanceSheet({ companyId, asOf = null }) {
     equity: new Map(),
   };
 
-  const groupByType = {
-    asset: 'assets',
-    liability: 'liabilities',
-    equity: 'equity',
+  let revenueDebitTotal = 0;
+  let revenueCreditTotal = 0;
+  let expenseDebitTotal = 0;
+  let expenseCreditTotal = 0;
+
+  const resolveBalanceSheetGroup = (account) => {
+    if (!account) {
+      return null;
+    }
+
+    if (account.type === 'asset') {
+      return 'assets';
+    }
+
+    if (account.type === 'liability') {
+      return 'liabilities';
+    }
+
+    if (account.type === 'equity') {
+      return 'equity';
+    }
+
+    if (account.type === 'tax') {
+      if (account.taxCategory === 'input_vat') {
+        return 'assets';
+      }
+
+      if (account.taxCategory === 'output_vat') {
+        return 'liabilities';
+      }
+    }
+
+    return null;
   };
 
   for (const entry of journalEntries) {
     for (const line of entry.lines || []) {
       const account = line.account;
-      const groupName = account ? groupByType[account.type] : null;
+
+      if (!account) {
+        continue;
+      }
+
+      if (account.type === 'revenue') {
+        revenueDebitTotal += toNumber(line.debit);
+        revenueCreditTotal += toNumber(line.credit);
+        continue;
+      }
+
+      if (account.type === 'expense') {
+        expenseDebitTotal += toNumber(line.debit);
+        expenseCreditTotal += toNumber(line.credit);
+        continue;
+      }
+
+      const groupName = resolveBalanceSheetGroup(account);
 
       if (!groupName) {
         continue;
@@ -279,6 +325,7 @@ async function getBalanceSheet({ companyId, asOf = null }) {
           accountName: account.name,
           accountType: account.type,
           normalBalance: account.normalBalance,
+          taxCategory: account.taxCategory || null,
           debitTotal: 0,
           creditTotal: 0,
           balance: 0,
@@ -289,6 +336,24 @@ async function getBalanceSheet({ companyId, asOf = null }) {
       row.debitTotal += toNumber(line.debit);
       row.creditTotal += toNumber(line.credit);
     }
+  }
+
+  const currentEarnings = roundMoney(
+    (revenueCreditTotal - revenueDebitTotal) - (expenseDebitTotal - expenseCreditTotal),
+  );
+
+  if (currentEarnings !== 0) {
+    groups.equity.set('__current_earnings__', {
+      accountId: null,
+      accountCode: 'CURRENT_EARNINGS',
+      accountName: currentEarnings >= 0 ? 'Current year profit' : 'Current year loss',
+      accountType: 'equity',
+      normalBalance: 'credit',
+      taxCategory: null,
+      debitTotal: currentEarnings < 0 ? Math.abs(currentEarnings) : 0,
+      creditTotal: currentEarnings >= 0 ? currentEarnings : 0,
+      balance: 0,
+    });
   }
 
   const normalizeRows = (rows, balanceDirection) =>
@@ -415,7 +480,7 @@ async function getGeneralLedger({
         ...(accountId ? { id: accountId } : {}),
         ...(accountCode ? { code: String(accountCode) } : {}),
       },
-      attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+      attributes: ['id', 'code', 'name', 'type', 'normalBalance', 'taxCategory'],
     });
 
     if (!targetAccount) {
@@ -459,7 +524,7 @@ async function getGeneralLedger({
               model: ChartAccount,
               as: 'account',
               required: true,
-              attributes: ['id', 'code', 'name', 'type', 'normalBalance'],
+              attributes: ['id', 'code', 'name', 'type', 'normalBalance', 'taxCategory'],
             },
           ],
         },

@@ -40,7 +40,8 @@
     "env:check": "node scripts/env-guard.js",
     "voice:check": "node scripts/voice-guard.js",
     "backend:start": "node src/server.js",
-    "backend:dev": "nodemon src/server.js"
+    "backend:dev": "nodemon src/server.js",
+    "seed:demo:accounting": "DEMO_MODE=true ALLOW_DEMO_SEED=true node scripts/seed-demo-accounting.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
