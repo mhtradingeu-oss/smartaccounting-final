@@ -41,7 +41,8 @@
     "voice:check": "node scripts/voice-guard.js",
     "backend:start": "node src/server.js",
     "backend:dev": "nodemon src/server.js",
-    "seed:demo:accounting": "DEMO_MODE=true ALLOW_DEMO_SEED=true node scripts/seed-demo-accounting.js"
+    "seed:demo:accounting": "DEMO_MODE=true ALLOW_DEMO_SEED=true node scripts/seed-demo-accounting.js",
+    "guard:phase": "cat docs/GUARDS/ENGINEERING_SAFETY_GUARD.md && echo \"\" && cat docs/ROADMAP/PHASE_6_COMPLETION_PLAN.md"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
