@@ -1,0 +1,77 @@
+=================================================================
+PHASE 3 — FRONTEND ROUTING / LAYOUT / AUTH / COMPANY STATE LOCK
+SECRET-SAFE SUMMARY ONLY
+=================================================================
+
+Scope:
+- Frontend routing truth
+- Layout and navigation truth
+- Auth context wiring
+- Role provider wiring
+- Company state truth
+- API client/base URL behavior
+- Frontend quality gates
+- Runtime frontend/backend smoke
+
+Final decision:
+PHASE 3 = PASS + LOCKED
+
+Key correction applied before lock:
+- RoleProvider was previously mounted without receiving the authenticated user.
+- App.jsx now introduces RoleAwareAppRoutes, reads user from useAuth(), and passes user into RoleProvider.
+- Commit: 979d10e fix: wire role provider to authenticated user
+
+Frontend source of truth:
+- React entrypoint: client/src/main.jsx
+- App shell providers: client/src/App.jsx
+- Routes: client/src/AppRoutes.jsx
+- Auth context: client/src/context/AuthContext.jsx
+- Role context: client/src/context/RoleContext.jsx
+- Company context: client/src/context/CompanyContext.jsx
+- API client: client/src/services/api.js
+- Navigation config: client/src/navigation/sidebarNavigation.js
+
+Confirmed routing/navigation truth:
+- Navigation entries all point to real AppRoutes.
+- NAV_NOT_IN_APP = []
+- Only valid dashboard-prefixed route is /dashboard.
+- Real app routes include /companies, /invoices, /expenses, /bank-statements, /ai, /ai-manager, /ai-assistant, /users.
+
+Final quality verification:
+- Lint completed with 0 errors and 22 existing warnings.
+- Frontend build completed successfully.
+- Targeted tests completed successfully:
+  - src/tests/sidebar.test.jsx
+  - src/components/__tests__/TopBar.test.jsx
+  - src/context/__tests__/AuthContext.test.jsx
+- Test result: 3 files passed, 7 tests passed.
+
+Runtime verification:
+- Runtime started successfully through npm start / start-all.
+- Docker stack started: backend, postgres, redis.
+- Frontend served on http://localhost:5173.
+- Backend served on http://localhost:5001.
+- System reported fully operational.
+- Frontend root returned HTTP 200.
+- Real frontend app routes returned HTTP 200.
+- Backend /health returned HTTP 200.
+- Database status: connected.
+- Redis status: ready.
+- Demo-admin login succeeded and returned JWT.
+- Core API smoke returned HTTP 200 for:
+  - /api/auth/me
+  - /api/companies
+  - /api/invoices
+  - /api/expenses
+  - /api/bank-statements
+- stop:all cleaned frontend and Docker services.
+
+Known non-blocking follow-ups:
+- Existing lint warnings remain for cleanup phase.
+- Raw Phase 3 scan report is local-only and should not be committed.
+- CompanyContext.restore.js and CompanyContext.safe.patch.js should be reviewed later in cleanup, but they are not a Phase 3 blocker.
+- Bundle size/chunk warnings are non-blocking and can be optimized later.
+
+Security note:
+- This lock file intentionally excludes raw environment values, tokens, credentials, secrets, cookies, and full logs.
+=================================================================
