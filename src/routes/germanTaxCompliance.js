@@ -42,8 +42,11 @@ router.post('/ustva/generate', async (req, res) => {
   }
 });
 
-// Submit UStVA to ELSTER
-router.post('/ustva/submit', async (req, res) => {
+// Direct UStVA submission to ELSTER is intentionally disabled until an official ERiC/certificate flow is implemented.
+router.post('/ustva/submit', disabledFeatureHandler('Direct ELSTER/UStVA submission'));
+router.use('/ustva/submit-disabled-legacy', disabledFeatureHandler('Legacy direct ELSTER/UStVA submission'));
+
+router.post('/ustva/submit-disabled-legacy', async (req, res) => {
   try {
     const { reportData, sessionToken } = req.body;
 

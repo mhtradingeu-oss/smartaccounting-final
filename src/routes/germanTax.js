@@ -117,7 +117,10 @@ router.post('/validate-transaction', async (req, res, next) => {
   }
 });
 
-router.post('/submit', async (req, res, next) => {
+router.post('/submit', disabledFeatureHandler('Direct German tax / ELSTER submission'));
+router.use('/submit-disabled-legacy', disabledFeatureHandler('Legacy direct German tax / ELSTER submission'));
+
+router.post('/submit-disabled-legacy', async (req, res, next) => {
   try {
     const { reportType, period, data, submitToElster = false } = req.body;
     const companyId = req.companyId;
