@@ -168,7 +168,7 @@ docs/release/OBSERVABILITY.md
 docs/release/ERROR_REPORTING.md
 Important Release Boundary
 
-This release candidate is certified as a production-readiness candidate, not a guarantee that all future product features are complete.
+This release candidate is internally verified as a production-readiness candidate for the validated scope; it is not a legal, DATEV, or ELSTER certification and does not guarantee that all future product features are complete.
 
 Future roadmap items remain outside this release certification unless separately tested and closed.
 
@@ -185,6 +185,6 @@ External storage/CDN production setup
 End-to-end browser automation
 Final Decision
 
-SmartAccounting is ready as a certified Release Candidate after CERT-0 through CERT-11.
+SmartAccounting is ready as an internally verified Release Candidate after CERT-0 through CERT-11 for the validated scope.
 
 No uncommitted runtime or source changes should be present at release handover.

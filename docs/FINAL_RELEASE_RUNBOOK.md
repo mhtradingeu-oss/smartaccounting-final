@@ -12,7 +12,7 @@ Last Updated: 2025
 
 This document is the **single source of truth** for:
 
-- Verifying SmartAccounting is 100% production-ready
+- Verifying SmartAccounting production-readiness for the validated release scope
 - Running **secure technical audits**
 - Testing the full application (backend, frontend, AI, security)
 - Validating Docker and deployment artifacts
@@ -321,7 +321,7 @@ Audit-safe
 
 AI-governed
 
-Regulation-ready
+Regulation-aware and review-ready
 
 Enterprise-grade
 

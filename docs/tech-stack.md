@@ -32,7 +32,7 @@ This file answers what is used, why it is used, and how it supports German compl
 │ Authentication  JWT + bcrypt                                           │
 │ Security        Helmet, RBAC, Rate Limiting, Audit Logs                 │
 │ OCR             Tesseract.js                                           │
-│ Reporting       PDF / CSV / DATEV-ready exports                         │
+│ Reporting       PDF / CSV / DATEV-compatible export preparation                         │
 │ DevOps          Docker, Docker Compose                                  │
 │ Documentation   Markdown + OpenAPI                                     │
 └───────────────────────────────────────────────────────────────────────┘
@@ -286,9 +286,9 @@ PDF generation
 
 CSV exports
 
-DATEV-ready data structures
+DATEV-compatible export preparation data structures
 
-ELSTER-ready VAT exports
+ELSTER/UStVA preparation exports — no direct submission
 
 Weekly AI-generated financial digests
 
@@ -382,9 +382,9 @@ TypeScript migration
 
 Advanced AI anomaly scoring
 
-ELSTER deep integration
+Planned ELSTER/ERiC integration
 
-DATEV XML export
+Planned DATEV XML/export expansion
 
 AI Ops / SuperAdmin intelligence
 
