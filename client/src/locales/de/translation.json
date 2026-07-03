@@ -106,7 +106,8 @@
     "rbac": "RBAC-Konsole",
     "ai_assistant": "AI Assistant",
     "system_admin_dashboard": "System-Dashboard",
-    "ai_manager": "AI Manager"
+    "ai_manager": "AI Manager",
+    "tax_bridge": "Tax Bridge"
   },
   "auth": {
     "logout": "Abmelden"

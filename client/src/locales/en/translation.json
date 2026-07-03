@@ -108,7 +108,8 @@
     "profile_settings": "Profile Settings",
     "billing": "Billing",
     "system_admin_dashboard": "System Dashboard",
-    "ai_manager": "AI Manager"
+    "ai_manager": "AI Manager",
+    "tax_bridge": "Tax Bridge"
   },
   "auth": {
     "logout": "Logout"

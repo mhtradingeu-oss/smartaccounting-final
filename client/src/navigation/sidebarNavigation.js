@@ -193,6 +193,15 @@ export const ADMINISTRATION_NAVIGATION_ITEMS = [
 
 export const COMPLIANCE_NAVIGATION_ITEMS = [
   {
+    nameKey: 'navigation.tax_bridge',
+    href: '/tax-bridge',
+    icon: ShieldCheckIcon,
+    iconSolid: ShieldCheckIconSolid,
+    badge: 'Bridge',
+    description: 'Tax readiness cockpit',
+    enabled: true,
+  },
+  {
     nameKey: 'navigation.tax_reports',
     href: '/german-tax-reports',
     icon: DocumentChartBarIcon,

@@ -44,6 +44,7 @@ import AuditLogs from './pages/AuditLogs';
 import SystemAdminDashboard from './pages/SystemAdminDashboard';
 import Exports from './pages/Exports';
 import DatevExport from './pages/DatevExport';
+import TaxBridge from './pages/TaxBridge';
 import ComplianceDashboard from './pages/ComplianceDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Onboarding from './pages/Onboarding';
@@ -88,6 +89,50 @@ function SystemAdminLayout({ children }) {
     </ProtectedRoute>
   );
 }
+
+export const ROUTE_DEFINITIONS = [
+  { path: '/' },
+  { path: '/login' },
+  { path: '/pricing' },
+  { path: '/request-access' },
+  { path: '/terms' },
+  { path: '/privacy' },
+  { path: '/dashboard' },
+  { path: '/companies' },
+  { path: '/invoices' },
+  { path: '/invoices/create' },
+  { path: '/invoices/import' },
+  { path: '/invoices/:invoiceId/edit' },
+  { path: '/expenses' },
+  { path: '/expenses/create' },
+  { path: '/bank-statements' },
+  { path: '/bank-statements/import' },
+  { path: '/bank-statements/preview' },
+  { path: '/bank-statements/:statementId' },
+  { path: '/bank-statements/:statementId/reconciliation-preview' },
+  { path: '/documents/inbox' },
+  { path: '/ocr-preview' },
+  { path: '/ai' },
+  { path: '/ai-hub' },
+  { path: '/ai-manager' },
+  { path: '/ai-advisor' },
+  { path: '/ai-assistant' },
+  { path: '/analytics' },
+  { path: '/users' },
+  { path: '/billing' },
+  { path: '/profile-settings' },
+  { path: '/tax-bridge' },
+  { path: '/german-tax-reports' },
+  { path: '/gdpr-actions' },
+  { path: '/audit-logs' },
+  { path: '/exports' },
+  { path: '/exports/datev' },
+  { path: '/compliance' },
+  { path: '/investor-dashboard' },
+  { path: '/onboarding' },
+  { path: '/onboarding-wizard' },
+  { path: '/system-admin' },
+];
 
 function AppRoutes() {
   return (
@@ -140,6 +185,7 @@ function AppRoutes() {
       <Route path="/profile-settings" element={<ProtectedLayout><ProfileSettings /></ProtectedLayout>} />
 
       <Route path="/german-tax-reports" element={<ProtectedLayout><GermanTaxReports /></ProtectedLayout>} />
+      <Route path="/tax-bridge" element={<ProtectedLayout><TaxBridge /></ProtectedLayout>} />
       <Route path="/gdpr-actions" element={<ProtectedLayout><GDPRActions /></ProtectedLayout>} />
       <Route path="/audit-logs" element={<ProtectedLayout><AuditLogs /></ProtectedLayout>} />
 

@@ -1,3 +1,4 @@
+export { ROUTE_DEFINITIONS } from './AppRoutes';
 import React from 'react';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
