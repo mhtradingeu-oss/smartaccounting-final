@@ -415,8 +415,8 @@ export default function TaxBridge() {
               Prepare Steuerberater package
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-              Build a preparation package for review. This does not upload to DATEV, submit to
-              ELSTER, or file taxes. It helps organize readiness, evidence, and next actions.
+              Build a preparation package for review. No DATEV upload. No ELSTER submission. No
+              tax filing. It helps organize readiness, evidence, and next actions.
             </p>
           </div>
 
