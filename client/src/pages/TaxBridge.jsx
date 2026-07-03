@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowDownTrayIcon,
   ArrowPathIcon,
   ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
+  ClipboardDocumentCheckIcon,
   DocumentArrowDownIcon,
   ExclamationTriangleIcon,
   ShieldCheckIcon,
@@ -52,6 +54,72 @@ const formatPeriodValue = (value) => {
   }
 
   return date.toISOString().slice(0, 10);
+};
+
+const todayIsoDate = () => new Date().toISOString().slice(0, 10);
+
+const defaultPeriod = () => {
+  const now = new Date();
+  return {
+    from: `${now.getFullYear()}-01-01`,
+    to: todayIsoDate(),
+  };
+};
+
+const downloadJsonFile = (filename, payload) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: 'application/json;charset=utf-8',
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+const buildPackageSummary = (readiness, period) => {
+  if (!readiness) {
+    return '';
+  }
+
+  const scores = readiness.scores || {};
+  const metrics = readiness.metrics || {};
+  const issues = readiness.issues || [];
+  const warnings = readiness.warnings || [];
+  const boundaries = readiness.sourceBoundaries || [];
+
+  return [
+    'SmartAccounting Tax Bridge - Steuerberater Package Summary',
+    `Period: ${period.from || 'all'} to ${period.to || 'all'}`,
+    `Mode: ${readiness.mode}`,
+    '',
+    'Scores',
+    `- Overall readiness: ${scores.overall ?? 0}/100`,
+    `- DATEV preparation: ${scores.datevReadiness ?? 0}/100`,
+    `- ELSTER preparation: ${scores.elsterPreparationReadiness ?? 0}/100`,
+    `- GoBD evidence: ${scores.gobdEvidenceReadiness ?? 0}/100`,
+    '',
+    'Key Metrics',
+    `- Invoices: ${metrics.totalInvoices ?? 0}`,
+    `- Finalized invoices: ${metrics.finalizedInvoices ?? 0}`,
+    `- Expenses: ${metrics.totalExpenses ?? 0}`,
+    `- Posted journal entries: ${metrics.postedJournalEntries ?? 0}`,
+    `- VAT accounts: ${metrics.taxAccounts ?? 0}`,
+    `- Invoice attachments: ${metrics.invoiceAttachments ?? 0}`,
+    `- Expense attachments: ${metrics.expenseAttachments ?? 0}`,
+    '',
+    `Critical issues: ${issues.length}`,
+    ...issues.map((item) => `- ${item.code}: ${item.message}`),
+    '',
+    `Warnings: ${warnings.length}`,
+    ...warnings.map((item) => `- ${item.code}: ${item.message}`),
+    '',
+    'Boundaries',
+    ...boundaries.map((item) => `- ${item}`),
+  ].join('\n');
 };
 
 function ScoreCard({ label, score }) {
@@ -108,9 +176,13 @@ function IssueList({ title, items, emptyText }) {
 
 export default function TaxBridge() {
   const { activeCompany } = useCompany();
+  const initialPeriod = useMemo(() => defaultPeriod(), []);
+  const [period, setPeriod] = useState(initialPeriod);
+  const [draftPeriod, setDraftPeriod] = useState(initialPeriod);
   const [readiness, setReadiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
   const [error, setError] = useState('');
 
   const activeCompanyId = activeCompany?.id || null;
@@ -131,7 +203,11 @@ export default function TaxBridge() {
     setError('');
 
     try {
-      const data = await getTaxBridgeReadiness({ companyId: activeCompanyId });
+      const data = await getTaxBridgeReadiness({
+        companyId: activeCompanyId,
+        from: period.from,
+        to: period.to,
+      });
       setReadiness(data);
     } catch (err) {
       setError(formatApiError(err, 'Failed to load Tax Bridge readiness.'));
@@ -156,7 +232,11 @@ export default function TaxBridge() {
 
       try {
         const data = await getTaxBridgeReadiness(
-          { companyId: activeCompanyId },
+          {
+            companyId: activeCompanyId,
+            from: period.from,
+            to: period.to,
+          },
           { signal: controller.signal },
         );
         setReadiness(data);
@@ -172,13 +252,93 @@ export default function TaxBridge() {
     run();
 
     return () => controller.abort();
-  }, [activeCompanyId]);
+  }, [activeCompanyId, period.from, period.to]);
 
-  const metrics = readiness?.metrics || {};
-  const issues = readiness?.issues || [];
-  const warnings = readiness?.warnings || [];
+  const metrics = useMemo(() => readiness?.metrics || {}, [readiness?.metrics]);
+  const issues = useMemo(() => readiness?.issues || [], [readiness?.issues]);
+  const warnings = useMemo(() => readiness?.warnings || [], [readiness?.warnings]);
   const nextActions = readiness?.nextActions || [];
   const sourceBoundaries = readiness?.sourceBoundaries || [];
+
+  const packageChecklist = useMemo(
+    () => [
+      {
+        id: 'readiness-json',
+        label: 'Readiness JSON report',
+        status: readiness ? 'ready' : 'missing',
+        detail: 'Downloadable preparation-only readiness snapshot.',
+      },
+      {
+        id: 'datev-export',
+        label: 'DATEV-compatible export',
+        status: (metrics.finalizedInvoices || 0) > 0 ? 'ready' : 'review',
+        detail: 'Prepare from the DATEV export screen. No direct DATEV upload is performed.',
+      },
+      {
+        id: 'vat-summary',
+        label: 'VAT summary / UStVA preparation data',
+        status:
+          (metrics.taxAccounts || 0) >= 2 && (metrics.postedJournalEntries || 0) > 0
+            ? 'ready'
+            : 'review',
+        detail: 'Review VAT summary data before Steuerberater or filing workflow.',
+      },
+      {
+        id: 'attachments',
+        label: 'Source document evidence',
+        status:
+          (metrics.invoiceAttachments || 0) + (metrics.expenseAttachments || 0) > 0
+            ? 'ready'
+            : 'review',
+        detail: 'Receipts and invoice source documents improve GoBD evidence readiness.',
+      },
+      {
+        id: 'warnings',
+        label: 'Warnings checklist',
+        status: warnings.length === 0 && issues.length === 0 ? 'ready' : 'review',
+        detail: 'Resolve or document warnings before sending the package for review.',
+      },
+    ],
+    [metrics, readiness, warnings.length, issues.length],
+  );
+
+  const handlePeriodChange = (field, value) => {
+    setDraftPeriod((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleApplyPeriod = () => {
+    setPeriod(draftPeriod);
+  };
+
+  const handleDownloadReadiness = () => {
+    if (!readiness) {
+      return;
+    }
+
+    downloadJsonFile(`tax-bridge-readiness-${period.from || 'all'}-${period.to || 'all'}.json`, {
+      generatedAt: new Date().toISOString(),
+      packageType: 'steuerberater_preparation_package',
+      product: readiness.product,
+      mode: readiness.mode,
+      period,
+      readiness,
+      boundaries: readiness.sourceBoundaries,
+    });
+  };
+
+  const handleCopyPackageSummary = async () => {
+    if (!readiness || !navigator?.clipboard?.writeText) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(buildPackageSummary(readiness, period));
+    setCopyStatus('Package summary copied.');
+    window.setTimeout(() => setCopyStatus(''), 2500);
+  };
+
 
   const scoreEntries = useMemo(() => {
     const currentScores = readiness?.scores || {};
@@ -244,6 +404,101 @@ export default function TaxBridge() {
           <p className="mt-2 text-sm">{error}</p>
         </div>
       )}
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-700">
+              Package Builder
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-gray-900">
+              Prepare Steuerberater package
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
+              Build a preparation package for review. This does not upload to DATEV, submit to
+              ELSTER, or file taxes. It helps organize readiness, evidence, and next actions.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleDownloadReadiness}
+              disabled={!readiness}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ArrowDownTrayIcon className="h-5 w-5" />
+              Download readiness JSON
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyPackageSummary}
+              disabled={!readiness}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ClipboardDocumentCheckIcon className="h-5 w-5" />
+              Copy package summary
+            </button>
+          </div>
+        </div>
+
+        {copyStatus && (
+          <p className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
+            {copyStatus}
+          </p>
+        )}
+
+        <div className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+          <label className="block">
+            <span className="text-sm font-semibold text-gray-700">From</span>
+            <input
+              type="date"
+              value={draftPeriod.from}
+              onChange={(event) => handlePeriodChange('from', event.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-gray-700">To</span>
+            <input
+              type="date"
+              value={draftPeriod.to}
+              onChange={(event) => handlePeriodChange('to', event.target.value)}
+              className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleApplyPeriod}
+            disabled={loading || refreshing}
+            className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+            Apply period
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {packageChecklist.map((item) => (
+            <div key={item.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-bold text-gray-900">{item.label}</p>
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-bold uppercase ${
+                    item.status === 'ready'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {item.status}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-gray-600">{item.detail}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
       {!loading && readiness && (
         <>
@@ -328,7 +583,7 @@ export default function TaxBridge() {
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  to="/datev-export"
+                  to="/exports/datev"
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                 >
                   <DocumentArrowDownIcon className="h-5 w-5" />
