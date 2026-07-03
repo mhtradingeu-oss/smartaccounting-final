@@ -46,7 +46,39 @@ const companyUpdateValidators = [
 
 const sanitizeStringValue = (value) => (typeof value === 'string' ? value.trim() : value);
 
-router.get('/', async (req, res, next) => {
+const getCompanyHeaderValue = (req) => {
+  const rawValue = req.headers?.['x-company-id'];
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+  return typeof value === 'string' ? value.trim() : value;
+};
+
+const rejectInvalidCompanyContext = (req, res) =>
+  res.status(403).json({
+    error: true,
+    message: 'Company context is invalid',
+    errorCode: 'COMPANY_CONTEXT_INVALID',
+    requestId: req.id || req.requestId || null,
+  });
+
+const enforceCompanyHeaderIfPresent = (req, res, next) => {
+  const headerCompanyId = getCompanyHeaderValue(req);
+
+  if (headerCompanyId === undefined || headerCompanyId === null || headerCompanyId === '') {
+    return next();
+  }
+
+  const userCompanyId = req.user?.companyId || req.tokenCompanyId;
+
+  if (!userCompanyId || String(userCompanyId) !== String(headerCompanyId)) {
+    return rejectInvalidCompanyContext(req, res);
+  }
+
+  req.companyId = Number(headerCompanyId);
+  return next();
+};
+
+
+router.get('/', enforceCompanyHeaderIfPresent, async (req, res, next) => {
   try {
     const filters = [];
     const scopedCompanyId = req.companyId || req.user?.companyId || req.tokenCompanyId;

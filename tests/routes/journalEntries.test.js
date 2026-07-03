@@ -165,6 +165,22 @@ describe('Journal entries API', () => {
     expect(response.body.journalEntry.lines).toHaveLength(2);
   });
 
+  it('rejects invalid journal entry ids before hitting the database', async () => {
+    const response = await requestFor({
+      method: 'post',
+      url: '/api/journal-entries/not-a-real-id/reverse',
+      token: admin.token,
+      companyId: admin.user.companyId,
+      body: {},
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({
+      error: true,
+      errorCode: 'JOURNAL_ENTRY_ID_INVALID',
+    });
+  });
+
   it('filters journal entries by status and sourceType', async () => {
     const postedEntry = await createPostedJournalEntry({ userId: accountant.user.id });
 

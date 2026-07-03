@@ -6,6 +6,26 @@ const { JournalEntry, JournalEntryLine, ChartAccount, AuditLog } = require('../m
 
 const router = express.Router();
 
+const JOURNAL_ENTRY_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isValidJournalEntryId = (value) => JOURNAL_ENTRY_UUID_RE.test(String(value || ''));
+
+const rejectInvalidJournalEntryId = (req, res, next) => {
+  const journalEntryId = req.params.journalEntryId;
+
+  if (!isValidJournalEntryId(journalEntryId)) {
+    return res.status(400).json({
+      error: true,
+      message: 'Invalid journal entry id',
+      errorCode: 'JOURNAL_ENTRY_ID_INVALID',
+      requestId: req.id || req.requestId || null,
+    });
+  }
+
+  return next();
+};
+
+
 router.use(requireCompany);
 
 
@@ -241,7 +261,7 @@ router.get('/export', requireRole(['admin', 'accountant', 'auditor']), async (re
 });
 
 
-router.get('/:journalEntryId/audit-log', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+router.get('/:journalEntryId/audit-log', rejectInvalidJournalEntryId, requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
   try {
     const journalEntry = await JournalEntry.findOne({
       where: {
@@ -281,7 +301,7 @@ router.get('/:journalEntryId/audit-log', requireRole(['admin', 'accountant', 'au
 });
 
 
-router.get('/:journalEntryId', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
+router.get('/:journalEntryId', rejectInvalidJournalEntryId, requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res, next) => {
   try {
     const journalEntry = await JournalEntry.findOne({
       where: {
@@ -308,7 +328,7 @@ router.get('/:journalEntryId', requireRole(['admin', 'accountant', 'auditor', 'v
 });
 
 
-router.post('/:journalEntryId/reverse', requireRole(['admin', 'accountant']), async (req, res, next) => {
+router.post('/:journalEntryId/reverse', rejectInvalidJournalEntryId, requireRole(['admin', 'accountant']), async (req, res, next) => {
   try {
     const result = await accountingPostingService.reverseJournalEntry({
       journalEntryId: req.params.journalEntryId,
