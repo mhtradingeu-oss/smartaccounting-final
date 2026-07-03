@@ -28,88 +28,90 @@ Do not commit raw logs, secrets, tokens, private env files, or huge terminal dum
 
 Use safe commands. Prefer:
 
-```bash
-grep
-nl -ba
-sed -n
-git diff
-node -c
+- `grep`
+- `nl -ba`
+- `sed -n`
+- `git diff`
+- `node -c`
 
-Avoid destructive shell commands unless explicitly reviewed.
-Never run broad deletion commands without listing targets first.
+Avoid destructive shell commands unless explicitly reviewed.  
+Never run broad deletion commands without listing targets first.  
 Never overwrite generated files unless the exact target is known.
 
-Tax / DATEV / ELSTER wording guard
+## Tax / DATEV / ELSTER wording guard
 
 Allowed wording:
 
-DATEV-compatible export preparation
-Prepare export
-Download for Steuerberater review
-UStVA preparation data
-ELSTER preparation
-No direct submission
-No certification
-Review with qualified Steuerberater
+- DATEV-compatible export preparation
+- Prepare export
+- Download for Steuerberater review
+- UStVA preparation data
+- ELSTER preparation
+- No direct submission
+- No certification
+- Review with qualified Steuerberater
 
 Forbidden wording unless an official integration is actually implemented and legally reviewed:
 
-DATEV certified
-ELSTER connected
-Submit to ELSTER
-Send to Finanzamt
-Tax filing completed
-Officially filed
-Direct DATEV upload
-Automatic tax submission
-Runtime route guard
+- DATEV certified
+- ELSTER connected
+- Submit to ELSTER
+- Send to Finanzamt
+- Tax filing completed
+- Officially filed
+- Direct DATEV upload
+- Automatic tax submission
+
+## Runtime route guard
 
 Direct tax/ELSTER submission routes must stay disabled unless a dedicated future official integration phase is approved.
 
 Expected safe behavior:
 
-/api/tax-bridge/readiness returns mode:"preparation_only"
-/api/vat/ustva returns mode:"preparation_only" and X-Export-Disclaimer
-/api/exports/datev returns X-Export-Disclaimer
-/api/elster/* returns disabled/501
-/api/tax-reports/* returns disabled/501
-Direct German tax submit routes return disabled/501
-Commit guard
+- `/api/tax-bridge/readiness` returns `mode:"preparation_only"`
+- `/api/vat/ustva` returns `mode:"preparation_only"` and `X-Export-Disclaimer`
+- `/api/exports/datev` returns `X-Export-Disclaimer`
+- `/api/elster/*` returns disabled/501
+- `/api/tax-reports/*` returns disabled/501
+- Direct German tax submit routes return disabled/501
+
+## Commit guard
 
 Before every commit:
 
-git status --branch --short
-git diff --stat
-git diff --name-only
-git diff --cached --stat
-git diff --cached --name-only
+- `git status --branch --short`
+- `git diff --stat`
+- `git diff --name-only`
+- `git diff --cached --stat`
+- `git diff --cached --name-only`
 
 Only stage files belonging to the current phase.
 
-Required quality gates
+## Required quality gates
 
 Minimum gates unless phase scope says otherwise:
 
-npm run runtime:check
-npm run env:check
-npm run voice:check
-npm run lint
+- `npm run runtime:check`
+- `npm run env:check`
+- `npm run voice:check`
+- `npm run lint`
 
 Frontend changes also require:
 
-npm run build --prefix client
+- `npm run build --prefix client`
 
 Tax Bridge / DATEV / VAT changes require:
 
-npm run test --prefix client -- src/pages/__tests__/TaxBridge.test.jsx src/tests/routeConfig.test.jsx src/tests/sidebar.test.jsx
-npx jest tests/vatUstva.test.js tests/routes/taxBridgeReadiness.test.js tests/routes/datevExport.test.js tests/datev/datev.formatter.test.js --runInBand
-Definition of done
+- `npm run test --prefix client -- src/pages/__tests__/TaxBridge.test.jsx src/tests/routeConfig.test.jsx src/tests/sidebar.test.jsx`
+- `npx jest tests/vatUstva.test.js tests/routes/taxBridgeReadiness.test.js tests/routes/datevExport.test.js tests/datev/datev.formatter.test.js --runInBand`
+
+## Definition of done
 
 A phase is complete only when:
 
-The actual current system state is known.
-Any patch is scoped and reviewed.
-Tests/build/smoke match the touched area.
-git status is clean.
-Commit is pushed.
-A short lock note exists in the chat or docs.
+- The actual current system state is known.
+- Any patch is scoped and reviewed.
+- Tests/build/smoke match the touched area.
+- `git status` is clean.
+- Commit is pushed.
+- A short lock note exists in the chat or docs.
