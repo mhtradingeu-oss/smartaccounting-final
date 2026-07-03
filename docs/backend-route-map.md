@@ -80,14 +80,14 @@
 ### Tax Reports
 | Path | Methods | Notes |
 | --- | --- | --- |
-| `/api/tax-reports/` | GET | List tax reports |
-| `/api/tax-reports/` | POST | Create report |
-| `/api/tax-reports/generate` | POST | Generate report |
-| `/api/tax-reports/:id` | GET | Report detail |
-| `/api/tax-reports/:id` | PUT | Update report |
-| `/api/tax-reports/:id` | DELETE | Delete report |
-| `/api/tax-reports/:id/export/elster` | GET | Export to Elster format |
-| `/api/tax-reports/:id/submit` | POST | Submit report |
+| `/api/tax-reports/` | GET | Disabled: returns `501 {status:"disabled", feature:"Tax reporting"}`. Historical route kept for map visibility only. |
+| `/api/tax-reports/` | POST | Disabled: no report creation through this legacy route. Use Tax Bridge preparation/readiness flows instead. |
+| `/api/tax-reports/generate` | POST | Disabled: no tax filing/report generation through this legacy route. |
+| `/api/tax-reports/:id` | GET | Disabled: legacy tax report detail route. |
+| `/api/tax-reports/:id` | PUT | Disabled: legacy tax report mutation route. |
+| `/api/tax-reports/:id` | DELETE | Disabled: legacy tax report deletion route. |
+| `/api/tax-reports/:id/export/elster` | GET | Disabled: no ELSTER export or submission is performed. |
+| `/api/tax-reports/:id/submit` | POST | Disabled: no tax report submission is performed. |
 
 ### Compliance
 | Path | Methods | Notes |
@@ -105,25 +105,30 @@
 | `/api/gdpr/export-user-data` | GET | User data export |
 | `/api/gdpr/anonymize-user` | POST | GDPR anonymization flow |
 
+## VAT / UStVA Preparation (`/api/vat`)
+| Path | Methods | Notes |
+| --- | --- | --- |
+| `/api/vat/ustva` | POST | Preparation-only UStVA data endpoint. Returns `mode:"preparation_only"`, `sourceBoundaries`, and `X-Export-Disclaimer`; no ELSTER submission or Finanzamt transmission is performed. |
+
 ## German Tax Compliance Feature Flagged
 | Path | Methods | Notes |
 | --- | --- | --- |
 | `/api/german-tax/eur/:year` | GET | EUR forecast (feature flagged) |
 | `/api/german-tax/kleinunternehmer/:year` | GET | Kleinunternehmer status |
-| `/api/german-tax/submit` | POST | Submit VAT return |
+| `/api/german-tax/submit` | POST | Disabled: direct German tax / ELSTER submission returns `501`. |
 | `/api/german-tax/validate-transaction` | POST | Validate transaction for German tax |
-| `/api/german-tax/vat-return` | POST | Generate VAT return |
-| `/api/german-tax/elster-export` | POST | Export to Elster (service placeholder) |
+| `/api/german-tax/vat-return` | POST | Legacy VAT return preparation route; not a filing/submission endpoint. |
+| `/api/german-tax/elster-export` | POST | Legacy preparation/export placeholder; not an ELSTER transmission endpoint. |
 
 ## German Tax Compliance (Future)
 | Path | Methods | Notes |
 | --- | --- | --- |
 | `/api/german-tax-compliance/calendar/:year` | GET | Calendar insights |
 | `/api/german-tax-compliance/compliance/check/:year` | GET | Compliance check |
-| `/api/german-tax-compliance/elster/test` | GET | Connectivity test |
+| `/api/german-tax-compliance/elster/test` | GET | Disabled: ELSTER/compliance routes return `501`; no external connectivity test is performed. |
 | `/api/german-tax-compliance/eur/generate` | POST | EÜR generation |
-| `/api/german-tax-compliance/ustva/generate` | POST | UStVA generation |
-| `/api/german-tax-compliance/ustva/submit` | POST | UStVA submit |
+| `/api/german-tax-compliance/ustva/generate` | POST | UStVA preparation data generation; not a filing/submission endpoint. |
+| `/api/german-tax-compliance/ustva/submit` | POST | Disabled: direct ELSTER/UStVA submission returns `501`. |
 | `/api/german-tax-compliance/export/gobd` | POST | GoBD export |
 | `/api/german-tax-compliance/validate/integrity` | POST | Integrity check |
 
@@ -166,7 +171,7 @@
 | `/api/email-test/test-template/:type` | POST | Send test template |
 | `/api/email-test/send-test` | POST | Trigger email for QA |
 
-## Elster Exports (`/api/elster`)
+## ELSTER Routes (`/api/elster`) — Disabled
 > All routes are currently short-circuited by `disabledFeatureHandler('Elster exports')`, so they return `501 {status:'disabled'}` before the handlers below execute. The service layer also lacks the helper methods referenced below, so these routes are effectively dead code until Elster exports are re-enabled.
 | Path | Methods | Notes |
 | --- | --- | --- |
@@ -174,8 +179,8 @@
 | `/api/elster/history` | GET | Second handler (awaits same service but never reached) |
 | `/api/elster/status/:transferTicket` | GET | Historical check (undefined `getSubmissionStatus`) |
 | `/api/elster/status/:ticket` | GET | Active handler (calls `checkSubmissionStatus`) |
-| `/api/elster/submit` | POST | Submits tax report (uses several missing helpers) |
-| `/api/elster/generate-xml` | POST | Generates XML (calls `generateElsterXML`) |
+| `/api/elster/submit` | POST | Disabled: no ELSTER submission is performed. |
+| `/api/elster/generate-xml` | POST | Disabled: no ELSTER XML generation or transmission is performed. |
 
 ## Route Audit Notes
 - All `/api/*` endpoints above are mounted on the configurable `API_BASE_URL` (defaults to `/api`). `/api/expenses` now respects this prefix to avoid drift.
