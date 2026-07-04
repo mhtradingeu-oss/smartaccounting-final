@@ -79,7 +79,7 @@ describe('Dashboard', () => {
         metrics: [
           {
             id: 'total-revenue',
-            label: 'Total revenue',
+            label: 'Posted accounting revenue',
             value: 120000,
             format: 'currency',
             currency: 'EUR',
@@ -87,7 +87,7 @@ describe('Dashboard', () => {
           },
           {
             id: 'total-expenses',
-            label: 'Total expenses',
+            label: 'Posted accounting expenses',
             value: 45000,
             format: 'currency',
             currency: 'EUR',
@@ -139,7 +139,7 @@ describe('Dashboard', () => {
     expect(screen.getByText('Output VAT')).toBeInTheDocument();
     expect(screen.getByText('Net VAT payable')).toBeInTheDocument();
     expect(screen.getByText('Source: posted journal entries')).toBeInTheDocument();
-    expect(screen.getByText('Total revenue')).toBeInTheDocument();
+    expect(screen.getByText('Posted accounting revenue')).toBeInTheDocument();
     expect(screen.getByText('Active users')).toBeInTheDocument();
     expect(screen.getByText('Accounting command center')).toBeInTheDocument();
     expect(screen.getByText('What needs attention today')).toBeInTheDocument();

@@ -49,7 +49,7 @@ const buildMetricsFromStats = (stats = {}, invoiceStats = {}, financialOverview 
   if (totalRevenue !== null) {
     metrics.push({
       id: 'total-revenue',
-      label: 'Total revenue',
+      label: hasFinancialOverview ? 'Posted accounting revenue' : 'Total revenue',
       value: totalRevenue,
       format: 'currency',
       currency,
@@ -62,7 +62,7 @@ const buildMetricsFromStats = (stats = {}, invoiceStats = {}, financialOverview 
   if (totalExpenses !== null) {
     metrics.push({
       id: 'total-expenses',
-      label: 'Total expenses',
+      label: hasFinancialOverview ? 'Posted accounting expenses' : 'Total expenses',
       value: totalExpenses,
       format: 'currency',
       currency,
@@ -75,7 +75,7 @@ const buildMetricsFromStats = (stats = {}, invoiceStats = {}, financialOverview 
   if (netProfit !== null) {
     metrics.push({
       id: 'net-profit',
-      label: 'Net profit',
+      label: hasFinancialOverview ? 'Posted net profit' : 'Net profit',
       value: netProfit,
       format: 'currency',
       currency,
