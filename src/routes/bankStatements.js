@@ -28,6 +28,24 @@ const upload = createSecureUploader({
 
 const SUPPORTED_FORMATS = ['CSV', 'MT940', 'CAMT053', 'OCR'];
 
+const isValidBankStatementId = (value) => /^\d+$/.test(String(value || '').trim());
+
+const rejectInvalidBankStatementId = (req, res, next) => {
+  const statementId = req.params.id || req.params.statementId || req.params.bankStatementId;
+
+  if (!isValidBankStatementId(statementId)) {
+    return res.status(400).json({
+      success: false,
+      error: true,
+      message: 'Bank statement ID is invalid',
+      errorCode: 'BANK_STATEMENT_ID_INVALID',
+    });
+  }
+
+  return next();
+};
+
+
 const inferFormat = (fileName = '', detectedType = '') => {
   const ext = fileName.toLowerCase().split('.').pop();
   if (ext === 'csv' || ext === 'txt') {
@@ -506,7 +524,7 @@ router.get('/:id', requireRole(['auditor']), async (req, res) => {
  * List Transactions for a Statement
  * ─────────────────────────────────────────────────────────
  */
-router.get('/:id/transactions', requireRole(['auditor']), async (req, res) => {
+router.get('/:id/transactions', rejectInvalidBankStatementId, requireRole(['auditor']), async (req, res) => {
   try {
     const transactions = await BankTransaction.findAll({
       where: {
@@ -528,7 +546,7 @@ router.get('/:id/transactions', requireRole(['auditor']), async (req, res) => {
   }
 });
 
-router.get('/:id/audit-logs', requireRole(['auditor']), async (req, res) => {
+router.get('/:id/audit-logs', rejectInvalidBankStatementId, requireRole(['auditor']), async (req, res) => {
   try {
     const logs = await bankStatementService.getAuditLogEntriesForStatement({
       statementId: Number(req.params.id),

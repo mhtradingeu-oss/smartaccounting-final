@@ -806,4 +806,44 @@ describe('Manual reconciliation undo and audit log', () => {
     expect(reconcileEntry.resourceId).toBe(String(bankTransaction.id));
     expect(reconcileEntry.userId).toBe(testUser.id);
   });
+  it('rejects invalid bank statement ids before fetching transactions', async () => {
+    const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
+    testUser = result.user;
+    authToken = result.token;
+
+    const response = await request
+      .get('/api/bank-statements/not-a-real-id/transactions')
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: false,
+        error: true,
+        errorCode: 'BANK_STATEMENT_ID_INVALID',
+      }),
+    );
+  });
+
+  it('rejects invalid bank statement ids before fetching audit logs', async () => {
+    const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
+    testUser = result.user;
+    authToken = result.token;
+
+    const response = await request
+      .get('/api/bank-statements/not-a-real-id/audit-logs')
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: false,
+        error: true,
+        errorCode: 'BANK_STATEMENT_ID_INVALID',
+      }),
+    );
+  });
+
 });
