@@ -241,6 +241,22 @@ class BankStatementService {
         ocrWarnings = preview?.warnings || [];
       } else {
         transactions = await this.loadTransactionsFromFile(filePath, normalizedFormat);
+
+        if (transactions.length > 0) {
+          const duplicateChecks = await Promise.all(
+            transactions.map((candidate) =>
+              this.isDuplicateTransaction(companyId, this.normalizeTransaction(candidate)),
+            ),
+          );
+
+          if (duplicateChecks.every(Boolean)) {
+            const error = new Error('All transactions in this bank statement already exist');
+            error.status = 409;
+            error.code = 'BANK_IMPORT_ALL_TRANSACTIONS_DUPLICATE';
+            throw error;
+          }
+        }
+
         processedTransactions = await this.processTransactions(
           companyId,
           bankStatement.id,

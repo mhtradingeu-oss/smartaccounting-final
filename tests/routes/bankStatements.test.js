@@ -400,6 +400,74 @@ describe('Bank statement import confirmation', () => {
     }
   });
 
+  it('rejects confirming a dry run when all transactions already exist', async () => {
+    const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
+    testUser = result.user;
+    authToken = result.token;
+
+    const firstDryRunResponse = await request
+      .post('/api/bank-statements/import')
+      .query({ dryRun: 'true' })
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
+      .set('X-Mock-Bank-Statement-Path', fixtureFile)
+      .send({ format: 'CSV' });
+
+    expect(firstDryRunResponse.status).toBe(200);
+    expect(firstDryRunResponse.body.dryRunId).toBeDefined();
+
+    const firstConfirmResponse = await request
+      .post('/api/bank-statements/import/confirm')
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
+      .send({ dryRunId: firstDryRunResponse.body.dryRunId });
+
+    expect(firstConfirmResponse.status).toBe(200);
+    expect(firstConfirmResponse.body.success).toBe(true);
+
+    const statementsAfterFirstConfirm = await BankStatement.count({
+      where: { companyId: testUser.companyId },
+    });
+    const transactionsAfterFirstConfirm = await BankTransaction.count({
+      where: { companyId: testUser.companyId },
+    });
+
+    const duplicateDryRunResponse = await request
+      .post('/api/bank-statements/import')
+      .query({ dryRun: 'true' })
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
+      .set('X-Mock-Bank-Statement-Path', fixtureFile)
+      .send({ format: 'CSV' });
+
+    expect(duplicateDryRunResponse.status).toBe(200);
+    expect(duplicateDryRunResponse.body.dryRunId).toBeDefined();
+
+    const duplicateConfirmResponse = await request
+      .post('/api/bank-statements/import/confirm')
+      .set('Authorization', `Bearer ${authToken}`)
+      .set('x-company-id', testUser.companyId)
+      .send({ dryRunId: duplicateDryRunResponse.body.dryRunId });
+
+    expect(duplicateConfirmResponse.status).toBe(409);
+    expect(duplicateConfirmResponse.body).toEqual(
+      expect.objectContaining({
+        success: false,
+        code: 'BANK_IMPORT_ALL_TRANSACTIONS_DUPLICATE',
+      }),
+    );
+
+    const statementsAfterDuplicateConfirm = await BankStatement.count({
+      where: { companyId: testUser.companyId },
+    });
+    const transactionsAfterDuplicateConfirm = await BankTransaction.count({
+      where: { companyId: testUser.companyId },
+    });
+
+    expect(statementsAfterDuplicateConfirm).toBe(statementsAfterFirstConfirm);
+    expect(transactionsAfterDuplicateConfirm).toBe(transactionsAfterFirstConfirm);
+  });
+
   it('rejects duplicate confirmations', async () => {
     const result = await global.testUtils.createTestUserAndLogin({ role: 'admin' });
     testUser = result.user;
