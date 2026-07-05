@@ -13,6 +13,7 @@ module.exports = {
 
       'GET /api/companies',
       'GET /api/dashboard/stats',
+      'GET /api/review-center/summary',
 
       'GET /api/invoices',
       'GET /api/invoices/:id',
@@ -84,6 +85,7 @@ module.exports = {
 
       'GET /api/companies',
       'GET /api/dashboard/stats',
+      'GET /api/review-center/summary',
 
       'GET /api/invoices',
       'GET /api/invoices/:id',
@@ -128,6 +130,7 @@ module.exports = {
 
       'GET /api/companies',
       'GET /api/dashboard/stats',
+      'GET /api/review-center/summary',
       'GET /api/invoices',
       'GET /api/invoices/:id',
       'GET /api/invoices/:id/audit-log',
