@@ -141,6 +141,16 @@ const ROLE_LIMITATIONS = {
   },
 };
 
+const formatAiProposalValue = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return 'not available';
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+  return String(value);
+};
+
 const AIAssistant = () => {
   const { user } = useAuth();
   const { activeCompany } = useCompany();
@@ -1459,15 +1469,29 @@ const AIAssistant = () => {
     }
     const extractedEntries = Object.entries(analysis.extracted || {}).filter(
       ([key, value]) =>
-        !['raw', 'lineItems'].includes(key) &&
-        value !== null &&
-        value !== undefined &&
-        value !== '',
+        !['raw', 'lineItems'].includes(key) && value !== null && value !== undefined && value !== '',
     );
     const validation = analysis.validation || {};
     const reviewState = analysis.reviewState || analysis.lifecycle?.reviewState;
     const draftEligibility = analysis.draftEligibility || analysis.lifecycle?.draftEligibility;
     const accountingDecision = analysis.accountingDecision || analysis.lifecycle?.accountingDecision || null;
+
+    const proposalSummary = analysis.proposalSummary || null;
+    const actionProposal = analysis.actionProposal || null;
+    const approvalQueueItem = analysis.approvalQueueItem || null;
+    const hasAiProposalMetadata = !!(proposalSummary || actionProposal || approvalQueueItem);
+    const aiProposalItems = hasAiProposalMetadata
+      ? [
+          ['Proposal status', proposalSummary?.proposalStatus || actionProposal?.status],
+          ['Approval status', proposalSummary?.approvalStatus || approvalQueueItem?.status],
+          ['Tool', proposalSummary?.toolId || actionProposal?.toolId || approvalQueueItem?.toolId],
+          ['Result type', proposalSummary?.resultType],
+          ['Risk level', proposalSummary?.riskLevel || actionProposal?.riskLevel],
+          ['Execution mode', proposalSummary?.executionMode || actionProposal?.executionMode],
+          ['Requires approval', proposalSummary?.requiresApproval ?? actionProposal?.requiresApproval],
+          ['Blocked', proposalSummary?.blocked ?? actionProposal?.blocked],
+        ].filter(([, value]) => value !== null && value !== undefined && value !== '')
+      : [];
     const accountingDecisionItems = accountingDecision
       ? [
           ['Posting intent', accountingDecision.postingIntent],
@@ -1507,6 +1531,36 @@ const AIAssistant = () => {
               Status: {reviewState.status || 'needs_review'}.{' '}
               {draftEligibility?.reason || 'Re-check document before draft eligibility.'}
             </div>
+          </div>
+        )}
+
+        {hasAiProposalMetadata && (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 text-sm text-indigo-950 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-100">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">AI proposal</p>
+                <p className="text-xs text-indigo-800 dark:text-indigo-200">
+                  Read-only proposal metadata. No approval, posting, payment, tax submission, or DATEV upload is executed here.
+                </p>
+              </div>
+              {approvalQueueItem?.approvalId && (
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-indigo-700 shadow-sm dark:bg-indigo-900/50 dark:text-indigo-100">
+                  Approval ID: {String(approvalQueueItem.approvalId).slice(0, 12)}
+                </span>
+              )}
+            </div>
+            <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+              {aiProposalItems.map(([label, value]) => (
+                <div key={label} className="rounded-xl bg-white/70 p-3 dark:bg-slate-900/40">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                    {label}
+                  </dt>
+                  <dd className="mt-1 break-words text-sm font-medium">
+                    {formatAiProposalValue(value)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         )}
 

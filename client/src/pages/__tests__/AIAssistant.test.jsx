@@ -964,4 +964,119 @@ describe('AI Assistant ChatGPT-like experience', () => {
     expect(within(chat).queryByRole('button', { name: /^delete$/i })).not.toBeInTheDocument();
     expect(within(chat).queryByRole('button', { name: /^reconcile$/i })).not.toBeInTheDocument();
   });
+
+    it('renders OCR AI proposal metadata as read-only UI', async () => {
+      analyzeIntake.mockResolvedValueOnce({
+        success: true,
+        requestId: 'req-doc-proposal',
+        document: { id: 'doc-proposal-1', originalName: 'receipt.pdf' },
+        ocr: { confidence: 88 },
+        classification: {
+          documentType: 'receipt',
+          suggestedAction: 'create_expense_draft',
+          confidence: 'medium',
+        },
+        extracted: {
+          vendorName: 'DB Vertrieb GmbH',
+          grossAmount: 11.9,
+          currency: 'EUR',
+        },
+        validation: {
+          status: 'needs_review',
+          errors: [],
+          warnings: [],
+          missingFields: ['businessPurpose'],
+        },
+        reviewState: {
+          status: 'needs_review',
+          reviewRequired: true,
+          reviewedByUserId: null,
+          reviewedAt: null,
+          hasUserCorrections: false,
+          criticalFieldsReviewed: false,
+        },
+        editablePayload: {
+          aiExtractedValues: {
+            vendorName: 'DB Vertrieb GmbH',
+            grossAmount: 11.9,
+            currency: 'EUR',
+          },
+          reviewedValues: null,
+          fieldChanges: [],
+        },
+        draftEligibility: {
+          eligible: false,
+          reason: 'Review extracted fields and re-check document before draft creation.',
+        },
+        accountingDecision: {
+          schemaVersion: 'accounting_decision.v1',
+          documentType: 'receipt',
+          businessDirection: 'incoming',
+          postingIntent: 'expense_draft',
+          draftType: 'expense',
+          vatTreatment: 'domestic_input_vat_review_required',
+          inputVatAllowed: true,
+          outputVatRequired: false,
+          accountantReviewRequired: false,
+          riskLevel: 'medium',
+          manualOverrideApplied: false,
+          source: 'ai_document_intake',
+          explanation: ['Document type: receipt.'],
+        },
+        draft: { targetRoute: 'POST /api/expenses', payload: { attachments: ['doc-proposal-1'] } },
+        audit: {
+          advisoryOnly: true,
+          requiresHumanConfirmation: true,
+          blockedActions: ['post', 'approve', 'delete', 'reconcile'],
+        },
+        actionProposal: {
+          type: 'action_proposal',
+          toolId: 'create_expense_draft_from_reviewed_document',
+          status: 'approval_required',
+          riskLevel: 'draft_write',
+          executionMode: 'prepare_draft',
+          requiresApproval: true,
+          blocked: false,
+        },
+        approvalQueueItem: {
+          approvalId: 'aiap_frontend_test',
+          status: 'pending',
+          toolId: 'create_expense_draft_from_reviewed_document',
+          auditRequired: true,
+        },
+        proposalSummary: {
+          serviceVersion: 'ai_proposal_service.v1',
+          resultType: 'approval_request',
+          toolId: 'create_expense_draft_from_reviewed_document',
+          riskLevel: 'draft_write',
+          executionMode: 'prepare_draft',
+          proposalStatus: 'approval_required',
+          requiresApproval: true,
+          blocked: false,
+          approvalStatus: 'pending',
+        },
+      });
+
+      await renderAssistant();
+
+      const file = new File(['%PDF-1.4'], 'receipt.pdf', { type: 'application/pdf' });
+      fireEvent.change(screen.getByLabelText('Choose file attachment'), {
+        target: { files: [file] },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      expect(await screen.findByText('AI proposal')).toBeInTheDocument();
+      expect(screen.getByText(/Read-only proposal metadata/i)).toBeInTheDocument();
+      expect(screen.getByText('Proposal status')).toBeInTheDocument();
+      expect(screen.getByText('approval_required')).toBeInTheDocument();
+      expect(screen.getByText('Approval status')).toBeInTheDocument();
+      expect(screen.getAllByText('pending').length).toBeGreaterThan(0);
+      expect(screen.getByText('Tool')).toBeInTheDocument();
+      expect(screen.getByText('create_expense_draft_from_reviewed_document')).toBeInTheDocument();
+      expect(screen.getByText('Execution mode')).toBeInTheDocument();
+      expect(screen.getByText('prepare_draft')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Approve$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Execute$/i })).not.toBeInTheDocument();
+    });
+
 });
