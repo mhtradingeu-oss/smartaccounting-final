@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import AIManager from '../AIManager';
 import { aiAssistantAPI } from '../../services/aiAssistantAPI';
 import { aiInsightsAPI } from '../../services/aiInsightsAPI';
+import { aiApprovalQueueAPI } from '../../services/aiApprovalQueueAPI';
 
 vi.mock('../../context/CompanyContext', () => ({
   useCompany: () => ({
@@ -19,6 +20,12 @@ vi.mock('../../services/aiAssistantAPI', () => ({
 
 vi.mock('../../services/aiInsightsAPI', () => ({
   aiInsightsAPI: {
+    list: vi.fn(),
+  },
+}));
+
+vi.mock('../../services/aiApprovalQueueAPI', () => ({
+  aiApprovalQueueAPI: {
     list: vi.fn(),
   },
 }));
@@ -46,6 +53,22 @@ describe('AI Manager page', () => {
     });
   };
 
+  const mockApprovalQueue = (overrides = {}) => {
+    aiApprovalQueueAPI.list.mockResolvedValue({
+      success: true,
+      persisted: false,
+      items: [],
+      message: 'AI approval queue persistence is not enabled yet.',
+      meta: {
+        companyId: 10,
+        readOnly: true,
+        executionEnabled: false,
+        approvalDecisionsEnabled: false,
+      },
+      ...overrides,
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockContext({
@@ -67,6 +90,7 @@ describe('AI Manager page', () => {
         summary: 'Potential duplicate invoice needs review.',
       },
     ]);
+    mockApprovalQueue();
   });
 
   it('renders live read-only AI Manager data', async () => {
@@ -78,6 +102,7 @@ describe('AI Manager page', () => {
 
     expect(aiAssistantAPI.getContext).toHaveBeenCalledWith({ companyId: 10 });
     expect(aiInsightsAPI.list).toHaveBeenCalledWith({ companyId: 10 });
+    expect(aiApprovalQueueAPI.list).toHaveBeenCalledWith({ companyId: 10 });
 
     expect(screen.getByText('Today’s Accounting Briefing')).toBeInTheDocument();
     expect(screen.getByText('Critical Alerts')).toBeInTheDocument();
@@ -87,7 +112,8 @@ describe('AI Manager page', () => {
     expect(screen.getByText('Evidence')).toBeInTheDocument();
     expect(screen.getByText('AI Approval Inbox')).toBeInTheDocument();
     expect(screen.getByText(/read-only foundation for future AI proposal review/i)).toBeInTheDocument();
-    expect(screen.getByText('No approval queue items are persisted yet.')).toBeInTheDocument();
+    expect(screen.getByText('AI approval queue persistence is not enabled yet.')).toBeInTheDocument();
+    expect(screen.getByText('Backend status: persisted=false, items=0.')).toBeInTheDocument();
     expect(screen.getByText('Persistence')).toBeInTheDocument();
     expect(screen.getByText('Not enabled')).toBeInTheDocument();
     expect(screen.getByText('Execution')).toBeInTheDocument();

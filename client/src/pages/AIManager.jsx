@@ -11,6 +11,7 @@ import { Button } from '../components/ui/Button';
 import { useCompany } from '../context/CompanyContext';
 import { aiAssistantAPI } from '../services/aiAssistantAPI';
 import { aiInsightsAPI } from '../services/aiInsightsAPI';
+import { aiApprovalQueueAPI } from '../services/aiApprovalQueueAPI';
 import { formatApiError } from '../services/api';
 
 const ExplainWhy = ({ why }) => <p className="text-sm text-gray-600 dark:text-gray-300">{why}</p>;
@@ -304,6 +305,7 @@ export default function AIManager() {
   const [viewerLimited, setViewerLimited] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [approvalQueue, setApprovalQueue] = useState({ loading: true, error: null, data: null });
 
   const loadAIManagerData = useCallback(async () => {
     if (!activeCompanyId) {
@@ -311,27 +313,32 @@ export default function AIManager() {
       setInsights([]);
       setViewerLimited(false);
       setError(null);
+      setApprovalQueue({ loading: false, error: null, data: null });
       setLoading(false);
       return;
     }
 
     setLoading(true);
     setError(null);
+    setApprovalQueue({ loading: true, error: null, data: null });
 
     try {
-      const [assistantContext, insightsResult] = await Promise.all([
+      const [assistantContext, insightsResult, approvalQueueResult] = await Promise.all([
         aiAssistantAPI.getContext({ companyId: activeCompanyId }),
         aiInsightsAPI.list({ companyId: activeCompanyId }),
+        aiApprovalQueueAPI.list({ companyId: activeCompanyId }),
       ]);
 
       setContext(assistantContext || null);
       setInsights(insightsResult?.insights || []);
       setViewerLimited(Boolean(insightsResult?.viewerLimited));
+      setApprovalQueue({ loading: false, error: null, data: approvalQueueResult || null });
     } catch (err) {
       setContext(null);
       setInsights([]);
       setViewerLimited(false);
       setError(formatApiError(err, 'Unable to load AI Manager data.'));
+      setApprovalQueue({ loading: false, error: formatApiError(err, 'Unable to load AI approval queue.'), data: null });
     } finally {
       setLoading(false);
     }
@@ -692,7 +699,16 @@ export default function AIManager() {
               A read-only foundation for future AI proposal review. Draft-write proposals can be surfaced here after a persisted approval queue exists.
             </p>
             <div className="mt-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-950 dark:border-indigo-900/60 dark:bg-indigo-950/20 dark:text-indigo-100">
-              <p className="font-semibold">No approval queue items are persisted yet.</p>
+              <p className="font-semibold">
+                {approvalQueue.loading
+                  ? 'Loading approval queue…'
+                  : approvalQueue.error ||
+                    approvalQueue.data?.message ||
+                    'No approval queue items are persisted yet.'}
+              </p>
+              <p className="mt-1 text-xs leading-5">
+                Backend status: persisted={String(approvalQueue.data?.persisted ?? false)}, items={(approvalQueue.data?.items || []).length}.
+              </p>
               <p className="mt-1 text-xs leading-5">
                 This inbox does not approve, reject, execute, post, pay, submit tax, upload DATEV data, or change records.
               </p>
