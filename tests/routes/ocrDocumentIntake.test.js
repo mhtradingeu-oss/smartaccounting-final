@@ -308,6 +308,33 @@ describe('OCR document intake analyze route', () => {
     );
     expect(response.body.lifecycle.accountingDecision).toEqual(response.body.accountingDecision);
     expect(response.body.audit.blockedActions).toEqual(['post', 'approve', 'delete', 'reconcile']);
+    expect(response.body.actionProposal).toEqual(
+      expect.objectContaining({
+        type: 'action_proposal',
+        toolId: 'create_expense_draft_from_reviewed_document',
+        status: 'approval_required',
+        requiresApproval: true,
+        blocked: false,
+      }),
+    );
+    expect(response.body.approvalQueueItem).toEqual(
+      expect.objectContaining({
+        status: 'pending',
+        toolId: 'create_expense_draft_from_reviewed_document',
+        companyId: accountant.user.companyId,
+        requestedByUserId: accountant.user.id,
+        auditRequired: true,
+      }),
+    );
+    expect(response.body.proposalSummary).toEqual(
+      expect.objectContaining({
+        serviceVersion: 'ai_proposal_service.v1',
+        resultType: 'approval_request',
+        toolId: 'create_expense_draft_from_reviewed_document',
+        approvalStatus: 'pending',
+        blocked: false,
+      }),
+    );
     const document = await FileAttachment.findByPk(response.body.document.id);
     expect(document.extractedData.intake.reviewState).toEqual(response.body.reviewState);
     expect(document.extractedData.intake.editablePayload.aiExtractedValues).toEqual(

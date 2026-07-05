@@ -16,6 +16,10 @@ const {
 } = require('../middleware/secureUpload');
 const { analyzeDocument, classifyDocumentType } = require('../services/documentAnalysisService');
 const documentIntakeAssistantService = require('../services/ai/documentIntakeAssistantService');
+const {
+  createAiProposalBundle,
+  summarizeAiProposalBundle,
+} = require('../services/ai/aiProposalService');
 const expenseService = require('../services/expenseService');
 const invoiceService = require('../services/invoiceService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
@@ -189,6 +193,70 @@ const buildDocumentInboxItem = (documentRecord) => {
   };
 };
 
+const OCR_DRAFT_ACTION_TOOL_IDS = Object.freeze({
+  create_expense_draft: 'create_expense_draft_from_reviewed_document',
+  create_invoice_draft: 'create_invoice_draft_from_reviewed_document',
+});
+
+const buildOcrActionProposalMetadata = ({ req, documentRecord, intake } = {}) => {
+  const suggestedAction = intake?.classification?.suggestedAction;
+  const toolId = OCR_DRAFT_ACTION_TOOL_IDS[suggestedAction];
+
+  if (!toolId) {
+    return {
+      actionProposal: null,
+      approvalQueueItem: null,
+      proposalSummary: null,
+    };
+  }
+
+  const draftKind = suggestedAction === 'create_invoice_draft' ? 'invoice' : 'expense';
+  const preview =
+    intake?.editablePayload?.reviewedValues ||
+    intake?.editablePayload?.aiExtractedValues ||
+    intake?.extracted ||
+    {};
+
+  const documentType =
+    intake?.classification?.documentType ||
+    documentRecord?.documentType ||
+    'document';
+
+  const bundle = createAiProposalBundle({
+    toolId,
+    summary: `Prepare ${draftKind} draft proposal from OCR intake for reviewed document values.`,
+    preview,
+    evidence: [
+      {
+        source: 'ocr_intake',
+        documentId: documentRecord?.id || null,
+        documentType,
+        suggestedAction,
+      },
+    ],
+    reason:
+      'OCR intake returned a draft suggestion that requires reviewed values and human approval before draft creation.',
+    requestedBy: 'ai_document_intake',
+    requestedByUserId: req?.userId || null,
+    companyId: req?.companyId || documentRecord?.companyId || null,
+    metadata: {
+      source: 'ocr_intake',
+      requestId: req?.requestId || null,
+      documentId: documentRecord?.id || null,
+      documentType,
+      suggestedAction,
+      responseOnly: true,
+      execution: 'none',
+    },
+  });
+
+  return {
+    actionProposal: bundle.proposal || null,
+    approvalQueueItem: bundle.approvalQueueItem || null,
+    proposalSummary: summarizeAiProposalBundle(bundle),
+  };
+};
+
 const buildIntakeResponse = ({ req, documentRecord, intake }) => ({
   requestId: req.requestId || null,
   document: {
@@ -212,6 +280,7 @@ const buildIntakeResponse = ({ req, documentRecord, intake }) => ({
   validation: intake.validation,
   draft: intake.draft,
   audit: intake.audit,
+  ...buildOcrActionProposalMetadata({ req, documentRecord, intake }),
 });
 
 const previewHandler = async (req, res) => {
@@ -641,6 +710,7 @@ router.post(
         validation: intake.validation,
         draft: intake.draft,
         audit: intake.audit,
+        ...buildOcrActionProposalMetadata({ req, documentRecord, intake }),
       });
     } catch (error) {
       logger.error('OCR intake analysis failed', { error: error.message });
