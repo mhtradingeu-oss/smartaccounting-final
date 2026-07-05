@@ -45,6 +45,7 @@ import SystemAdminDashboard from './pages/SystemAdminDashboard';
 import Exports from './pages/Exports';
 import DatevExport from './pages/DatevExport';
 import TaxBridge from './pages/TaxBridge';
+import SmartReviewCenter from './pages/SmartReviewCenter';
 import ComplianceDashboard from './pages/ComplianceDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Onboarding from './pages/Onboarding';
@@ -122,6 +123,7 @@ export const ROUTE_DEFINITIONS = [
   { path: '/billing' },
   { path: '/profile-settings' },
   { path: '/tax-bridge' },
+  { path: '/review-center' },
   { path: '/german-tax-reports' },
   { path: '/gdpr-actions' },
   { path: '/audit-logs' },
@@ -186,6 +188,7 @@ function AppRoutes() {
 
       <Route path="/german-tax-reports" element={<ProtectedLayout><GermanTaxReports /></ProtectedLayout>} />
       <Route path="/tax-bridge" element={<ProtectedLayout><TaxBridge /></ProtectedLayout>} />
+      <Route path="/review-center" element={<ProtectedLayout><SmartReviewCenter /></ProtectedLayout>} />
       <Route path="/gdpr-actions" element={<ProtectedLayout><GDPRActions /></ProtectedLayout>} />
       <Route path="/audit-logs" element={<ProtectedLayout><AuditLogs /></ProtectedLayout>} />
 
