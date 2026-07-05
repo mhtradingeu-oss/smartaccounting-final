@@ -85,6 +85,13 @@ describe('AI Manager page', () => {
     expect(screen.getByText('Next best action')).toBeInTheDocument();
     expect(screen.getByText('Why this matters')).toBeInTheDocument();
     expect(screen.getByText('Evidence')).toBeInTheDocument();
+    expect(screen.getByText('AI Approval Inbox')).toBeInTheDocument();
+    expect(screen.getByText(/read-only foundation for future AI proposal review/i)).toBeInTheDocument();
+    expect(screen.getByText('No approval queue items are persisted yet.')).toBeInTheDocument();
+    expect(screen.getByText('Persistence')).toBeInTheDocument();
+    expect(screen.getByText('Not enabled')).toBeInTheDocument();
+    expect(screen.getByText('Execution')).toBeInTheDocument();
+    expect(screen.getByText('Blocked in this view')).toBeInTheDocument();
     expect(screen.getByText('Review queue')).toBeInTheDocument();
     expect(screen.getByText('Ask AI Manager')).toBeInTheDocument();
 
@@ -207,6 +214,18 @@ describe('AI Manager page', () => {
 
     const forbiddenActionButtons = /approve|reject|resolve|post|delete|reconcile now/i;
     expect(screen.queryByRole('button', { name: forbiddenActionButtons })).not.toBeInTheDocument();
+  });
+
+  it('does not render approval inbox write actions', async () => {
+    renderAIManager();
+
+    await waitFor(() => expect(screen.getByText('AI Approval Inbox')).toBeInTheDocument());
+
+    expect(screen.queryByRole('button', { name: /^Approve$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Reject$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Execute$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Submit tax$/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/does not approve, reject, execute, post, pay, submit tax, upload DATEV data, or change records/i)).toBeInTheDocument();
   });
 
   it('keeps API calls scoped to companyId', async () => {

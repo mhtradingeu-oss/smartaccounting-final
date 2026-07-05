@@ -682,6 +682,37 @@ export default function AIManager() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
+
+          <section className="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-indigo-900/40 dark:bg-gray-900/80 dark:shadow-none" aria-label="AI Approval Inbox">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-gray-950 dark:text-white">AI Approval Inbox</h2>
+              <AIBadge label="Read-only" />
+            </div>
+            <p className="text-sm leading-6 text-gray-600 dark:text-gray-300">
+              A read-only foundation for future AI proposal review. Draft-write proposals can be surfaced here after a persisted approval queue exists.
+            </p>
+            <div className="mt-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-950 dark:border-indigo-900/60 dark:bg-indigo-950/20 dark:text-indigo-100">
+              <p className="font-semibold">No approval queue items are persisted yet.</p>
+              <p className="mt-1 text-xs leading-5">
+                This inbox does not approve, reject, execute, post, pay, submit tax, upload DATEV data, or change records.
+              </p>
+            </div>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              {[
+                ['Persistence', 'Not enabled'],
+                ['Execution', 'Blocked in this view'],
+                ['Scope', 'Active company context'],
+                ['Next step', 'Backend read model'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-800 dark:bg-gray-950/70">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {label}
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium text-gray-950 dark:text-white">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:shadow-none">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-gray-950 dark:text-white">Review queue</h2>
