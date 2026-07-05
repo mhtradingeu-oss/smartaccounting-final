@@ -59,6 +59,7 @@ module.exports = {
       'PUT /api/bank-statements/transactions/:id/categorize',
 
       'GET /api/ai/read/*',
+      'GET /api/ai/approval-queue',
       'POST /api/ai/read/*',
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
@@ -109,6 +110,7 @@ module.exports = {
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
       'GET /api/ai/read/*',
+      'GET /api/ai/approval-queue',
       'POST /api/ai/read/*',
 
       'GET /api/exports/*',
@@ -146,6 +148,7 @@ module.exports = {
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
       'GET /api/ai/read/*',
+      'GET /api/ai/approval-queue',
       'POST /api/ai/read/*',
     ],
   },

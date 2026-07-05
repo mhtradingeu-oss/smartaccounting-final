@@ -121,6 +121,7 @@ const journalEntryRoutes = require('./routes/journalEntries');
 const reportRoutes = require('./routes/reports');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
+const aiApprovalQueueRoutes = require('./routes/aiApprovalQueue');
 const adminRoutes = require('./routes/admin');
 const gdprRoutes = require('./routes/gdpr');
 const publicRoutes = require('./routes/public');
@@ -314,6 +315,7 @@ app.use(`${EXPRESS_API_PREFIX}/compliance`, complianceRoutes);
 app.use(`${EXPRESS_API_PREFIX}/german-tax-compliance`, germanTaxComplianceRoutes);
 app.use(`${EXPRESS_API_PREFIX}/tax-bridge`, taxBridgeRoutes);
 app.use(`${EXPRESS_API_PREFIX}/elster`, elsterRoutes);
+app.use(`${EXPRESS_API_PREFIX}/ai/approval-queue`, aiApprovalQueueRoutes);
 app.use(`${EXPRESS_API_PREFIX}/ai`, aiRoutes);
 app.use(`${EXPRESS_API_PREFIX}/admin`, adminRoutes);
 app.use(`${EXPRESS_API_PREFIX}/gdpr`, gdprRoutes);
@@ -333,6 +335,7 @@ app.get(`${EXPRESS_API_PREFIX}/ai/suggest`, (req, res, next) => {
 // --------------------------------------------------
 // Fallback & Error handling
 // --------------------------------------------------
+
 app.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',
