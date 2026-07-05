@@ -20,14 +20,33 @@ const priorityTone = (priority = '') => {
   return 'bg-blue-50 text-blue-700 border-blue-200';
 };
 
-const formatLabel = (value = '') =>
-  value
+const formatLabel = (value = '') => {
+  const normalized = value
     .toString()
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .split(/[_\s-]/)
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const specialCases = {
+    ai: 'AI',
+    datev: 'DATEV',
+    elster: 'ELSTER',
+    gdpr: 'GDPR',
+    ustva: 'UStVA',
+    vat: 'VAT',
+  };
+
+  return normalized
+    .split(' ')
     .filter(Boolean)
-    .map((segment) => segment[0].toUpperCase() + segment.slice(1).toLowerCase())
+    .map((segment) => {
+      const lower = segment.toLowerCase();
+      return specialCases[lower] || segment[0].toUpperCase() + segment.slice(1).toLowerCase();
+    })
     .join(' ');
+};
 
 const ScoreCard = ({ label, value }) => (
   <div className={`rounded-2xl border p-4 ${scoreTone(Number(value) || 0)}`}>
@@ -127,7 +146,7 @@ export default function SmartReviewCenter() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-28">
       <section className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Smart Review</p>
         <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -165,7 +184,7 @@ export default function SmartReviewCenter() {
               </p>
             </div>
             <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-              {summary?.mode || 'read_only_preparation'}
+              {formatLabel(summary?.mode || 'read_only_preparation')}
             </span>
           </div>
 
@@ -178,7 +197,7 @@ export default function SmartReviewCenter() {
                       <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${priorityTone(action.priority)}`}>
                         {formatLabel(action.priority)}
                       </span>
-                      <span className="text-xs font-semibold text-gray-400">{action.code}</span>
+                      <span className="text-xs font-semibold text-gray-400">{formatLabel(action.code)}</span>
                     </div>
                     <h3 className="mt-2 font-semibold text-gray-900">{action.title}</h3>
                     <p className="mt-1 text-sm text-gray-600">{action.description}</p>
@@ -222,7 +241,7 @@ export default function SmartReviewCenter() {
                     <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-amber-700">
                       {formatLabel(warning.severity)}
                     </span>
-                    <span className="text-xs font-semibold text-amber-800">{warning.code}</span>
+                    <span className="text-xs font-semibold text-amber-800">{formatLabel(warning.code)}</span>
                   </div>
                   <h3 className="mt-2 font-semibold text-amber-950">{warning.message}</h3>
                   <p className="mt-1 text-sm text-amber-900">{warning.action}</p>

@@ -131,9 +131,11 @@ describe('SmartReviewCenter page', () => {
     expect(screen.getByText('Draft Invoices')).toBeInTheDocument();
     expect(screen.getByText('Expenses Without Attachments')).toBeInTheDocument();
     expect(screen.getByText('Unreconciled Bank Transactions')).toBeInTheDocument();
+    expect(screen.getByText('Pending AI Approvals')).toBeInTheDocument();
+    expect(screen.getByText('AI Insights')).toBeInTheDocument();
 
     expect(screen.getByText('Warnings checklist')).toBeInTheDocument();
-    expect(screen.getByText('DRAFT_INVOICES_EXIST')).toBeInTheDocument();
+    expect(screen.getByText('Draft Invoices Exist')).toBeInTheDocument();
     expect(screen.getByText('Draft invoices exist and will not be included in DATEV export preparation.')).toBeInTheDocument();
 
     expect(screen.getByText('Safety boundaries')).toBeInTheDocument();
