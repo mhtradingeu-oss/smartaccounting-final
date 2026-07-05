@@ -13,12 +13,29 @@ const clampScore = (value) => Math.max(0, Math.min(100, Math.round(Number(value)
 
 const statusUpper = (value) => String(value || '').toUpperCase();
 
+function getAllowedStatusValues(Model, attributeName, wantedStatuses) {
+  const values = Model?.rawAttributes?.[attributeName]?.values;
+  const wanted = new Set(wantedStatuses.map((value) => statusUpper(value)));
+
+  if (Array.isArray(values) && values.length > 0) {
+    return values.filter((value) => wanted.has(statusUpper(value)));
+  }
+
+  return wantedStatuses;
+}
+
 async function countDraftInvoices(companyId) {
+  const draftStatuses = getAllowedStatusValues(Invoice, 'status', ['DRAFT', 'draft']);
+
+  if (!draftStatuses.length) {
+    return 0;
+  }
+
   return Invoice.count({
     where: {
       companyId,
       status: {
-        [Op.in]: ['DRAFT', 'draft'],
+        [Op.in]: draftStatuses,
       },
     },
   });
@@ -27,19 +44,27 @@ async function countDraftInvoices(companyId) {
 async function countExpensesWithoutAttachments(companyId) {
   const expenses = await Expense.findAll({
     where: { companyId },
-    attributes: ['id'],
-    include: [
-      {
-        association: 'attachments',
-        required: false,
-        attributes: ['id'],
-      },
-    ],
+    attributes: {
+      exclude: ['createdAt', 'updatedAt'],
+    },
+    raw: true,
   });
 
   return expenses.filter((expense) => {
-    const attachments = expense.attachments || [];
-    return attachments.length === 0;
+    const scalarAttachmentFields = [
+      expense.receiptUrl,
+      expense.receiptPath,
+      expense.attachmentUrl,
+      expense.attachmentPath,
+      expense.documentUrl,
+      expense.documentId,
+      expense.fileUrl,
+      expense.fileId,
+    ];
+
+    const hasScalarAttachment = scalarAttachmentFields.some((value) => Boolean(value));
+
+    return !hasScalarAttachment;
   }).length;
 }
 
@@ -48,7 +73,12 @@ async function countBankReviewItems(companyId) {
     where: {
       companyId,
       status: {
-        [Op.in]: ['NEEDS_REVIEW', 'needs_review', 'PROCESSING', 'processing'],
+        [Op.in]: getAllowedStatusValues(BankStatement, 'status', [
+          'NEEDS_REVIEW',
+          'needs_review',
+          'PROCESSING',
+          'processing',
+        ]),
       },
     },
   });
