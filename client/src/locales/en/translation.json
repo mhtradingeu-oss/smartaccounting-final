@@ -109,7 +109,8 @@
     "billing": "Billing",
     "system_admin_dashboard": "System Dashboard",
     "ai_manager": "AI Manager",
-    "tax_bridge": "Tax Bridge"
+    "tax_bridge": "Tax Bridge",
+    "smart_review": "Smart Review"
   },
   "auth": {
     "logout": "Logout"

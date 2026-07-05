@@ -193,6 +193,15 @@ export const ADMINISTRATION_NAVIGATION_ITEMS = [
 
 export const COMPLIANCE_NAVIGATION_ITEMS = [
   {
+    nameKey: 'navigation.smart_review',
+    href: '/review-center',
+    icon: DocumentMagnifyingGlassIcon,
+    iconSolid: DocumentMagnifyingGlassIconSolid,
+    badge: 'Review',
+    description: 'Smart Review Center',
+    enabled: true,
+  },
+  {
     nameKey: 'navigation.tax_bridge',
     href: '/tax-bridge',
     icon: ShieldCheckIcon,
