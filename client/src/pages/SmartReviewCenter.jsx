@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
 import { reviewCenterAPI } from '../services/reviewCenterAPI';
+import { aiApprovalQueueAPI } from '../services/aiApprovalQueueAPI';
 import { formatApiError } from '../services/api';
 import Card from '../components/Card';
 import { Button } from '../components/ui/Button';
@@ -71,12 +72,14 @@ const LoadingState = () => (
 export default function SmartReviewCenter() {
   const { activeCompany } = useCompany();
   const [summary, setSummary] = useState(null);
+  const [approvalQueue, setApprovalQueue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadSummary = useCallback(async () => {
     if (!activeCompany?.id) {
       setSummary(null);
+      setApprovalQueue(null);
       setError(null);
       setLoading(false);
       return;
@@ -86,10 +89,15 @@ export default function SmartReviewCenter() {
     setError(null);
 
     try {
-      const result = await reviewCenterAPI.getSummary({ companyId: activeCompany.id });
+      const [result, queueResult] = await Promise.all([
+        reviewCenterAPI.getSummary({ companyId: activeCompany.id }),
+        aiApprovalQueueAPI.list({ companyId: activeCompany.id }),
+      ]);
       setSummary(result || null);
+      setApprovalQueue(queueResult || null);
     } catch (err) {
       setSummary(null);
+      setApprovalQueue(null);
       setError(formatApiError(err, 'Unable to load Smart Review Center.'));
     } finally {
       setLoading(false);
@@ -224,6 +232,79 @@ export default function SmartReviewCenter() {
               </div>
             ))}
           </dl>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Pending AI Approval Queue</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Read-only queue for AI draft proposals. Approval decisions and execution are disabled.
+              </p>
+            </div>
+            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+              {(approvalQueue?.items || []).length} pending
+            </span>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {(approvalQueue?.items || []).length ? (
+              approvalQueue.items.slice(0, 5).map((item) => (
+                <div key={item.approvalId || item.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                          {formatLabel(item.status || 'pending')}
+                        </span>
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                          {formatLabel(item.riskLevel || 'draft_write')}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-400">
+                          {formatLabel(item.executionMode || 'prepare_draft')}
+                        </span>
+                      </div>
+                      <h3 className="mt-2 font-semibold text-gray-900">
+                        {item.actionProposal?.label || formatLabel(item.toolId || 'AI approval proposal')}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {item.actionProposal?.summary || item.approvalReason || 'AI proposal awaiting human review.'}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
+                        {item.actionProposal?.preview?.vendorName && (
+                          <span>Vendor: {item.actionProposal.preview.vendorName}</span>
+                        )}
+                        {item.metadata?.documentType && (
+                          <span>Document: {formatLabel(item.metadata.documentType)}</span>
+                        )}
+                        {item.createdAt && (
+                          <span>Created: {new Date(item.createdAt).toLocaleString()}</span>
+                        )}
+                      </div>
+                    </div>
+                    <Link className="text-sm font-semibold text-indigo-700 hover:text-indigo-900" to="/ai-manager">
+                      Open AI Manager
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+                No pending AI approval queue items were returned.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700">
+            <p className="font-semibold text-gray-900">Governance status</p>
+            <p className="mt-1">
+              Read-only: {String(approvalQueue?.meta?.readOnly ?? true)} · Execution enabled:{' '}
+              {String(approvalQueue?.meta?.executionEnabled ?? false)} · Approval decisions enabled:{' '}
+              {String(approvalQueue?.meta?.approvalDecisionsEnabled ?? false)}
+            </p>
+          </div>
         </Card>
       </section>
 
