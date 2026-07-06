@@ -20,6 +20,7 @@ const {
   createAiProposalBundle,
   summarizeAiProposalBundle,
 } = require('../services/ai/aiProposalService');
+const { persistApprovalQueueItem } = require('../services/ai/aiApprovalQueueRepository');
 const expenseService = require('../services/expenseService');
 const invoiceService = require('../services/invoiceService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
@@ -256,6 +257,55 @@ const buildOcrActionProposalMetadata = ({ req, documentRecord, intake } = {}) =>
     proposalSummary: summarizeAiProposalBundle(bundle),
   };
 };
+const persistOcrApprovalQueueMetadata = async (metadata = {}) => {
+  const approvalQueueItem = metadata.approvalQueueItem || null;
+
+  if (!approvalQueueItem) {
+    return {
+      ...metadata,
+      approvalQueuePersistence: {
+        persisted: false,
+        created: false,
+        approvalId: null,
+        error: null,
+        reason: 'no_approval_queue_item',
+      },
+    };
+  }
+
+  try {
+    const persistence = await persistApprovalQueueItem({ item: approvalQueueItem });
+
+    return {
+      ...metadata,
+      approvalQueuePersistence: {
+        persisted: persistence.persisted === true,
+        created: persistence.created === true,
+        approvalId:
+          persistence.item?.approvalId ||
+          approvalQueueItem.approvalId ||
+          approvalQueueItem.id ||
+          null,
+        error: persistence.error || null,
+        reason: persistence.persisted
+          ? 'persisted_read_only_queue_item'
+          : 'persistence_rejected',
+      },
+    };
+  } catch (error) {
+    return {
+      ...metadata,
+      approvalQueuePersistence: {
+        persisted: false,
+        created: false,
+        approvalId: approvalQueueItem.approvalId || approvalQueueItem.id || null,
+        error: error.message || 'Unable to persist approval queue item.',
+        reason: 'persistence_error',
+      },
+    };
+  }
+};
+
 
 const buildIntakeResponse = ({ req, documentRecord, intake }) => ({
   requestId: req.requestId || null,
@@ -710,7 +760,7 @@ router.post(
         validation: intake.validation,
         draft: intake.draft,
         audit: intake.audit,
-        ...buildOcrActionProposalMetadata({ req, documentRecord, intake }),
+        ...(await persistOcrApprovalQueueMetadata(buildOcrActionProposalMetadata({ req, documentRecord, intake }))),
       });
     } catch (error) {
       logger.error('OCR intake analysis failed', { error: error.message });

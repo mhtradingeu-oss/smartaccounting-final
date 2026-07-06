@@ -21,7 +21,7 @@ jest.mock('../../src/middleware/rateLimiter', () => ({
 const ocrRouter = require('../../src/routes/ocr');
 const ocrService = require('../../src/services/ocrService');
 const { createApiTimeoutMiddleware } = require('../../src/middleware/apiTimeout');
-const { AuditLog, Expense, FileAttachment, Invoice } = require('../../src/models');
+const { AIApprovalQueueItem, AuditLog, Expense, FileAttachment, Invoice } = require('../../src/models');
 
 const app = express();
 app.use(express.json());
@@ -326,6 +326,30 @@ describe('OCR document intake analyze route', () => {
         auditRequired: true,
       }),
     );
+    expect(response.body.approvalQueuePersistence).toEqual(
+      expect.objectContaining({
+        persisted: true,
+        created: true,
+        approvalId: response.body.approvalQueueItem.approvalId || response.body.approvalQueueItem.id,
+        error: null,
+      }),
+    );
+
+    const persistedApprovalQueueItem = await AIApprovalQueueItem.findOne({
+      where: {
+        approvalId: response.body.approvalQueueItem.approvalId || response.body.approvalQueueItem.id,
+        companyId: accountant.user.companyId,
+      },
+    });
+
+    expect(persistedApprovalQueueItem).toEqual(
+      expect.objectContaining({
+        toolId: 'create_expense_draft_from_reviewed_document',
+        status: 'pending',
+        companyId: accountant.user.companyId,
+      }),
+    );
+
     expect(response.body.proposalSummary).toEqual(
       expect.objectContaining({
         serviceVersion: 'ai_proposal_service.v1',
