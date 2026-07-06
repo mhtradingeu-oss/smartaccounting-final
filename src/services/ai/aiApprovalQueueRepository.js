@@ -1,4 +1,8 @@
 const { AIApprovalQueueItem } = require('../../models');
+const {
+  AI_APPROVAL_DECISIONS,
+  decideAiApprovalQueueItem,
+} = require('./aiApprovalQueueContract');
 
 const serializeApprovalQueueItem = (item) => {
   const plain = typeof item?.get === 'function' ? item.get({ plain: true }) : item;
@@ -151,7 +155,75 @@ const listApprovalQueueItems = async ({ companyId, limit = 50 } = {}) => {
   return items.map(serializeApprovalQueueItem).filter(Boolean);
 };
 
+const decideApprovalQueueItem = async ({
+  approvalId,
+  companyId,
+  decision,
+  decidedByUserId,
+  decisionReason,
+  now = new Date(),
+} = {}) => {
+  if (!approvalId) {
+    return { success: false, item: null, error: 'approvalId is required.' };
+  }
+
+  if (!companyId) {
+    return { success: false, item: null, error: 'companyId is required.' };
+  }
+
+  if (!Object.values(AI_APPROVAL_DECISIONS).includes(decision)) {
+    return { success: false, item: null, error: 'Unsupported approval decision.' };
+  }
+
+  if (!AIApprovalQueueItem) {
+    return { success: false, item: null, error: 'AIApprovalQueueItem model is unavailable.' };
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  if (!record) {
+    return { success: false, item: null, error: 'Approval queue item not found.' };
+  }
+
+  const plain = serializeApprovalQueueItem(record);
+  const decisionResult = decideAiApprovalQueueItem({
+    item: {
+      ...plain,
+      actionProposalValid: true,
+    },
+    decision,
+    decidedByUserId,
+    decisionReason,
+    now,
+  });
+
+  if (!decisionResult.success) {
+    return {
+      success: false,
+      item: decisionResult.item || plain,
+      error: decisionResult.error,
+    };
+  }
+
+  await record.update({
+    status: decisionResult.item.status,
+    decision,
+    decisionReason: decisionResult.item.decisionReason || null,
+    decidedByUserId: decisionResult.item.decidedByUserId || null,
+    decidedAt: toDateOrNull(decisionResult.item.decidedAt) || new Date(),
+  });
+
+  return {
+    success: true,
+    item: serializeApprovalQueueItem(record),
+    error: null,
+  };
+};
+
 module.exports = {
+  decideApprovalQueueItem,
   listApprovalQueueItems,
   normalizeApprovalQueuePayload,
   persistApprovalQueueItem,

@@ -61,6 +61,8 @@ module.exports = {
 
       'GET /api/ai/read/*',
       'GET /api/ai/approval-queue',
+      'POST /api/ai/approval-queue/approve',
+      'POST /api/ai/approval-queue/reject',
       'POST /api/ai/read/*',
       'GET /api/ai/insights',
       'POST /api/ai/voice/assistant',
