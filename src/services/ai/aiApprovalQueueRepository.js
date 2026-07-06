@@ -34,6 +34,103 @@ const serializeApprovalQueueItem = (item) => {
   };
 };
 
+const toDateOrNull = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeApprovalQueuePayload = (item) => {
+  if (!item || typeof item !== 'object') {
+    return { valid: false, error: 'Approval queue item is required.', payload: null };
+  }
+
+  const approvalId = String(item.approvalId || item.id || '').trim();
+  if (!approvalId) {
+    return { valid: false, error: 'Approval queue item approvalId is required.', payload: null };
+  }
+
+  if (!item.companyId) {
+    return { valid: false, error: 'Approval queue item companyId is required.', payload: null };
+  }
+
+  if (!item.toolId) {
+    return { valid: false, error: 'Approval queue item toolId is required.', payload: null };
+  }
+
+  if (!item.actionProposal || item.actionProposal.type !== 'action_proposal') {
+    return { valid: false, error: 'Approval queue item actionProposal is required.', payload: null };
+  }
+
+  return {
+    valid: true,
+    error: null,
+    payload: {
+      approvalId,
+      schemaVersion: item.schemaVersion || 'ai_approval_queue.v1',
+      companyId: item.companyId,
+      requestedByUserId: item.requestedByUserId || null,
+      decidedByUserId: item.decidedByUserId || null,
+      status: item.status || 'pending',
+      decision: item.decision || null,
+      toolId: item.toolId,
+      riskLevel: item.riskLevel || null,
+      executionMode: item.executionMode || null,
+      requiresApproval: item.requiresApproval === true,
+      blocked: item.blocked === true,
+      requestedBy: item.requestedBy || null,
+      approvalReason: item.approvalReason || item.reason || null,
+      decisionReason: item.decisionReason || null,
+      actionProposal: item.actionProposal,
+      metadata: item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)
+        ? item.metadata
+        : {},
+      expiresAt: toDateOrNull(item.expiresAt),
+      decidedAt: toDateOrNull(item.decidedAt),
+      auditRequired: item.auditRequired === true,
+    },
+  };
+};
+
+const persistApprovalQueueItem = async ({ item } = {}) => {
+  if (!AIApprovalQueueItem) {
+    return {
+      success: false,
+      persisted: false,
+      created: false,
+      item: null,
+      error: 'AIApprovalQueueItem model is unavailable.',
+    };
+  }
+
+  const normalized = normalizeApprovalQueuePayload(item);
+  if (!normalized.valid) {
+    return {
+      success: false,
+      persisted: false,
+      created: false,
+      item: null,
+      error: normalized.error,
+    };
+  }
+
+  const [record, created] = await AIApprovalQueueItem.findOrCreate({
+    where: { approvalId: normalized.payload.approvalId },
+    defaults: normalized.payload,
+  });
+
+  return {
+    success: true,
+    persisted: true,
+    created,
+    item: serializeApprovalQueueItem(record),
+    error: null,
+  };
+};
+
 const listApprovalQueueItems = async ({ companyId, limit = 50 } = {}) => {
   if (!companyId) {
     return [];
@@ -56,5 +153,7 @@ const listApprovalQueueItems = async ({ companyId, limit = 50 } = {}) => {
 
 module.exports = {
   listApprovalQueueItems,
+  normalizeApprovalQueuePayload,
+  persistApprovalQueueItem,
   serializeApprovalQueueItem,
 };
