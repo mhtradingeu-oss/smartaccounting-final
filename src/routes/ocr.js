@@ -551,6 +551,7 @@ router.post(
             validation: intake.validation,
             draft: intake.draft,
             audit: intake.audit,
+            ...(await persistOcrApprovalQueueMetadata(buildOcrActionProposalMetadata({ req, documentRecord, intake }))),
           });
         }
 
