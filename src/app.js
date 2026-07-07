@@ -338,6 +338,24 @@ app.get(`${EXPRESS_API_PREFIX}/ai/suggest`, (req, res, next) => {
 // Fallback & Error handling
 // --------------------------------------------------
 
+
+// ===== UNIFIED EVENT READ MODEL =====
+const unifiedTimelineRoutes = require('./routes/enterprise/unifiedTimeline.routes');
+app.use('/api/enterprise/timeline', unifiedTimelineRoutes);
+// ====================================
+
+
+// ===== AI REPLAY EXPLANATION LAYER =====
+const replayExplanationRoutes = require('./routes/enterprise/replayExplanation.routes');
+app.use('/api/enterprise/replay/explain', replayExplanationRoutes);
+// ======================================
+
+
+// ===== SAFE EVENT REPLAY ENGINE =====
+const eventReplayRoutes = require('./routes/enterprise/eventReplay.routes');
+app.use('/api/enterprise/replay', eventReplayRoutes);
+// ====================================
+
 app.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',
@@ -346,6 +364,9 @@ app.use('*', (req, res) => {
   });
 });
 
+
 app.use(errorHandler);
 
 module.exports = app;
+
+
