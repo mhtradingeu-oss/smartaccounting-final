@@ -23,6 +23,7 @@ const {
 const { persistApprovalQueueItem } = require('../services/ai/aiApprovalQueueRepository');
 const expenseService = require('../services/expenseService');
 const invoiceService = require('../services/invoiceService');
+const reviewedDocumentDraftService = require('../services/ai/reviewedDocumentDraftService');
 const { disabledFeatureHandler } = require('../utils/disabledFeatureResponse');
 
 const router = express.Router();
@@ -987,204 +988,19 @@ router.post('/intake/:documentId/recheck', requireRole(['accountant']), async (r
 });
 
 router.post('/intake/:documentId/create-draft', requireRole(['accountant']), async (req, res) => {
-  const reason = String(req.body?.reason || 'Create draft from reviewed document values').trim();
-  const providedFingerprint = String(req.body?.decisionFingerprint || '').trim();
-
   try {
-    const documentRecord = await FileAttachment.findOne({
-      where: { id: req.params.documentId, companyId: req.companyId },
-    });
-
-    if (!documentRecord) {
-      return sendError(res, 'Document not found.', 404);
-    }
-
-    const existingData = getJsonObject(documentRecord.extractedData);
-    const intake = getJsonObject(existingData.intake);
-    const reviewState = getJsonObject(intake.reviewState);
-    const editablePayload = getJsonObject(intake.editablePayload);
-    const reviewedValues = getJsonObject(editablePayload.reviewedValues);
-    const storedManualOverride = getJsonObject(
-      editablePayload.manualOverride || intake.manualOverride || intake.lifecycle?.manualOverride,
-    );
-    const hasManualOverride = isNonEmptyPlainObject(storedManualOverride);
-    const currentFingerprint = intake.decisionFingerprint || intake.lifecycle?.decisionFingerprint || null;
-    const accountingDecision = intake.accountingDecision || intake.lifecycle?.accountingDecision || null;
-
-    if (reviewState.status !== 'rechecked' || reviewState.criticalFieldsReviewed !== true) {
-      return sendError(res, 'Review extracted fields and re-check document before draft creation.', 409);
-    }
-
-    if (!isNonEmptyPlainObject(reviewedValues)) {
-      return sendError(res, 'Reviewed values are required before draft creation.', 409);
-    }
-
-    if (!currentFingerprint || !providedFingerprint || providedFingerprint !== currentFingerprint) {
-      return sendError(res, 'The reviewed document decision is stale. Re-check document first.', 409);
-    }
-
-    if (intake.validation?.status === 'needs_correction' || intake.validation?.errors?.length) {
-      return sendError(res, 'Reviewed document still needs correction before draft creation.', 409);
-    }
-
-    if (Array.isArray(intake.validation?.missingFields) && intake.validation.missingFields.length > 0) {
-      return sendError(res, 'Reviewed document needs additional information before draft creation.', 409);
-    }
-
-    const draftType = documentIntakeAssistantService.resolveReviewedDraftType({
-      intake,
-      reviewedValues,
-    });
-    if (!draftType) {
-      return sendError(res, 'Unsupported reviewed document type for draft creation.', 422);
-    }
-
-    if (hasManualOverride && draftType !== 'expense') {
-      return sendError(res, 'Manual override can only create an expense draft with restricted VAT treatment.', 422);
-    }
-
-    if (hasManualOverride) {
-      const manualOverrideValidation =
-        documentIntakeAssistantService.validateManualOverride(storedManualOverride);
-      if (!manualOverrideValidation.valid) {
-        return sendError(
-          res,
-          'Manual override with reason is required before draft creation.',
-          409,
-          manualOverrideValidation.errors,
-        );
-      }
-      if (
-        Number(reviewedValues.vatRate) !== 0 ||
-        Number(reviewedValues.vatAmount) !== 0 ||
-        reviewedValues.taxTreatment !== 'no_vorsteuer_allowed' ||
-        reviewedValues.inputVatAllowed !== false ||
-        reviewedValues.accountantReviewRequired !== true
-      ) {
-        return sendError(
-          res,
-          'Manual override draft requires restricted VAT treatment. Re-check document first.',
-          409,
-        );
-      }
-    }
-
-    if (!intake.draftEligibility?.eligible) {
-      return sendError(res, 'Reviewed document is not eligible for draft creation.', 422);
-    }
-
-    const systemContext = {
-      source: 'ai_document_intake_reviewed',
-      documentId: documentRecord.id,
-      requestId: req.requestId || null,
-      decisionFingerprint: currentFingerprint,
-      accountingDecision,
-      reviewState,
-      fieldChanges: editablePayload.fieldChanges || [],
-      manualOverride: hasManualOverride ? storedManualOverride : null,
-      restrictedTaxTreatment: hasManualOverride
-        ? {
-            taxTreatment: 'no_vorsteuer_allowed',
-            inputVatAllowed: false,
-            accountantReviewRequired: true,
-          }
-        : null,
-      reason,
-    };
-
-    let createdDraft;
-    if (draftType === 'expense') {
-      const payload = documentIntakeAssistantService.buildReviewedExpenseDraftPayload({
-        reviewedValues,
-        documentId: documentRecord.id,
-        systemContext,
-      });
-      createdDraft = await expenseService.createExpense(payload, req.userId, req.companyId, {
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent') || null,
-        userId: req.userId,
-        ...systemContext,
-      });
-    } else if (draftType === 'invoice') {
-      const payload = documentIntakeAssistantService.buildReviewedInvoiceDraftPayload({
-        reviewedValues,
-        documentId: documentRecord.id,
-        systemContext,
-      });
-      createdDraft = await invoiceService.createInvoice(payload, req.userId, req.companyId);
-    }
-
-    const updatedIntake = {
-      ...intake,
-      accountingDecision,
-      lifecycle: {
-        ...(intake.lifecycle || {}),
-        ...(accountingDecision ? { accountingDecision } : {}),
-      },
-      draftCreation: {
-        draftType,
-        draftId: createdDraft?.id || null,
-        createdAt: new Date().toISOString(),
-        decisionFingerprint: currentFingerprint,
-        accountingDecision,
-      },
-    };
-    await documentRecord.reload();
-    const latestData = getJsonObject(documentRecord.extractedData);
-    await documentRecord.update({
-      extractedData: {
-        ...latestData,
-        intake: updatedIntake,
-      },
-    });
-
-    await AuditLogService.appendEntry({
-      action: 'DOCUMENT_DRAFT_CREATED_FROM_REVIEWED_VALUES',
-      resourceType: draftType === 'expense' ? 'Expense' : 'Invoice',
-      resourceId: createdDraft?.id ? String(createdDraft.id) : null,
+    const result = await reviewedDocumentDraftService.createDraftFromReviewedDocument({
+      documentId: req.params.documentId,
+      companyId: req.companyId,
       userId: req.userId,
-      reason,
-      newValues: {
-        companyId: req.companyId,
-        documentId: documentRecord.id,
-        source: 'ai_document_intake_reviewed',
-        draftType,
-        draftId: createdDraft?.id || null,
-        decisionFingerprint: currentFingerprint,
-        accountingDecision,
-        reviewState,
-        fieldChanges: editablePayload.fieldChanges || [],
-        manualOverride: hasManualOverride ? storedManualOverride : null,
-        restrictedTaxTreatment: hasManualOverride
-          ? {
-              taxTreatment: 'no_vorsteuer_allowed',
-              inputVatAllowed: false,
-              accountantReviewRequired: true,
-            }
-          : null,
-      },
+      reason: req.body?.reason || 'Create draft from reviewed document values',
+      decisionFingerprint: req.body?.decisionFingerprint,
+      requestId: req.requestId || null,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent') || null,
     });
 
-    return sendSuccess(res, 'Draft created from reviewed values', {
-      requestId: req.requestId || null,
-      draft: {
-        type: draftType,
-        id: createdDraft?.id || null,
-        status: createdDraft?.status || (draftType === 'invoice' ? 'DRAFT' : 'pending'),
-        summary:
-          draftType === 'expense'
-            ? createdDraft?.vendorName || reviewedValues.vendorName || null
-            : createdDraft?.clientName || reviewedValues.customerName || null,
-      },
-      intake: updatedIntake,
-      reviewState: updatedIntake.reviewState,
-      editablePayload: updatedIntake.editablePayload,
-      draftEligibility: updatedIntake.draftEligibility,
-      accountingDecision: updatedIntake.accountingDecision || updatedIntake.lifecycle?.accountingDecision || null,
-      decisionFingerprint: currentFingerprint,
-    }, 201);
+    return sendSuccess(res, 'Draft created from reviewed values', result, 201);
   } catch (error) {
     logger.error('OCR intake draft creation failed', { error: error.message });
     const status = error.status || error.statusCode || 500;
@@ -1192,6 +1008,7 @@ router.post('/intake/:documentId/create-draft', requireRole(['accountant']), asy
       res,
       status >= 500 ? 'Unable to create draft from reviewed document values' : error.message,
       status,
+      error.details,
     );
   }
 });

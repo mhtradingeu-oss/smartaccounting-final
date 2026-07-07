@@ -12,31 +12,27 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireCompany);
 
-router.get(
-  '/',
-  requireRole(['admin', 'accountant', 'auditor', 'viewer']),
-  async (req, res) => {
-    const items = await listApprovalQueueItems({
-      companyId: req.companyId,
-      limit: req.query?.limit,
-    });
+router.get('/', requireRole(['admin', 'accountant', 'auditor', 'viewer']), async (req, res) => {
+  const items = await listApprovalQueueItems({
+    companyId: req.companyId,
+    limit: req.query?.limit,
+  });
 
-    res.json({
-      success: true,
-      persisted: true,
-      items,
-      message: items.length
-        ? 'AI approval queue is persisted and read-only.'
-        : 'AI approval queue is persisted. No approval queue items are currently pending review.',
-      meta: {
-        companyId: req.companyId,
-        readOnly: true,
-        executionEnabled: false,
-        approvalDecisionsEnabled: false,
-      },
-    });
-  },
-);
+  res.json({
+    success: true,
+    persisted: true,
+    items,
+    message: items.length
+      ? 'AI approval queue is persisted and read-only.'
+      : 'AI approval queue is persisted. No approval queue items are currently pending review.',
+    meta: {
+      companyId: req.companyId,
+      readOnly: true,
+      executionEnabled: false,
+      approvalDecisionsEnabled: false,
+    },
+  });
+});
 
 const handleApprovalDecision = (decision) => async (req, res, next) => {
   try {
@@ -128,8 +124,15 @@ const handleApprovalDecision = (decision) => async (req, res, next) => {
   }
 };
 
-router.post('/approve', requireRole(['admin', 'accountant']), handleApprovalDecision(AI_APPROVAL_DECISIONS.APPROVE));
-router.post('/reject', requireRole(['admin', 'accountant']), handleApprovalDecision(AI_APPROVAL_DECISIONS.REJECT));
-
+router.post(
+  '/approve',
+  requireRole(['admin', 'accountant']),
+  handleApprovalDecision(AI_APPROVAL_DECISIONS.APPROVE),
+);
+router.post(
+  '/reject',
+  requireRole(['admin', 'accountant']),
+  handleApprovalDecision(AI_APPROVAL_DECISIONS.REJECT),
+);
 
 module.exports = router;

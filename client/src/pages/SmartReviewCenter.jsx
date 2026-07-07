@@ -10,14 +10,14 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { PageErrorState } from '../components/ui/PageStates';
 
 const scoreTone = (score) => {
-  if (score >= 80) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-  if (score >= 50) return 'text-amber-700 bg-amber-50 border-amber-200';
+  if (score >= 80) {return 'text-emerald-700 bg-emerald-50 border-emerald-200';}
+  if (score >= 50) {return 'text-amber-700 bg-amber-50 border-amber-200';}
   return 'text-red-700 bg-red-50 border-red-200';
 };
 
 const priorityTone = (priority = '') => {
-  if (priority === 'high') return 'bg-red-50 text-red-700 border-red-200';
-  if (priority === 'medium') return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (priority === 'high') {return 'bg-red-50 text-red-700 border-red-200';}
+  if (priority === 'medium') {return 'bg-amber-50 text-amber-700 border-amber-200';}
   return 'bg-blue-50 text-blue-700 border-blue-200';
 };
 

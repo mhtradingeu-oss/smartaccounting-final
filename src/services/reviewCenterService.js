@@ -107,13 +107,13 @@ async function countAIInsights(companyId) {
 }
 
 function buildDocumentScore({ totalExpenses, expensesWithoutAttachments }) {
-  if (!totalExpenses) return 100;
+  if (!totalExpenses) {return 100;}
   const attached = Math.max(0, totalExpenses - expensesWithoutAttachments);
   return clampScore((attached / totalExpenses) * 100);
 }
 
 function buildBankScore({ bankReviewItems }) {
-  if (!bankReviewItems.total) return 100;
+  if (!bankReviewItems.total) {return 100;}
   return clampScore(100 - Math.min(80, bankReviewItems.total * 10));
 }
 
