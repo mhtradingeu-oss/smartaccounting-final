@@ -155,6 +155,50 @@ const listApprovalQueueItems = async ({ companyId, limit = 50 } = {}) => {
   return items.map(serializeApprovalQueueItem).filter(Boolean);
 };
 
+
+const getById = async (approvalId) => {
+  if (!approvalId || !AIApprovalQueueItem) {
+    return null;
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId },
+  });
+
+  return serializeApprovalQueueItem(record);
+};
+
+const markExecuted = async (approvalId, execution = {}) => {
+  if (!approvalId || !AIApprovalQueueItem) {
+    return { success: false, item: null, error: 'approvalId and AIApprovalQueueItem are required.' };
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId },
+  });
+
+  if (!record) {
+    return { success: false, item: null, error: 'Approval queue item not found.' };
+  }
+
+  const metadata = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+    ? record.metadata
+    : {};
+
+  await record.update({
+    status: 'executed',
+    metadata: {
+      ...metadata,
+      execution: {
+        ...execution,
+        executedAt: new Date().toISOString(),
+      },
+    },
+  });
+
+  return { success: true, item: serializeApprovalQueueItem(record), error: null };
+};
+
 const decideApprovalQueueItem = async ({
   approvalId,
   companyId,
@@ -224,7 +268,9 @@ const decideApprovalQueueItem = async ({
 
 module.exports = {
   decideApprovalQueueItem,
+  getById,
   listApprovalQueueItems,
+  markExecuted,
   normalizeApprovalQueuePayload,
   persistApprovalQueueItem,
   serializeApprovalQueueItem,
