@@ -345,6 +345,19 @@ app.use('/api/enterprise/timeline', unifiedTimelineRoutes);
 // ====================================
 
 
+// ===== ENTERPRISE OBSERVABILITY + GRAPH ROUTES =====
+const observabilityRoutes = require('./routes/enterprise/observability.routes');
+const graphRoutes = require('./routes/graph');
+const timelineRoutes = require('./routes/timeline');
+const aiReasoningRoutes = require('./routes/ai/reasoning');
+
+app.use('/api/enterprise/observability', observabilityRoutes);
+app.use('/api/enterprise/graph', graphRoutes);
+app.use('/api/enterprise/audit-timeline', timelineRoutes);
+app.use('/api/ai/reasoning', aiReasoningRoutes);
+// ================================================
+
+
 // ===== AI REPLAY EXPLANATION LAYER =====
 const replayExplanationRoutes = require('./routes/enterprise/replayExplanation.routes');
 app.use('/api/enterprise/replay/explain', replayExplanationRoutes);
