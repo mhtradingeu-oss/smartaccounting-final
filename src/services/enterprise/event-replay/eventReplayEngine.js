@@ -1,7 +1,7 @@
 const { getUnifiedTimeline } = require('../unified-read-model/unifiedTimelineService');
 
 function safeString(value) {
-  if (value === null || value === undefined) return null;
+  if (value === null || value === undefined) {return null;}
   return String(value);
 }
 
@@ -11,7 +11,7 @@ function toBoolean(value) {
 
 function toPositiveInt(value, fallback = 50, max = 500) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (!Number.isFinite(parsed) || parsed <= 0) {return fallback;}
   return Math.min(parsed, max);
 }
 
@@ -56,11 +56,11 @@ function classifyEvent(event) {
   const source = safeString(event.source) || 'unknown';
   const payload = event.payload || {};
 
-  if (source === 'approval_queue') return 'approval';
-  if (source === 'ledger') return 'ledger';
-  if (type.includes('EXPORT') || type.includes('DATEV')) return 'export';
-  if (type.startsWith('AI_') || type.includes('AI_QUERY')) return 'ai';
-  if (type.includes('bank_import') || type.includes('BankStatement')) return 'bank';
+  if (source === 'approval_queue') {return 'approval';}
+  if (source === 'ledger') {return 'ledger';}
+  if (type.includes('EXPORT') || type.includes('DATEV')) {return 'export';}
+  if (type.startsWith('AI_') || type.includes('AI_QUERY')) {return 'ai';}
+  if (type.includes('bank_import') || type.includes('BankStatement')) {return 'bank';}
 
   if (
     type.includes('document') ||

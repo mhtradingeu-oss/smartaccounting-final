@@ -29,8 +29,8 @@ async function fetchEventStoreRows(entityId, companyId) {
     }
 
     const where = {};
-    if (entityId) where.entityId = entityId;
-    if (companyId) where.companyId = companyId;
+    if (entityId) {where.entityId = entityId;}
+    if (companyId) {where.companyId = companyId;}
 
     return await getDB().EventStore.findAll({
       where,
@@ -48,7 +48,7 @@ async function fetchAuditRows(entityId, companyId) {
     const logs = await AuditLogService.exportLogs({ companyId });
     const rows = Array.isArray(logs) ? logs : logs?.logs || logs?.entries || [];
 
-    if (!entityId) return rows;
+    if (!entityId) {return rows;}
 
     return rows.filter((row) => {
       const plain = typeof row?.get === 'function' ? row.get({ plain: true }) : row;
@@ -72,10 +72,10 @@ async function fetchLedgerRows(entityId, companyId) {
     const out = [];
 
     for (const model of candidates) {
-      if (typeof model.findAll !== 'function') continue;
+      if (typeof model.findAll !== 'function') {continue;}
 
       const where = {};
-      if (companyId) where.companyId = companyId;
+      if (companyId) {where.companyId = companyId;}
 
       const rows = await model.findAll({
         where,
@@ -105,8 +105,8 @@ async function fetchApprovalRows(entityId, companyId) {
     }
 
     const where = {};
-    if (companyId) where.companyId = companyId;
-    if (entityId) where.approvalId = entityId;
+    if (companyId) {where.companyId = companyId;}
+    if (entityId) {where.approvalId = entityId;}
 
     return await getDB().AIApprovalQueueItem.findAll({
       where,

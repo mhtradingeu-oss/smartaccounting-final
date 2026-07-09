@@ -94,7 +94,7 @@ function explainWarnings(warningSummary = {}) {
   }
 
   for (const [code, count] of Object.entries(byCode)) {
-    if (explanations.some((item) => item.code === code)) continue;
+    if (explanations.some((item) => item.code === code)) {continue;}
 
     explanations.push({
       code,
@@ -169,13 +169,13 @@ function buildNarrative(replayResult = {}) {
     paragraphs.push('No replayable activity was found for this scope.');
   } else {
     paragraphs.push(
-      `The replay scanned ${replay.stepsCount} normalized timeline events in read-only simulation mode.`
+      `The replay scanned ${replay.stepsCount} normalized timeline events in read-only simulation mode.`,
     );
 
     paragraphs.push(
       `The dominant activity category is "${dominant.label}". The most active sources are ${topSources
         .map((item) => `${item.name} (${item.count})`)
-        .join(', ')}.`
+        .join(', ')}.`,
     );
 
     if (topTypes.length) {
@@ -183,24 +183,24 @@ function buildNarrative(replayResult = {}) {
         `The most frequent event types are ${topTypes
           .slice(0, 5)
           .map((item) => `${item.name} (${item.count})`)
-          .join(', ')}.`
+          .join(', ')}.`,
       );
     }
 
     if (warningSummary.total > 0) {
       paragraphs.push(
-        `The replay detected ${warningSummary.total} warnings. Most of them are data-quality warnings from historical records, not write failures.`
+        `The replay detected ${warningSummary.total} warnings. Most of them are data-quality warnings from historical records, not write failures.`,
       );
     }
 
     if (health.status === 'needs_review') {
       paragraphs.push(
-        'The replay is safe to explain, but it should be reviewed before being used as a compliance-final or tenant-final reconstruction.'
+        'The replay is safe to explain, but it should be reviewed before being used as a compliance-final or tenant-final reconstruction.',
       );
     }
 
     paragraphs.push(
-      'No financial writes were performed. The replay engine observed existing timeline, ledger, audit, and approval data only.'
+      'No financial writes were performed. The replay engine observed existing timeline, ledger, audit, and approval data only.',
     );
   }
 

@@ -1,7 +1,7 @@
 function toPlain(item) {
-  if (!item) return {};
-  if (typeof item.get === 'function') return item.get({ plain: true });
-  if (typeof item.toJSON === 'function') return item.toJSON();
+  if (!item) {return {};}
+  if (typeof item.get === 'function') {return item.get({ plain: true });}
+  if (typeof item.toJSON === 'function') {return item.toJSON();}
   return item;
 }
 
