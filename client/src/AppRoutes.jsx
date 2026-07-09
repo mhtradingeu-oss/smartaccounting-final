@@ -50,6 +50,7 @@ import ComplianceDashboard from './pages/ComplianceDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Onboarding from './pages/Onboarding';
 import OnboardingWizard from './pages/OnboardingWizard';
+import ObservabilityDashboard from './pages/observability/ObservabilityDashboard';
 
 function PublicOnlyRoute({ children }) {
   const { isAuthenticated, status } = useAuth();
@@ -133,6 +134,7 @@ export const ROUTE_DEFINITIONS = [
   { path: '/investor-dashboard' },
   { path: '/onboarding' },
   { path: '/onboarding-wizard' },
+  { path: '/observability' },
   { path: '/system-admin' },
 ];
 
@@ -200,6 +202,8 @@ function AppRoutes() {
       <Route path="/onboarding-wizard" element={<ProtectedLayout><OnboardingWizard /></ProtectedLayout>} />
 
       {/* System admin */}
+      <Route path="/observability" element={<ProtectedLayout><ObservabilityDashboard /></ProtectedLayout>} />
+
       <Route path="/system-admin" element={<SystemAdminLayout><SystemAdminDashboard /></SystemAdminLayout>} />
 
       {/* Safe fallback */}
