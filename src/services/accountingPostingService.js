@@ -581,7 +581,6 @@ const reverseJournalEntry = async ({ journalEntryId, companyId, reversedBy = nul
         id: journalEntryId,
         companyId,
       },
-      include: [{ model: JournalEntryLine, as: 'lines' }],
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -630,7 +629,15 @@ const reverseJournalEntry = async ({ journalEntryId, companyId, reversedBy = nul
       throw error;
     }
 
-    const originalLines = originalEntry.lines || [];
+    const originalLines = await JournalEntryLine.findAll({
+      where: {
+        journalEntryId: originalEntry.id,
+        companyId,
+      },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
     if (!originalLines.length) {
       const error = new Error('Journal entry has no lines to reverse');
       error.code = 'JOURNAL_ENTRY_HAS_NO_LINES';
