@@ -139,22 +139,20 @@ async function createExpense(data, userId, companyId, context = {}) {
         if (!existingAttachment) {
           continue;
         }
-        const oldAttachmentValues = supportsAttachments
-          ? { expenseId: existingAttachment.expenseId || null }
-          : {
-              attachedToType: existingAttachment.attachedToType || null,
-              extractedData: existingAttachment.extractedData || null,
-            };
-        const linkPatch = supportsAttachments
-          ? { expenseId: createdExpense.id }
-          : {
-              attachedToType: 'Expense',
-              extractedData: {
-                ...(existingAttachment.extractedData || {}),
-                linkedExpenseId: createdExpense.id,
-                linkedVia: 'ai_document_intake_confirmed_draft',
-              },
-            };
+        const oldAttachmentValues = {
+          expenseId: supportsAttachments ? existingAttachment.expenseId || null : undefined,
+          attachedToType: existingAttachment.attachedToType || null,
+          extractedData: existingAttachment.extractedData || null,
+        };
+        const linkPatch = {
+          ...(supportsAttachments ? { expenseId: createdExpense.id } : {}),
+          attachedToType: 'Expense',
+          extractedData: {
+            ...(existingAttachment.extractedData || {}),
+            linkedExpenseId: createdExpense.id,
+            linkedVia: 'ai_document_intake_confirmed_draft',
+          },
+        };
         await existingAttachment.update(linkPatch, { transaction: t });
         await AuditLogService.appendEntry({
           action: 'EXPENSE_ATTACHMENT_ADD',

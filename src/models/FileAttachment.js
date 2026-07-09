@@ -105,7 +105,7 @@ module.exports = (sequelize, DataTypes) => {
         field: 'retention_period',
       },
       expenseId: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         field: 'expense_id',
       },
       invoiceId: {
