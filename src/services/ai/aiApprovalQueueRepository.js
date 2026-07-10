@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { AIApprovalQueueItem } = require('../../models');
 const {
   AI_APPROVAL_DECISIONS,
@@ -167,6 +168,449 @@ const getById = async (approvalId) => {
   });
 
   return serializeApprovalQueueItem(record);
+};
+
+
+const getByIdForCompany = async ({
+  approvalId,
+  companyId,
+} = {}) => {
+  if (!approvalId || !companyId || !AIApprovalQueueItem) {
+    return null;
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  return serializeApprovalQueueItem(record);
+};
+
+const classifyExecutionClaimFailure = (
+  item,
+  now = new Date(),
+) => {
+  if (!item) {
+    return {
+      success: false,
+      item: null,
+      error: 'Approval queue item not found.',
+      code: 'AI_APPROVAL_NOT_FOUND',
+    };
+  }
+
+  if (item.status === AI_APPROVAL_STATUSES.EXECUTED) {
+    return {
+      success: false,
+      item,
+      error: 'Approval queue item has already been executed.',
+      code: 'AI_APPROVAL_ALREADY_EXECUTED',
+    };
+  }
+
+  if (item.status === AI_APPROVAL_STATUSES.EXECUTING) {
+    return {
+      success: false,
+      item,
+      error: 'Approval queue item execution is already in progress.',
+      code: 'AI_APPROVAL_EXECUTION_IN_PROGRESS',
+    };
+  }
+
+  if (item.blocked === true || item.actionProposal?.blocked === true) {
+    return {
+      success: false,
+      item,
+      error: 'Blocked approval queue items cannot be executed.',
+      code: 'AI_APPROVAL_EXECUTION_BLOCKED',
+    };
+  }
+
+  if (
+    item.status === AI_APPROVAL_STATUSES.APPROVED &&
+    item.decision === AI_APPROVAL_DECISIONS.APPROVE
+  ) {
+    const nowDate = now instanceof Date ? now : new Date(now);
+    const expiresAtDate = item.expiresAt
+      ? new Date(item.expiresAt)
+      : null;
+
+    if (
+      expiresAtDate &&
+      !Number.isNaN(expiresAtDate.getTime()) &&
+      expiresAtDate.getTime() <= nowDate.getTime()
+    ) {
+      return {
+        success: false,
+        item,
+        error: 'Approval queue item is expired and cannot be executed.',
+        code: 'AI_APPROVAL_EXPIRED',
+      };
+    }
+  }
+
+  return {
+    success: false,
+    item,
+    error: 'Only approved approval queue items can be claimed for execution.',
+    code: 'AI_APPROVAL_NOT_APPROVED',
+  };
+};
+
+const claimExecution = async ({
+  approvalId,
+  companyId,
+  claimedByUserId = null,
+  now = new Date(),
+} = {}) => {
+  if (!approvalId) {
+    return {
+      success: false,
+      item: null,
+      error: 'approvalId is required.',
+      code: 'AI_APPROVAL_ID_REQUIRED',
+    };
+  }
+
+  if (!companyId) {
+    return {
+      success: false,
+      item: null,
+      error: 'companyId is required.',
+      code: 'AI_APPROVAL_COMPANY_REQUIRED',
+    };
+  }
+
+  if (!AIApprovalQueueItem) {
+    return {
+      success: false,
+      item: null,
+      error: 'AIApprovalQueueItem model is unavailable.',
+      code: 'AI_APPROVAL_MODEL_UNAVAILABLE',
+    };
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  if (!record) {
+    return {
+      success: false,
+      item: null,
+      error: 'Approval queue item not found.',
+      code: 'AI_APPROVAL_NOT_FOUND',
+    };
+  }
+
+  const current = serializeApprovalQueueItem(record);
+
+  const nowDate =
+    now instanceof Date
+      ? now
+      : new Date(now);
+
+  const classifiedFailure = classifyExecutionClaimFailure(
+    current,
+    nowDate,
+  );
+
+  if (
+    current.status !== AI_APPROVAL_STATUSES.APPROVED ||
+    current.decision !== AI_APPROVAL_DECISIONS.APPROVE ||
+    current.blocked === true ||
+    current.actionProposal?.blocked === true ||
+    classifiedFailure.code === 'AI_APPROVAL_EXPIRED'
+  ) {
+    return classifiedFailure;
+  }
+
+  const metadata =
+    record.metadata &&
+    typeof record.metadata === 'object' &&
+    !Array.isArray(record.metadata)
+      ? record.metadata
+      : {};
+
+  const claimedAt = nowDate.toISOString();
+
+  const [updatedCount] = await AIApprovalQueueItem.update(
+    {
+      status: AI_APPROVAL_STATUSES.EXECUTING,
+      metadata: {
+        ...metadata,
+        executionClaim: {
+          claimedByUserId,
+          claimedAt,
+        },
+      },
+    },
+    {
+      where: {
+        approvalId,
+        companyId,
+        status: AI_APPROVAL_STATUSES.APPROVED,
+        decision: AI_APPROVAL_DECISIONS.APPROVE,
+        blocked: false,
+        expiresAt: {
+          [Op.gt]: nowDate,
+        },
+      },
+    },
+  );
+
+  const latestRecord = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  const latestItem = serializeApprovalQueueItem(latestRecord);
+
+  if (updatedCount !== 1) {
+    return classifyExecutionClaimFailure(
+      latestItem,
+      nowDate,
+    );
+  }
+
+  return {
+    success: true,
+    item: latestItem,
+    error: null,
+    code: null,
+  };
+};
+
+const completeExecution = async ({
+  approvalId,
+  companyId,
+  execution = {},
+} = {}) => {
+  if (!approvalId) {
+    return {
+      success: false,
+      item: null,
+      error: 'approvalId is required.',
+      code: 'AI_APPROVAL_ID_REQUIRED',
+    };
+  }
+
+  if (!companyId) {
+    return {
+      success: false,
+      item: null,
+      error: 'companyId is required.',
+      code: 'AI_APPROVAL_COMPANY_REQUIRED',
+    };
+  }
+
+  if (!AIApprovalQueueItem) {
+    return {
+      success: false,
+      item: null,
+      error: 'AIApprovalQueueItem model is unavailable.',
+      code: 'AI_APPROVAL_MODEL_UNAVAILABLE',
+    };
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  if (!record) {
+    return {
+      success: false,
+      item: null,
+      error: 'Approval queue item not found.',
+      code: 'AI_APPROVAL_NOT_FOUND',
+    };
+  }
+
+  const current = serializeApprovalQueueItem(record);
+
+  if (current.status === AI_APPROVAL_STATUSES.EXECUTED) {
+    return {
+      success: false,
+      item: current,
+      error: 'Approval queue item has already been executed.',
+      code: 'AI_APPROVAL_ALREADY_EXECUTED',
+    };
+  }
+
+  if (current.status !== AI_APPROVAL_STATUSES.EXECUTING) {
+    return {
+      success: false,
+      item: current,
+      error: 'Approval queue item does not have an active execution claim.',
+      code: 'AI_APPROVAL_EXECUTION_NOT_CLAIMED',
+    };
+  }
+
+  const metadata =
+    record.metadata &&
+    typeof record.metadata === 'object' &&
+    !Array.isArray(record.metadata)
+      ? record.metadata
+      : {};
+
+  const completedAt = new Date().toISOString();
+
+  const [updatedCount] = await AIApprovalQueueItem.update(
+    {
+      status: AI_APPROVAL_STATUSES.EXECUTED,
+      metadata: {
+        ...metadata,
+        execution: {
+          ...execution,
+          executedAt: completedAt,
+        },
+        executionClaim: {
+          ...(metadata.executionClaim || {}),
+          completedAt,
+        },
+      },
+    },
+    {
+      where: {
+        approvalId,
+        companyId,
+        status: AI_APPROVAL_STATUSES.EXECUTING,
+      },
+    },
+  );
+
+  if (updatedCount !== 1) {
+    const latest = await AIApprovalQueueItem.findOne({
+      where: { approvalId, companyId },
+    });
+
+    return {
+      success: false,
+      item: serializeApprovalQueueItem(latest),
+      error: 'Approval queue item execution state changed before completion.',
+      code: 'AI_APPROVAL_EXECUTION_CONFLICT',
+    };
+  }
+
+  await record.reload();
+
+  return {
+    success: true,
+    item: serializeApprovalQueueItem(record),
+    error: null,
+    code: null,
+  };
+};
+
+const failExecution = async ({
+  approvalId,
+  companyId,
+  failure = {},
+} = {}) => {
+  if (!approvalId) {
+    return {
+      success: false,
+      item: null,
+      error: 'approvalId is required.',
+      code: 'AI_APPROVAL_ID_REQUIRED',
+    };
+  }
+
+  if (!companyId) {
+    return {
+      success: false,
+      item: null,
+      error: 'companyId is required.',
+      code: 'AI_APPROVAL_COMPANY_REQUIRED',
+    };
+  }
+
+  if (!AIApprovalQueueItem) {
+    return {
+      success: false,
+      item: null,
+      error: 'AIApprovalQueueItem model is unavailable.',
+      code: 'AI_APPROVAL_MODEL_UNAVAILABLE',
+    };
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  if (!record) {
+    return {
+      success: false,
+      item: null,
+      error: 'Approval queue item not found.',
+      code: 'AI_APPROVAL_NOT_FOUND',
+    };
+  }
+
+  const current = serializeApprovalQueueItem(record);
+
+  if (current.status !== AI_APPROVAL_STATUSES.EXECUTING) {
+    return {
+      success: false,
+      item: current,
+      error: 'Approval queue item does not have an active execution claim.',
+      code: 'AI_APPROVAL_EXECUTION_NOT_CLAIMED',
+    };
+  }
+
+  const metadata =
+    record.metadata &&
+    typeof record.metadata === 'object' &&
+    !Array.isArray(record.metadata)
+      ? record.metadata
+      : {};
+
+  const failedAt = new Date().toISOString();
+
+  const [updatedCount] = await AIApprovalQueueItem.update(
+    {
+      status: AI_APPROVAL_STATUSES.APPROVED,
+      metadata: {
+        ...metadata,
+        lastExecutionFailure: {
+          ...failure,
+          failedAt,
+        },
+        executionClaim: {
+          ...(metadata.executionClaim || {}),
+          releasedAt: failedAt,
+        },
+      },
+    },
+    {
+      where: {
+        approvalId,
+        companyId,
+        status: AI_APPROVAL_STATUSES.EXECUTING,
+      },
+    },
+  );
+
+  if (updatedCount !== 1) {
+    const latest = await AIApprovalQueueItem.findOne({
+      where: { approvalId, companyId },
+    });
+
+    return {
+      success: false,
+      item: serializeApprovalQueueItem(latest),
+      error: 'Approval queue item execution state changed before failure release.',
+      code: 'AI_APPROVAL_EXECUTION_CONFLICT',
+    };
+  }
+
+  await record.reload();
+
+  return {
+    success: true,
+    item: serializeApprovalQueueItem(record),
+    error: null,
+    code: null,
+  };
 };
 
 const markExecuted = async ({
@@ -375,8 +819,12 @@ const decideApprovalQueueItem = async ({
 };
 
 module.exports = {
+  claimExecution,
+  completeExecution,
   decideApprovalQueueItem,
+  failExecution,
   getById,
+  getByIdForCompany,
   listApprovalQueueItems,
   markExecuted,
   normalizeApprovalQueuePayload,

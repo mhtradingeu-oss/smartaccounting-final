@@ -10,6 +10,7 @@ const AI_APPROVAL_QUEUE_SCHEMA_VERSION = 'ai_approval_queue.v1';
 const AI_APPROVAL_STATUSES = Object.freeze({
   PENDING: 'pending',
   APPROVED: 'approved',
+  EXECUTING: 'executing',
   REJECTED: 'rejected',
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
