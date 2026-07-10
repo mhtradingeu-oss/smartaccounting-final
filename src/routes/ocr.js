@@ -247,8 +247,13 @@ const buildOcrActionProposalMetadata = ({ req, documentRecord, intake } = {}) =>
       documentId: documentRecord?.id || null,
       documentType,
       suggestedAction,
-      responseOnly: true,
-      execution: 'none',
+      draftKind,
+      decisionFingerprint:
+        intake?.decisionFingerprint ||
+        intake?.lifecycle?.decisionFingerprint ||
+        null,
+      responseOnly: false,
+      execution: 'pending_human_approval',
     },
   });
 

@@ -1,6 +1,7 @@
 const { AIApprovalQueueItem } = require('../../models');
 const {
   AI_APPROVAL_DECISIONS,
+  AI_APPROVAL_STATUSES,
   decideAiApprovalQueueItem,
 } = require('./aiApprovalQueueContract');
 
@@ -168,35 +169,142 @@ const getById = async (approvalId) => {
   return serializeApprovalQueueItem(record);
 };
 
-const markExecuted = async (approvalId, execution = {}) => {
-  if (!approvalId || !AIApprovalQueueItem) {
-    return { success: false, item: null, error: 'approvalId and AIApprovalQueueItem are required.' };
+const markExecuted = async ({
+  approvalId,
+  companyId,
+  execution = {},
+} = {}) => {
+  if (!approvalId) {
+    return {
+      success: false,
+      item: null,
+      error: 'approvalId is required.',
+      code: 'AI_APPROVAL_ID_REQUIRED',
+    };
+  }
+
+  if (!companyId) {
+    return {
+      success: false,
+      item: null,
+      error: 'companyId is required.',
+      code: 'AI_APPROVAL_COMPANY_REQUIRED',
+    };
+  }
+
+  if (!AIApprovalQueueItem) {
+    return {
+      success: false,
+      item: null,
+      error: 'AIApprovalQueueItem model is unavailable.',
+      code: 'AI_APPROVAL_MODEL_UNAVAILABLE',
+    };
   }
 
   const record = await AIApprovalQueueItem.findOne({
-    where: { approvalId },
+    where: { approvalId, companyId },
   });
 
   if (!record) {
-    return { success: false, item: null, error: 'Approval queue item not found.' };
+    return {
+      success: false,
+      item: null,
+      error: 'Approval queue item not found.',
+      code: 'AI_APPROVAL_NOT_FOUND',
+    };
   }
 
-  const metadata = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
-    ? record.metadata
-    : {};
+  const current = serializeApprovalQueueItem(record);
+  const existingExecution =
+    current?.metadata?.execution &&
+    typeof current.metadata.execution === 'object' &&
+    !Array.isArray(current.metadata.execution)
+      ? current.metadata.execution
+      : null;
 
-  await record.update({
-    status: 'executed',
-    metadata: {
-      ...metadata,
-      execution: {
-        ...execution,
-        executedAt: new Date().toISOString(),
+  if (
+    current.status === AI_APPROVAL_STATUSES.EXECUTED ||
+    existingExecution?.executedAt
+  ) {
+    return {
+      success: false,
+      item: current,
+      error: 'Approval queue item has already been executed.',
+      code: 'AI_APPROVAL_ALREADY_EXECUTED',
+    };
+  }
+
+  if (
+    current.status !== AI_APPROVAL_STATUSES.APPROVED ||
+    current.decision !== AI_APPROVAL_DECISIONS.APPROVE
+  ) {
+    return {
+      success: false,
+      item: current,
+      error: 'Only approved approval queue items can be executed.',
+      code: 'AI_APPROVAL_NOT_APPROVED',
+    };
+  }
+
+  if (current.blocked === true || current.actionProposal?.blocked === true) {
+    return {
+      success: false,
+      item: current,
+      error: 'Blocked approval queue items cannot be executed.',
+      code: 'AI_APPROVAL_EXECUTION_BLOCKED',
+    };
+  }
+
+  const metadata =
+    record.metadata &&
+    typeof record.metadata === 'object' &&
+    !Array.isArray(record.metadata)
+      ? record.metadata
+      : {};
+
+  const executedAt = new Date().toISOString();
+
+  const [updatedCount] = await AIApprovalQueueItem.update(
+    {
+      status: AI_APPROVAL_STATUSES.EXECUTED,
+      metadata: {
+        ...metadata,
+        execution: {
+          ...execution,
+          executedAt,
+        },
       },
     },
-  });
+    {
+      where: {
+        approvalId,
+        companyId,
+        status: AI_APPROVAL_STATUSES.APPROVED,
+      },
+    },
+  );
 
-  return { success: true, item: serializeApprovalQueueItem(record), error: null };
+  if (updatedCount !== 1) {
+    const latest = await AIApprovalQueueItem.findOne({
+      where: { approvalId, companyId },
+    });
+
+    return {
+      success: false,
+      item: serializeApprovalQueueItem(latest),
+      error: 'Approval queue item execution state changed before completion.',
+      code: 'AI_APPROVAL_EXECUTION_CONFLICT',
+    };
+  }
+
+  await record.reload();
+
+  return {
+    success: true,
+    item: serializeApprovalQueueItem(record),
+    error: null,
+    code: null,
+  };
 };
 
 const decideApprovalQueueItem = async ({

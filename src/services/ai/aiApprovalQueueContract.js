@@ -14,6 +14,7 @@ const AI_APPROVAL_STATUSES = Object.freeze({
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
   EXECUTION_BLOCKED: 'execution_blocked',
+  EXECUTED: 'executed',
 });
 
 const AI_APPROVAL_DECISIONS = Object.freeze({
@@ -32,6 +33,7 @@ const TERMINAL_APPROVAL_STATUSES = Object.freeze([
   AI_APPROVAL_STATUSES.EXPIRED,
   AI_APPROVAL_STATUSES.CANCELLED,
   AI_APPROVAL_STATUSES.EXECUTION_BLOCKED,
+  AI_APPROVAL_STATUSES.EXECUTED,
 ]);
 
 const makeApprovalId = () => `aiap_${crypto.randomUUID()}`;
