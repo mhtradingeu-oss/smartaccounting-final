@@ -76,6 +76,7 @@ module.exports = {
       'GET /api/exports/*',
       'GET /api/compliance/*',
       'GET /api/tax-reports/*',
+      'GET /api/tax-bridge/readiness',
       'POST /api/tax-reports/*',
     ],
   },
@@ -126,6 +127,7 @@ module.exports = {
       'GET /api/exports/*',
       'GET /api/compliance/*',
       'GET /api/tax-reports/*',
+      'GET /api/tax-bridge/readiness',
     ],
   },
 
@@ -152,6 +154,8 @@ module.exports = {
       'GET /api/reports/general-ledger',
       'GET /api/reports/account-ledger',
       'GET /api/reports/vat-summary',
+      'GET /api/tax-bridge/readiness',
+      'GET /api/compliance/*',
       'GET /api/journal-entries/:id',
       'GET /api/journal-entries/:id/audit-log',
 
