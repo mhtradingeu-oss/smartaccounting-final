@@ -211,3 +211,6 @@ database/*.db
 *.sqlite
 *.db
 .DS_Store
+
+# Generated SmartAccounting truth-scan evidence
+docs/final-truth/audits/*.txt
