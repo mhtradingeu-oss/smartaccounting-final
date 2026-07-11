@@ -5,6 +5,9 @@ const {
   listApprovalQueueItems,
 } = require('../services/ai/aiApprovalQueueRepository');
 const { AI_APPROVAL_DECISIONS } = require('../services/ai/aiApprovalQueueContract');
+const {
+  executeApprovedSafeDraft,
+} = require('../services/ai/safeDraftExecutionService');
 const AuditLogService = require('../services/auditLogService');
 
 const router = express.Router();
@@ -134,5 +137,77 @@ router.post(
   requireRole(['admin', 'accountant']),
   handleApprovalDecision(AI_APPROVAL_DECISIONS.REJECT),
 );
+
+const FORBIDDEN_EXECUTION_BODY_FIELDS = Object.freeze([
+  'companyId',
+  'toolId',
+  'documentId',
+  'decisionFingerprint',
+  'draftKind',
+  'payload',
+  'executionMode',
+]);
+
+router.post('/execute', requireRole(['admin', 'accountant']), async (req, res, next) => {
+  try {
+    const body = req.body || {};
+    const forbiddenField = FORBIDDEN_EXECUTION_BODY_FIELDS.find((field) =>
+      Object.prototype.hasOwnProperty.call(body, field),
+    );
+
+    if (forbiddenField) {
+      return res.status(400).json({
+        success: false,
+        error: `${forbiddenField} must be loaded from the persisted approval.`,
+      });
+    }
+
+    if (typeof body.approvalId !== 'string' || !body.approvalId.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'approvalId is required and must be a non-empty string.',
+      });
+    }
+
+    if (typeof body.reason !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'reason is required and must be a string.',
+      });
+    }
+
+    const approvalId = body.approvalId.trim();
+    const reason = body.reason.trim();
+
+    if (reason.length < 3 || reason.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'reason must be between 3 and 500 characters.',
+      });
+    }
+
+    const result = await executeApprovedSafeDraft({
+      approvalId,
+      companyId: req.companyId,
+      userId: req.user?.id || req.userId,
+      reason,
+      requestId: req.requestId || req.id || null,
+      ipAddress: req.ip || null,
+      userAgent: req.get('User-Agent') || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      result,
+      meta: {
+        companyId: req.companyId,
+        executionEnabled: true,
+        executionScope: 'reviewed_document_drafts_only',
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 module.exports = router;
