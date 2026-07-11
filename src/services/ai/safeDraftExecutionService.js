@@ -378,6 +378,42 @@ const createSafeDraftExecutionService = ({
       throw invalidResultError;
     }
 
+    const recoveryResult =
+      await approvalRepository.recordPostDraftRecovery({
+        approvalId,
+        companyId,
+        recovery: {
+          toolId: approval.toolId,
+          documentId: contract.documentId,
+          decisionFingerprint:
+            draftResult.decisionFingerprint ||
+            contract.decisionFingerprint,
+          draftType: draft.type,
+          draftId: draft.id,
+          draftStatus: draft.status || null,
+          createdByUserId: userId,
+          requestId,
+        },
+      });
+
+    if (!recoveryResult?.success) {
+      throw makeExecutionError(
+        'Draft was created but recovery evidence could not be persisted.',
+        'AI_APPROVAL_POST_DRAFT_RECOVERY_PERSIST_FAILED',
+        500,
+        {
+          approvalId,
+          companyId,
+          draft: {
+            type: draft.type,
+            id: draft.id,
+            status: draft.status || null,
+          },
+          recoveryResult,
+        },
+      );
+    }
+
     const completionResult =
       await approvalRepository.completeExecution({
         approvalId,

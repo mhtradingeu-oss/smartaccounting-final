@@ -380,6 +380,368 @@ const claimExecution = async ({
   };
 };
 
+const recordPostDraftRecovery = async ({
+  approvalId,
+  companyId,
+  recovery = {},
+} = {}) => {
+  if (!approvalId) {
+    return {
+      success: false,
+      item: null,
+      recovery: null,
+      idempotent: false,
+      error: 'approvalId is required.',
+      code: 'AI_APPROVAL_ID_REQUIRED',
+    };
+  }
+
+  if (!companyId) {
+    return {
+      success: false,
+      item: null,
+      recovery: null,
+      idempotent: false,
+      error: 'companyId is required.',
+      code: 'AI_APPROVAL_COMPANY_REQUIRED',
+    };
+  }
+
+  if (!AIApprovalQueueItem) {
+    return {
+      success: false,
+      item: null,
+      recovery: null,
+      idempotent: false,
+      error: 'AIApprovalQueueItem model is unavailable.',
+      code: 'AI_APPROVAL_MODEL_UNAVAILABLE',
+    };
+  }
+
+  const record = await AIApprovalQueueItem.findOne({
+    where: { approvalId, companyId },
+  });
+
+  if (!record) {
+    return {
+      success: false,
+      item: null,
+      recovery: null,
+      idempotent: false,
+      error: 'Approval queue item not found.',
+      code: 'AI_APPROVAL_NOT_FOUND',
+    };
+  }
+
+  const current = serializeApprovalQueueItem(record);
+
+  if (current.status === AI_APPROVAL_STATUSES.EXECUTED) {
+    return {
+      success: false,
+      item: current,
+      recovery: current.metadata?.postDraftRecovery || null,
+      idempotent: false,
+      error: 'Approval queue item has already been executed.',
+      code: 'AI_APPROVAL_ALREADY_EXECUTED',
+    };
+  }
+
+  if (current.status !== AI_APPROVAL_STATUSES.EXECUTING) {
+    return {
+      success: false,
+      item: current,
+      recovery: current.metadata?.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Post-draft recovery evidence requires an active execution claim.',
+      code: 'AI_APPROVAL_EXECUTION_NOT_CLAIMED',
+    };
+  }
+
+  const metadata =
+    record.metadata &&
+    typeof record.metadata === 'object' &&
+    !Array.isArray(record.metadata)
+      ? record.metadata
+      : {};
+
+  const normalizeComparable = (value) => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    return String(value);
+  };
+
+  const expectedToolId =
+    normalizeComparable(current.toolId);
+
+  const expectedDocumentId =
+    normalizeComparable(metadata.documentId);
+
+  const expectedDecisionFingerprint =
+    normalizeComparable(metadata.decisionFingerprint);
+
+  const expectedDraftType =
+    normalizeComparable(metadata.draftKind);
+
+  if (
+    !expectedToolId ||
+    !expectedDocumentId ||
+    !expectedDecisionFingerprint ||
+    !expectedDraftType
+  ) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Approval item is missing the original recovery contract.',
+      code: 'AI_APPROVAL_RECOVERY_SOURCE_CONTRACT_INVALID',
+    };
+  }
+
+  const recoveryToolId =
+    normalizeComparable(
+      recovery.toolId || expectedToolId,
+    );
+
+  const documentId =
+    normalizeComparable(recovery.documentId);
+
+  const decisionFingerprint =
+    normalizeComparable(recovery.decisionFingerprint);
+
+  const draftType =
+    normalizeComparable(recovery.draftType);
+
+  const draftId =
+    normalizeComparable(recovery.draftId);
+
+  if (
+    !recoveryToolId ||
+    !draftId ||
+    !draftType ||
+    !documentId ||
+    !decisionFingerprint
+  ) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Post-draft recovery evidence requires toolId, draftId, draftType, documentId, and decisionFingerprint.',
+      code: 'AI_APPROVAL_RECOVERY_EVIDENCE_INVALID',
+    };
+  }
+
+  if (!['expense', 'invoice'].includes(draftType)) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error: 'Unsupported recovery draft type.',
+      code: 'AI_APPROVAL_RECOVERY_DRAFT_TYPE_INVALID',
+    };
+  }
+
+  if (recoveryToolId !== expectedToolId) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Recovery tool does not match the approved tool.',
+      code: 'AI_APPROVAL_RECOVERY_TOOL_MISMATCH',
+    };
+  }
+
+  if (documentId !== expectedDocumentId) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Recovery document does not match the approved document.',
+      code: 'AI_APPROVAL_RECOVERY_DOCUMENT_MISMATCH',
+    };
+  }
+
+  if (
+    decisionFingerprint !==
+    expectedDecisionFingerprint
+  ) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Recovery fingerprint does not match the approved decision fingerprint.',
+      code: 'AI_APPROVAL_RECOVERY_FINGERPRINT_MISMATCH',
+    };
+  }
+
+  if (draftType !== expectedDraftType) {
+    return {
+      success: false,
+      item: current,
+      recovery: metadata.postDraftRecovery || null,
+      idempotent: false,
+      error:
+        'Recovery draft type does not match the approved draft kind.',
+      code: 'AI_APPROVAL_RECOVERY_DRAFT_KIND_MISMATCH',
+    };
+  }
+
+  const candidate = {
+    state: 'completion_pending',
+    toolId: recoveryToolId,
+    documentId,
+    decisionFingerprint,
+    draftType,
+    draftId,
+    draftStatus:
+      normalizeComparable(recovery.draftStatus),
+    createdByUserId:
+      recovery.createdByUserId || null,
+    requestId:
+      normalizeComparable(recovery.requestId),
+  };
+
+  const existingRecovery =
+    metadata.postDraftRecovery &&
+    typeof metadata.postDraftRecovery === 'object' &&
+    !Array.isArray(metadata.postDraftRecovery)
+      ? metadata.postDraftRecovery
+      : null;
+
+  const comparableRecovery = (value) => ({
+    state: value?.state || null,
+    toolId: normalizeComparable(value?.toolId),
+    documentId: normalizeComparable(value?.documentId),
+    decisionFingerprint:
+      normalizeComparable(value?.decisionFingerprint),
+    draftType: normalizeComparable(value?.draftType),
+    draftId: normalizeComparable(value?.draftId),
+    draftStatus:
+      normalizeComparable(value?.draftStatus),
+    createdByUserId:
+      value?.createdByUserId || null,
+    requestId:
+      normalizeComparable(value?.requestId),
+  });
+
+  const evidenceMatches = (left, right) =>
+    JSON.stringify(comparableRecovery(left)) ===
+    JSON.stringify(comparableRecovery(right));
+
+  if (existingRecovery) {
+    if (evidenceMatches(existingRecovery, candidate)) {
+      return {
+        success: true,
+        item: current,
+        recovery: existingRecovery,
+        idempotent: true,
+        error: null,
+        code: null,
+      };
+    }
+
+    return {
+      success: false,
+      item: current,
+      recovery: existingRecovery,
+      idempotent: false,
+      error:
+        'Different post-draft recovery evidence is already stored.',
+      code: 'AI_APPROVAL_RECOVERY_EVIDENCE_CONFLICT',
+    };
+  }
+
+  const recordedAt = new Date().toISOString();
+
+  const storedRecovery = {
+    ...candidate,
+    recordedAt,
+  };
+
+  const [updatedCount] = await AIApprovalQueueItem.update(
+    {
+      metadata: {
+        ...metadata,
+        postDraftRecovery: storedRecovery,
+      },
+    },
+    {
+      where: {
+        approvalId,
+        companyId,
+        status: AI_APPROVAL_STATUSES.EXECUTING,
+        updatedAt: record.updatedAt,
+      },
+    },
+  );
+
+  if (updatedCount !== 1) {
+    const latestRecord =
+      await AIApprovalQueueItem.findOne({
+        where: { approvalId, companyId },
+      });
+
+    const latest =
+      serializeApprovalQueueItem(latestRecord);
+
+    const latestRecovery =
+      latest?.metadata?.postDraftRecovery || null;
+
+    if (
+      latest?.status ===
+        AI_APPROVAL_STATUSES.EXECUTING &&
+      latestRecovery &&
+      evidenceMatches(latestRecovery, candidate)
+    ) {
+      return {
+        success: true,
+        item: latest,
+        recovery: latestRecovery,
+        idempotent: true,
+        error: null,
+        code: null,
+      };
+    }
+
+    return {
+      success: false,
+      item: latest,
+      recovery: latestRecovery,
+      idempotent: false,
+      error:
+        'Approval execution state or recovery evidence changed before persistence.',
+      code: 'AI_APPROVAL_RECOVERY_EVIDENCE_CONFLICT',
+    };
+  }
+
+  await record.reload();
+
+  const item = serializeApprovalQueueItem(record);
+
+  return {
+    success: true,
+    item,
+    recovery:
+      item?.metadata?.postDraftRecovery || null,
+    idempotent: false,
+    error: null,
+    code: null,
+  };
+};
+
 const completeExecution = async ({
   approvalId,
   companyId,
@@ -827,6 +1189,7 @@ module.exports = {
   getByIdForCompany,
   listApprovalQueueItems,
   markExecuted,
+  recordPostDraftRecovery,
   normalizeApprovalQueuePayload,
   persistApprovalQueueItem,
   serializeApprovalQueueItem,

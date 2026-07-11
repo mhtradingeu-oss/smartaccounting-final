@@ -70,6 +70,29 @@ const createHarness = ({
       },
     ),
 
+    recordPostDraftRecovery: jest.fn().mockResolvedValue({
+      success: true,
+      item: {
+        ...approval,
+        status: 'executing',
+        metadata: {
+          ...approval.metadata,
+          postDraftRecovery: {
+            state: 'completion_pending',
+            draftType: draftResult?.draft?.type || null,
+            draftId: draftResult?.draft?.id || null,
+          },
+        },
+      },
+      recovery: {
+        state: 'completion_pending',
+        draftType: draftResult?.draft?.type || null,
+        draftId: draftResult?.draft?.id || null,
+      },
+      error: null,
+      code: null,
+    }),
+
     completeExecution: jest.fn().mockResolvedValue(
       completionResult || {
         success: true,
@@ -175,6 +198,23 @@ describe('safeDraftExecutionService', () => {
       requestId: 'req-expense-1',
       ipAddress: '127.0.0.1',
       userAgent: 'jest',
+    });
+
+    expect(
+      harness.approvalRepository.recordPostDraftRecovery,
+    ).toHaveBeenCalledWith({
+      approvalId: approval.approvalId,
+      companyId: approval.companyId,
+      recovery: expect.objectContaining({
+        toolId: approval.toolId,
+        documentId: approval.metadata.documentId,
+        decisionFingerprint:
+          approval.metadata.decisionFingerprint,
+        draftType: 'expense',
+        draftId: 501,
+        createdByUserId: 77,
+        requestId: 'req-expense-1',
+      }),
     });
 
     expect(
@@ -366,6 +406,10 @@ describe('safeDraftExecutionService', () => {
     ).not.toHaveBeenCalled();
 
     expect(
+      harness.approvalRepository.recordPostDraftRecovery,
+    ).not.toHaveBeenCalled();
+
+    expect(
       harness.approvalRepository.completeExecution,
     ).not.toHaveBeenCalled();
   });
@@ -445,6 +489,52 @@ describe('safeDraftExecutionService', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('keeps the execution claimed when recovery evidence persistence fails after draft creation', async () => {
+    const approval = buildApproval();
+
+    const harness = createHarness({ approval });
+
+    harness.approvalRepository
+      .recordPostDraftRecovery
+      .mockResolvedValueOnce({
+        success: false,
+        item: {
+          ...approval,
+          status: 'executing',
+        },
+        error:
+          'Recovery evidence persistence conflict.',
+        code:
+          'AI_APPROVAL_RECOVERY_EVIDENCE_CONFLICT',
+      });
+
+    await expect(
+      harness.service.executeApprovedSafeDraft({
+        approvalId: approval.approvalId,
+        companyId: approval.companyId,
+        userId: 77,
+      }),
+    ).rejects.toMatchObject({
+      code:
+        'AI_APPROVAL_POST_DRAFT_RECOVERY_PERSIST_FAILED',
+      status: 500,
+      details: {
+        draft: {
+          type: 'expense',
+          id: 501,
+        },
+      },
+    });
+
+    expect(
+      harness.approvalRepository.failExecution,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      harness.approvalRepository.completeExecution,
+    ).not.toHaveBeenCalled();
+  });
+
   it('reports completion failure without releasing a claim after a draft exists', async () => {
     const approval = buildApproval();
 
@@ -479,6 +569,19 @@ describe('safeDraftExecutionService', () => {
         },
       },
     });
+
+    expect(
+      harness.approvalRepository.recordPostDraftRecovery,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        approvalId: approval.approvalId,
+        companyId: approval.companyId,
+        recovery: expect.objectContaining({
+          draftType: 'expense',
+          draftId: 501,
+        }),
+      }),
+    );
 
     expect(
       harness.approvalRepository.failExecution,
