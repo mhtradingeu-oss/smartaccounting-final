@@ -55,4 +55,30 @@ describe('createDatabaseConfig safety integration behavior', () => {
     expect(config.isSqlite).toBeFalsy();
     expect(config.databaseUrl).toBe('postgres://postgres:postgres@db:5432/smartaccounting_test');
   });
+
+  test('loads Sequelize CLI environments lazily and keeps test access fail-closed', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.USE_SQLITE = 'false';
+    process.env.DATABASE_URL =
+      'postgres://smart:smartpass@db:5432/smartaccounting';
+    delete process.env.TEST_DATABASE_ALLOWED_NAMES;
+
+    jest.resetModules();
+
+    const sequelizeCliConfig = require('../../config/sequelize');
+
+    expect(Object.keys(sequelizeCliConfig)).toEqual([
+      'development',
+      'test',
+      'production',
+    ]);
+
+    expect(() => sequelizeCliConfig.development).not.toThrow();
+    expect(sequelizeCliConfig.development.dialect).toBe('postgres');
+
+    expect(() => sequelizeCliConfig.test).toThrow(
+      /TEST_DATABASE_SAFETY_VIOLATION|safety/i,
+    );
+  });
+
 });

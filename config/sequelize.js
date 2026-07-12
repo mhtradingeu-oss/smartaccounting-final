@@ -1,9 +1,11 @@
-// Unified config: use getDatabaseConfig from src/config/database.js
+// Unified Sequelize CLI config.
+// Each environment is resolved lazily so loading the development config
+// cannot accidentally evaluate the protected PostgreSQL test configuration.
 const { createDatabaseConfig } = require('../src/config/database');
 
 function getDatabaseConfig(env) {
-  // This function returns a config object compatible with sequelize-cli
   const config = createDatabaseConfig(env);
+
   if (config.isSqlite) {
     return {
       dialect: 'sqlite',
@@ -11,6 +13,7 @@ function getDatabaseConfig(env) {
       logging: false,
     };
   }
+
   return {
     dialect: 'postgres',
     url: config.databaseUrl,
@@ -20,8 +23,16 @@ function getDatabaseConfig(env) {
   };
 }
 
-module.exports = {
-  development: getDatabaseConfig('development'),
-  test: getDatabaseConfig('test'),
-  production: getDatabaseConfig('production'),
-};
+const sequelizeConfig = {};
+
+for (const env of ['development', 'test', 'production']) {
+  Object.defineProperty(sequelizeConfig, env, {
+    enumerable: true,
+    configurable: false,
+    get() {
+      return getDatabaseConfig(env);
+    },
+  });
+}
+
+module.exports = sequelizeConfig;
