@@ -79,6 +79,8 @@ module.exports = {
       'GET /api/tax-reports/*',
       'GET /api/tax-bridge/readiness',
       'POST /api/tax-reports/*',
+      'GET /api/enterprise/timeline',
+      'GET /api/enterprise/timeline/*',
     ],
   },
 
@@ -129,6 +131,8 @@ module.exports = {
       'GET /api/compliance/*',
       'GET /api/tax-reports/*',
       'GET /api/tax-bridge/readiness',
+      'GET /api/enterprise/timeline',
+      'GET /api/enterprise/timeline/*',
     ],
   },
 
@@ -170,6 +174,8 @@ module.exports = {
       'GET /api/ocr/results/:id',
       'GET /api/ocr/validate/:id',
       'POST /api/ai/read/*',
+      'GET /api/enterprise/timeline',
+      'GET /api/enterprise/timeline/*',
     ],
   },
 };

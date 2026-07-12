@@ -210,6 +210,9 @@ async function cleanDatabase() {
     AIInsight,
     AIInsightDecision,
     BankStatementImportDryRun,
+    JournalEntryLine,
+    JournalEntry,
+    ChartAccount,
   } = require('../../src/models');
 
   // 1. Destroy all child/dependent tables first (strict FK order)
@@ -251,6 +254,15 @@ async function cleanDatabase() {
   }
   if (AIApprovalQueueItem) {
     await AIApprovalQueueItem.destroy({ where: {}, force: true });
+  }
+  if (JournalEntryLine) {
+    await JournalEntryLine.destroy({ where: {}, force: true });
+  }
+  if (JournalEntry) {
+    await JournalEntry.destroy({ where: {}, force: true });
+  }
+  if (ChartAccount) {
+    await ChartAccount.destroy({ where: {}, force: true });
   }
 
   // 2. Destroy User before Company

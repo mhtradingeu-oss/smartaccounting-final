@@ -1,45 +1,55 @@
 const express = require('express');
-const router = express.Router();
-
+const ApiError = require('../../lib/errors/apiError');
+const {
+  requireCompany,
+  requireRole,
+} = require('../../middleware/authMiddleware');
 const {
   getUnifiedTimeline,
 } = require('../../services/enterprise/unified-read-model/unifiedTimelineService');
 
-router.get('/:entityId', async (req, res) => {
-  try {
-    const { entityId } = req.params;
-    const { companyId } = req.query;
+const router = express.Router();
 
-    const result = await getUnifiedTimeline(entityId, companyId);
+const ALLOWED_TIMELINE_ROLES = ['admin', 'accountant', 'auditor', 'viewer'];
+
+function rejectClientCompanyScope(req, _res, next) {
+  if (Object.prototype.hasOwnProperty.call(req.query || {}, 'companyId')) {
+    return next(
+      new ApiError(
+        400,
+        'COMPANY_SCOPE_CLIENT_OVERRIDE_FORBIDDEN',
+        'Company scope must be derived from authenticated context',
+      ),
+    );
+  }
+
+  return next();
+}
+
+async function getTimeline(req, res, next) {
+  try {
+    const entityId = req.params?.entityId || null;
+    const result = await getUnifiedTimeline(entityId, req.companyId);
 
     return res.json({
       success: true,
       ...result,
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+  } catch (_error) {
+    return next(
+      new ApiError(
+        500,
+        'INTERNAL_ERROR',
+        'Failed to load unified timeline',
+      ),
+    );
   }
-});
+}
 
-router.get('/', async (req, res) => {
-  try {
-    const { companyId } = req.query;
+router.use(requireCompany);
+router.use(requireRole(ALLOWED_TIMELINE_ROLES));
 
-    const result = await getUnifiedTimeline(null, companyId);
-
-    return res.json({
-      success: true,
-      ...result,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
+router.get('/:entityId', rejectClientCompanyScope, getTimeline);
+router.get('/', rejectClientCompanyScope, getTimeline);
 
 module.exports = router;
