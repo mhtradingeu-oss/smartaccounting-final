@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
 const logger = require('../lib/logger');
+const { assertSafeTestDatabaseTarget } = require('./testDatabaseSafety');
 
 const parseNumberEnv = (value) => {
   if (value === undefined || value === null) {
@@ -100,6 +101,13 @@ function createDatabaseConfig(targetEnv) {
       : undefined;
 
   const loggingOptions = buildSequelizeLoggingOptions(isTestEnv);
+
+  assertSafeTestDatabaseTarget({
+    nodeEnv: normalizedEnv,
+    useSqlite: String(forceSqlite),
+    databaseUrl,
+    allowedNames: process.env.TEST_DATABASE_ALLOWED_NAMES,
+  });
 
   const config = {
     env: normalizedEnv,

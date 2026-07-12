@@ -4,7 +4,8 @@
  * @returns {Promise<Expense>}
  */
 const bcrypt = require('bcryptjs');
-const { User, Invoice, Company, Expense, sequelize } = require('../../src/models');
+const { User, Invoice, Company, Expense, sequelize,
+  AIApprovalQueueItem} = require('../../src/models');
 const { buildExpensePayload } = require('./buildPayload');
 /**
  * Create a test expense with all required fields.
@@ -248,6 +249,10 @@ async function cleanDatabase() {
   if (TaxReport) {
     await TaxReport.destroy({ where: {}, force: true });
   }
+  if (AIApprovalQueueItem) {
+    await AIApprovalQueueItem.destroy({ where: {}, force: true });
+  }
+
   // 2. Destroy User before Company
   if (User) {
     await User.destroy({ where: {}, force: true });

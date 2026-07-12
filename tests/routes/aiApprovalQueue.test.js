@@ -3,6 +3,13 @@ const crypto = require('crypto');
 const { AIApprovalQueueItem, Expense, FileAttachment, Invoice } = require('../../src/models');
 
 describe('AI Approval Queue API', () => {
+  beforeEach(async () => {
+    await global.testUtils.cleanDatabase();
+  });
+
+  afterAll(async () => {
+    await global.testUtils.cleanDatabase();
+  });
   it('returns a safe persisted empty approval queue for viewer role', async () => {
     const { user, token } = await global.testUtils.createTestUserAndLogin({ role: 'viewer' });
 

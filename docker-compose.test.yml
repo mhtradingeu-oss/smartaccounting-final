@@ -35,6 +35,7 @@ services:
       NODE_ENV: test
       PORT: 5001
       USE_SQLITE: "false"
+      TEST_DATABASE_ALLOWED_NAMES: smartaccounting_test
 
       DATABASE_URL: postgres://postgres:postgres@db:5432/smartaccounting_test
 
