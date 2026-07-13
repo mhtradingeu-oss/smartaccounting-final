@@ -3,6 +3,10 @@ const db = require('../../../models');
 
 class EventStoreService {
 
+  static async create(data = {}) {
+    return await db.EventStore.create(data);
+  }
+
   static async record(event) {
     return await db.EventStore.create({
       eventType: event.type,

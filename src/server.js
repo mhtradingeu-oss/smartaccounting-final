@@ -1,6 +1,7 @@
 const logger = require('./lib/logger');
 const { sequelize } = require('./models');
 const app = require('./app');
+const { startEventCore } = require('./services/enterprise/event-core/bootstrapEventCore');
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -54,6 +55,8 @@ async function startServer() {
   if (serverInstance) {
     return serverInstance;
   }
+
+  startEventCore();
 
   serverInstance = app.listen(PORT, HOST, () => {
     logger.info('Server running', {

@@ -24,20 +24,23 @@ const AuditLogService = require('../audit/AuditLogService');
 const LedgerService = require('./ledger.service');
 
 /* ================= EVENT GRAPH (CLEAN CORE) ================ */
-const { emitEvent, buildEvent } = require('./event-graph-bridge');
+const { emitEvent } = require('../enterprise/event-gateway');
 
 const emitFlowEvent = async (type, payload, user, companyId) => {
   try {
     return await emitEvent(
-      buildEvent(type, {
-        ...payload,
+      type,
+      payload,
+      {
         userId: user?.id,
         companyId,
-        correlationId: payload?.correlationId,
-      }),
+        entityType: payload?.entityType || 'ApprovalQueue',
+        entityId: payload?.entityId || payload?.approvalId || null,
+        source: 'execution_engine',
+      },
     );
   } catch (e) {
-    console.warn('EventGraph failed:', e.message);
+    console.warn('Event Gateway failed:', e.message);
   }
 };
 /* ================= END EVENT GRAPH ================= */
@@ -76,6 +79,18 @@ const executeApprovalItem = async ({
   if (mode === 'simulation' || !unlock) {
     const preview = LedgerService.previewFromApproval(item);
 
+    await emitFlowEvent(
+      'execution.simulation.completed',
+      {
+        approvalId,
+        entityType: 'ApprovalQueue',
+        entityId: approvalId,
+        preview,
+      },
+      user,
+      user.companyId,
+    );
+
     await AuditLogService.appendEntry({
       action: 'execution_simulation',
       resourceType: 'ApprovalQueue',
@@ -89,12 +104,35 @@ const executeApprovalItem = async ({
     return { success: true, mode: 'simulation', preview };
   }
 
+  await emitFlowEvent(
+    'execution.started',
+    {
+      approvalId,
+      entityType: 'ApprovalQueue',
+      entityId: approvalId,
+    },
+    user,
+    user.companyId,
+  );
+
   const ledgerEntry = await LedgerService.postFromApproval(item);
 
   await ApprovalQueue.markExecuted(approvalId, {
     executedBy: user.id,
     ledgerId: ledgerEntry.id,
   });
+
+  await emitFlowEvent(
+    'execution.completed',
+    {
+      approvalId,
+      ledgerId: ledgerEntry.id,
+      entityType: 'ApprovalQueue',
+      entityId: approvalId,
+    },
+    user,
+    user.companyId,
+  );
 
   await AuditLogService.appendEntry({
     action: 'execution_posted',
