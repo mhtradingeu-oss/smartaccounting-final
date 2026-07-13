@@ -29,6 +29,14 @@ class EventStoreService {
     });
   }
 
+  static async replay(entityType, entityId, companyId) {
+    return await this.getEntityHistory(
+      entityType,
+      entityId,
+      companyId,
+    );
+  }
+
 }
 
 module.exports = EventStoreService;

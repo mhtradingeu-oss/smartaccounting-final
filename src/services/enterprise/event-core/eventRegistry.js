@@ -9,6 +9,10 @@ const registry = {
   'ledger.posted': { domain: 'ledger' },
   'ledger.reversed': { domain: 'ledger' },
 
+  'execution.simulation.completed': { domain: 'execution' },
+  'execution.started': { domain: 'execution' },
+  'execution.completed': { domain: 'execution' },
+
   'ai.requested': { domain: 'ai' },
   'ai.succeeded': { domain: 'ai' },
   'ai.failed': { domain: 'ai' },
