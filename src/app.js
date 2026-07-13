@@ -123,6 +123,8 @@ const reportRoutes = require('./routes/reports');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
 const aiApprovalQueueRoutes = require('./routes/aiApprovalQueue');
+const aiReasoningRoutes = require('./routes/ai/reasoning');
+
 const adminRoutes = require('./routes/admin');
 const gdprRoutes = require('./routes/gdpr');
 const publicRoutes = require('./routes/public');
@@ -318,6 +320,11 @@ app.use(`${EXPRESS_API_PREFIX}/tax-bridge`, taxBridgeRoutes);
 app.use(`${EXPRESS_API_PREFIX}/review-center`, reviewCenterRoutes);
 app.use(`${EXPRESS_API_PREFIX}/elster`, elsterRoutes);
 app.use(`${EXPRESS_API_PREFIX}/ai/approval-queue`, aiApprovalQueueRoutes);
+
+// AI Reasoning must be registered before generic AI routes
+// to avoid /api/ai middleware shadowing.
+app.use('/api/ai/reasoning', aiReasoningRoutes);
+
 app.use(`${EXPRESS_API_PREFIX}/ai`, aiRoutes);
 app.use(`${EXPRESS_API_PREFIX}/admin`, adminRoutes);
 app.use(`${EXPRESS_API_PREFIX}/gdpr`, gdprRoutes);
@@ -349,12 +356,12 @@ app.use('/api/enterprise/timeline', unifiedTimelineRoutes);
 const observabilityRoutes = require('./routes/enterprise/observability.routes');
 const graphRoutes = require('./routes/graph');
 const timelineRoutes = require('./routes/timeline');
-const aiReasoningRoutes = require('./routes/ai/reasoning');
+
 
 app.use('/api/enterprise/observability', observabilityRoutes);
 app.use('/api/enterprise/graph', graphRoutes);
 app.use('/api/enterprise/audit-timeline', timelineRoutes);
-app.use('/api/ai/reasoning', aiReasoningRoutes);
+
 // ================================================
 
 

@@ -2,9 +2,21 @@ const express = require('express');
 const router = express.Router();
 
 const {
+  requireCompany,
+  requireRole,
+} = require('../../middleware/authMiddleware');
+
+const {
   explainEntity,
   explainChain,
 } = require('../../services/ai/reasoning/aiReasoningEngine');
+
+const ALLOWED_REASONING_ROLES = [
+  'auditor',
+];
+
+router.use(requireCompany);
+router.use(requireRole(ALLOWED_REASONING_ROLES));
 
 /**
  * Explain single entity
@@ -12,9 +24,7 @@ const {
 router.get('/explain/:type/:id', (req, res) => {
   try {
     const { type, id } = req.params;
-    const { companyId } = req.query;
-
-    const result = explainEntity(type, id, companyId);
+    const result = explainEntity(type, id, req.companyId);
 
     res.json(result);
 
@@ -31,9 +41,7 @@ router.get('/explain/:type/:id', (req, res) => {
  */
 router.get('/chain', (req, res) => {
   try {
-    const { companyId } = req.query;
-
-    const result = explainChain(companyId);
+    const result = explainChain(req.companyId);
 
     res.json(result);
 

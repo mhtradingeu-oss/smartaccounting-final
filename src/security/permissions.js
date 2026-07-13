@@ -66,6 +66,7 @@ module.exports = {
       'POST /api/ai/approval-queue/execute',
       'POST /api/ai/read/*',
       'GET /api/ai/insights',
+      'GET /api/ai/reasoning/*',
       'POST /api/ai/voice/assistant',
       'POST /api/ocr/intake/analyze',
       'GET /api/ocr/intake/documents',
@@ -81,6 +82,7 @@ module.exports = {
       'POST /api/tax-reports/*',
       'GET /api/enterprise/timeline',
       'GET /api/enterprise/timeline/*',
+      'GET /api/enterprise/graph/*',
     ],
   },
 
@@ -118,6 +120,7 @@ module.exports = {
       'GET /api/bank-statements/:id/audit-logs',
 
       'GET /api/ai/insights',
+      'GET /api/ai/reasoning/*',
       'POST /api/ai/voice/assistant',
       'GET /api/ai/read/*',
       'GET /api/ai/approval-queue',
@@ -133,6 +136,7 @@ module.exports = {
       'GET /api/tax-bridge/readiness',
       'GET /api/enterprise/timeline',
       'GET /api/enterprise/timeline/*',
+      'GET /api/enterprise/graph/*',
     ],
   },
 
@@ -166,6 +170,7 @@ module.exports = {
 
       'GET /api/telemetry/client-error',
       'GET /api/ai/insights',
+      'GET /api/ai/reasoning/*',
       'POST /api/ai/voice/assistant',
       'GET /api/ai/read/*',
       'GET /api/ai/approval-queue',
@@ -176,6 +181,7 @@ module.exports = {
       'POST /api/ai/read/*',
       'GET /api/enterprise/timeline',
       'GET /api/enterprise/timeline/*',
+      'GET /api/enterprise/graph/*',
     ],
   },
 };

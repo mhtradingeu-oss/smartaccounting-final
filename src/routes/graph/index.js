@@ -1,16 +1,32 @@
 const express = require('express');
 const router = express.Router();
 
-const { buildGraph, traceEntity } = require('../../services/audit/graph/TimelineGraphEngine');
+const {
+  requireCompany,
+  requireRole,
+} = require('../../middleware/authMiddleware');
+
+const {
+  buildGraph,
+  traceEntity,
+} = require('../../services/audit/graph/TimelineGraphEngine');
+
+const ALLOWED_GRAPH_ROLES = [
+  'admin',
+  'accountant',
+  'auditor',
+  'viewer',
+];
+
+router.use(requireCompany);
+router.use(requireRole(ALLOWED_GRAPH_ROLES));
 
 /**
  * GET FULL GRAPH
  */
 router.get('/full', (req, res) => {
   try {
-    const { companyId } = req.query;
-
-    const graph = buildGraph(companyId);
+    const graph = buildGraph(req.companyId);
 
     res.json({
       success: true,
@@ -31,9 +47,7 @@ router.get('/full', (req, res) => {
 router.get('/trace/:type/:id', (req, res) => {
   try {
     const { type, id } = req.params;
-    const { companyId } = req.query;
-
-    const node = traceEntity(type, id, companyId);
+    const node = traceEntity(type, id, req.companyId);
 
     res.json({
       success: true,
