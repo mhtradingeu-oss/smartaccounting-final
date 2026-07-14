@@ -114,4 +114,3 @@ This phase does not introduce automatic accounting posting.
 No irreversible financial mutation is performed by AI execution evidence flow.
 
 AI execution remains controlled through approval, evidence persistence, and audited execution boundaries.
-
