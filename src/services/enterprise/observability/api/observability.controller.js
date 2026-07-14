@@ -20,7 +20,7 @@ class ObservabilityController {
 
       const dlq = DeadLetterQueue.getAll();
 
-      const graph = buildGraph(req.companyId);
+      const graph = await buildGraph(req.companyId);
 
       return res.json({
         success: true,

@@ -8,8 +8,8 @@ const { buildGraph } = require('../../audit/graph/TimelineGraphEngine');
 /**
  * Explain WHY an entity action happened
  */
-function explainEntity(entityType, entityId, companyId) {
-  const graph = buildGraph(companyId);
+async function explainEntity(entityType, entityId, companyId) {
+  const graph = await buildGraph(companyId);
 
   const nodeId = `${entityType}:${entityId}`;
   const node = graph.nodes.find(n => n.id === nodeId);
@@ -67,8 +67,8 @@ function explainEntity(entityType, entityId, companyId) {
 /**
  * Explain full financial chain (approval → ledger → execution)
  */
-function explainChain(companyId) {
-  const graph = buildGraph(companyId);
+async function explainChain(companyId) {
+  const graph = await buildGraph(companyId);
 
   return {
     success: true,

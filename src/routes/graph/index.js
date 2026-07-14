@@ -24,9 +24,9 @@ router.use(requireRole(ALLOWED_GRAPH_ROLES));
 /**
  * GET FULL GRAPH
  */
-router.get('/full', (req, res) => {
+router.get('/full', async (req, res) => {
   try {
-    const graph = buildGraph(req.companyId);
+    const graph = await buildGraph(req.companyId);
 
     res.json({
       success: true,
@@ -44,10 +44,10 @@ router.get('/full', (req, res) => {
 /**
  * TRACE SINGLE ENTITY
  */
-router.get('/trace/:type/:id', (req, res) => {
+router.get('/trace/:type/:id', async (req, res) => {
   try {
     const { type, id } = req.params;
-    const node = traceEntity(type, id, req.companyId);
+    const node = await traceEntity(type, id, req.companyId);
 
     res.json({
       success: true,

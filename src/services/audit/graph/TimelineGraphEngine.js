@@ -1,12 +1,24 @@
-const { getEvents } = require('../timeline/persistence/TimelinePersistence');
+const {
+  getUnifiedTimeline,
+} = require('../../enterprise/unified-read-model/unifiedTimelineService');
 
 /**
  * NODE TYPES:
  * approval, ledger, execution, audit
  */
 
-function buildGraph(companyId) {
-  const rawEvents = getEvents(null, companyId) || [];
+async function buildGraph(companyId) {
+  const timelineResult = await getUnifiedTimeline(null, companyId);
+
+  const rawEvents = (timelineResult.timeline || []).map((event) => ({
+    type: event.type,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    companyId: event.companyId,
+    timestamp: event.timestamp,
+    payload: event.payload,
+    correlationId: event.correlationId,
+  }));
 
   const nodes = [];
   const edges = [];
@@ -31,8 +43,9 @@ function buildGraph(companyId) {
     nodeMap.get(nodeId).events.push(e);
   }
 
-  // Build edges (causal chain)
-  const sorted = rawEvents.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const sorted = rawEvents.sort(
+    (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+  );
 
   for (let i = 1; i < sorted.length; i++) {
     const from = sorted[i - 1];
@@ -59,10 +72,14 @@ function buildGraph(companyId) {
 /**
  * Trace full chain for one entity
  */
-function traceEntity(entityType, entityId, companyId) {
-  const graph = buildGraph(companyId);
+async function traceEntity(entityType, entityId, companyId) {
+  const graph = await buildGraph(companyId);
 
-  return graph.nodes.find(n => n.id === `${entityType}:${entityId}`) || null;
+  return (
+    graph.nodes.find(
+      (n) => n.id === `${entityType}:${entityId}`,
+    ) || null
+  );
 }
 
 module.exports = {
