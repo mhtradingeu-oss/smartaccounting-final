@@ -20,7 +20,7 @@ class ObservabilityController {
 
       const dlq = DeadLetterQueue.getAll();
 
-      const graph = buildGraph(req.query.companyId);
+      const graph = buildGraph(req.companyId);
 
       return res.json({
         success: true,
@@ -49,7 +49,7 @@ class ObservabilityController {
       const events = await EventStoreService.replay(
         req.query.entityType,
         req.query.entityId,
-        req.query.companyId,
+        req.companyId,
       );
 
       return res.json({
