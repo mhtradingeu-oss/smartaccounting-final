@@ -138,6 +138,8 @@ module.exports = {
       'GET /api/enterprise/timeline/*',
       'GET /api/enterprise/graph/*',
       'GET /api/enterprise/observability/*',
+      'GET /api/enterprise/replay',
+      'GET /api/enterprise/replay/*',
     ],
   },
 

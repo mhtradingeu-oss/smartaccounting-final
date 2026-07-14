@@ -241,8 +241,8 @@ function buildRecommendedActions(replayResult = {}) {
   if ((replayResult.sourceTimeline?.sources?.eventStore || 0) === 0) {
     actions.push({
       priority: 'low',
-      action: 'Register and migrate durable EventStore later.',
-      reason: 'Current replay works from audit, ledger, and approval sources, while EventStore DB source is still empty.',
+      action: 'Review the selected replay scope for durable EventStore evidence.',
+      reason: 'No durable EventStore records were present in the selected replay scope.',
     });
   }
 
