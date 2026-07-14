@@ -16,6 +16,12 @@ function normalizeEvent(item, source) {
     userId: plain.userId || plain.createdBy || plain.decidedByUserId || null,
     timestamp: plain.createdAt || plain.timestamp || plain.updatedAt || null,
     source,
+    correlationId:
+      plain.correlationId ||
+      plain.metadata?.correlationId ||
+      plain.trace?.correlationId ||
+      plain.payload?.correlationId ||
+      null,
     payload: plain.payload || plain.newValues || plain.metadata || plain,
   };
 }

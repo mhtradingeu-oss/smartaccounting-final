@@ -133,15 +133,21 @@ const createHarness = ({
     createDraftFromReviewedDocument: createDraftMock,
   };
 
+  const eventPublisher = jest.fn().mockResolvedValue({
+    success: true,
+  });
+
   const service = createSafeDraftExecutionService({
     approvalRepository,
     draftService,
+    eventPublisher,
   });
 
   return {
     service,
     approvalRepository,
     draftService,
+    eventPublisher,
   };
 };
 
@@ -235,6 +241,35 @@ describe('safeDraftExecutionService', () => {
       harness.approvalRepository.failExecution,
     ).not.toHaveBeenCalled();
 
+    expect(harness.eventPublisher).toHaveBeenNthCalledWith(
+      1,
+      'execution.started',
+      expect.objectContaining({
+        approvalId: approval.approvalId,
+        documentId: approval.metadata.documentId,
+        entityId: approval.approvalId,
+      }),
+      expect.objectContaining({
+        companyId: approval.companyId,
+        userId: 77,
+        correlationId: 'req-expense-1',
+        source: 'safe_draft_execution',
+      }),
+    );
+
+    expect(harness.eventPublisher).toHaveBeenNthCalledWith(
+      2,
+      'execution.completed',
+      expect.objectContaining({
+        approvalId: approval.approvalId,
+        draftType: 'expense',
+        draftId: 501,
+      }),
+      expect.objectContaining({
+        correlationId: 'req-expense-1',
+      }),
+    );
+
     expect(result).toMatchObject({
       success: true,
       approvalId: approval.approvalId,
@@ -242,6 +277,7 @@ describe('safeDraftExecutionService', () => {
       toolId:
         'create_expense_draft_from_reviewed_document',
       executionMode: 'prepare_draft',
+      correlationId: 'req-expense-1',
       draft: {
         type: 'expense',
         id: 501,

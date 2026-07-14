@@ -1,6 +1,9 @@
+const crypto = require('crypto');
+
 const aiApprovalQueueRepository = require('./aiApprovalQueueRepository');
 const reviewedDocumentDraftService = require('./reviewedDocumentDraftService');
 const { getAiTool } = require('./aiToolRegistry');
+const { emitEvent } = require('../enterprise/event-gateway');
 
 const SAFE_DRAFT_TOOL_IDS = Object.freeze([
   'create_expense_draft_from_reviewed_document',
@@ -207,6 +210,7 @@ const validateApprovalExecutionContract = (approval) => {
 const createSafeDraftExecutionService = ({
   approvalRepository = aiApprovalQueueRepository,
   draftService = reviewedDocumentDraftService,
+  eventPublisher = emitEvent,
 } = {}) => {
   const executeApprovedSafeDraft = async ({
     approvalId,
@@ -248,6 +252,34 @@ const createSafeDraftExecutionService = ({
     });
 
     const contract = validateApprovalExecutionContract(approval);
+    const correlationId =
+      contract.metadata.correlationId ||
+      contract.metadata.requestId ||
+      requestId ||
+      crypto.randomUUID();
+
+    const publishExecutionEvent = (type, payload = {}) =>
+      eventPublisher(
+        type,
+        {
+          approvalId,
+          entityType: 'ApprovalQueue',
+          entityId: approvalId,
+          documentId: contract.documentId,
+          toolId: approval.toolId,
+          decisionFingerprint: contract.decisionFingerprint,
+          requestId,
+          ...payload,
+        },
+        {
+          companyId,
+          userId,
+          entityType: 'ApprovalQueue',
+          entityId: approvalId,
+          correlationId,
+          source: 'safe_draft_execution',
+        },
+      );
 
     const claimResult = await approvalRepository.claimExecution({
       approvalId,
@@ -266,6 +298,8 @@ const createSafeDraftExecutionService = ({
     let draftResult;
 
     try {
+      await publishExecutionEvent('execution.started');
+
       draftResult =
         await draftService.createDraftFromReviewedDocument({
           documentId: contract.documentId,
@@ -393,6 +427,7 @@ const createSafeDraftExecutionService = ({
           draftStatus: draft.status || null,
           createdByUserId: userId,
           requestId,
+          correlationId,
         },
       });
 
@@ -429,6 +464,7 @@ const createSafeDraftExecutionService = ({
           draftStatus: draft.status || null,
           executedByUserId: userId,
           requestId,
+          correlationId,
         },
       });
 
@@ -450,6 +486,12 @@ const createSafeDraftExecutionService = ({
       );
     }
 
+    await publishExecutionEvent('execution.completed', {
+      draftType: draft.type,
+      draftId: draft.id,
+      draftStatus: draft.status || null,
+    });
+
     return {
       success: true,
       approvalId,
@@ -465,6 +507,7 @@ const createSafeDraftExecutionService = ({
       decisionFingerprint:
         draftResult.decisionFingerprint ||
         contract.decisionFingerprint,
+      correlationId,
       approval: completionResult.item,
     };
   };

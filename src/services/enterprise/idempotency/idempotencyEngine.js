@@ -10,10 +10,26 @@ function checkIdempotency(type, payload, context = {}) {
   const key = store.generateKey(type, payload, context);
 
   if (store.exists(key)) {
+    const cached = store.get(key);
+
+    if (cached?.status === 'failed') {
+      store.set(key, {
+        type,
+        payload,
+        context,
+        status: 'processing',
+      });
+
+      return {
+        isDuplicate: false,
+        key,
+      };
+    }
+
     return {
       isDuplicate: true,
       key,
-      cached: store.get(key),
+      cached,
     };
   }
 

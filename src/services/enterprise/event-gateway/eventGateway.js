@@ -2,7 +2,7 @@ const { createEvent } = require('../event-core/eventContract');
 const { emitUnified } = require('../event-core/unifiedEventBus');
 const { getEventMeta } = require('../event-core/eventRegistry');
 
-const { checkIdempotency, markCompleted } =
+const { checkIdempotency, markCompleted, markFailed } =
 require('../idempotency/idempotencyEngine');
 
 /**
@@ -43,11 +43,18 @@ async function eventGateway(type, payload = {}, context = {}) {
   else {event.route = 'system';}
 
   // 5. EMIT CORE
-  const result = await emitUnified(
-    event.type,
-    event.payload,
-    enrichedContext,
-  );
+  let result;
+
+  try {
+    result = await emitUnified(
+      event.type,
+      event.payload,
+      enrichedContext,
+    );
+  } catch (error) {
+    markFailed(key, error);
+    throw error;
+  }
 
   // 6. MARK COMPLETE
   markCompleted(key, result);

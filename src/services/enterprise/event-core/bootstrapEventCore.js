@@ -1,16 +1,25 @@
-const { bus, emitUnified } = require('./unifiedEventBus');
+const {
+  configureEventPersistence,
+  emitUnified,
+} = require('./unifiedEventBus');
 const { persistEvent } = require('./eventPersistence');
+
+let started = false;
 
 /**
  * BOOTSTRAP EVENT BACKBONE
  */
 function startEventCore() {
+  if (started) {
+    return false;
+  }
 
-  bus.on('event', async (event) => {
-    await persistEvent(event);
-  });
+  configureEventPersistence(persistEvent);
+  started = true;
 
   console.log('🧠 Unified Event Backbone ACTIVE');
+
+  return true;
 }
 
 module.exports = {
