@@ -35,6 +35,7 @@ module.exports = {
       'PATCH /api/expenses/:id/status',
 
       'GET /api/journal-entries',
+      'GET /api/reports/bwa',
       'GET /api/reports/trial-balance',
       'GET /api/reports/profit-loss',
       'GET /api/reports/balance-sheet',
@@ -104,6 +105,7 @@ module.exports = {
       'GET /api/expenses',
       'GET /api/expenses/:id',
       'GET /api/journal-entries',
+      'GET /api/reports/bwa',
       'GET /api/reports/trial-balance',
       'GET /api/reports/profit-loss',
       'GET /api/reports/balance-sheet',
@@ -160,6 +162,7 @@ module.exports = {
       'GET /api/expenses',
       'GET /api/expenses/:id',
       'GET /api/journal-entries',
+      'GET /api/reports/bwa',
       'GET /api/reports/trial-balance',
       'GET /api/reports/profit-loss',
       'GET /api/reports/balance-sheet',

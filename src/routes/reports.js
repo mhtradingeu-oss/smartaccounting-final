@@ -2,6 +2,12 @@ const express = require('express');
 const { requireRole, requireCompany } = require('../middleware/authMiddleware');
 const financialReportService = require('../services/financialReportService');
 
+const {
+  getBwaReport,
+} = require('../services/reporting/bwa/bwaReportService');
+
+const ApiError = require('../lib/errors/apiError');
+
 const router = express.Router();
 
 
@@ -246,8 +252,127 @@ const buildFinancialReportForExport = async ({ reportType, companyId, query }) =
 };
 
 
+function rejectBwaClientCompanyScope(req, _res, next) {
+  if (
+    Object.prototype.hasOwnProperty.call(
+      req.query || {},
+      'companyId',
+    )
+  ) {
+    return next(
+      new ApiError(
+        400,
+        'COMPANY_SCOPE_CLIENT_OVERRIDE_FORBIDDEN',
+        'Company scope must be derived from authenticated context',
+      ),
+    );
+  }
+
+  return next();
+}
+
+function parseStrictIntegerQuery(value) {
+  if (
+    typeof value !== 'string' ||
+    !/^\d+$/.test(value)
+  ) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isSafeInteger(parsed)
+    ? parsed
+    : null;
+}
+
+function mapBwaRouteError(error) {
+  const status =
+    error?.status ||
+    error?.statusCode ||
+    500;
+
+  if (
+    status >= 400 &&
+    status < 500 &&
+    error?.code
+  ) {
+    return error;
+  }
+
+  return new ApiError(
+    500,
+    'INTERNAL_ERROR',
+    'Failed to generate BWA report',
+  );
+}
+
 router.use(requireCompany);
 
+
+
+router.get(
+  '/bwa',
+  requireRole([
+    'admin',
+    'accountant',
+    'auditor',
+    'viewer',
+  ]),
+  rejectBwaClientCompanyScope,
+  async (req, res, next) => {
+    try {
+      const year = parseStrictIntegerQuery(
+        req.query.year,
+      );
+
+      if (year === null) {
+        return next(
+          new ApiError(
+            400,
+            'BWA_REPORT_INVALID_YEAR_QUERY',
+            'year must be an integer query parameter',
+          ),
+        );
+      }
+
+      const toMonth = parseStrictIntegerQuery(
+        req.query.toMonth,
+      );
+
+      if (
+        toMonth === null ||
+        toMonth < 1 ||
+        toMonth > 12
+      ) {
+        return next(
+          new ApiError(
+            400,
+            'BWA_REPORT_INVALID_MONTH_QUERY',
+            'toMonth must be an integer from 1 through 12',
+          ),
+        );
+      }
+
+      const report = await getBwaReport({
+        companyId: req.companyId,
+        year,
+        toMonth,
+        definitionId:
+          req.query.definitionId || undefined,
+      });
+
+      return res.status(200).json({
+        success: true,
+        report,
+      });
+    } catch (error) {
+      return next(
+        mapBwaRouteError(error),
+      );
+    }
+  },
+);
 
 router.get('/export', requireRole(['admin', 'accountant', 'auditor']), async (req, res, next) => {
   try {
