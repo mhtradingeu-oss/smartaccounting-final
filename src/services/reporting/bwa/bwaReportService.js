@@ -154,6 +154,7 @@ const createBwaReportService = ({
       reportBuilder({
         definition,
         accounts: ledgerResult.accounts,
+        months: ledgerResult.period.months,
       }),
     );
 

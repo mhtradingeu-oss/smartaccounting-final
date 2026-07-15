@@ -402,13 +402,17 @@ function buildWarnings(unmappedAccounts) {
 function buildBwaReport({
   definition,
   accounts = [],
+  months = null,
 }) {
   validateDefinition(definition);
 
   const safeAccounts = cloneObject(accounts) || [];
   validateAccountMappings(definition, safeAccounts);
 
-  const months = collectMonths(safeAccounts);
+  const resolvedMonths = Array.isArray(months)
+    ? [...months]
+    : collectMonths(safeAccounts);
+
   const rowMap = new Map();
   const rows = [];
 
@@ -417,7 +421,7 @@ function buildBwaReport({
       const result = aggregateAccountRow(
         row,
         safeAccounts,
-        months,
+        resolvedMonths,
       );
 
       rowMap.set(row.id, result);
@@ -428,7 +432,7 @@ function buildBwaReport({
     const result = evaluateFormulaRow(
       row,
       rowMap,
-      months,
+      resolvedMonths,
     );
 
     rowMap.set(row.id, result);
@@ -450,7 +454,7 @@ function buildBwaReport({
       title: definition.title,
     },
     preliminary: definition.preliminary === true,
-    months,
+    months: resolvedMonths,
     rows,
     unmappedAccounts,
     warnings: buildWarnings(unmappedAccounts),

@@ -197,6 +197,8 @@ describe('BWA application report service', () => {
         SKR03_BWA_01_V1,
       accounts:
         ledgerResult.accounts,
+      months:
+        ledgerResult.period.months,
     });
   });
 

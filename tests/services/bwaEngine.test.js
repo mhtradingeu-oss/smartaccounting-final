@@ -605,4 +605,42 @@ describe('BWA pure synthetic engine', () => {
     expect(result.ytdValue).toBe(0.33);
   });
 
+
+  it('preserves explicit report months when accounts are empty', () => {
+    const report = buildBwaReport({
+      definition: buildSyntheticDefinition(),
+      accounts: [],
+      months: [
+        '2026-01',
+        '2026-02',
+      ],
+    });
+
+    expect(report.months).toEqual([
+      '2026-01',
+      '2026-02',
+    ]);
+
+    for (const row of report.rows) {
+      expect(row.monthlyValues).toEqual({
+        '2026-01': 0,
+        '2026-02': 0,
+      });
+
+      expect(row.ytdValue).toBe(0);
+    }
+  });
+
+  it('continues to derive months from accounts when explicit months are omitted', () => {
+    const report = buildBwaReport({
+      definition: buildSyntheticDefinition(),
+      accounts: buildAccounts(),
+    });
+
+    expect(report.months).toEqual([
+      '2026-01',
+      '2026-02',
+    ]);
+  });
+
 });
