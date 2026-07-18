@@ -4,7 +4,8 @@
  * @returns {Promise<Expense>}
  */
 const bcrypt = require('bcryptjs');
-const { User, Invoice, Company, Expense, sequelize,
+const {
+  AccountingPeriod, User, Invoice, Company, Expense, sequelize,
   AIApprovalQueueItem} = require('../../src/models');
 const { buildExpensePayload } = require('./buildPayload');
 /**
@@ -273,6 +274,10 @@ async function cleanDatabase() {
   if (RevokedToken) {
     await RevokedToken.destroy({ where: {}, force: true });
   }
+  if (AccountingPeriod) {
+    await AccountingPeriod.destroy({ where: {}, force: true });
+  }
+
   if (Company) {
     await Company.destroy({ where: {}, force: true });
   }

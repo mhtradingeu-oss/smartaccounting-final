@@ -1,4 +1,5 @@
 const { Model } = require('sequelize');
+const { assertAccountingDateOpen } = require('../services/accountingPeriodService');
 
 class Invoice extends Model {
   static associate(models) {
@@ -113,14 +114,44 @@ module.exports = (sequelize, DataTypes) => {
     });
     const FINAL_STATUSES = new Set(['SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'PARTIALLY_PAID']);
     const ALLOWED_FINAL_UPDATE_FIELDS = new Set(['status', 'updatedAt']);
-    Invoice.addHook('beforeUpdate', (invoice) => {
+
+    Invoice.addHook('beforeCreate', async (invoice, options = {}) => {
+      await assertAccountingDateOpen({
+        companyId: invoice.companyId,
+        accountingDate: invoice.date,
+        transaction: options.transaction || null,
+      });
+    });
+
+    Invoice.addHook('beforeUpdate', async (invoice, options = {}) => {
+      const previousCompanyId =
+        invoice._previousDataValues?.companyId || invoice.companyId;
+      const previousDate =
+        invoice._previousDataValues?.date || invoice.date;
+
+      await assertAccountingDateOpen({
+        companyId: previousCompanyId,
+        accountingDate: previousDate,
+        transaction: options.transaction || null,
+      });
+
+      if (invoice.changed('date') || invoice.changed('companyId')) {
+        await assertAccountingDateOpen({
+          companyId: invoice.companyId,
+          accountingDate: invoice.date,
+          transaction: options.transaction || null,
+        });
+      }
+
       const prevStatus = (invoice._previousDataValues?.status || '').toUpperCase();
       if (!FINAL_STATUSES.has(prevStatus)) {
         return;
       }
+
       const changedFields = (invoice.changed() || []).filter(
         (field) => !ALLOWED_FINAL_UPDATE_FIELDS.has(field),
       );
+
       if (changedFields.length > 0) {
         const err = new Error('Finalized invoices cannot be modified; create a correction entry instead.');
         err.status = 400;

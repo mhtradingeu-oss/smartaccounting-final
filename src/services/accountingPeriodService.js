@@ -1,7 +1,16 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { AccountingPeriod } = require('../models');
+
+const getAccountingPeriodModel = () => {
+  const { AccountingPeriod } = require('../models');
+
+  if (!AccountingPeriod) {
+    throw new Error('AccountingPeriod model is not registered');
+  }
+
+  return AccountingPeriod;
+};
 
 const normalizeDateOnly = (value) => {
   if (!value) {
@@ -44,6 +53,7 @@ const findClosedPeriod = async ({ companyId, accountingDate, transaction = null 
   }
 
   const normalizedDate = normalizeDateOnly(accountingDate);
+  const AccountingPeriod = getAccountingPeriodModel();
 
   return AccountingPeriod.findOne({
     where: {
@@ -91,6 +101,8 @@ const closePeriod = async ({
     throw new Error('startDate must be before or equal to endDate');
   }
 
+  const AccountingPeriod = getAccountingPeriodModel();
+
   const [period] = await AccountingPeriod.findOrCreate({
     where: {
       companyId,
@@ -133,6 +145,8 @@ const reopenPeriod = async ({ periodId, companyId, userId = null, reason = null,
   if (!companyId) {
     throw new Error('companyId is required');
   }
+
+  const AccountingPeriod = getAccountingPeriodModel();
 
   const period = await AccountingPeriod.findOne({
     where: { id: periodId, companyId },
