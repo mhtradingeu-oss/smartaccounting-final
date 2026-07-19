@@ -119,6 +119,7 @@ const taxBridgeRoutes = require('./routes/taxBridge');
 const reviewCenterRoutes = require('./routes/reviewCenter');
 const expenseRoutes = require('./routes/expenses');
 const journalEntryRoutes = require('./routes/journalEntries');
+const accountingPeriodRoutes = require('./routes/accountingPeriods');
 const reportRoutes = require('./routes/reports');
 const telemetryRoutes = require('./routes/telemetry');
 const aiRoutes = require('./routes/ai');
@@ -336,6 +337,7 @@ app.use(`${EXPRESS_API_PREFIX}/exports`, exportRoutes);
 app.use(`${EXPRESS_API_PREFIX}/email-test`, emailTestRoutes);
 app.use(`${EXPRESS_API_PREFIX}/expenses`, expenseRoutes);
 app.use(`${EXPRESS_API_PREFIX}/journal-entries`, journalEntryRoutes);
+app.use(`${EXPRESS_API_PREFIX}/accounting-periods`, accountingPeriodRoutes);
 app.use(`${EXPRESS_API_PREFIX}/reports`, reportRoutes);
 app.get(`${EXPRESS_API_PREFIX}/ai/suggest`, (req, res, next) => {
   return next(new ApiError(501, 'AI_SUGGEST_NOT_READY', 'AI suggestions are not production-ready'));

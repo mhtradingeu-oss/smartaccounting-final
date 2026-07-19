@@ -84,6 +84,8 @@ module.exports = {
       'GET /api/enterprise/timeline',
       'GET /api/enterprise/timeline/*',
       'GET /api/enterprise/graph/*',
+      'GET /api/accounting-periods',
+      'POST /api/accounting-periods/close',
     ],
   },
 
@@ -142,6 +144,7 @@ module.exports = {
       'GET /api/enterprise/observability/*',
       'GET /api/enterprise/replay',
       'GET /api/enterprise/replay/*',
+      'GET /api/accounting-periods',
     ],
   },
 
@@ -188,6 +191,7 @@ module.exports = {
       'GET /api/enterprise/timeline',
       'GET /api/enterprise/timeline/*',
       'GET /api/enterprise/graph/*',
+      'GET /api/accounting-periods',
     ],
   },
 };
