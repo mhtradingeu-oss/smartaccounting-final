@@ -3,6 +3,7 @@
 const { ChartAccount, Expense, JournalEntry, JournalEntryLine, sequelize } = require('../models');
 const chartOfAccountsService = require('./chartOfAccountsService');
 const AuditLogService = require('./auditLogService');
+const { assertAccountingDateOpen } = require('./accountingPeriodService');
 
 const MONEY_SCALE = 2;
 
@@ -474,6 +475,12 @@ const finalizeExpensePosting = async ({ expenseId, companyId, postedBy = null } 
   };
 
   const postedEntry = await sequelize.transaction(async (transaction) => {
+    await assertAccountingDateOpen({
+      companyId,
+      accountingDate: preview.entryDate,
+      transaction,
+    });
+
     const lockedPreview = await JournalEntry.findOne({
       where: {
         id: preview.id,

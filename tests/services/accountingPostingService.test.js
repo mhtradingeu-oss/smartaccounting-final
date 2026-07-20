@@ -12,6 +12,9 @@ const {
 } = require('../../src/models');
 const accountingPostingService = require('../../src/services/accountingPostingService');
 const chartOfAccountsService = require('../../src/services/chartOfAccountsService');
+const {
+  closePeriod,
+} = require('../../src/services/accountingPeriodService');
 
 describe('accountingPostingService', () => {
   let company;
@@ -649,6 +652,78 @@ describe('accountingPostingService', () => {
         linesCount: 3,
       }),
     );
+  });
+
+  it('rejects final expense posting when its accounting period was closed after preview creation', async () => {
+    const expense = await Expense.create({
+      companyId: company.id,
+      userId: user.id,
+      createdByUserId: user.id,
+      date: new Date('2026-06-21'),
+      category: 'office',
+      vendorName: 'Closed Period Final Posting Vendor',
+      description: 'Closed period final posting regression test',
+      expenseDate: '2026-06-21',
+      amount: 119,
+      grossAmount: 119,
+      netAmount: 100,
+      vatAmount: 19,
+      vatRate: 0.19,
+      currency: 'EUR',
+      status: 'pending',
+      source: 'manual',
+    });
+
+    const preview = await accountingPostingService.createExpensePostingPreview({
+      expenseId: expense.id,
+      companyId: company.id,
+      createdBy: user.id,
+    });
+
+    expect(preview.journalEntry.status).toBe('draft');
+
+    const closedPeriod = await closePeriod({
+      companyId: company.id,
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+      userId: user.id,
+      reason: 'Finalize posting period-lock regression test',
+    });
+
+    try {
+      await expect(
+        accountingPostingService.finalizeExpensePosting({
+          expenseId: expense.id,
+          companyId: company.id,
+          postedBy: user.id,
+        }),
+      ).rejects.toMatchObject({
+        code: 'ACCOUNTING_PERIOD_CLOSED',
+        status: 409,
+      });
+
+      const persistedPreview = await JournalEntry.findByPk(
+        preview.journalEntry.id,
+      );
+
+      expect(persistedPreview).toBeTruthy();
+      expect(persistedPreview.status).toBe('draft');
+      expect(persistedPreview.postedAt).toBeNull();
+      expect(persistedPreview.postedBy).toBeNull();
+
+      const finalizedAudit = await AuditLog.findOne({
+        where: {
+          action: 'expense_posting_finalized',
+          resourceType: 'JournalEntry',
+          resourceId: String(preview.journalEntry.id),
+          companyId: company.id,
+        },
+      });
+
+      expect(finalizedAudit).toBeNull();
+    } finally {
+      await closedPeriod.destroy({ force: true });
+    }
   });
 
   it('rejects final expense posting when no preview exists', async () => {
