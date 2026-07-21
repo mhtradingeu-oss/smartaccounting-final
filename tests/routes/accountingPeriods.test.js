@@ -34,7 +34,7 @@ const createRoleSession = (role, companyId) =>
   global.testUtils.createTestUserAndLogin({
     role,
     companyId,
-    email: `accounting-period-${role}-${Date.now()}-${Math.random()}@example.com`,
+    email: `accounting-period-${role}-${companyId}@example.test`,
   });
 
 describe('Accounting periods API', () => {

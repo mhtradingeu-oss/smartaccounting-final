@@ -487,7 +487,6 @@ const finalizeExpensePosting = async ({ expenseId, companyId, postedBy = null } 
         companyId,
         status: 'draft',
       },
-      include: [{ model: JournalEntryLine, as: 'lines' }],
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -499,8 +498,17 @@ const finalizeExpensePosting = async ({ expenseId, companyId, postedBy = null } 
       throw error;
     }
 
+    const lockedPreviewLines = await JournalEntryLine.findAll({
+      where: {
+        journalEntryId: lockedPreview.id,
+        companyId,
+      },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
     validateBalancedEntry(
-      (lockedPreview.lines || []).map((line) => ({
+      lockedPreviewLines.map((line) => ({
         accountId: line.accountId,
         debit: line.debit,
         credit: line.credit,
